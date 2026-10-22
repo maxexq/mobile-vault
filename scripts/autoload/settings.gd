@@ -1,0 +1,227 @@
+extends Node
+## Player preferences (not progress): audio, language, display / performance, feel, camera.
+## Stored apart from the save so a reset, an imported save or a new generation keeps them:
+## web -> localStorage["mobile_vault_settings_v1"], desktop -> user://settings.json.
+## Also owns the save-file tools of the Settings window: export / import / wipe.
+
+signal changed(key: String)
+signal import_failed(reason: String)
+
+const KEY := "mobile_vault_settings_v1"
+const FILE_PATH := "user://settings.json"
+const IMPORT_PATH := "user://import_save.json"     # desktop import source
+const BUSES := ["Music", "SFX"]
+const LANGS := [["th", "ไทย", true], ["en", "English (เร็วๆ นี้)", false]]
+const DEFAULTS := {
+	"master": 0.8, "music": 0.7, "sfx": 0.8, "mute": false,
+	"lang": "th",
+	"ui_scale": "auto",      # auto (largest whole scale) | small (one step smaller: more room)
+	"zoom": "auto",          # camera default: auto | wide | normal
+	"crt": true,             # CRT scanlines / vignette overlay
+	"fx_gpu": true,          # GPU particles (pretty) / CPU (weak phones)
+	"fps": 60,               # 60 | 30 (battery saver)
+	"fullscreen": false,
+	"shake": true,
+	"gore": true,
+	"vibrate": true,
+}
+
+var v: Dictionary = DEFAULTS.duplicate()
+var _import_poll := false
+
+
+func _ready() -> void:
+	_ensure_buses()
+	_load()
+	for k in v:
+		# browsers only allow fullscreen from a tap, so the web build starts windowed
+		if k == "fullscreen" and OS.has_feature("web"):
+			continue
+		_apply(k)
+
+
+func _ensure_buses() -> void:
+	for b in BUSES:
+		if AudioServer.get_bus_index(b) < 0:
+			AudioServer.add_bus()
+			var i := AudioServer.get_bus_count() - 1
+			AudioServer.set_bus_name(i, b)
+			AudioServer.set_bus_send(i, "Master")
+
+
+func _load() -> void:
+	var text := Save.read_key(KEY, FILE_PATH)
+	if text == "":
+		return
+	var d = JSON.parse_string(text)
+	if not d is Dictionary:
+		return
+	for k in DEFAULTS:
+		if not d.has(k):
+			continue
+		var def = DEFAULTS[k]
+		if def is int and (d[k] is float or d[k] is int):     # JSON numbers come back as float
+			v[k] = int(d[k])
+		elif def is float and (d[k] is float or d[k] is int):
+			v[k] = clampf(float(d[k]), 0.0, 1.0)
+		elif typeof(d[k]) == typeof(def):
+			v[k] = d[k]
+	v.fps = 30 if int(v.fps) == 30 else 60
+	if not v.ui_scale in ["auto", "small"]:
+		v.ui_scale = "auto"
+	if not v.zoom in ["auto", "wide", "normal"]:
+		v.zoom = "auto"
+
+
+func persist() -> void:
+	Save.write_key(KEY, FILE_PATH, JSON.stringify(v))
+
+
+func get_value(k: String) -> Variant:
+	return v.get(k, DEFAULTS.get(k))
+
+
+func set_value(k: String, value: Variant) -> void:
+	if not DEFAULTS.has(k) or v.get(k) == value:
+		return
+	v[k] = value
+	_apply(k)
+	persist()
+	Trace.rec("settings", k, {"v": value})
+	changed.emit(k)
+
+
+func reset_defaults() -> void:
+	for k in DEFAULTS:
+		set_value(k, DEFAULTS[k])
+
+
+func _apply(k: String) -> void:
+	match k:
+		"master", "music", "sfx", "mute":
+			_apply_audio()
+		"lang":
+			TranslationServer.set_locale(str(v.lang))
+		"fx_gpu":
+			FX.use_gpu = bool(v.fx_gpu)
+		"fps":
+			Engine.max_fps = int(v.fps)
+		"fullscreen":
+			var want := DisplayServer.WINDOW_MODE_FULLSCREEN if v.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+			if DisplayServer.get_name() != "headless" and DisplayServer.window_get_mode() != want:
+				DisplayServer.window_set_mode(want)
+
+
+func _apply_audio() -> void:
+	AudioServer.set_bus_volume_linear(0, float(v.master))
+	AudioServer.set_bus_mute(0, bool(v.mute))
+	for b in BUSES:
+		var i := AudioServer.get_bus_index(b)
+		if i >= 0:
+			AudioServer.set_bus_volume_linear(i, float(v[b.to_lower()]))
+
+
+## short buzz for big hits (web: navigator.vibrate; ignored where unsupported)
+func buzz(ms: int = 40) -> void:
+	if bool(v.vibrate):
+		Input.vibrate_handheld(ms)
+
+
+# ------------------------------------------------------------------ save tools
+func save_size_bytes() -> int:
+	return JSON.stringify(Game.s).length() if not Game.s.is_empty() else 0
+
+
+## web: browser download (call from a button press); desktop: user://mobile_vault_save_<time>.json
+func export_save() -> String:
+	Game.save_game()
+	var d := Save.read()
+	if d.is_empty():
+		return ""
+	d["exported"] = {"v": BuildInfo.GAME_VERSION, "build": BuildInfo.commit_short(), "at": Time.get_datetime_string_from_system(true)}
+	var name := "mobile_vault_save_%s.json" % Time.get_datetime_string_from_system(true).replace(":", "-")
+	var text := JSON.stringify(d)
+	if OS.has_feature("web"):
+		JavaScriptBridge.download_buffer(text.to_utf8_buffer(), name, "application/json")
+		return name
+	var path := "user://" + name
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return ""
+	f.store_string(text)
+	return ProjectSettings.globalize_path(path)
+
+
+## checks a save file's text; returns "" when it can be loaded, else a Thai reason
+func validate_save(text: String) -> String:
+	var j := JSON.new()      # JSON.parse() reports errors quietly, unlike JSON.parse_string()
+	if j.parse(text) != OK or not j.data is Dictionary:
+		return "ไฟล์ไม่ใช่เซฟของ Mobile Vault (อ่าน JSON ไม่ได้)"
+	var d: Dictionary = j.data
+	if not d.has("rooms") or not d.has("res") or not d.has("dwellers"):
+		return "ไฟล์นี้ไม่มีข้อมูลรถหรือลูกเรือ"
+	return ""
+
+
+## replaces the current save with `text` (already validated) and restarts into it
+func apply_import(text: String) -> bool:
+	if validate_save(text) != "":
+		return false
+	var d: Dictionary = JSON.parse_string(text)
+	d.erase("exported")
+	Game.started = false        # stop autosave from writing the old run over the import
+	Save.write(d)
+	Trace.rec("save", "imported", {"bytes": text.length()})
+	_restart()
+	return true
+
+
+## web: opens the browser file picker (call from a button press); desktop: reads user://import_save.json
+func begin_import() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("""(function(){window.__mv_import=null;var i=document.createElement('input');
+i.type='file';i.accept='.json,application/json';i.onchange=function(){var f=i.files&&i.files[0];if(!f)return;
+var r=new FileReader();r.onload=function(){window.__mv_import=String(r.result);};r.readAsText(f);};i.click();})()""", true)
+		_import_poll = true
+		return
+	if not FileAccess.file_exists(IMPORT_PATH):
+		import_failed.emit("วางไฟล์เซฟไว้ที่ %s ก่อน" % ProjectSettings.globalize_path(IMPORT_PATH))
+		return
+	_finish_import(FileAccess.get_file_as_string(IMPORT_PATH))
+
+
+func _process(_d: float) -> void:
+	if not _import_poll or Engine.get_process_frames() % 10 != 0:
+		return
+	var r = JavaScriptBridge.eval("window.__mv_import", true)
+	if r == null:
+		return
+	_import_poll = false
+	JavaScriptBridge.eval("window.__mv_import=null", true)
+	_finish_import(str(r))
+
+
+func _finish_import(text: String) -> void:
+	var why := validate_save(text)
+	if why != "":
+		import_failed.emit(why)
+		return
+	apply_import(text)
+
+
+## erases progress (settings stay) and goes back to the title screen
+func reset_progress(restart: bool = true) -> void:
+	Trace.rec("save", "progress reset")
+	# keep Game.s until the reload so the scene still has a world to draw for the last frames;
+	# started = false stops the simulation and autosave from writing it back
+	Game.started = false
+	Save.wipe()
+	if restart:
+		_restart()
+
+
+func _restart() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("location.reload()", true)
+	else:
+		get_tree().reload_current_scene.call_deferred()

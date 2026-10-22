@@ -32,6 +32,7 @@ Synergy="*res://scripts/autoload/synergy.gd"
 Trace="*res://scripts/autoload/trace.gd"
 Dev="*res://scripts/autoload/dev.gd"
 Tutorial="*res://scripts/autoload/tutorial.gd"
+Settings="*res://scripts/autoload/settings.gd"
 
 [display]
 

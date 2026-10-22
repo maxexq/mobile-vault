@@ -65,6 +65,8 @@ var _xray_btn: Button
 var _zoom_btn: Button
 var _god_btn: Button
 var tutorial_overlay: TutorialOverlay
+var settings_panel: SettingsPanel
+var _settings_btn: Button
 signal zoom_pressed
 signal xray_toggled(on: bool)
 
@@ -94,6 +96,11 @@ func _ready() -> void:
 	_zoom_btn.tooltip_text = "ซูม: อัตโนมัติ / กว้าง / ปกติ"
 	_zoom_btn.pressed.connect(func(): zoom_pressed.emit())
 	_view_box.add_child(_zoom_btn)
+	_settings_btn = UIKit.button("", "gray", "gear")
+	_settings_btn.custom_minimum_size = Vector2(26, 22)
+	_settings_btn.tooltip_text = "ตั้งค่า / ข้อมูลเวอร์ชัน"
+	_settings_btn.pressed.connect(func(): open_settings())
+	_view_box.add_child(_settings_btn)
 	# tester console: only exists once Dev is unlocked (debug build, ?god=1, or 7 taps on the VAULT chip)
 	_god_btn = UIKit.button("GOD", "gray")
 	_god_btn.custom_minimum_size = Vector2(34, 22)
@@ -134,6 +141,11 @@ func _ready() -> void:
 	add_child(event_popup)
 	title_screen = TitleScreen.new()
 	add_child(title_screen)
+	# settings opens from the title menu too, so it sits above the title screen
+	settings_panel = SettingsPanel.new()
+	add_child(settings_panel)
+	panels["settings"] = settings_panel
+	title_screen.settings_requested.connect(open_settings)
 
 	Game.resources_changed.connect(_refresh_res)
 	Game.travel_changed.connect(_refresh_travel)
@@ -719,6 +731,16 @@ func open_panel(key: String) -> void:
 	if key == "log":
 		Game.s["lore_seen"] = Lore.count_open()
 		_refresh_log_badge()
+
+
+## works before a run has started (title menu), unlike open_panel()
+func open_settings(tab: String = "game") -> void:
+	if room_closeup.is_open:
+		room_closeup.close()
+	for k in panels:
+		if k != "settings" and panels[k].is_open:
+			panels[k].close()
+	settings_panel.open_tab(tab)
 
 
 func any_modal_open() -> bool:
