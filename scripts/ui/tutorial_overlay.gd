@@ -48,6 +48,7 @@ func _ready() -> void:
 	v.add_child(_head)
 	_text = UIKit.label("", UIKit.FS_SMALL, UIKit.C_TEXT)
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_text.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING   # lines don't reflow while typing
 	_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(_text)
 	_bar = UIKit.progress(UIKit.C_GOLD, 4)
