@@ -46,6 +46,7 @@ var _portrait := true
 var _closeup_on := false
 var _wave_lbl: Label
 var _wave_sub: Label
+var _threat_bar: ProgressBar
 var _push_btn: Button
 var _boss_btn: Button
 var _log_badge: Label
@@ -402,6 +403,8 @@ func _build_combat_chip() -> void:
 	v.add_child(_wave_lbl)
 	_wave_sub = UIKit.label("", UIKit.FP, UIKit.C_DIM, true)
 	v.add_child(_wave_sub)
+	_threat_bar = UIKit.progress(UIKit.C_GREEN, 3)
+	v.add_child(_threat_bar)
 	h.add_child(v)
 	_push_btn = UIKit.button("", "yellow")
 	_push_btn.custom_minimum_size = Vector2(38, 20)
@@ -417,6 +420,7 @@ func _build_combat_chip() -> void:
 	h.add_child(_boss_btn)
 	add_child(_combat_box)
 	Combat.wave_changed.connect(_refresh_combat)
+	Threat.phase_changed.connect(func(_p): _refresh_combat())
 
 
 func _build_banner() -> void:
@@ -752,6 +756,7 @@ func _refresh_combat() -> void:
 	_wave_lbl.add_theme_color_override("font_color", UIKit.C_RED if boss or Combat.is_boss_wave(w) else UIKit.C_TEXT)
 	var lv := Combat.warlord_level() if boss else Combat.enemy_level()
 	_wave_sub.text = "LV%d DPS%d" % [lv, int(Combat.dps_meter)]
+	_refresh_threat(boss)
 	var push := bool(Game.s.combat.push)
 	_push_btn.text = "PUSH" if push else "FARM"
 	UIKit.style_button(_push_btn, "yellow" if push else "blue")
@@ -760,6 +765,41 @@ func _refresh_combat() -> void:
 	if _boss_btn.visible != show_boss:
 		_boss_btn.visible = show_boss
 		_apply_layout.call_deferred()
+
+
+## threat pacing: between raids the chip shows the phase and the threat meter instead of the wave
+func _refresh_threat(boss: bool) -> void:
+	var on := not Threat.classic()
+	_threat_bar.visible = on
+	if not on:
+		_combat_box.tooltip_text = ""
+		return
+	var t := Threat.threat()
+	_threat_bar.value = t / 100.0
+	var col := UIKit.C_GREEN if t < 40.0 else (UIKit.C_GOLD if t < 70.0 else UIKit.C_RED)
+	(_threat_bar.get_theme_stylebox("fill") as StyleBoxFlat).bg_color = col
+	if not Combat.wave_active and not boss:
+		match Threat.phase:
+			"warning":
+				_wave_lbl.text = "INCOMING!"
+				_wave_lbl.add_theme_color_override("font_color", UIKit.C_GOLD)
+			"salvage":
+				_wave_lbl.text = "SALVAGE"
+				_wave_lbl.add_theme_color_override("font_color", UIKit.C_ORANGE)
+			_:
+				_wave_lbl.text = "QUIET"
+				_wave_lbl.add_theme_color_override("font_color", UIKit.C_GREEN)
+		_wave_sub.text = "THREAT %d%% +%d/M" % [int(t), int(round(Threat.rate_pm()))]
+	var p := Threat.rate_parts()
+	var names := {"biome": "พื้นที่", "engine": "เสียงเครื่องยนต์", "parked": "จอดนิ่ง (กลิ่น)", "night": "กลางคืน",
+		"rooms": "เสียง/แสงจากห้อง", "cargo": "ของบรรทุกเต็ม", "blood": "กลิ่นเลือด"}
+	var lines := ["ภัยคุกคาม %d%% · %s" % [int(t), Threat.PHASE_TH.get(Threat.phase, "")]]
+	for k in names:
+		if float(p[k]) >= 0.05:
+			lines.append("+%.1f/นาที %s" % [float(p[k]), names[k]])
+	if float(p.mask) < 1.0:
+		lines.append("×%.2f สภาพอากาศช่วยพรางตัว" % float(p.mask))
+	_combat_box.tooltip_text = "\n".join(lines)
 
 
 ## while the camera is zoomed into a room only the resource strip stays on screen
