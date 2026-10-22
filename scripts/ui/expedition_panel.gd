@@ -126,6 +126,14 @@ func _build_planner() -> void:
 		for t in Crew.traits(d):
 			tags.append(Crew.TRAITS[t].th)
 		tv.add_child(UIKit.label("%s Lv%d  พลัง %d" % [d.name, d.lvl, int(Combat.hero_power(d))], UIKit.FS_SMALL))
+		var role := Game.squad_role(d)
+		if role >= 0:
+			# defence squad members can go, but their slot is freed for someone else
+			var rh := UIKit.hbox(2)
+			rh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			rh.add_child(UIKit.icon_rect("sword", 10))
+			rh.add_child(UIKit.label("อยู่ในทีมป้องกันรถ · %s" % Combat.ROLES[role].th, UIKit.FS_SMALL, UIKit.C_ORANGE))
+			tv.add_child(rh)
 		tv.add_child(UIKit.label(" · ".join(tags), UIKit.FS_SMALL, UIKit.C_DIM))
 		bh.add_child(tv)
 		var hp := UIKit.progress(UIKit.C_GREEN if float(d.hp) > float(d.max_hp) * 0.4 else UIKit.C_RED, 3)
@@ -142,6 +150,13 @@ func _build_planner() -> void:
 			_auto_supplies()
 			refresh())
 		_list.add_child(b)
+	var leaving := []
+	for id in picked:
+		var pr := Game.squad_role(Game.dweller_by_id(int(id)))
+		if pr >= 0:
+			leaving.append(Combat.ROLES[pr].th)
+	if not leaving.is_empty():
+		_list.add_child(UIKit.wrap_label("ช่องทีมป้องกันรถ (%s) จะว่างทันทีที่ออกเดินทาง — เลือกคนใหม่ได้ที่เมนู Squad" % ", ".join(leaving), UIKit.FS_SMALL, UIKit.C_ORANGE))
 	# supplies
 	var need := Expedition.need_supplies(site, maxi(1, picked.size()))
 	_list.add_child(UIKit.header("SUPPLIES", "เสบียงที่พกไป (แนะนำ อาหาร %d น้ำ %d)" % [int(need.food), int(need.water)]))

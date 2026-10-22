@@ -209,6 +209,7 @@ func start(id: String, ids: Array, sup: Dictionary) -> bool:
 		return false
 	var dur := duration_sec(id)
 	var now := Time.get_unix_time_from_system()
+	var freed := []
 	for did in ids:
 		var d := Game.dweller_by_id(int(did))
 		if d.is_empty():
@@ -219,8 +220,11 @@ func start(id: String, ids: Array, sup: Dictionary) -> bool:
 		var role := Game.squad_role(d)
 		if role >= 0:
 			Game.s.squad[role] = -1
+			freed.append(Game.dweller_by_id(int(did)).name)
 	Game.s["exp"] = {"site": id, "team": ids.duplicate(), "sup": sup.duplicate(), "start": now, "dur": dur, "log": [], "seed": randi()}
 	Game.toast.emit("ทีมสำรวจออกเดินทางไป %s — รถจอดรอจนกว่าทีมจะกลับ" % site_def(id).th, "info")
+	if not freed.is_empty():
+		Game.toast.emit("%s ออกจากทีมป้องกันรถ — ช่องว่างแล้ว เลือกคนใหม่ได้ที่เมนู Squad" % ", ".join(freed), "warn")
 	expedition_started.emit()
 	Game.squad_changed.emit()
 	Game.dwellers_changed.emit()
