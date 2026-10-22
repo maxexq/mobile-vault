@@ -37,6 +37,8 @@ OUTFITS = {
     "jumpsuit": ("blue3", "blue2", "blue3", "blue2", "gray1", "cap"),
     "medic":    ("cream3", "cream2", "teal2", "teal1", "gray1", "nurse"),
     "raider":   ("gray3", "gray2", "red1", "red0", "gray0", "mohawk"),
+    # v4.3 builder refugees: faded hi-vis vest over work clothes, dented hard hat
+    "builder":  ("yellow2", "yellow1", "blue2", "blue1", "wood0", "hardhat"),
 }
 HAIRS = {"brown": ("wood2", "wood1"), "black": ("gray1", "gray0"), "blonde": ("yellow2", "yellow1"),
          "red": ("orange2", "orange1"), "gray": ("gray4", "gray3")}
@@ -50,6 +52,9 @@ FRAMES = [
     ("guitar", 0, "guitar1", 0), ("guitar", 1, "guitar2", 0),
     ("coffee", 0, "coffee1", 0), ("coffee", 1, "coffee2", 1),
     ("clean", 0, "clean1", 0), ("clean", 1, "clean2", 0),
+    # v4.3 construction (frames 15..19): hammering (raise / mid / strike) and hauling a plank
+    ("hammer", 0, "hammer1", 0), ("hammer", 1, "hammer2", 0), ("hammer", 2, "hammer3", 1),
+    ("carry", 0, "carryA", 0), ("carry", 1, "carryC", 1),
 ]
 
 
@@ -94,6 +99,13 @@ def draw_head(img, ox, oy, outfit, hair, skin, blink=False):
     elif hat == "mohawk":
         for k in range(4):
             vline(img, ox + 1 + k * 2, oy - 2 - (k % 2), 3, c("red3"))
+    elif hat == "hardhat":
+        rect(img, ox, oy - 1, 8, 3, c("yellow2"))
+        hline(img, ox + 1, oy - 2, 6, c("yellow2"))
+        hline(img, ox + 2, oy - 2, 3, c("yellow3"))
+        hline(img, ox - 1, oy + 2, 10, c("yellow1"))           # brim, longer at the front
+        px(img, ox + 4, oy, c("yellow1"))                      # dent / ridge
+        rect(img, ox, oy + 3, 2, 2, c(hc))
     # face: one dark eye, brow, mouth line; grime on the cheek
     if blink:
         hline(img, ox + 5, oy + 4, 2, c("ol1"))
@@ -139,8 +151,17 @@ def draw_body(img, ox, oy, outfit, skin, pose):
     elif outfit == "raider":
         for k in range(3):
             px(img, ox + 5 + k * 2, oy + 1, c("gray5"))
+    elif outfit == "builder":
+        hline(img, ox + 4, oy + 3, 6, c("gray5"))            # worn reflective stripe
+        vline(img, ox + 6, oy, 3, c("blue2"))                 # shirt under the open vest
     # front arm
-    if pose in ("work1", "work2"):
+    if pose.startswith("hammer"):
+        return _hammer_arm(img, ox, oy, sh, sk, pose, pa, pad, boot)
+    if pose in ("carryA", "carryC"):
+        # both hands up on the plank resting on the shoulder
+        rect(img, ox + 8, oy, 2, 3, sh)
+        px(img, ox + 9, oy - 1, sk)
+    elif pose in ("work1", "work2"):
         ay = oy + (1 if pose == "work1" else 2)
         rect(img, ox + 9, ay, 3, 2, sh)
         px(img, ox + 12, ay, sk)
@@ -156,9 +177,9 @@ def draw_body(img, ox, oy, outfit, skin, pose):
         rect(img, ox + 9, ly + 2, 2, 2, pad)
         hline(img, ox + 9, ly + 4, 3, boot)
         return
-    if pose == "walkA":
+    if pose in ("walkA", "carryA"):
         legs = [(4, pad, 0), (8, pa, 0)]
-    elif pose == "walkC":
+    elif pose in ("walkC", "carryC"):
         legs = [(5, pad, 0), (7, pa, 0)]
     else:
         legs = [(5, pad, 0), (7, pa, 0)]
@@ -169,8 +190,41 @@ def draw_body(img, ox, oy, outfit, skin, pose):
             px(img, ox + lx - 1, ly + 3, boot)
 
 
+def _hammer_arm(img, ox, oy, sh, sk, pose, pa, pad, boot):
+    """front arm swinging a claw hammer at a beam in front of the builder; legs planted"""
+    if pose == "hammer1":          # raised overhead
+        rect(img, ox + 9, oy - 1, 2, 3, sh)
+        px(img, ox + 11, oy - 2, sk)
+        vline(img, ox + 12, oy - 7, 5, c("wood2"))
+        rect(img, ox + 11, oy - 8, 3, 2, c("gray4"))
+        px(img, ox + 13, oy - 8, c("gray6"))
+    elif pose == "hammer2":        # mid swing
+        rect(img, ox + 9, oy, 3, 2, sh)
+        px(img, ox + 12, oy, sk)
+        line(img, ox + 12, oy - 1, ox + 13, oy - 5, c("wood2"))
+        rect(img, ox + 12, oy - 6, 2, 3, c("gray4"))
+    else:                          # strike: hammer head down on the nail
+        rect(img, ox + 9, oy + 2, 3, 2, sh)
+        px(img, ox + 12, oy + 3, sk)
+        hline(img, ox + 11, oy + 4, 3, c("wood2"))
+        rect(img, ox + 12, oy + 5, 2, 2, c("gray4"))
+        px(img, ox + 13, oy + 5, c("gray6"))
+    ly = oy + 6
+    for lx, col in ((4, pad), (8, pa)):
+        rect(img, ox + lx, ly, 2, 3, col)
+        rect(img, ox + lx, ly + 3, 3 if lx > 5 else 2, 1, boot)
+    px(img, ox + 3, ly + 3, boot)
+
+
 def _props(img, pose, skin):
     sk = c(skin)
+    if pose.startswith("carry"):
+        # rough plank over the shoulder, sticking out both sides
+        hline(img, 0, 8, 14, c("wood3"))
+        hline(img, 0, 9, 14, c("wood1"))
+        px(img, 0, 8, c("wood2"))
+        px(img, 13, 9, c("wood0"))
+        return
     if pose.startswith("guitar"):
         # acoustic guitar across the lap, strumming hand moves
         ellipse(img, 5, 13, 6, 5, c("wood2"))
@@ -216,6 +270,10 @@ def dweller_frame(outfit, hair, pose, bob, skin="skin2", blink=False):
     if pose == "sit":
         draw_body(img, 0, 11, outfit, skin, pose)
         draw_head(img, 3, 3, outfit, hair, skin, blink)
+    elif pose.startswith("carry"):
+        draw_body(img, 0, 9, outfit, skin, pose)
+        draw_head(img, 3, 1 + b, outfit, hair, skin, blink)
+        _props(img, pose, skin)
     else:
         draw_body(img, 0, 9, outfit, skin, pose)
         draw_head(img, 3, 1 + b, outfit, hair, skin, blink)
@@ -239,6 +297,8 @@ def portrait(outfit, hair, skin):
         rect(img, 6, 15, 1, 3, c("red3"))
     if outfit == "scav":
         line(img, 3, 15, 10, 19, c("wood1"))
+    if outfit == "builder":
+        hline(img, 2, 18, 16, c("gray5"))
     rect(img, 8, 13, 4, 3, skd)
     # head 11x12
     rect(img, 5, 2, 10, 12, sk)
@@ -274,6 +334,12 @@ def portrait(outfit, hair, skin):
     elif hat == "mohawk":
         for k in range(5):
             vline(img, 5 + k * 2, 0, 3, c("red3"))
+    elif hat == "hardhat":
+        rect(img, 4, 0, 11, 4, c("yellow2"))
+        hline(img, 6, 0, 5, c("yellow3"))
+        hline(img, 3, 4, 15, c("yellow1"))
+        vline(img, 9, 1, 3, c("yellow1"))
+        rect(img, 4, 5, 3, 3, c(hc))
     # face
     if hat != "goggles":
         hline(img, 10, 5, 4, c(hd))

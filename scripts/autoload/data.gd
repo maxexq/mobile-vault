@@ -149,6 +149,13 @@ const ROOMS := {
 }
 const BUILDABLE := ["quarters", "kitchen", "water", "hydroponics", "medical", "refinery", "workshop", "armory", "science", "radio"]
 const ROOM_UPGRADE_COST := [0, 0, 150, 300]   # cost to reach level index
+## v4.3 construction: building / upgrading a room takes time. Progress is in "work seconds"; the site advances
+## at BUILD_IDLE_SPEED with nobody on it, and every crew member assigned to the room adds Crew.build_speed(d).
+const BUILD_BASE_SEC := 40.0
+const BUILD_SEC_PER_SCRAP := 0.35
+const UPGRADE_SEC := [0, 0, 150.0, 300.0]     # work seconds to reach level index
+const BUILD_IDLE_SPEED := 0.5
+const RUSH_SEC_PER_COMPONENT := 15.0          # 1 component skips this many work seconds
 
 # ------------------------------------------------------------------ ITEMS
 const ITEMS := {
@@ -404,7 +411,7 @@ const EVENTS := {
 
 # ------------------------------------------------------------------ NAMES
 const FIRST_NAMES := ["มาร์ค", "คลารา", "บ็อบ", "แซลลี่", "ลีโอ", "อาร์โล", "นิค", "เมย์", "ต้น", "ฝน", "จิน", "ไอซ์", "ปอ", "โจ", "แพร", "เบน", "ซาร่า", "กัส", "ลิลลี่", "ภู", "อิง", "ท็อป", "เรย์", "มีน"]
-const TITLES := {"army": "จ่า", "lab": "ดร.", "chef": "เชฟ", "medic": "พยาบาล", "scav": "", "jumpsuit": "", "raider": ""}
+const TITLES := {"army": "จ่า", "lab": "ดร.", "chef": "เชฟ", "medic": "พยาบาล", "scav": "", "jumpsuit": "", "raider": "", "builder": "ช่าง"}
 const OUTFIT_FOR_STAT := {"str": ["army", "scav"], "int": ["lab", "medic", "jumpsuit"], "agi": ["chef", "scav", "jumpsuit"]}
 const HAIRS := ["brown", "black", "blonde", "red", "gray"]
 

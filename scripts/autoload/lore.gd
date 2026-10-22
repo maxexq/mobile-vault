@@ -84,6 +84,12 @@ const LINES_GENERIC := [
 	"ข้าวตังกัดรองเท้าฉันอีกแล้ว", "นับวันไม่ได้แล้วว่าออกเดินทางมานานเท่าไหร่", "ทุกคนอยู่ครบนะ ดีแล้ว",
 	"ฉันฝันถึงไอศกรีม", "อย่าลืมเช็กยางล้อหลังนะ", "ใครกินขนมปังกรอบชิ้นสุดท้ายไป!",
 ]
+## v4.3: said on a construction site
+const LINES_BUILD := [
+	"ส่งตะปูมาอีกกำ!", "ใครเห็นค้อนฉันบ้าง", "ระวังหัว! คานลงนะ", "เชื่อมตรงนี้อีกนิดเดียว",
+	"อย่าเหยียบไม้แผ่นนั้น มันผุ", "วัดสองครั้ง ตัดครั้งเดียว", "เสร็จก่อนมืดแน่นอน... มั้ง",
+	"ไหล่จะหลุดแล้วเนี่ย", "ใครวางแบบห้องนี้เนี่ย", "รถสั่นทีไร ตะปูหลุดทุกที",
+]
 const LINES_ROOM := {
 	"kitchen": ["ซุปวันนี้...อย่าถามว่าเนื้ออะไร", "เครื่องเทศเหลือแค่เกลือกับความหวัง", "ใครล้างหม้อ? ไม่มีใครเลยเหรอ"],
 	"hydroponics": ["มะเขือเทศลูกแรกของฤดูกาล!", "ต้นไม้ชอบเพลง ฉันเลยร้องให้ฟัง", "รากเน่าอีกแล้ว ต้องเปลี่ยนน้ำ"],
@@ -222,7 +228,7 @@ func bio(d: Dictionary) -> Dictionary:
 		return BIOS[k]
 	var h := absi(hash(str(d.id) + str(d.name)))
 	var outfit := str(d.variant).split("_")[1] if str(d.variant).count("_") >= 2 else "scav"
-	var role: String = {"army": "อดีตทหาร", "lab": "นักวิทยาศาสตร์", "chef": "พ่อครัว", "medic": "ผู้ช่วยแพทย์", "jumpsuit": "ช่างซ่อม", "scav": "นักคุ้ยซาก", "raider": "อดีตโจร"}.get(outfit, "ผู้รอดชีวิต")
+	var role: String = {"army": "อดีตทหาร", "lab": "นักวิทยาศาสตร์", "chef": "พ่อครัว", "medic": "ผู้ช่วยแพทย์", "jumpsuit": "ช่างซ่อม", "scav": "นักคุ้ยซาก", "raider": "อดีตโจร", "builder": "อดีตช่างก่อสร้าง"}.get(outfit, "ผู้รอดชีวิต")
 	return {"role": role,
 		"text": "%s %s\nเป้าหมาย: %s" % [ORIGINS[h % ORIGINS.size()], TRAITS[(h / 7) % TRAITS.size()], GOALS[(h / 53) % GOALS.size()]],
 		"likes": "-", "fear": "-"}
@@ -239,7 +245,9 @@ func pick_line(d: Dictionary, rng: RandomNumberGenerator) -> String:
 	var slot := int(d.get("room", -1))
 	if slot >= 0 and slot < Game.s.rooms.size():
 		var rt := str(Game.s.rooms[slot].type)
-		if LINES_ROOM.has(rt):
+		if Game.is_constructing(slot):
+			pools.append([LINES_BUILD, 6])
+		elif LINES_ROOM.has(rt):
 			pools.append([LINES_ROOM[rt], 3])
 	var wid := str(Game.s.get("weather", ""))
 	if LINES_WEATHER.has(wid):

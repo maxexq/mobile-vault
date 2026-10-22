@@ -207,6 +207,7 @@ func next_generation(carry_ids: Array, tier_id: String = "") -> void:
 		var nd := Game._add_dweller({"name": d.name, "lore": d.get("lore", ""), "variant": d.variant, "str": d.str, "int": d.int, "agi": d.agi,
 			"lvl": maxi(1, int(round(float(d.lvl) * keep)))})
 		nd.traits = d.get("traits", [])
+		nd["role"] = d.get("role", "")
 		var w: Variant = d.get("gear", {}).get("weapon")
 		if w is Dictionary:
 			nd.gear["weapon"] = w

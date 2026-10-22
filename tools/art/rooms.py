@@ -725,3 +725,110 @@ def gen_rooms():
         if lx is not None:
             ceiling_lamp(img, lx)
         add("room_" + k, img)
+    gen_construction()
+
+
+# ------------------------------------------------------------------ v4.3 construction site
+def room_construct():
+    """bare steel frame of a room that is still being put up: raw rusty panels, I-beams, cross bracing,
+    a tarp over the gap in the hull, sandbags, a toolbox and loose planks. Lit by a caged work lamp."""
+    img = base("panel", "gray3", "gray2", floor_kind="metal", wains=None, ceil="gray1")
+    # missing wall panels: dark gaps showing the hull ribs behind
+    for (x, w) in ((22, 12), (44, 9)):
+        rect(img, x, 8, w, 22, c("gray1"))
+        for y in range(10, 30, 5):
+            hline(img, x, y, w, c("gray0"))
+    # vertical I-beams
+    for x in (2, 31, 58):
+        rect(img, x, 4, 4, 42, OL)
+        rect(img, x + 1, 4, 2, 42, c("orange1"))
+        vline(img, x + 1, 4, 42, c("orange2"))
+        for y in range(8, 44, 7):
+            px(img, x + 2, y, c("gray5"))                  # rivets
+    # cross bracing
+    line(img, 6, 8, 30, 30, c("orange1"))
+    line(img, 6, 30, 30, 8, c("orange0"))
+    # horizontal girder
+    rect(img, 0, 30, RW, 3, OL)
+    hline(img, 0, 31, RW, c("orange2"))
+    # torn tarp hanging on the right
+    poly(img, [(36, 6), (56, 6), (55, 22), (49, 26), (44, 21), (37, 24)], c("teal1"), OL)
+    for x in range(39, 55, 4):
+        vline(img, x, 7, 14, c("teal2"))
+    # hazard tape
+    for x in range(0, RW, 6):
+        rect(img, x, 36, 3, 2, c("yellow2"))
+        rect(img, x + 3, 36, 3, 2, OL)
+    # sandbags + toolbox + loose planks on the floor
+    for k, (x, y) in enumerate(((5, 41), (11, 41), (8, 37))):
+        ellipse(img, x, y, 8, 5, c("sand2"), OL)
+        hline(img, x + 2, y + 1, 4, c("sand3"))
+    box(img, 46, 39, 12, 7, "red", 2)
+    hline(img, 49, 38, 6, OL)
+    line(img, 20, 45, 42, 41, c("wood3"))
+    line(img, 20, 46, 42, 42, c("wood1"))
+    line(img, 24, 45, 40, 45, c("wood2"))
+    floor_shadow(img, 5, 16)
+    floor_shadow(img, 46, 12)
+    return img
+
+
+def scaffold_front():
+    """transparent scaffolding drawn over the room while it is worked on (crew stay visible between poles)"""
+    img = new(RW, RH)
+    for x in (4, 59):
+        rect(img, x - 1, 4, 3, 42, OL)
+        vline(img, x, 4, 42, c("gray4"))
+        for y in range(6, 46, 8):
+            hline(img, x - 1, y, 3, c("gray5"))            # clamps
+    for y in (18, 33):
+        rect(img, 2, y, 60, 3, OL)
+        hline(img, 3, y + 1, 58, c("wood3"))
+        for x in range(10, 60, 12):
+            px(img, x, y + 1, c("wood1"))
+    line(img, 5, 21, 58, 33, c("gray3"))
+    # warning sign hanging from the top plank
+    orect(img, 27, 21, 10, 9, c("yellow2"))
+    poly(img, [(32, 22), (35, 28), (29, 28)], OL)
+    px(img, 32, 25, c("yellow2"))
+    return img
+
+
+def fx_weld(f):
+    """welding sparks, 4 frames"""
+    img = new(9, 9)
+    r = random.Random(500 + f)
+    px(img, 4, 4, c("lamp2"))
+    for k in range(5 + f * 2):
+        a = r.uniform(0, math.tau)
+        d = r.uniform(1, 2 + f)
+        col = c("lamp2") if d < 2 else (c("lamp1") if d < 3.5 else c("yellow2"))
+        px(img, 4 + round(math.cos(a) * d), 4 + round(math.sin(a) * d), col)
+    return img
+
+
+def fx_dust(f):
+    """dust puff kicked up by a hammer blow, 3 frames"""
+    img = new(10, 6)
+    r = 2 + f
+    ellipse(img, 5 - r, 5 - r // 2 - 1, r * 2, r + 1, c("sand2"))
+    if f > 0:
+        for x in range(10):
+            for y in range(6):
+                if get(img, x, y)[3] and bayer(x, y) < 0.25 * f:
+                    px(img, x, y, CLEAR)
+    return img
+
+
+def gen_construction():
+    img = room_construct()
+    rng = random.Random(4243)
+    grime(img, rng)
+    light(img, 32, rng)
+    ceiling_lamp(img, 32, "lamp0")
+    add("room_construct", img)
+    add("scaffold_front", scaffold_front())
+    for f in range(4):
+        add(f"fx_weld_{f}", fx_weld(f))
+    for f in range(3):
+        add(f"fx_dust_{f}", fx_dust(f))
