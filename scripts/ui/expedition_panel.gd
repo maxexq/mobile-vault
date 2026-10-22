@@ -288,15 +288,80 @@ func _build_report() -> void:
 	var def := Expedition.site_def(str(report.site))
 	set_title("REPORT / ผลการสำรวจ %s" % def.th)
 	var ok: bool = report.ok
-	var l := UIKit.label("ภารกิจสำเร็จ!" if ok else "ภารกิจล้มเหลว...", UIKit.FS_HUGE, UIKit.C_GREEN if ok else UIKit.C_RED)
-	_list.add_child(l)
-	_list.add_child(UIKit.wrap_label("ได้รับ: " + str(report.loot), UIKit.FS_SMALL, UIKit.C_TEXT))
+	var col := UIKit.C_GREEN if ok else UIKit.C_RED
+	var kind: String = ExpeditionFeed.KIND.get(str(report.site), "ruins")
+	var tex: Texture2D = load("res://assets/exp/exp_%s.png" % kind)
+	var inner := box.custom_minimum_size.x - 30.0
+	var frame := media_frame(tex, col, 2 if inner >= tex.get_size().x * 2.0 + 2.0 else 1)
+	_list.add_child(frame)
+	var dead := (report.dead as Array).size()
+	OutcomeKit.stamp(frame, "MISSION OK" if ok else ("LOST" if dead > 0 else "FAILED"),
+		"ภารกิจสำเร็จ!" if ok else "ภารกิจล้มเหลว...", col, not ok)
+	var odds := UIKit.label("โอกาสสำเร็จตอนออกเดินทาง %d%%" % int(float(report.get("chance", 0.0)) * 100.0), UIKit.FS_SMALL, UIKit.C_DIM)
+	odds.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_list.add_child(odds)
+	var rows := []
+	# what the team carried home; storage that was already full keeps only part of it
+	var gain: Dictionary = report.get("gain", {})
+	var want: Dictionary = report.get("want", {})
+	var keys: Array = want.keys()
+	for k in gain:
+		if not keys.has(k):
+			keys.append(k)
+	for k in keys:
+		var n := int(want.get(k, gain.get(k, 0)))
+		if n == 0:
+			continue
+		var kept := int(gain.get(k, 0))
+		var nm := Data.item_name(str(k))
+		if kept < n:
+			nm += " (คลังเต็ม เก็บได้ %d)" % kept
+		rows.append({"icon": Data.item_icon(str(k)), "name": nm, "n": n})
+	if int(report.get("gear", 0)) > 0:
+		rows.append({"icon": "chest", "name": "อุปกรณ์", "n": int(report.gear)})
+	var crew := []
+	for c in report.get("crew", []):
+		var tags := []
+		if c.dead:
+			tags.append(["KIA", UIKit.C_RED])
+		else:
+			if int(c.hp) != 0:
+				tags.append(["%+d HP" % int(c.hp), UIKit.C_GREEN if int(c.hp) > 0 else UIKit.C_RED])
+			if int(c.inf) > 0:
+				tags.append(["+%d INF" % int(c.inf), UIKit.C_ORANGE])
+			if tags.is_empty():
+				tags.append(["OK", UIKit.C_GREEN])
+		crew.append({"d": c, "tags": tags})
+	var delay := OutcomeKit.lists(_list, rows, crew, col, "ของที่ขนกลับมา", 0.35)
+	# gear names, blueprints, recruits only live in the text line
+	_list.add_child(UIKit.wrap_label("ได้รับ: " + str(report.loot).trim_prefix(", "), UIKit.FS_SMALL, UIKit.C_DIM))
+	var enc: Dictionary = report.get("enc", {})
+	if not enc.is_empty():
+		var rp := UIKit.panel(Color("14100a"), UIKit.C_GOLD)
+		var rv := UIKit.vbox(2)
+		rp.add_child(rv)
+		var eh := UIKit.hbox(4)
+		eh.add_child(UIKit.icon_rect("signal", 16))
+		eh.add_child(UIKit.header("RADIO", "จุดพิเศษ: " + str(Encounter.def(str(enc.id)).th), UIKit.C_GOLD))
+		rv.add_child(eh)
+		rv.add_child(UIKit.wrap_label("\"%s\"" % str(enc.text), UIKit.FS_SMALL, UIKit.C_TEXT))
+		_list.add_child(rp)
+		OutcomeKit.fade_in(rp, delay)
+		delay += 0.1
 	for line in report.lines:
+		if not enc.is_empty() and str(line).begins_with("จุดพิเศษ"):
+			continue
+		if str(line).contains("บาดเจ็บ (HP") or str(line).contains("ติดเชื้อ!"):
+			continue   # shown on the crew chips
 		_list.add_child(UIKit.wrap_label("• " + str(line), UIKit.FS_SMALL, UIKit.C_ORANGE))
-	if not (report.dead as Array).is_empty():
+	if dead > 0:
 		_list.add_child(UIKit.wrap_label("ชื่อของพวกเขาถูกสลักไว้บนกำแพงอนุสรณ์ในสมุดบันทึก", UIKit.FS_SMALL, UIKit.C_DIM))
-	var ok_b := UIKit.button("ตกลง", "green", "play")
+	var ok_b := UIKit.button("ตกลง", "green" if ok else "red", "play")
+	ok_b.custom_minimum_size.y = 32
 	ok_b.pressed.connect(func():
 		report = {}
 		close())
 	_list.add_child(ok_b)
+	OutcomeKit.fade_in(ok_b, delay)
+	if not ok:
+		get_tree().call_group("shake", "shake", 4.0)

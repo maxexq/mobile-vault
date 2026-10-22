@@ -150,7 +150,7 @@ func make_list(sep: int = 4) -> VBoxContainer:
 	return l
 
 
-## illustration (160x80 pixel art) + scrolling text column for event-style terminals.
+## illustration (pixel art) + scrolling text column for event-style terminals.
 ## Landscape screens get a wider window with the art at x2 beside the text; otherwise the art sits on top
 ## of the text (x2 when it fits) so the text column always spans the window and Thai lines can wrap.
 func media_layout(tex: Texture2D, line: Color) -> VBoxContainer:
@@ -160,7 +160,8 @@ func media_layout(tex: Texture2D, line: Color) -> VBoxContainer:
 	_layout()
 	var inner := box.custom_minimum_size.x - 18.0
 	# keep at least ~220 px for the text column beside the art
-	var k := 2 if (inner - 330.0 >= 220.0 if side else inner >= 322.0) else 1
+	var w := tex.get_size().x
+	var k := 2 if (inner - w * 2.0 - 10.0 >= 220.0 if side else inner >= w * 2.0 + 2.0) else 1
 	var sc := UIKit.scroll()
 	var v := UIKit.vbox(4)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -181,7 +182,7 @@ func media_layout(tex: Texture2D, line: Color) -> VBoxContainer:
 	return v
 
 
-## 160x80 illustration in a thin frame at integer scale k
+## illustration (event art is 160x80) in a thin frame at integer scale k
 static func media_frame(tex: Texture2D, line: Color, k: int) -> PanelContainer:
 	var frame := UIKit.panel(Color("000000"), line)
 	frame.get_theme_stylebox("panel").set_content_margin_all(1)
@@ -190,7 +191,7 @@ static func media_frame(tex: Texture2D, line: Color, k: int) -> PanelContainer:
 	img.texture = tex
 	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	img.stretch_mode = TextureRect.STRETCH_SCALE
-	img.custom_minimum_size = Vector2(160 * k, 80 * k)
+	img.custom_minimum_size = tex.get_size() * k
 	img.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(img)

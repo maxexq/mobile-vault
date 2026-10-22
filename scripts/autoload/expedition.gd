@@ -254,6 +254,13 @@ func finish(offline: bool) -> Dictionary:
 	var ok := rng.randf() < chance
 	var ratio := team_power(members, sup) / danger_need(id)
 	var rep := {"site": id, "ok": ok, "chance": chance, "lines": [], "dead": [], "loot": ""}
+	# before-state so the report screen can show exact gains and who got hurt
+	var res0: Dictionary = (Game.s.res as Dictionary).duplicate()
+	var items0: Dictionary = (Game.s.items as Dictionary).duplicate()
+	var gear0: int = Loot.stash().size()
+	var crew0 := []
+	for d in members:
+		crew0.append({"d": d, "hp": float(d.hp), "inf": float(d.get("infection", 0.0))})
 	# ---- casualties
 	for d in members:
 		d.away_until = 0.0
@@ -321,8 +328,32 @@ func finish(offline: bool) -> Dictionary:
 			got += (", ผู้รอดชีวิต " + nd.name) if not nd.is_empty() else ", คนแปลกหน้าฝีมือดีรอตรวจที่ประตู"
 		if loot.has("lore") and Lore.unlock(str(loot.lore)):
 			got += ", บันทึกใหม่"
+	var want := rew.duplicate()
+	if str(Encounter.state().get("st", "")) == "done" and members.size() > rep.dead.size():
+		var eb: Dictionary = Encounter.state().get("bonus", {})
+		for k in eb:
+			if not str(k).begins_with("_"):
+				want[k] = int(want.get(k, 0)) + int(eb[k])
+	rep["want"] = want
 	got += Encounter.apply(rep, members.size() - rep.dead.size())
 	rep.loot = got
+	var gain := {}
+	for k in Game.s.res:
+		var dv := int(round(float(Game.s.res[k]) - float(res0.get(k, 0.0))))
+		if dv != 0:
+			gain[k] = dv
+	for k in Game.s.items:
+		var dv := int(Game.s.items[k]) - int(items0.get(k, 0))
+		if dv != 0:
+			gain[k] = dv
+	rep["gain"] = gain
+	rep["gear"] = Loot.stash().size() - gear0
+	var crew := []
+	for c in crew0:
+		var d: Dictionary = c.d
+		crew.append({"name": str(d.name), "variant": str(d.variant), "dead": rep.dead.has(d.name),
+			"hp": int(round(float(d.hp) - float(c.hp))), "inf": int(round(float(d.get("infection", 0.0)) - float(c.inf)))})
+	rep["crew"] = crew
 	if SITES.has(id):
 		mark_done(id)
 		Game.s["at_site"] = ""
