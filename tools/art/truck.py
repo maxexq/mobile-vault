@@ -603,13 +603,8 @@ def gen_mods():
 
 
 def gen_truck():
-    for floors in (4, 5, 6):
-        shell = weather(gen_shell(floors), floors)
-        roof = weather(gen_roof_props(floors), 99)
-        shell.paste(roof, (0, 0), roof)
-        add(f"truck_shell_{floors}", shell)
-        if floors == 4:
-            add("truck_shell", shell.copy())
+    from . import vehicles
+    vehicles.gen_vehicles()
     for i, f in enumerate(solar_frames()):
         add(f"solar_{i}", f)
     for i, f in enumerate(wheel_frames()):

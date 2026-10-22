@@ -10,8 +10,9 @@ const VARIANTS_JSON := "res://assets/atlas/dweller_variants.json"
 ## frame layout of every dweller sheet (14x20 px chibi frames) – must match tools/art/chars.py
 const DW_W := 14
 const DW_H := 20
-const DW_FRAMES := {"idle": [0, 1], "walk": [2, 3, 4, 5], "sit": [6], "work": [7, 8]}
-const DW_FPS := {"idle": 2.0, "walk": 8.0, "sit": 1.0, "work": 4.0}
+const DW_FRAMES := {"idle": [0, 1], "walk": [2, 3, 4, 5], "sit": [6], "work": [7, 8],
+	"guitar": [9, 10], "coffee": [11, 12], "clean": [13, 14]}
+const DW_FPS := {"idle": 2.0, "walk": 8.0, "sit": 1.0, "work": 4.0, "guitar": 5.0, "coffee": 1.2, "clean": 3.0}
 
 var sheet: Texture2D
 var regions: Dictionary = {}
@@ -82,16 +83,25 @@ func dweller_frames(variant: String) -> SpriteFrames:
 	return sf
 
 
-func wheel_frames() -> SpriteFrames:
-	if _frames_cache.has("_wheel"):
-		return _frames_cache["_wheel"]
+func wheel_frames(offroad: bool = false) -> SpriteFrames:
+	return _loop_frames("bwheel" if offroad else "wheel", 4, 12.0)
+
+
+func rail_wheel_frames() -> SpriteFrames:
+	return _loop_frames("rwheel", 4, 12.0)
+
+
+func _loop_frames(prefix: String, n: int, fps: float) -> SpriteFrames:
+	var key := "_" + prefix
+	if _frames_cache.has(key):
+		return _frames_cache[key]
 	var sf := SpriteFrames.new()
 	if not sf.has_animation("default"):
 		sf.add_animation("default")
-	sf.set_animation_speed("default", 12.0)
-	for i in 4:
-		sf.add_frame("default", tex("wheel_%d" % i))
-	_frames_cache["_wheel"] = sf
+	sf.set_animation_speed("default", fps)
+	for i in n:
+		sf.add_frame("default", tex("%s_%d" % [prefix, i]))
+	_frames_cache[key] = sf
 	return sf
 
 

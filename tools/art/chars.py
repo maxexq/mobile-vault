@@ -46,6 +46,10 @@ FRAMES = [
     ("walk", 0, "walkA", 0), ("walk", 1, "walkB", 1), ("walk", 2, "walkC", 0), ("walk", 3, "walkB", 1),
     ("sit", 0, "sit", 0),
     ("work", 0, "work1", 0), ("work", 1, "work2", 1),
+    # micro-animations while off duty (frames 9..14)
+    ("guitar", 0, "guitar1", 0), ("guitar", 1, "guitar2", 0),
+    ("coffee", 0, "coffee1", 0), ("coffee", 1, "coffee2", 1),
+    ("clean", 0, "clean1", 0), ("clean", 1, "clean2", 0),
 ]
 
 
@@ -165,9 +169,50 @@ def draw_body(img, ox, oy, outfit, skin, pose):
             px(img, ox + lx - 1, ly + 3, boot)
 
 
+def _props(img, pose, skin):
+    sk = c(skin)
+    if pose.startswith("guitar"):
+        # acoustic guitar across the lap, strumming hand moves
+        ellipse(img, 5, 13, 6, 5, c("wood2"))
+        px(img, 7, 15, c("ol0"))
+        line(img, 10, 14, 13, 11, c("wood1"))
+        px(img, 13, 10, c("wood3"))
+        hy = 13 if pose == "guitar1" else 15
+        px(img, 6, hy, sk)
+        px(img, 12, 12, sk)
+    elif pose.startswith("coffee"):
+        my = 9 if pose == "coffee1" else 10
+        rect(img, 10, my, 3, 3, c("cream2"))
+        px(img, 13, my + 1, c("cream1"))
+        px(img, 10, my - 1, sk)
+        if pose == "coffee1":
+            px(img, 11, my - 2, c("gray5"))
+            px(img, 12, my - 4, c("gray4"))
+    elif pose.startswith("clean"):
+        # rifle on the knees, rag moving along the barrel
+        hline(img, 2, 15, 12, c("gray2"))
+        rect(img, 2, 15, 3, 2, c("wood1"))
+        px(img, 13, 15, c("gray4"))
+        rx = 7 if pose == "clean1" else 10
+        rect(img, rx, 14, 2, 2, c("cream2"))
+        px(img, rx, 13, sk)
+
+
 def dweller_frame(outfit, hair, pose, bob, skin="skin2", blink=False):
     img = new(FW, FH)
     b = 1 if bob else 0
+    if pose[:-1] in ("guitar", "clean"):
+        draw_body(img, 0, 11, outfit, skin, "sit")
+        draw_head(img, 3, 3, outfit, hair, skin, blink)
+        _props(img, pose, skin)
+        img = auto_shade(img, 0.18, 0.3)
+        return outline_alpha(img)
+    if pose[:-1] == "coffee":
+        draw_body(img, 0, 9, outfit, skin, "stand")
+        draw_head(img, 3, 1 + b, outfit, hair, skin, blink)
+        _props(img, pose, skin)
+        img = auto_shade(img, 0.18, 0.3)
+        return outline_alpha(img)
     if pose == "sit":
         draw_body(img, 0, 11, outfit, skin, pose)
         draw_head(img, 3, 3, outfit, hair, skin, blink)
@@ -255,6 +300,83 @@ def gen_dwellers():
             add("pt_" + name, portrait(outfit, hair, skin))
             variants.append(name)
     return variants
+
+
+# ================================================================== PETS (walk0, walk1, sit, sleep)
+def _pet_dog(f):
+    i = new(16, 11)
+    body_y = 4 if f != 3 else 6
+    if f == 3:   # curled up asleep
+        ellipse(i, 3, 5, 11, 6, c("wood3"))
+        ellipse(i, 2, 5, 5, 5, c("wood3"))
+        px(i, 3, 7, OL)
+        line(i, 12, 9, 14, 8, c("wood2"))
+        return outline_alpha(auto_shade(i, 0.15, 0.3))
+    rect(i, 4, body_y, 9, 4, c("wood3"))
+    ellipse(i, 10, body_y - 3, 6, 6, c("wood3"))       # head (faces right)
+    px(i, 11, body_y - 4, c("wood1"))
+    px(i, 14, body_y - 4, c("wood1"))
+    px(i, 13, body_y - 1, OL)
+    px(i, 15, body_y, OL)
+    px(i, 14, body_y + 1, c("red3"))
+    line(i, 4, body_y, 1, body_y - 3 + (f % 2), c("wood2"))
+    if f == 2:
+        rect(i, 4, body_y + 3, 3, 3, c("wood2"))
+        rect(i, 10, body_y + 4, 2, 3, c("wood2"))
+    else:
+        for k, x in enumerate((5, 7, 10, 12)):
+            vline(i, x + ((f + k) % 2), body_y + 4, 3, c("wood2"))
+    return outline_alpha(auto_shade(i, 0.15, 0.3))
+
+
+def _pet_cat(f):
+    i = new(14, 11)
+    if f == 3:
+        ellipse(i, 2, 5, 10, 6, c("orange2"))
+        ellipse(i, 8, 4, 5, 5, c("orange2"))
+        line(i, 2, 9, 6, 10, c("orange1"))
+        return outline_alpha(auto_shade(i, 0.15, 0.3))
+    y = 5 if f != 2 else 6
+    rect(i, 3, y, 7, 3, c("orange2"))
+    for x in (4, 7):
+        px(i, x, y + 1, c("orange1"))
+    ellipse(i, 8, y - 4, 5, 5, c("orange2"))
+    px(i, 8, y - 5, c("orange2"))
+    px(i, 12, y - 5, c("orange2"))
+    px(i, 11, y - 2, c("toxic3"))
+    line(i, 3, y, 1, y - 4 + (f % 2), c("orange2"))
+    if f == 2:
+        rect(i, 3, y + 2, 3, 2, c("orange1"))
+    else:
+        for k, x in enumerate((4, 6, 8, 9)):
+            vline(i, x, y + 3, 2 + ((f + k) % 2), c("orange1"))
+    return outline_alpha(auto_shade(i, 0.15, 0.3))
+
+
+def _pet_hen(f):
+    i = new(11, 11)
+    y = 3 if f != 3 else 4
+    ellipse(i, 1, y + 1, 8, 6, c("cream3"))
+    ellipse(i, 6, y - 2, 4, 4, c("cream3"))
+    ellipse(i, 3, y - 3, 4, 4, c("cream3"))          # second head
+    px(i, 5, y - 4, c("red3"))
+    px(i, 8, y - 3, c("red3"))
+    px(i, 9, y - 1, c("yellow2"))
+    px(i, 6, y - 2, c("yellow2"))
+    px(i, 8, y - 1, OL)
+    px(i, 4, y - 2, OL)
+    if f == 3:
+        rect(i, 2, y + 6, 6, 1, c("cream2"))
+    else:
+        for k, x in enumerate((3, 6)):
+            vline(i, x + ((f + k) % 2 if f < 2 else 0), y + 7, 2, c("yellow1"))
+    return outline_alpha(auto_shade(i, 0.15, 0.3))
+
+
+def gen_pets():
+    for name, fn in (("dog", _pet_dog), ("cat", _pet_cat), ("hen", _pet_hen)):
+        for f in range(4):
+            add(f"pet_{name}_{f}", fn(f))
 
 
 # ================================================================== ENEMIES (face LEFT, towards the truck)

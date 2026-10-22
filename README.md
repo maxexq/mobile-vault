@@ -55,7 +55,7 @@ Save data: browser **localStorage** (key `mobile_vault_save_v1`), auto-saved eve
 | Crafting | Each room has recipes with pixel progress bars (stimpacks, RadAway, weapons, armor, ammo, meals, seeds, scrap refining, hull repair, SOS broadcast). |
 | Dwellers | Assign / move / remove, equip gear, use stimpack / RadAway / antibiotics, level up from work (+stat). Each survivor has **traits** and a **skill tree** (see 4d). |
 | Travel & biomes | 6 biomes: Industrial Ruins → Desert → Overgrown Forest → **Toxic Bayou** → Frozen Highway → **Signal Metropolis** → loop (lap +1 = harder, richer). Driving salvages scrap. Each biome ends at a **checkpoint** (warlord + Vault level). |
-| Mobile Vault upgrade | Lv.1–6. Costs scrap: opens more room slots in the 4-storey truck (**3 rooms per floor**, 12 slots; MK-II/III chassis = 5/6 floors, 15/18 slots), bigger storage, advanced rooms, next biome, full hull repair. |
+| Mobile Vault upgrade | Lv.1–6. Costs scrap: opens more room slots (**3 rooms per floor**; van 2 floors / 6 rooms → bus 3 / 9 → 18-wheel rig 4 / 12 → armoured train 4 / 12, plus up to 2 trailers / wagons of 6 rooms each), bigger storage, advanced rooms, next biome, full hull repair. |
 | Weather | Clear / overcast / rain / storm (lightning + shake) / sandstorm / snow / fog / **acid rain** (eats hull unless plated) / **ashfall**. Affects solar, crops, rain water, speed, panel dirt. |
 | Day/night | 6-minute day; CanvasModulate colour grade; rooms + headlight glow at night; solar panel tilts to follow the sun. |
 | Random events | 19 events (new: sealed bunker, signal tower, stray dog "ข้าวตัง", ember cultists, gas station, gambler, HELIOS plane wreck, acid flood, rogue robot). Choices: fight, flee, bargain, ram, shelter, **stat checks** (INT/AGI vs difficulty), **gamble**, **adopt a pet**… Some choices unlock logbook records. |
@@ -90,8 +90,28 @@ Files: `scripts/autoload/combat.gd` (simulation), `scripts/autoload/loot.gd` (it
 | Internal & external mods | Garage (Mods button). **Exterior, visible on the truck model**: spiked ram (3 levels), roof auto-turret (3), spare fuel drums (stacked on the front wall), snow tracks (replace the rear wheels, animated), armour plates (cab → lower floors → every floor), solar hoods, lead radiation skirt, rain catcher. **Interior**: insulation, boiler heater (chimney on the roof), air filter, storage racks, repair bay, water recycler. Some need blueprints. `scripts/autoload/mods.gd`, `scripts/ui/garage_panel.gd`. |
 | Fuel & refinery | New resource: fuel (cap grows with fuel drums). Produced by the new **Fuel Refinery** room, used for heating and the backup generator. New **Workshop** room (blueprint) salvages parts and patches the hull. |
 | Expeditions | 12 landmarks (2 per biome: hospital, military depot, dune gas stop, satellite array, ranger tower, research lab, chemical plant, stilt village, polar station, mine, mall, HELIOS spire) + "scavenge the area" anywhere. The truck **parks**, the landmark rolls in beside it, the chosen 1–3 survivors climb down from the rear deck and **walk into the building**; they walk back out when the timer ends (idle, works offline). Pack food/water/stimpacks/ammo/antibiotics; odds depend on team power vs danger. Rewards: blueprints, rare gear, recruits, lore. Risks: injury, **infection** (needs antibiotics / a medical room), death (names go on the memorial wall in the logbook). `scripts/autoload/expedition.gd`, `scripts/world/expedition_view.gd`. |
-| The Next Generation | If the hull sits at 0 % for 2 minutes the truck is wrecked for good; you can also retire it voluntarily after beating the first warlord. Bank **legacy points**, buy permanent perks (head start, efficiency, quick frame, early rooms, veterans, training, skill spark, **chassis MK-II / MK-III** = 5 / 6 floors), pick which high-level survivors escape (keep traits, weapon and part of their level), carry all blueprints and part of the scrap/components, and start again from the first biome in a bigger truck. `scripts/autoload/meta.gd`, `scripts/ui/nextgen_panel.gd`. |
-| Tall trucks | A 5/6-floor truck is stacked upwards (cab, wheels and road line never move); drag down to look up at the roof when the screen is short. |
+| The Next Generation | If the hull sits at 0 % for 2 minutes the truck is wrecked for good; you can also retire it voluntarily after beating the first warlord. Bank **legacy points**, buy permanent perks (head start, efficiency, quick frame, early rooms, veterans, training, skill spark, **vehicle research**: bus → rig → armoured train, each needs a blueprint), pick which high-level survivors escape (keep traits, weapon and part of their level), carry all blueprints and part of the scrap/components, and start again from the first biome in a bigger vehicle. See 4e for the story screens. `scripts/autoload/meta.gd`, `scripts/ui/nextgen_panel.gd`. |
+| Tall vehicles | Extra floors stack upwards (cab, wheels and road line never move); drag down to look up at the roof when the screen is short. |
+
+## 4e. v4 — vehicle ladder, synergy, weight, morale, mutants, juice
+
+| System | How it works |
+|---|---|
+| Vehicle ladder | A new game starts in a **van** (2 floors × 3 rooms). Prestige research unlocks the **armoured bus** (3 floors), the **18-wheel rig** (4 floors) and the **armoured train** (4 floors, runs on rails laid over the road, rail wheels). Old saves become the rig (or the train if they had the MK-III chassis), rooms keep their position. `Data.VEHICLES`, `Game.tier()`. |
+| Trailers | From Vault Lv.5 with the *trailer* blueprint (polar station): hitch up to **2 trailers** (wagons for the train), each 2 floors × 3 rooms, bought between runs in the garage. They add weight and power draw. `Mods.add_trailer()`. |
+| Room synergy | Neighbours on the same vehicle unit matter: engine next to quarters = poor sleep (−10 happiness), engine + workshop = +15 % output and faster repairs, hydroponics + water = +15 %, kitchen + refinery = fumes (−10 %), radio next to the engine = static… Build mode colours each empty slot green / red with a preview, rooms show +/− markers, the close-up lists every effect. `scripts/autoload/synergy.gd`. |
+| Power & weight | Weight = base vehicle + trailers + rooms + levels + mods + cargo + crew. Engine capacity = vehicle engine + engine room + **engine tune** (int. mod), **suspension** and **off-road wheels** (ext. mods, visible shocks + chunky tyres). Above 80 % load the vehicle slows and burns more fuel; the garage shows a weight bar. `scripts/autoload/haul.gd`. |
+| Morale | New traits (afraid of the dark…). Low happiness → the survivor **goes on strike** (sits with a protest sign, no work). Left too long under 10 % they **steal food, water, scrap, parts and a stimpack and leave**. Pets, good synergy and full larders keep people happy; crowding, darkness and noisy neighbours don't. |
+| Pets | Event pets live on the vehicle and roam every room: the dog ข้าวตัง, the cat ส้มจี๊ด (cuts food waste) and the mutant hen ไข่ดาว (lays food). Up to 2 pets, +happiness each. |
+| Blackouts | Empty battery or a random short circuit blacks out a room: it goes pitch dark and only the crew's **head-torches** sweep around (additive pixel light cones); production drops until the mechanic fixes it. |
+| Scavenging squads | Expeditions now need a team of **2–3**; new site: the dead **supermarket** (engine-tune blueprint). |
+| Mutants & bosses | Further biomes mix in mutants: runners, **acid spitters** (corrode the hull: defence ×0.6), **bloaters** (explode), **screechers** that fly and peck the **solar panel**, armoured brutes. Every 10th wave rotates through **8 bosses** (Acid Matron, Bloat King, Sky Harpy, Bone Hulk, Drill Worm, Screamer, Necro Priest, Mech Spider) with mechanics: enrage below 30 %, armour above 60 %, summon, revive, burrow / erupt, acid, solar dive. The new **flak cannon** turret prioritises flyers. |
+| Boss bar | A big segmented HP bar slams in under the HUD: name, level, mechanic tags, a white damage trail, phase markers at 60 % / 30 %, armour plating, shake + flash on heavy hits, ENRAGED / UNDERGROUND states. |
+| Gore & juice | Blood sprays, gibs, scrap shards and brass casings fall onto the road and slide away with the road speed, splats, explosion frames, screen shake; road walkers get run over by the ram. |
+| Micro-animations | Off-duty crew strum a guitar, sip coffee or clean their rifle. |
+| Camera | Zoom button / mouse wheel / pinch: **auto** (goes wide during boss fights or when trailers are hitched), **wide**, **normal** — still whole-pixel scaling (the world viewport grows instead of being shrunk). |
+| Cutaway / X-ray | The eye button toggles the closed armoured shell vs the cut-away interior; with the shell closed, the first tap on the vehicle peeks inside for a few seconds. |
+| Prestige stories | Wreck → "the hull is gone, but the SOS got out", retire → "the blueprints reach the command centre": an illustrated, typewritten story screen before banking **genetic research points**. |
 
 ## 4c. True pixel art pipeline
 
@@ -116,8 +136,12 @@ scripts/
   world/chatter.gd            speech bubbles above survivors
   main.gd                     camera fit, swipe, tap, room close-up zoom + blur, build placement, floating numbers, shake
   world/background.gd         Parallax2D layers per biome (sky, clouds, far, mid, near, road) + cross-fade
-  world/vehicle.gd            MAMMOTH-7 4-storey truck, 8 room slots (2x4), 3 wheels, dust/mud, smoke, solar tilt frames, headlight, body bob
-  world/room_view.gd          room interior, level pips, craft strip, build highlight, night glow
+  world/vehicle.gd            van / bus / rig / train shells + trailers, exterior shell (X-ray), wheels per tier, mods, pets, dust/mud, smoke, solar tilt frames, headlight, body bob
+  world/room_view.gd          room interior, level pips, synergy markers, craft strip, build highlight, night glow, blackout + head-torches
+  world/pet_actor.gd          roaming pets
+  autoload/haul.gd            weight / engine capacity / speed / fuel burn
+  autoload/synergy.gd         room adjacency rules
+  ui/boss_bar.gd              boss HP bar
   world/dweller_actor.gd      idle / walk / sit / work state machine (AnimatedSprite2D)
   world/weather_fx.gd         rain, snow, sand, fog, leaves, lightning, haze, day/night CanvasModulate
   world/fx.gd                 particle factory: GPUParticles2D (default) / CPUParticles2D (Low FX)

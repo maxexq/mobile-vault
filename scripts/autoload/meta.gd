@@ -2,7 +2,9 @@ extends Node
 ## Prestige / meta-progression: "The Next Generation".
 ## When the truck is wrecked (hull 0 for 2 minutes) or the player retires it after the first warlord,
 ## part of the crew, resources and every blueprint escape to build a new, bigger vehicle.
-## Legacy points buy permanent perks; blueprints unlock the MK-II / MK-III chassis (5 / 6 floors).
+## Genetic-research points (stored as "legacy") buy permanent perks; vehicle blueprints + research unlock the
+## next vehicle tier: camper van -> armoured bus -> 18-wheeler rig -> armoured train. Every rebirth is told as a
+## short story (a radio SOS from the wreck, handing the blueprints to Command...).
 
 signal wrecked
 signal generation_started(gen: int)
@@ -16,10 +18,21 @@ const PERKS := {
 	"veterans": {"th": "ทหารผ่านศึก", "en": "VETERANS", "icon": "people", "max": 2, "cost": [6, 12], "desc": "พาผู้รอดชีวิตหนีได้เพิ่ม +1 คน/ระดับ"},
 	"training": {"th": "ถ่ายทอดประสบการณ์", "en": "TRAINING", "icon": "xp", "max": 2, "cost": [6, 12], "desc": "ผู้รอดชีวิตที่พามาเก็บเลเวลได้ 50% → 70% → 90%"},
 	"skill_spark": {"th": "ประกายแห่งทักษะ", "en": "SKILL SPARK", "icon": "int", "max": 2, "cost": [7, 14], "desc": "ทุกคนได้แต้มสกิล +2 ต่อระดับ"},
-	"chassis2": {"th": "แชสซี MK-II", "en": "CHASSIS MK-II", "icon": "hull", "max": 1, "cost": [12], "bp": "bp_chassis2", "desc": "รถคันใหม่สูง 5 ชั้น (15 ห้อง) · ต้องมีพิมพ์เขียว"},
-	"chassis3": {"th": "แชสซี MK-III", "en": "CHASSIS MK-III", "icon": "hull", "max": 1, "cost": [25], "bp": "bp_chassis3", "req": "chassis2", "desc": "รถคันใหม่สูง 6 ชั้น (18 ห้อง) · ต้องมีพิมพ์เขียว"},
+	"tier_bus": {"th": "รถบัสหุ้มเหล็ก", "en": "ARMOURED BUS", "icon": "hull", "max": 1, "cost": [8], "bp": "bp_bus", "desc": "รุ่นถัดไปออกเดินทางด้วยรถบัส 3 ชั้น (9 ห้อง) · ต้องมีพิมพ์เขียว"},
+	"tier_rig": {"th": "รถพ่วง 18 ล้อ", "en": "18-WHEELER RIG", "icon": "hull", "max": 1, "cost": [16], "bp": "bp_rig", "req": "tier_bus", "desc": "รถบรรทุก 4 ชั้น (12 ห้อง) เครื่องแรง · ต้องมีพิมพ์เขียว"},
+	"tier_train": {"th": "รถไฟหุ้มเกราะ", "en": "ARMOURED TRAIN", "icon": "hull", "max": 1, "cost": [30], "bp": "bp_train", "req": "tier_rig", "desc": "หัวรถจักรหุ้มเกราะ 4 ชั้น วิ่งบนราง ลากโบกี้ได้ · ต้องมีพิมพ์เขียว"},
 }
-const VEHICLE_NAMES := ["MAMMOTH-7", "MAMMOTH-8", "BEHEMOTH-1", "BEHEMOTH-2", "LEVIATHAN", "LEVIATHAN-II", "ARK", "ARK-II"]
+const TIER_PERK := {"bus": "tier_bus", "rig": "tier_rig", "train": "tier_train"}
+const RESEARCH_TH := "แต้มวิจัยพันธุกรรม"
+## rebirth stories: picked by how the run ended
+const STORIES := {
+	"wreck": {"title": "สัญญาณสุดท้าย", "en": "LAST TRANSMISSION", "img": "story_sos",
+		"text": "%s พังยับเยินกลางถนน แต่ก่อนไฟจะดับ วิทยุยังส่งสัญญาณขอความช่วยเหลือออกไปได้ทัน... ฮ.กู้ภัยของศูนย์บัญชาการลงจอดตอนรุ่งสาง รับผู้รอดชีวิตและพิมพ์เขียวทุกแผ่นกลับไปที่ฐาน"},
+	"retire": {"title": "ส่งมอบพิมพ์เขียว", "en": "BLUEPRINT HANDOVER", "img": "story_command",
+		"text": "%s พาทุกคนมาถึงศูนย์บัญชาการได้สำเร็จ ข้อมูลเส้นทาง ตัวอย่างพันธุกรรมของสิ่งกลายพันธุ์ และพิมพ์เขียวทั้งหมดถูกส่งมอบให้ทีมวิจัย ช่างเริ่มประกอบพาหนะคันใหม่ที่ใหญ่กว่าเดิมทันที"},
+	"lap": {"title": "เกินขอบแผนที่", "en": "BEYOND THE MAP", "img": "story_command",
+		"text": "%s วิ่งครบเส้นทางทั้งสายและกลับมาพร้อมแผนที่ที่ไม่มีใครเคยเห็น ศูนย์บัญชาการตั้งชื่อเส้นทางนี้ตามชื่อรถของคุณ"},
+}
 
 
 func m() -> Dictionary:
@@ -35,7 +48,21 @@ func generation() -> int:
 
 
 func vehicle_name() -> String:
-	return VEHICLE_NAMES[clampi(generation() - 1, 0, VEHICLE_NAMES.size() - 1)]
+	var names: Array = Game.vehicle_def().get("names", ["MAMMOTH-7"])
+	return str(names[(generation() - 1) % names.size()]) if not Game.s.is_empty() else "MAMMOTH-7"
+
+
+## best vehicle tier the research has unlocked (the next generation builds this)
+func best_tier() -> String:
+	var best := "van"
+	for t in Data.TIER_ORDER:
+		if t == "van" or perk(TIER_PERK[t]) > 0:
+			best = t
+	return best
+
+
+func tier_unlocked(t: String) -> bool:
+	return t == "van" or perk(TIER_PERK.get(t, "")) > 0
 
 
 func perk(id: String) -> int:
@@ -44,16 +71,8 @@ func perk(id: String) -> int:
 	return int(m().get("perks", {}).get(id, 0))
 
 
-func chassis() -> int:
-	if perk("chassis3") > 0:
-		return 3
-	if perk("chassis2") > 0:
-		return 2
-	return 1
-
-
 func floors() -> int:
-	return 3 + int(Game.s.get("chassis", 1)) if not Game.s.is_empty() else 4
+	return Game.floors() if not Game.s.is_empty() else 4
 
 
 func has_blueprint(bp: String) -> bool:
@@ -153,8 +172,16 @@ func bank_legacy() -> int:
 	return e
 
 
-## build the next vehicle. carry_ids = survivors who escape
-func next_generation(carry_ids: Array) -> void:
+func story_key() -> String:
+	if is_wrecked():
+		return "wreck"
+	if int(Game.s.get("lap", 0)) > 0:
+		return "lap"
+	return "retire"
+
+
+## build the next vehicle. carry_ids = survivors who escape, tier_id = vehicle to build ("" = best unlocked)
+func next_generation(carry_ids: Array, tier_id: String = "") -> void:
 	var old := Game.s
 	var meta: Dictionary = (old.meta as Dictionary).duplicate(true)
 	meta.gen = int(meta.gen) + 1
@@ -167,8 +194,8 @@ func next_generation(carry_ids: Array) -> void:
 	var comps := int(float(old.items.get("components", 0)) * carry_res_ratio())
 	var memorial: Array = old.get("memorial", [])
 	# --- fresh state with the meta carried over
-	Game.s = {"meta": meta, "chassis": 1}
-	Game.s.chassis = chassis()
+	var tid := tier_id if tier_id != "" and tier_unlocked(tier_id) else best_tier()
+	Game.s = {"meta": meta, "tier": tid}
 	Game.setup_default_state(true)
 	Game.s.meta = meta
 	Game.s.memorial = memorial

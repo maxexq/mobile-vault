@@ -25,6 +25,7 @@ const TRAITS := {
 	"lucky":      {"th": "ดวงดี", "en": "LUCKY", "icon": "xp", "rooms": [], "aff": 0.0, "desc": "สำรวจสำเร็จ +10% · ดรอปของ +10%"},
 	"cheerful":   {"th": "ร่าเริง", "en": "CHEERFUL", "icon": "happy", "rooms": [], "aff": 0.0, "desc": "เพื่อนร่วมห้องมีความสุข +10 และผลิต +5%"},
 	"grumpy":     {"th": "ขี้บ่น", "en": "GRUMPY", "icon": "sad", "rooms": [], "aff": 0.0, "bad": true, "desc": "ผลิตเอง +15% แต่เพื่อนร่วมห้องความสุข -8"},
+	"afraid_dark": {"th": "กลัวความมืด", "en": "AFRAID OF DARK", "icon": "moon", "rooms": [], "aff": 0.0, "bad": true, "desc": "ไฟดับ/กลางคืน ความสุขลดหนัก (-16)"},
 	"coward":     {"th": "ขี้ขลาด", "en": "COWARD", "icon": "flee", "rooms": [], "aff": 0.0, "bad": true, "desc": "สำรวจเสี่ยงขึ้น 30% แต่ทำงานในรถ +10%"},
 }
 ## named crew have fixed traits (fits their bios)
@@ -178,6 +179,87 @@ func tick(d: Dictionary, m: float, medical_power: float) -> void:
 		d.hp = maxf(1.0, float(d.hp) - 0.04 * inf * m)
 		var cure := (0.6 + medical_power * 1.2) * (1.0 + Skills.val(d, "medic"))
 		d.infection = maxf(0.0, inf - cure * m)
+
+
+# ------------------------------------------------------------------ morale: strike -> steal & desert
+const STRIKE_AT := 22.0       # happiness below this for 90 s -> strike (stops working)
+const STRIKE_END := 38.0      # back to work above this
+const DESERT_AT := 10.0       # striking and below this for 3 min (warned at 1 min) -> steals and runs
+var _deserters: Array = []
+
+
+func morale_tick(d: Dictionary, dt: float, offline: bool) -> void:
+	var h := float(d.happy)
+	if not d.get("strike", false):
+		if h < STRIKE_AT:
+			d["strike_t"] = float(d.get("strike_t", 0.0)) + dt
+			if float(d.strike_t) >= 90.0:
+				d["strike"] = true
+				d["desert_t"] = 0.0
+				if not offline:
+					Game.toast.emit("%s ประท้วงหยุดงาน! ขวัญกำลังใจต่ำ (อาหาร/ห้องพัก/งานที่ถนัด/ยา ช่วยได้)" % d.name, "bad")
+				Game.dwellers_changed.emit()
+		else:
+			d["strike_t"] = maxf(0.0, float(d.get("strike_t", 0.0)) - dt)
+		return
+	if h >= STRIKE_END:
+		d["strike"] = false
+		d["strike_t"] = 0.0
+		d["desert_t"] = 0.0
+		d.erase("desert_warn")
+		if not offline:
+			Game.toast.emit("%s หายงอนแล้ว กลับมาทำงาน" % d.name, "good")
+		Game.dwellers_changed.emit()
+		return
+	if h < DESERT_AT and not offline:
+		d["desert_t"] = float(d.get("desert_t", 0.0)) + dt
+		if float(d.desert_t) >= 60.0 and not d.get("desert_warn", false):
+			d["desert_warn"] = true
+			Game.toast.emit("%s แอบเก็บของใส่เป้... กำลังจะหนี! รีบทำให้มีความสุขขึ้น" % d.name, "bad")
+		if float(d.desert_t) >= 180.0 and not _deserters.has(d):
+			_deserters.append(d)
+	else:
+		d["desert_t"] = maxf(0.0, float(d.get("desert_t", 0.0)) - dt * 0.5)
+
+
+func is_striking(d: Dictionary) -> bool:
+	return d.get("strike", false)
+
+
+## called by Game after the dweller loop (never remove while iterating)
+func flush_deserters() -> void:
+	for d in _deserters:
+		if Game.s.dwellers.has(d):
+			desert(d)
+	_deserters.clear()
+
+
+func desert(d: Dictionary) -> void:
+	var stolen := []
+	for k in ["food", "water", "scrap"]:
+		var amt := floorf(float(Game.s.res[k]) * 0.12)
+		if amt >= 1.0:
+			Game.s.res[k] = float(Game.s.res[k]) - amt
+			stolen.append("%s %d" % [Data.item_name(k), int(amt)])
+	var comps := int(float(Game.s.items.get("components", 0)) * 0.1)
+	if comps > 0:
+		Game.s.items.components = int(Game.s.items.components) - comps
+		stolen.append("ชิ้นส่วน %d" % comps)
+	if int(Game.s.items.get("stimpack", 0)) > 0:
+		Game.s.items.stimpack = int(Game.s.items.stimpack) - 1
+		stolen.append("สติมแพ็ก 1")
+	var role := Game.squad_role(d)
+	if role >= 0:
+		Game.s.squad[role] = -1
+	if not Game.s.has("deserters"):
+		Game.s["deserters"] = []
+	Game.s.deserters.append({"name": d.name, "lvl": d.lvl, "km": snappedf(float(Game.s.stats.km_total), 0.1), "stole": ", ".join(stolen)})
+	Game.s.dwellers.erase(d)     # leaves with the gear on their back
+	Game.toast.emit("%s ขโมย %s แล้วหนีลงจากรถไปในความมืด!" % [d.name, ", ".join(stolen) if not stolen.is_empty() else "ของเล็กน้อย"], "bad")
+	Game.dwellers_changed.emit()
+	Game.squad_changed.emit()
+	Game.rooms_changed.emit()
+	Game.resources_changed.emit()
 
 
 func cure(d: Dictionary) -> void:

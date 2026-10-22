@@ -22,6 +22,7 @@ const GROUND_COLORS := {"industrial": Color("26262a"), "desert": Color("4e3e2a")
 	"swamp": Color("21160f"), "tundra": Color("3a3a3e"), "metro": Color("18181c")}
 
 var groups: Dictionary = {}      # biome id -> {root, layers:[Parallax2D]}
+var rails: Parallax2D            # railway laid over the road when the convoy is an armoured train
 var current := ""
 var _speed := 0.0
 
@@ -30,13 +31,19 @@ func _ready() -> void:
 	for b in Data.BIOMES:
 		_build_group(b.id)
 	Game.biome_changed.connect(_on_biome_changed)
+	rails = _px_layer(load("res://assets/bg/rails.png"), 1.0, 1.0, ROAD_Y + 8.0, BW)
+	rails.z_index = 1
+	rails.visible = false
+	add_child(rails)
 
 
 func _px_layer(tex: Texture2D, scroll_x: float, speed: float, y: float, repeat_w: float) -> Parallax2D:
 	var px := Parallax2D.new()
 	px.scroll_scale = Vector2(scroll_x, 1.0)
 	px.repeat_size = Vector2(repeat_w, 0)
-	px.repeat_times = 5 if repeat_w >= BW else 15
+	# repeat_times spreads copies evenly behind and in front of the original (docs: 2D Parallax > Repeat times);
+	# the wide battle zoom shows ~1.6x more world, so cover ~±1300 px whatever the strip width
+	px.repeat_times = maxi(5, int(ceil(2600.0 / repeat_w)) | 1)
 	px.set_meta("speed", speed)
 	var spr := Sprite2D.new()
 	spr.texture = tex
@@ -120,6 +127,8 @@ func _process(delta: float) -> void:
 			var wind := WIND_PX if sp < 0.05 else 0.0
 			# the truck drives to the LEFT, so the world scrolls to the right (+x)
 			(px as Parallax2D).autoscroll = Vector2(_speed * sp + wind, 0.0)
+	rails.visible = Game.started and not Game.s.is_empty() and Game.vehicle_def().get("rail", false)
+	rails.autoscroll = Vector2(_speed, 0.0)
 
 
 func current_speed_px() -> float:

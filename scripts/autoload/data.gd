@@ -3,13 +3,35 @@ extends Node
 ## Everything that a designer would tune lives here (no logic).
 
 const ROOMS_PER_FLOOR := 3
-const SLOT_COUNT := 12            # 4-floor chassis (Game.slot_count() for the current truck)
-const MAX_SLOTS := 18             # 6-floor chassis MK-III
-const ENGINE_SLOT := 7
-## order in which buildable slots unlock as the vault frame levels up (bottom floors first;
-## slots 0-7 keep their v2 positions, 8-11 are the new third column, 12-17 the extra MK-II/III floors)
-const SLOT_UNLOCK_ORDER := [4, 5, 6, 8, 9, 0, 1, 10, 2, 3, 11, 12, 13, 14, 15, 16, 17]
-## buildable slots unlocked at vault level N (index = level)
+## v4 slot layout: slot = floor * 3 + column (bottom floor first) on the main body, then 6 slots per trailer.
+## The engine room is always slot 0 (bottom floor, right behind the cab).
+const ENGINE_SLOT := 0
+const SLOT_COUNT := 12            # rig body, kept for tools / tests
+const MAX_TRAILERS := 2
+const TRAILER_FLOORS := 2
+const TRAILER_SLOTS := 6
+const MAX_SLOTS := 24             # 4-floor body + 2 trailers
+## v3 -> v4 save migration: old slot index -> (column, floor)
+const V3_SLOT_CELL := [[0, 2], [1, 2], [0, 3], [1, 3], [0, 1], [1, 1], [1, 0], [0, 0], [2, 0], [2, 1], [2, 2], [2, 3],
+	[0, 4], [1, 4], [2, 4], [0, 5], [1, 5], [2, 5]]
+## Prestige vehicle ladder. Geometry must match tools/art/vehicles.py.
+##  weight / engine: tons vs. engine capacity (Haul autoload); hull: bonus hull points.
+const TIER_ORDER := ["van", "bus", "rig", "train"]
+const VEHICLES := {
+	"van": {"th": "รถตู้แคมป์ปิ้ง", "en": "CAMPER VAN", "floors": 2, "weight": 18.0, "engine": 40.0, "hull": 0.0,
+		"wheels": [[26, 284], [214, 284]], "rail": false, "headlight": [0, 213], "chimney": [250, 272], "trailer": "trailer",
+		"names": ["SCRAPPY", "LITTLE ROAMER"]},
+	"bus": {"th": "รถบัสหุ้มเหล็ก", "en": "ARMOURED BUS", "floors": 3, "weight": 28.0, "engine": 62.0, "hull": 40.0,
+		"wheels": [[34, 284], [214, 284]], "rail": false, "headlight": [0, 249], "chimney": [250, 272], "trailer": "trailer",
+		"names": ["BIG YELLOW", "ROUTE 66"]},
+	"rig": {"th": "รถพ่วง 18 ล้อ", "en": "18-WHEELER RIG", "floors": 4, "weight": 40.0, "engine": 90.0, "hull": 80.0,
+		"wheels": [[22, 284], [182, 284], [222, 284]], "rail": false, "headlight": [0, 227], "chimney": [33, 144], "trailer": "trailer",
+		"names": ["MAMMOTH-7", "MAMMOTH-8", "BEHEMOTH-1"]},
+	"train": {"th": "รถไฟหุ้มเกราะ", "en": "ARMOURED TRAIN", "floors": 4, "weight": 60.0, "engine": 140.0, "hull": 160.0,
+		"wheels": [], "rail": true, "headlight": [6, 164], "chimney": [29, 14], "trailer": "wagon",
+		"names": ["LEVIATHAN", "LEVIATHAN-II", "ARK"]},
+}
+const TRAILER_COST := [{"scrap": 2500, "components": 120}, {"scrap": 4500, "components": 220}]
 const SLOTS_PER_LEVEL := [0, 3, 5, 6, 8, 10, 11]
 const MAX_VAULT_LEVEL := 6
 const VAULT_UPGRADE_COST := [0, 500, 1300, 2600, 4200, 6500, 0]   # cost to go from level i -> i+1
@@ -164,7 +186,7 @@ const BIOMES := [
 		"id": "industrial", "th": "เขตอุตสาหกรรมร้าง", "en": "INDUSTRIAL RUINS", "length": 4.0, "req": 1,
 		"scrap_pm": 3.0, "danger": 1,
 		"weather": {"clear": 3, "overcast": 3, "rain": 3, "storm": 1, "fog": 1},
-		"events": ["raiders", "cache", "survivor", "radstorm", "bugs", "trader", "gas_station", "stray_dog", "signal"],
+		"events": ["raiders", "cache", "survivor", "radstorm", "bugs", "trader", "gas_station", "stray_dog", "stray_cat", "signal"],
 	},
 	{
 		"id": "desert", "th": "ทะเลทรายร้าง", "en": "DESERT BIOME", "length": 6.0, "req": 2,
@@ -176,13 +198,13 @@ const BIOMES := [
 		"id": "forest", "th": "ป่าทึบและลำธาร", "en": "OVERGROWN FOREST", "length": 8.0, "req": 3,
 		"scrap_pm": 6.0, "danger": 3,
 		"weather": {"rain": 4, "storm": 2, "fog": 2, "overcast": 2, "clear": 1},
-		"events": ["wolves", "bridge", "bugs", "survivor", "raiders", "cache", "cultists", "stray_dog", "bunker"],
+		"events": ["wolves", "bridge", "bugs", "survivor", "raiders", "cache", "cultists", "stray_dog", "mutant_hen", "bunker"],
 	},
 	{
 		"id": "swamp", "th": "หนองน้ำพิษ", "en": "TOXIC BAYOU", "length": 9.0, "req": 4,
 		"scrap_pm": 7.0, "danger": 4,
 		"weather": {"acid_rain": 4, "fog": 3, "rain": 2, "overcast": 1},
-		"events": ["acid_flood", "bugs", "cultists", "plane_wreck", "survivor", "stray_dog", "signal", "gambler"],
+		"events": ["acid_flood", "bugs", "cultists", "plane_wreck", "survivor", "stray_dog", "stray_cat", "mutant_hen", "signal", "gambler"],
 	},
 	{
 		"id": "tundra", "th": "ทุ่งน้ำแข็งเหนือ", "en": "FROZEN HIGHWAY", "length": 10.0, "req": 5,
@@ -224,9 +246,25 @@ const EVENTS := {
 		"th": "หมาหลงข้างทาง", "en": "A STRAY DOG", "image": "dog", "danger": 0,
 		"desc": "หมาพันธุ์ผสมขนยุ่งวิ่งตามรถมาหลายกิโล ลิ้นห้อย หางกระดิก มันดูหิวแต่ไม่ดุร้ายเลย",
 		"choices": [
-			{"action": "adopt", "cost": {"food": 10}, "th": "รับเลี้ยง ตั้งชื่อว่า ข้าวตัง", "en": "ADOPT IT", "sub": "-10 อาหาร · ทุกคนมีความสุข +15", "color": "green", "lore": "khaotang"},
+			{"action": "adopt", "pet": {"kind": "dog", "name": "ข้าวตัง"}, "cost": {"food": 10}, "th": "รับเลี้ยง ตั้งชื่อว่า ข้าวตัง", "en": "ADOPT IT", "sub": "-10 อาหาร · ทุกคนมีความสุข +15 · มันจะวิ่งเล่นทั่วรถ", "color": "green", "lore": "khaotang"},
 			{"action": "gift", "cost": {"food": 5}, "th": "โยนเนื้อแห้งให้", "en": "TOSS SOME FOOD", "sub": "-5 อาหาร · ความสุข +", "color": "yellow"},
 			{"action": "ignore", "th": "เร่งเครื่องหนี", "en": "DRIVE AWAY", "sub": "ความสุขลด", "color": "gray", "happy": -6},
+		],
+	},
+	"stray_cat": {
+		"th": "แมวในซากรถ", "en": "A CAT IN THE WRECK", "image": "cat", "danger": 0,
+		"desc": "เสียงร้องแหลม ๆ ดังจากใต้ซากรถเก๋ง แมวส้มผอมโซมองรถบ้านด้วยตาวาว มันคาบหนูกลายพันธุ์ตัวหนึ่งไว้ในปาก",
+		"choices": [
+			{"action": "adopt", "pet": {"kind": "cat", "name": "ส้มจี๊ด"}, "cost": {"food": 6}, "th": "อุ้มขึ้นรถ ตั้งชื่อ ส้มจี๊ด", "en": "TAKE IT ALONG", "sub": "-6 อาหาร · ความสุข + · จับหนู อาหารเสียน้อยลง", "color": "green"},
+			{"action": "ignore", "th": "ปล่อยไว้ตรงนั้น", "en": "LEAVE IT", "sub": "", "color": "gray"},
+		],
+	},
+	"mutant_hen": {
+		"th": "ไก่สองหัว", "en": "TWO-HEADED HEN", "image": "hen", "danger": 0,
+		"desc": "ไก่ตัวหนึ่งมีสองหัว ยืนจิกเมล็ดพืชอยู่กลางถนนอย่างไม่สนโลก ข้าง ๆ มีไข่สามฟองที่ดูปกติดี",
+		"choices": [
+			{"action": "adopt", "pet": {"kind": "hen", "name": "ไข่ดาว"}, "cost": {"food": 4}, "th": "จับขึ้นรถ ตั้งชื่อ ไข่ดาว", "en": "ADOPT THE HEN", "sub": "-4 อาหาร · ออกไข่ อาหาร +0.6/นาที", "color": "green"},
+			{"action": "shelter", "time": 5.0, "reward": {"food": 15}, "th": "เก็บแค่ไข่", "en": "JUST THE EGGS", "sub": "อาหาร +15", "color": "yellow"},
 		],
 	},
 	"cultists": {

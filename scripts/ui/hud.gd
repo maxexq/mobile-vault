@@ -58,6 +58,13 @@ var _scav_btn: Button
 var room_closeup: RoomCloseup
 var event_popup: EventPopup
 var title_screen: TitleScreen
+var boss_bar: BossBar
+var _boss_was := false
+var _view_box: HBoxContainer
+var _xray_btn: Button
+var _zoom_btn: Button
+signal zoom_pressed
+signal xray_toggled(on: bool)
 
 
 func _ready() -> void:
@@ -67,6 +74,25 @@ func _ready() -> void:
 	_build_top()
 	_build_bottom()
 	_build_combat_chip()
+	boss_bar = BossBar.new()
+	add_child(boss_bar)
+	_view_box = UIKit.hbox(2)
+	_xray_btn = UIKit.button("", "gray", "eye")
+	_xray_btn.custom_minimum_size = Vector2(26, 22)
+	_xray_btn.tooltip_text = "สลับมุมมอง ผ่าซีก (X-RAY) / เปลือกนอก"
+	_xray_btn.toggle_mode = true
+	_xray_btn.button_pressed = true
+	_xray_btn.toggled.connect(func(on: bool):
+		UIKit.style_button(_xray_btn, "gray" if on else "yellow")
+		xray_toggled.emit(on)
+		show_toast("มุมมอง: ผ่าซีก X-RAY" if on else "มุมมอง: เปลือกนอก (แตะตัวรถเพื่อส่องข้างใน)", "info"))
+	_view_box.add_child(_xray_btn)
+	_zoom_btn = UIKit.button("", "gray", "zoom")
+	_zoom_btn.custom_minimum_size = Vector2(26, 22)
+	_zoom_btn.tooltip_text = "ซูม: อัตโนมัติ / กว้าง / ปกติ"
+	_zoom_btn.pressed.connect(func(): zoom_pressed.emit())
+	_view_box.add_child(_zoom_btn)
+	add_child(_view_box)
 	toast_box = UIKit.vbox(2)
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toast_box)
@@ -121,7 +147,7 @@ func _ready() -> void:
 
 
 func _set_hud_visible(v: bool) -> void:
-	for c in [_top, _bottom, _combat_box, _tools]:
+	for c in [_top, _bottom, _combat_box, _tools, _view_box]:
 		c.visible = v
 	if v:
 		_refresh_res()
@@ -372,6 +398,9 @@ func _apply_layout() -> void:
 		_bottom.position = Vector2(M, _tools.position.y - _bottom.size.y - 2)
 		_top.reset_size()
 		_pin_right(_combat_box, M, _top.position.y + _top.size.y + 2)
+		_view_box.position = Vector2(M, _top.position.y + _top.size.y + 2)
+		boss_bar.position = Vector2(M, _top.position.y + _top.size.y + 28)
+		boss_bar.size = Vector2(vp.x - M * 2, 32)
 	else:
 		_top.position = Vector2(M, M)
 		_top.custom_minimum_size.x = vp.x - 52 - M * 2
@@ -386,6 +415,9 @@ func _apply_layout() -> void:
 		_bottom.position = Vector2(M, vp.y - _bottom.size.y - M)
 		_top.reset_size()
 		_pin_right(_combat_box, 52 + M, _top.position.y + _top.size.y + 2)
+		_view_box.position = Vector2(M, _top.position.y + _top.size.y + 2)
+		boss_bar.position = Vector2(M + 60, _top.position.y + _top.size.y + 2)
+		boss_bar.size = Vector2(vp.x - 52 - M * 2 - 160, 32)
 	_place_toasts()
 	if banner.visible:
 		show_banner(banner_lbl.text)
@@ -417,6 +449,8 @@ func world_rect() -> Rect2:
 func _place_toasts() -> void:
 	toast_box.reset_size()
 	var y := _top.position.y + _top.size.y + 26 if _top.visible else 40.0
+	if boss_bar.visible:
+		y = maxf(y, boss_bar.position.y + boss_bar.H + 4.0)
 	if _closeup_on:
 		y = size.y - toast_box.size.y - 8
 	toast_box.position = Vector2(floorf((size.x - toast_box.size.x) * 0.5), floorf(y))
@@ -443,6 +477,9 @@ func _process(d: float) -> void:
 	if _combat_t <= 0.0:
 		_combat_t = 0.5
 		_refresh_combat()
+		if boss_bar.visible != _boss_was:
+			_boss_was = boss_bar.visible
+			_place_toasts()
 		speed_lbl.text = "%d KM/H" % int(round(Game.speed_kmh()))
 		var stage_km: float = float(Game.s.km) - Data.biome_start_km(Game.s.biome)
 		dist_lbl.text = "%.1f/%d KM" % [stage_km, int(Data.biome(Game.s.biome).length)]

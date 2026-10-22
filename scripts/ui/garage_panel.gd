@@ -1,6 +1,7 @@
 class_name GaragePanel
 extends ModalPanel
-## Vehicle customisation: external mods (shown on the truck) and internal mods, plus blueprints found.
+## Vehicle customisation: weight / drivetrain balance, trailers, external mods (shown on the vehicle),
+## internal mods, plus blueprints found.
 
 var tab := "ext"   # ext | int | bp
 var _tabs: HBoxContainer
@@ -35,6 +36,9 @@ func refresh() -> void:
 	if tab == "bp":
 		_build_blueprints()
 		return
+	_list.add_child(_weight_card())
+	if tab == "ext":
+		_list.add_child(_trailer_card())
 	_list.add_child(UIKit.wrap_label("ของที่ติดตั้งภายนอกจะเห็นบนตัวรถจริง · บางชิ้นต้องมีพิมพ์เขียวจากการสำรวจสถานที่สำคัญ" if tab == "ext" else "อัปเกรดระบบภายในเพื่อรับมือภัยของแต่ละ Biome"))
 	for id in Mods.MODS:
 		var md: Dictionary = Mods.MODS[id]
@@ -74,6 +78,52 @@ func _card(id: String, md: Dictionary) -> Control:
 		h.add_child(b)
 	else:
 		h.add_child(UIKit.label("MAX", UIKit.FP, UIKit.C_GOLD, true))
+	return p
+
+
+func _weight_card() -> Control:
+	var p := UIKit.panel(UIKit.C_BG2, UIKit.C_LINE_DIM)
+	var v := UIKit.vbox(2)
+	p.add_child(v)
+	var w := Haul.weight()
+	var cap := Haul.capacity()
+	var r := Haul.load_ratio()
+	var h := UIKit.hbox(4)
+	h.add_child(UIKit.label("น้ำหนัก %d / %d ตัน" % [int(w), int(cap)], UIKit.FS_SMALL, UIKit.C_TEXT))
+	h.add_child(UIKit.spacer())
+	h.add_child(UIKit.label("ความเร็ว x%.2f · น้ำมัน %.1f/นาที" % [Haul.speed_mult(), Haul.fuel_pm()], UIKit.FS_SMALL, UIKit.C_DIM))
+	v.add_child(h)
+	var bar := UIKit.progress(UIKit.C_GREEN if r <= 0.8 else (UIKit.C_GOLD if r <= 1.0 else UIKit.C_RED), 6)
+	bar.max_value = 1.5
+	bar.value = minf(r, 1.5)
+	v.add_child(bar)
+	v.add_child(UIKit.wrap_label(Haul.status_text() + " · ห้อง/เกราะ/รถพ่วงทำให้หนัก · จูนเครื่อง/ช่วงล่าง/ล้อออฟโรดช่วยรับน้ำหนัก", UIKit.FS_SMALL,
+		UIKit.C_RED if r > 1.0 else UIKit.C_DIM))
+	return p
+
+
+func _trailer_card() -> Control:
+	var kind := "โบกี้" if Game.vehicle_def().trailer == "wagon" else "รถพ่วงท้าย"
+	var p := UIKit.panel(UIKit.C_BG2, UIKit.C_GOLD if Game.trailers() > 0 else UIKit.C_LINE_DARK)
+	var h := UIKit.hbox(4)
+	p.add_child(h)
+	h.add_child(UIKit.icon_rect("hull", 32))
+	var v := UIKit.vbox(1)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_child(UIKit.label("%s  %d/%d" % [kind, Game.trailers(), Data.MAX_TRAILERS], UIKit.FS_SMALL, UIKit.C_TEXT))
+	v.add_child(UIKit.wrap_label("ต่อพ่วง 2 ชั้น +6 ห้อง ปลดล็อกทันที · หนัก +%d ตัน กินไฟ/น้ำมันมากขึ้น" % int(Haul.TRAILER_W), UIKit.FS_SMALL))
+	var why := Mods.can_add_trailer()
+	if why != "" and Game.trailers() < Data.MAX_TRAILERS:
+		v.add_child(UIKit.label(why, UIKit.FS_SMALL, UIKit.C_ORANGE))
+	h.add_child(v)
+	if Game.trailers() < Data.MAX_TRAILERS:
+		var b := UIKit.button(_cost_short(Mods.trailer_cost()), "yellow", "up")
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.disabled = why != ""
+		b.pressed.connect(func():
+			if Mods.add_trailer():
+				refresh())
+		h.add_child(b)
 	return p
 
 

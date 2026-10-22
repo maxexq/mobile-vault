@@ -147,7 +147,9 @@ func _build_planner() -> void:
 		hb.add_child(skip)
 	var go := UIKit.button("ส่งทีมสำรวจ!", "red", "explore")
 	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	go.disabled = picked.is_empty()
+	go.disabled = picked.size() < Expedition.min_team()
+	if go.disabled:
+		go.text = "ต้องการทีม %d-%d คน" % [Expedition.min_team(), Expedition.MAX_TEAM]
 	go.pressed.connect(func():
 		if Expedition.start(site, picked, sup):
 			close())

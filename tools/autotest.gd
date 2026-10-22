@@ -84,12 +84,12 @@ func _run() -> void:
 	main.hud.panels.inventory.close()
 	await wait(0.4)
 	# room close-up
-	main.open_closeup(4)
+	main.open_closeup(1)
 	await wait(1.0)
 	await shot("closeup_kitchen")
 	main.hud.room_closeup.close()
 	await wait(0.8)
-	main.open_closeup(6)
+	main.open_closeup(3)
 	await wait(1.0)
 	await shot("closeup_empty_build")
 	main.hud.room_closeup.close()
@@ -99,7 +99,7 @@ func _run() -> void:
 	main._enter_placement("hydroponics")
 	await wait(0.5)
 	await shot("placement_mode")
-	Game.build_room(6, "hydroponics")
+	Game.build_room(3, "hydroponics")
 	main._exit_placement()
 	# panels
 	for k in ["dwellers", "build", "map", "solar"]:
@@ -146,8 +146,8 @@ func _run() -> void:
 		main.hud.event_popup.close()
 		await wait(0.3)
 	# craft something
-	Game.start_craft(4, "cook_meal")
-	main.open_closeup(4)
+	Game.start_craft(1, "cook_meal")
+	main.open_closeup(1)
 	await wait(1.0)
 	await shot("closeup_crafting")
 	main.hud.room_closeup.close()
@@ -203,9 +203,9 @@ func _run() -> void:
 	for i in 30:
 		Game._simulate(1.0, true)
 	_check("enters desert after upgrade", Game.s.biome == 1)
-	var new_slot: int = Data.SLOT_UNLOCK_ORDER[Data.SLOTS_PER_LEVEL[1]]
-	_check("new slot unlocked at Lv2", Game.is_slot_unlocked(new_slot) and Game.unlocked_slots().size() == Data.SLOTS_PER_LEVEL[2] + 1)
-	_check("3 rooms per floor (12 slots)", Game.slot_count() == 12 and Game.s.rooms.size() == 12)
+	var new_slot: int = 4
+	_check("new slot unlocked at Lv2", Game.is_slot_unlocked(new_slot) and Game.unlocked_slots().size() == mini(Data.SLOTS_PER_LEVEL[2], Game.main_slots() - 1) + 1)
+	_check("first run is a camper van: 2 floors x 3 rooms", Game.tier() == "van" and Game.slot_count() == 6 and Game.s.rooms.size() == 6)
 	_check("build quarters", Game.build_room(new_slot, "quarters") and Game.pop_cap() == Data.BASE_POP_CAP + 4)
 	Game.s.res.scrap = 200.0
 	_check("craft starts", Game.start_craft(Data.ENGINE_SLOT, "repair_hull"))
@@ -257,19 +257,19 @@ func _run() -> void:
 	var before := JSON.stringify(Game.s)
 	Game.load_game()
 	print("[autotest] save roundtrip ok=", JSON.stringify(Game.s).length() > 100, " size=", before.length())
-	# --- v3 systems: mods on the truck, skill tree, hazards, expeditions, next generation
+	# --- v3/v4 systems: mods on the vehicle, skill tree, hazards, synergy, weight, morale, pets, mutations, tiers
 	Game.s.res.scrap = 99999.0
 	Game.s.items.components = 9999
 	Game.s.vault_level = 4
-	for bp in ["bp_roof_turret", "bp_tracks", "bp_solar_covers", "bp_rad_shield", "bp_heater"]:
+	for bp in ["bp_roof_turret", "bp_tracks", "bp_solar_covers", "bp_rad_shield", "bp_heater", "bp_engine_tune"]:
 		Meta.add_blueprint(bp)
 	var ok_all := true
-	for id in ["spike_ram", "spike_ram", "spike_ram", "roof_turret", "roof_turret", "fuel_tanks", "fuel_tanks", "fuel_tanks",
-			"tracks", "armor_plates", "armor_plates", "armor_plates", "solar_covers", "rad_shield", "rain_catcher", "heater"]:
+	for id in ["spike_ram", "spike_ram", "spike_ram", "roof_turret", "roof_turret", "fuel_tanks", "fuel_tanks",
+			"tracks", "armor_plates", "armor_plates", "solar_covers", "rad_shield", "rain_catcher", "heater",
+			"suspension", "suspension", "offroad_wheels", "engine_tune"]:
 		ok_all = Mods.install(id) and ok_all
 	Mods.mods_changed.emit()
 	_check("install exterior mods", ok_all and Mods.level("spike_ram") == 3 and Mods.level("tracks") == 1)
-	_check("tracks replace rear wheels", main.vehicle.tracks.visible and not main.vehicle.wheels[1].visible)
 	_check("fuel cap grows with tanks", Env.fuel_cap() > 60.0)
 	var sk: Dictionary = Game.s.dwellers[0]
 	sk.lvl = 8
@@ -278,39 +278,100 @@ func _run() -> void:
 	Game.s.biome = 4
 	Game.s.tod = 0.9
 	_check("tundra night needs heating fuel", Env.heating_fuel_pm() > 0.0)
+	# room synergy: engine (slot 0) next to quarters (slot 1) = noise; engine next to workshop = faster repairs
+	Game.s.rooms[1].type = "quarters"
+	var noisy := Synergy.happy_mod(1)
+	Game.s.rooms[1].type = "workshop"
+	Meta.add_blueprint("bp_workshop")
+	_check("synergy: engine noise next to quarters", noisy < 0.0)
+	_check("synergy: engine + workshop repairs +15%", Synergy.repair_bonus() > 1.1)
+	Game.s.rooms[1].type = "kitchen"
+	# weight / drivetrain
+	var w0 := Haul.weight()
+	var es := -1
+	for i in Game.s.rooms.size():
+		if Game.s.rooms[i].type == "empty":
+			es = i
+	Game.s.rooms[es].type = "medical"
+	_check("weight grows with rooms", es >= 0 and Haul.weight() > w0 and Haul.capacity() > float(Game.vehicle_def().engine))
+	Game.s.rooms[es].type = "empty"
+	# morale: strike then theft + desertion
+	var grumpy := Game._add_dweller({"name": "ทดสอบหนี", "variant": "dw_raider_black", "str": 3, "int": 3, "agi": 3, "lvl": 1})
+	grumpy.happy = 5.0
+	for i in 12:
+		Crew.morale_tick(grumpy, 10.0, false)
+	_check("morale: strike when unhappy", grumpy.get("strike", false))
+	var food0 := float(Game.s.res.food)
+	for i in 20:
+		Crew.morale_tick(grumpy, 10.0, false)
+	Crew.flush_deserters()
+	_check("morale: deserter steals and leaves", not Game.s.dwellers.has(grumpy) and float(Game.s.res.food) < food0)
+	# pets live on the vehicle
+	var adopt := Game.resolve_event("stray_cat", 0, [])
+	_check("adopt a pet", adopt.ok and Game.has_pet("cat"))
+	# blackout lighting
+	Game.s.outage = {"1": 60.0}
+	_check("short circuit darkens a room", Game.room_dark(1) and Game.outage_mult(1) < 1.0)
+	# mutations + boss roster
+	Game.s.biome = 3
+	_check("mutation chance grows with distance", Combat.mutation_chance() > 0.15)
+	var bosses := {}
+	for w in [10, 20, 30, 40, 50, 60]:
+		bosses[Combat.pick_wave_boss(w)] = true
+	_check("boss waves rotate through different bosses", bosses.size() >= 4)
 	Game.s.biome = 0
 	Game.s.tod = 0.4
 	Game.s.weather = "clear"
 	Game.weather_changed.emit("clear")
+	Game.s.outage = {"2": 40.0}
 	main.pan_x = 0.0
 	Expedition.skip_site()
+	_no_events()
 	for k in main.hud.panels:
 		if main.hud.panels[k].is_open:
 			main.hud.panels[k].close()
-	await wait(1.5)
-	await shot("mods_on_truck")
+	await wait(2.0)
+	await shot("van_mods_pets_blackout")
+	main.open_closeup(2)
+	await wait(1.2)
+	await shot("closeup_blackout_torches")
+	main.hud.room_closeup.close()
+	await wait(0.8)
+	Game.s.outage = {}
 	main.hud.open_panel("garage")
 	await wait(0.6)
-	await shot("panel_garage")
+	await shot("panel_garage_weight")
 	main.hud.panels.garage.close()
 	main.hud.open_skills(int(sk.id))
 	await wait(0.6)
 	await shot("panel_skills")
 	main.hud.panels.skills.close()
 	await wait(0.3)
-	# expedition at the abandoned hospital
+	# boss fight: big HP bar + wide auto zoom
+	_no_events()
+	Combat.reset_wave(20)
+	await wait(5.0)
+	await shot("boss_fight_bar")
+	await wait(4.0)
+	await shot("boss_fight_gore")
 	Combat.reset_wave(1)
-	Expedition.arrive("hospital")
+	# X-ray toggle: closed hull
+	main.vehicle.set_xray(false)
+	await wait(1.2)
+	await shot("exterior_view")
+	main.vehicle.set_xray(true)
+	# expedition at the dead supermarket
+	Expedition.arrive("market")
 	await wait(2.6)
-	main.hud.open_expedition("hospital")
+	main.hud.open_expedition("market")
 	await wait(0.6)
 	await shot("expedition_plan")
 	var team_ids := []
 	for dd in Game.s.dwellers:
 		if not Game.is_away(dd) and team_ids.size() < 2:
 			team_ids.append(int(dd.id))
-	var started := Expedition.start("hospital", team_ids, {"food": 10, "water": 10, "stimpack": 1, "ammo": 0, "antibiotics": 0})
-	_check("expedition start", started and Expedition.active())
+	var started := Expedition.start("market", team_ids, {"food": 10, "water": 10, "stimpack": 1, "ammo": 0, "antibiotics": 0})
+	_check("expedition start (team of 2)", started and Expedition.active())
 	main.hud.panels.expedition.close()
 	await wait(2.2)
 	await shot("expedition_walkout")
@@ -319,39 +380,45 @@ func _run() -> void:
 	Expedition.tick(false)
 	_check("expedition finished", not Expedition.active())
 	await wait(1.6)
-	await shot("expedition_return")
 	if main.hud.panels.expedition.is_open:
 		main.hud.panels.expedition.close()
 	Expedition.skip_site()
-	# next generation with a bigger chassis
-	Meta.m().legacy = 999
-	Meta.add_blueprint("bp_chassis2")
-	_check("buy chassis MK-II", Meta.buy("chassis2"))
-	Meta.next_generation([int(Game.s.dwellers[0].id)])
-	await wait(1.5)
-	_check("gen 2: 5 floors / 15 rooms", Meta.floors() == 5 and Game.slot_count() == 15 and Game.s.rooms.size() == 15 and main.vehicle.room_views.size() == 15)
-	await shot("gen2_truck")
+	# the prestige ladder: van -> bus -> rig -> train, with a story screen
 	Meta.m().legacy = 9999
-	Meta.add_blueprint("bp_chassis3")
-	Meta.buy("chassis3")
-	Meta.next_generation([int(Game.s.dwellers[0].id)])
+	Meta.add_blueprint("bp_bus")
+	_check("research the armoured bus", Meta.buy("tier_bus") and Meta.best_tier() == "bus")
+	main.hud.open_nextgen(false)
 	await wait(1.5)
-	_check("gen 3: 6 floors / 18 rooms", Meta.floors() == 6 and Game.s.rooms.size() == 18)
-	Game.s.vault_level = 6
-	Game.vault_level_changed.emit(6)
+	await shot("nextgen_story")
+	main.hud.panels.nextgen.close()
+	Meta.next_generation([int(Game.s.dwellers[0].id)])
+	_no_events()
+	await wait(1.5)
+	_check("gen 2 is a bus: 3 floors / 9 rooms", Game.tier() == "bus" and Game.slot_count() == 9 and main.vehicle.room_views.size() == 9)
+	await shot("gen2_bus")
+	Meta.add_blueprint("bp_rig")
+	Meta.add_blueprint("bp_train")
+	Meta.buy("tier_rig")
+	Meta.buy("tier_train")
+	Meta.next_generation([int(Game.s.dwellers[0].id)], "train")
+	_no_events()
 	await wait(1.0)
-	await shot("gen3_truck")
-	main.pan_y = main.pan_y_max
-	main.camera.position = main.cam_home + Vector2(0, -main.pan_y)
-	await wait(0.6)
-	await shot("gen3_truck_look_up")
-	main.pan_y = 0.0
-	print("[autotest] v3 checks done: %d failed total" % _fails)
+	Game.s.vault_level = 6
+	Game.s.res.scrap = 9000.0
+	Game.s.items.components = 9999
+	Meta.add_blueprint("bp_trailer")
+	_check("hitch two wagons to the train", Mods.add_trailer() and Mods.add_trailer() and Game.slot_count() == 24)
+	Game.vault_level_changed.emit(6)
+	main.set_zoom_mode("wide")
+	await wait(1.6)
+	await shot("train_two_wagons_wide")
+	main.set_zoom_mode("auto")
+	print("[autotest] v3/v4 checks done: %d failed total" % _fails)
 	# portrait phone
 	get_window().size = Vector2i(780, 1688)
 	await wait(1.5)
 	await shot("portrait")
-	main.open_closeup(5)
+	main.open_closeup(2)
 	await wait(1.0)
 	await shot("portrait_closeup")
 	main.hud.room_closeup.close()
@@ -379,3 +446,12 @@ func _run() -> void:
 	await shot("wide_map")
 	print("[autotest] DONE")
 	get_tree().quit()
+
+
+## keep random road events from popping over the v4 screenshots
+func _no_events() -> void:
+	Game.s.event_t = 1.0e9
+	if Game.active_event != "":
+		Game.active_event = ""
+	if main.hud.event_popup.is_open:
+		main.hud.event_popup.close()

@@ -6,6 +6,9 @@ extends Node2D
 ##  mixels, even for particles, tweens and the close-up zoom. UI lives in a CanvasLayer on top.
 ##  Handles camera framing, swipe-to-pan, tap-to-zoom room close-up (integer zoom Tween + blur shader),
 ##  build placement, floating numbers, screen shake.
+##  WIDE VIEW: zooming out keeps true pixels by rendering the world viewport larger and scaling it with a
+##  smaller WHOLE number (S -> S-1 ...), e.g. 3 px per art pixel -> 2 px: more road, still crisp. Auto mode
+##  pulls back for boss fights and long trailer convoys. Pinch / mouse wheel / the zoom button switch it.
 
 const PAN_LIMIT := 220.0
 const TAP_SLOP := 8.0
@@ -13,7 +16,7 @@ const PORTRAIT_BASE := Vector2i(360, 640)
 const LANDSCAPE_BASE := Vector2i(560, 320)
 
 var world_vp: SubViewport
-var world_box: SubViewportContainer
+var world_tex: TextureRect
 var world: Node2D
 var background: Background
 var vehicle: Vehicle
@@ -43,27 +46,35 @@ var _zf := 1.0
 var _zoom_from := {}
 var _placing := ""
 var _shake := 0.0
+var zoom_mode := "auto"          # normal | wide | auto
+var world_scale := 1.0           # physical px per art pixel used by the world (whole number)
+var view_k := 1.0                # world viewport px per UI/design px (S / world_scale)
+var _touches := {}
+var _pinch_d := 0.0
 
 
 func _ready() -> void:
 	add_to_group("shake")
-	# ---- low-res world viewport
-	world_box = SubViewportContainer.new()
-	world_box.stretch = true
-	world_box.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	world_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# ---- low-res world viewport (sized by hand so it can render wider than the UI for the wide view)
 	var world_layer := CanvasLayer.new()
 	world_layer.layer = 0
 	add_child(world_layer)
-	world_layer.add_child(world_box)
-	world_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	world_vp = SubViewport.new()
 	world_vp.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	world_vp.snap_2d_transforms_to_pixel = true
 	world_vp.snap_2d_vertices_to_pixel = true
 	world_vp.handle_input_locally = false
 	world_vp.gui_disable_input = true
-	world_box.add_child(world_vp)
+	world_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(world_vp)
+	world_tex = TextureRect.new()
+	world_tex.texture = world_vp.get_texture()
+	world_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	world_tex.stretch_mode = TextureRect.STRETCH_SCALE
+	world_tex.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	world_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	world_layer.add_child(world_tex)
+	world_tex.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	world = Node2D.new()
 	world.name = "World"
@@ -125,6 +136,8 @@ func _ready() -> void:
 	hud.room_closeup.closed.connect(_close_closeup)
 	hud.title_screen.start_requested.connect(_on_start)
 	hud.layout_changed.connect(_fit_camera)
+	hud.zoom_pressed.connect(cycle_zoom)
+	hud.xray_toggled.connect(func(on: bool): vehicle.set_xray(on))
 	# CRT scanlines / vignette over everything
 	var crt_layer := CanvasLayer.new()
 	crt_layer.layer = 50
@@ -187,7 +200,43 @@ func _on_resize() -> void:
 	if get_window().content_scale_size != want:
 		get_window().content_scale_size = want
 	pixel_scale = s
+	_apply_world_scale()
+
+
+## picks the world's whole-number scale for the current zoom mode and resizes the world viewport
+func _apply_world_scale() -> void:
+	var s := pixel_scale
+	var wide := zoom_mode == "wide" or (zoom_mode == "auto" and _auto_wide())
+	if _closeup_slot >= 0:
+		wide = false
+	var ws := maxf(1.0, s - 1.0) if wide else s
+	if s >= 4.0 and wide:
+		ws = floorf(s * 0.67)
+	world_scale = ws
+	view_k = s / ws
+	var design := Vector2(get_window().content_scale_size)
+	var want := Vector2i(int(floorf(design.x * view_k)), int(floorf(design.y * view_k)))
+	if world_vp.size != want:
+		world_vp.size = want
 	_fit_camera.call_deferred()
+
+
+func _auto_wide() -> bool:
+	if not Game.started or Game.s.is_empty():
+		return false
+	if not Combat.current_boss().is_empty():
+		return true
+	return Game.trailers() > 0
+
+
+func set_zoom_mode(m: String) -> void:
+	zoom_mode = m
+	_apply_world_scale()
+	Game.toast.emit({"normal": "มุมกล้อง: ปกติ", "wide": "มุมกล้อง: มุมกว้าง", "auto": "มุมกล้อง: อัตโนมัติ (กว้างตอนสู้บอส/ลากพ่วง)"}[m], "info")
+
+
+func cycle_zoom() -> void:
+	set_zoom_mode({"auto": "wide", "wide": "normal", "normal": "auto"}[zoom_mode])
 
 
 func vp_size() -> Vector2:
@@ -202,8 +251,9 @@ func _fit_camera() -> void:
 	var cm := crt.material as ShaderMaterial
 	cm.set_shader_parameter("design_size", get_viewport_rect().size)
 	cm.set_shader_parameter("pixel_scale", pixel_scale)
-	var free: Rect2 = hud.world_rect() if hud else Rect2(Vector2.ZERO, vp)
-	var span := 404.0                                   # truck front .. enemy spawn
+	var free_ui: Rect2 = hud.world_rect() if hud else Rect2(Vector2.ZERO, vp / view_k)
+	var free := Rect2(free_ui.position * view_k, free_ui.size * view_k)
+	var span := vehicle.length() + 124.0                 # vehicle front .. enemy spawn
 	var left := free.position.x + 4.0
 	if free.size.x > span + 8.0:
 		left = free.position.x + floorf((free.size.x - span) * 0.5)
@@ -222,6 +272,12 @@ func _fit_camera() -> void:
 
 func _process(delta: float) -> void:
 	_last_input_t += delta
+	if zoom_mode == "auto" and Engine.get_process_frames() % 20 == 0:
+		var want_k := pixel_scale / (maxf(1.0, pixel_scale - 1.0) if _auto_wide() and _closeup_slot < 0 else pixel_scale)
+		if pixel_scale >= 4.0 and _auto_wide() and _closeup_slot < 0:
+			want_k = pixel_scale / floorf(pixel_scale * 0.67)
+		if not is_equal_approx(want_k, view_k):
+			_apply_world_scale()
 	if _closeup_slot < 0 and not _pressing and _last_input_t > 3.0 and absf(pan_x) > 0.5:
 		pan_x = lerpf(pan_x, 0.0, clampf(delta * 1.5, 0.0, 1.0))
 		if _zoom_tw == null or not _zoom_tw.is_running():
@@ -240,17 +296,43 @@ func shake(amount: float) -> void:
 
 
 func screen_to_world(p: Vector2) -> Vector2:
-	return world_vp.get_canvas_transform().affine_inverse() * p
+	return world_vp.get_canvas_transform().affine_inverse() * (p * view_k)
 
 
 func world_to_screen(p: Vector2) -> Vector2:
-	return world_vp.get_canvas_transform() * p
+	return (world_vp.get_canvas_transform() * p) / view_k
 
 
 # ------------------------------------------------------------------ input (tap / swipe)
 func _unhandled_input(event: InputEvent) -> void:
 	if not Game.started or hud.any_modal_open():
 		return
+	# zoom: mouse wheel / trackpad magnify / two-finger pinch
+	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		if _closeup_slot < 0:
+			set_zoom_mode("normal" if event.button_index == MOUSE_BUTTON_WHEEL_UP else "wide")
+		return
+	if event is InputEventMagnifyGesture and _closeup_slot < 0:
+		set_zoom_mode("normal" if event.factor > 1.0 else "wide")
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_touches[event.index] = event.position
+		else:
+			_touches.erase(event.index)
+			_pinch_d = 0.0
+	if event is InputEventScreenDrag:
+		_touches[event.index] = event.position
+		if _touches.size() == 2:
+			var pts := _touches.values()
+			var d := (pts[0] as Vector2).distance_to(pts[1])
+			if _pinch_d > 0.0 and absf(d - _pinch_d) > 40.0 and _closeup_slot < 0:
+				set_zoom_mode("normal" if d > _pinch_d else "wide")
+				_pinch_d = d
+			elif _pinch_d <= 0.0:
+				_pinch_d = d
+			_pressing = false
+			return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_pressing = true
@@ -279,6 +361,9 @@ func _on_tap(screen_pos: Vector2) -> void:
 		return
 	var world_pos := screen_to_world(screen_pos)
 	var slot := vehicle.slot_at(world_pos)
+	if not vehicle.is_open_view() and vehicle.hull_has_point(world_pos) and _placing == "":
+		vehicle.peek(5.0)       # first tap on the closed hull opens the X-ray view
+		return
 	if _placing != "":
 		if slot >= 0 and Game.is_slot_unlocked(slot) and Game.s.rooms[slot].type == "empty":
 			if Game.build_room(slot, _placing):
@@ -295,6 +380,9 @@ func _on_tap(screen_pos: Vector2) -> void:
 # ------------------------------------------------------------------ room close-up (integer zoom)
 func open_closeup(slot: int) -> void:
 	_closeup_slot = slot
+	vehicle.peek(9999.0)
+	if view_k > 1.0:
+		_apply_world_scale()
 	Game.closeup_slot = slot
 	Game.travel_changed.emit()
 	weather.set_closeup(true)
@@ -350,6 +438,9 @@ func _close_closeup() -> void:
 		return
 	_closeup_slot = -1
 	Game.closeup_slot = -1
+	vehicle.peek(2.0)
+	vehicle._xray_hold = minf(vehicle._xray_hold, 2.0)
+	_apply_world_scale()
 	chatter.focus_slot = -1
 	hud.set_closeup_mode(false)
 	Game.travel_changed.emit()
@@ -367,8 +458,8 @@ func _update_blur_rect() -> void:
 	if slot < 0:
 		return
 	var r := vehicle.slot_global_rect(slot)
-	var p0 := world_to_screen(r.position)
-	var p1 := world_to_screen(r.end)
+	var p0 := world_vp.get_canvas_transform() * r.position
+	var p1 := world_vp.get_canvas_transform() * r.end
 	blur_mat.set_shader_parameter("focus_rect", Vector4(p0.x / vp.x, p0.y / vp.y, (p1.x - p0.x) / vp.x, (p1.y - p0.y) / vp.y))
 	blur_mat.set_shader_parameter("px_uv", Vector2(1.0 / vp.x, 1.0 / vp.y))
 
@@ -376,7 +467,7 @@ func _update_blur_rect() -> void:
 # ------------------------------------------------------------------ build placement
 func _enter_placement(room_type: String) -> void:
 	_placing = room_type
-	vehicle.set_build_highlight(true)
+	vehicle.set_build_highlight(true, room_type)
 	var any := false
 	for s in Game.unlocked_slots():
 		if Game.s.rooms[s].type == "empty":

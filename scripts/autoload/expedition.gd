@@ -8,13 +8,16 @@ signal expedition_started
 signal expedition_finished(report: Dictionary)
 
 const MAX_TEAM := 3
+const MIN_TEAM := 2         # a scavenging squad is 2-3 survivors (1 if that is all you have)
 const WALK_SEC := 7.0          # visual walk out / back inside the total duration
 ## landmarks along each biome (at = fraction of the biome length)
 const SITES := {
+	"market": {"biome": "industrial", "at": 0.2, "th": "ซูเปอร์มาร์เก็ตร้าง", "en": "DEAD SUPERMARKET", "sprite": "lm_market", "danger": 1, "min": 2.5,
+		"goal": "กวาดอาหารกระป๋องและน้ำขวดจากชั้นวาง", "loot": {"res": {"food": 80, "water": 60, "scrap": 30}, "items": {"ammo": 4}, "gear": 1, "bp": ["bp_engine_tune"]}},
 	"hospital": {"biome": "industrial", "at": 0.45, "th": "โรงพยาบาลร้าง", "en": "ABANDONED HOSPITAL", "sprite": "lm_hospital", "danger": 1, "min": 3.0,
 		"goal": "ค้นหายาและเวชภัณฑ์ในตึกผู้ป่วยใน", "loot": {"res": {"scrap": 60}, "items": {"stimpack": 3, "antibiotics": 2}, "gear": 1, "bp": ["bp_air_filter"]}},
 	"depot": {"biome": "industrial", "at": 0.85, "th": "คลังแสงทหาร", "en": "MILITARY DEPOT", "sprite": "lm_depot", "danger": 2, "min": 4.0,
-		"goal": "เจาะคลังอาวุธที่ถูกปิดตาย", "loot": {"res": {"scrap": 90}, "items": {"ammo": 10, "components": 15}, "gear": 2, "rare": 1, "bp": ["bp_roof_turret", "bp_workshop"]}},
+		"goal": "เจาะคลังอาวุธที่ถูกปิดตาย", "loot": {"res": {"scrap": 90}, "items": {"ammo": 10, "components": 15}, "gear": 2, "rare": 1, "bp": ["bp_bus", "bp_roof_turret", "bp_workshop"]}},
 	"gas_stop": {"biome": "desert", "at": 0.35, "th": "ปั๊มน้ำมันกลางทราย", "en": "DUNE GAS STOP", "sprite": "lm_gas", "danger": 2, "min": 3.5,
 		"goal": "สูบน้ำมันที่เหลือในถังใต้ดิน", "loot": {"res": {"fuel": 120, "scrap": 40}, "items": {"components": 8}, "gear": 1, "bp": ["bp_refinery"]}},
 	"sat_base": {"biome": "desert", "at": 0.8, "th": "สถานีจานดาวเทียม", "en": "SATELLITE ARRAY", "sprite": "lm_dish", "danger": 3, "min": 5.0,
@@ -24,17 +27,17 @@ const SITES := {
 	"lab": {"biome": "forest", "at": 0.8, "th": "สถานีวิจัยใต้ร่มไม้", "en": "CANOPY LAB", "sprite": "lm_lab", "danger": 4, "min": 5.0,
 		"goal": "กู้ข้อมูลวิจัยพืชกลายพันธุ์", "loot": {"res": {"scrap": 140}, "items": {"radaway": 3, "components": 25}, "gear": 2, "rare": 2, "bp": ["bp_repair_bay"]}},
 	"chem_plant": {"biome": "swamp", "at": 0.4, "th": "โรงงานเคมีรั่ว", "en": "LEAKING CHEM PLANT", "sprite": "lm_chem", "danger": 5, "min": 5.0,
-		"goal": "ปิดวาล์วที่รั่วและเก็บแผ่นตะกั่ว", "loot": {"res": {"scrap": 160, "fuel": 60}, "items": {"radaway": 4, "components": 30}, "gear": 2, "rare": 2, "bp": ["bp_rad_shield"]}},
+		"goal": "ปิดวาล์วที่รั่วและเก็บแผ่นตะกั่ว", "loot": {"res": {"scrap": 160, "fuel": 60}, "items": {"radaway": 4, "components": 30}, "gear": 2, "rare": 2, "bp": ["bp_rig", "bp_rad_shield"]}},
 	"stilt_town": {"biome": "swamp", "at": 0.8, "th": "หมู่บ้านบนเสา", "en": "STILT VILLAGE", "sprite": "lm_stilt", "danger": 4, "min": 4.5,
 		"goal": "ค้นหาผู้รอดชีวิตที่ติดอยู่", "loot": {"res": {"food": 90, "water": 90}, "items": {"antibiotics": 2}, "gear": 1, "recruit": 0.9}},
 	"polar": {"biome": "tundra", "at": 0.4, "th": "สถานีวิจัยขั้วโลก", "en": "POLAR STATION", "sprite": "lm_polar", "danger": 6, "min": 6.0,
-		"goal": "ขุดรถลุยหิมะที่จมอยู่ในโรงจอด", "loot": {"res": {"fuel": 150, "scrap": 200}, "items": {"components": 40}, "gear": 2, "rare": 2, "bp": ["bp_tracks", "bp_chassis2"]}},
+		"goal": "ขุดรถลุยหิมะที่จมอยู่ในโรงจอด", "loot": {"res": {"fuel": 150, "scrap": 200}, "items": {"components": 40}, "gear": 2, "rare": 2, "bp": ["bp_tracks", "bp_trailer"]}},
 	"mine": {"biome": "tundra", "at": 0.8, "th": "เหมืองแร่ร้าง", "en": "FROZEN MINE", "sprite": "lm_mine", "danger": 6, "min": 6.0,
 		"goal": "ขนแร่และชิ้นส่วนเครื่องจักรขึ้นมา", "loot": {"res": {"scrap": 320, "fuel": 80}, "items": {"components": 60}, "gear": 2, "rare": 3}},
 	"mall": {"biome": "metro", "at": 0.35, "th": "ห้างสรรพสินค้ายักษ์", "en": "MEGA MALL", "sprite": "lm_mall", "danger": 6, "min": 6.0,
 		"goal": "กวาดทุกอย่างที่ยังใช้ได้", "loot": {"res": {"food": 120, "water": 120, "scrap": 300}, "items": {"stimpack": 5, "antibiotics": 3}, "gear": 3, "rare": 2}},
 	"helios": {"biome": "metro", "at": 0.8, "th": "หอคอย HELIOS", "en": "HELIOS SPIRE", "sprite": "lm_spire", "danger": 7, "min": 8.0,
-		"goal": "ขึ้นไปถึงห้องควบคุมของ OVERSEER", "loot": {"res": {"scrap": 500, "power": 120}, "items": {"components": 90}, "gear": 3, "rare": 3, "bp": ["bp_chassis3"], "lore": "overseer"}},
+		"goal": "ขึ้นไปถึงห้องควบคุมของ OVERSEER", "loot": {"res": {"scrap": 500, "power": 120}, "items": {"components": 90}, "gear": 3, "rare": 3, "bp": ["bp_train"], "lore": "overseer"}},
 }
 const SUPPLY_KEYS := ["food", "water", "stimpack", "ammo", "antibiotics"]
 
@@ -187,8 +190,16 @@ func success_chance(id: String, members: Array, sup: Dictionary) -> float:
 	return clampf(c, 0.05, 0.97)
 
 
+func min_team() -> int:
+	var avail := 0
+	for d in Game.s.dwellers:
+		if not Game.is_away(d):
+			avail += 1
+	return clampi(avail - 1, 1, MIN_TEAM)     # never strip the truck completely
+
+
 func start(id: String, ids: Array, sup: Dictionary) -> bool:
-	if active() or ids.is_empty():
+	if active() or ids.size() < min_team():
 		return false
 	var cost := {}
 	for k in sup:

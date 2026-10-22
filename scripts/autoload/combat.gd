@@ -15,6 +15,7 @@ signal loot_dropped(item: Dictionary, at: Vector2)
 signal squad_wiped
 signal heroes_changed
 signal supply_found(kind: String, amount: float, at: Vector2)
+signal boss_event(kind: String, e: Dictionary)   # enrage | armor_break | summon | burrow | erupt | explode | acid | solar
 
 const STEP := 0.1
 ## enemies scale a little faster than gear (Loot.ILVL_GROWTH = 1.12) -> pushing hits a wall,
@@ -59,6 +60,18 @@ const MOBS := {
 	"gang_scav": {"th": "แก๊งเมืองร้าง", "sprite": "dw_raider_red", "hp": 38.0, "dmg": 7.0, "spd": 26.0, "cd": 1.3, "kind": "ranged", "range": 150.0},
 	"sentry_bot": {"th": "หุ่นยามติดปืน", "sprite": "en_sentry", "hp": 52.0, "dmg": 7.0, "spd": 20.0, "cd": 1.4, "kind": "ranged", "range": 160.0},
 	"mutant_ape": {"th": "ลิงกลายพันธุ์", "sprite": "en_ape", "hp": 70.0, "dmg": 10.0, "spd": 34.0, "cd": 1.3, "kind": "melee"},
+	# ---- mutations: appear further down the road and force a different loadout
+	"runner": {"th": "ซอมบี้วิ่งเร็ว", "sprite": "en_runner", "hp": 18.0, "dmg": 4.0, "spd": 72.0, "cd": 0.7, "kind": "melee", "mutant": true},
+	"spitter": {"th": "ซอมบี้พ่นกรด", "sprite": "en_spitter", "hp": 30.0, "dmg": 4.0, "spd": 22.0, "cd": 1.8, "kind": "ranged", "range": 150.0, "mech": ["acid"], "mutant": true},
+	"bloater": {"th": "ซอมบี้บวมระเบิด", "sprite": "en_bloater", "hp": 55.0, "dmg": 3.0, "spd": 16.0, "cd": 2.0, "kind": "melee", "mech": ["explode"], "mutant": true},
+	"screecher": {"th": "ซอมบี้ปีกหนัง", "sprite": "en_screecher", "hp": 22.0, "dmg": 4.0, "spd": 46.0, "cd": 1.2, "kind": "air", "range": 60.0, "mech": ["solar"], "mutant": true},
+	"brute": {"th": "ซอมบี้เกราะกระดูก", "sprite": "en_brute", "hp": 90.0, "dmg": 9.0, "spd": 18.0, "cd": 1.7, "kind": "melee", "mech": ["armor"], "mutant": true},
+}
+## mutations that can replace normal mobs, per biome (chance grows with distance / laps)
+const MUTANT_POOL := {
+	"industrial": ["runner"], "desert": ["runner", "spitter"], "forest": ["spitter", "screecher", "runner"],
+	"swamp": ["spitter", "bloater", "screecher"], "tundra": ["brute", "screecher", "bloater"],
+	"metro": ["runner", "spitter", "bloater", "screecher", "brute"],
 }
 const BIOME_MOBS := {
 	"industrial": ["rad_rat", "rad_rat", "scav_raider", "rust_drone"],
@@ -69,13 +82,27 @@ const BIOME_MOBS := {
 	"metro": ["gang_scav", "sentry_bot", "mutant_ape", "gang_scav"],
 }
 ## bosses have their own native-size sprites (no upscaling -> true pixel art)
+## mech: enrage (<30% hp faster & harder) | armor (-50% dmg taken above 60% hp) | summon (calls adds) |
+##       acid (corrodes the hull & armour) | solar (dives at the solar panels) | burrow (dives underground,
+##       erupts under the rear deck) | revive (raises the fallen) | explode (blows up when it dies)
 const BOSSES := {
-	"industrial": {"th": "โกเลมขยะ", "en": "JUNK GOLEM", "base": "yeti", "sprite": "boss_golem", "kind": "melee"},
-	"desert": {"th": "ราชันแมงป่อง", "en": "SCORPION KING", "base": "scorpion", "sprite": "boss_scorpion", "kind": "melee"},
-	"forest": {"th": "จ่าฝูงหมาป่ารังสี", "en": "ALPHA RAD-WOLF", "base": "rad_wolf", "sprite": "boss_wolf", "kind": "melee"},
-	"swamp": {"th": "ราชินีหนองพิษ", "en": "BOG QUEEN", "base": "bog_walker", "sprite": "boss_bogqueen", "kind": "ranged"},
-	"tundra": {"th": "ไททันน้ำแข็ง", "en": "FROST TITAN", "base": "yeti", "sprite": "boss_titan", "kind": "melee"},
-	"metro": {"th": "ผู้คุมจักรกล OVERSEER", "en": "OVERSEER MECH", "base": "sentry_bot", "sprite": "boss_overseer", "kind": "ranged"},
+	"industrial": {"th": "โกเลมขยะ", "en": "JUNK GOLEM", "base": "yeti", "sprite": "boss_golem", "kind": "melee", "mech": ["armor"]},
+	"desert": {"th": "ราชันแมงป่อง", "en": "SCORPION KING", "base": "scorpion", "sprite": "boss_scorpion", "kind": "melee", "mech": ["enrage", "acid"]},
+	"forest": {"th": "จ่าฝูงหมาป่ารังสี", "en": "ALPHA RAD-WOLF", "base": "rad_wolf", "sprite": "boss_wolf", "kind": "melee", "mech": ["summon", "enrage"]},
+	"swamp": {"th": "ราชินีหนองพิษ", "en": "BOG QUEEN", "base": "bog_walker", "sprite": "boss_bogqueen", "kind": "ranged", "mech": ["acid", "summon"]},
+	"tundra": {"th": "ไททันน้ำแข็ง", "en": "FROST TITAN", "base": "yeti", "sprite": "boss_titan", "kind": "melee", "mech": ["armor", "enrage"]},
+	"metro": {"th": "ผู้คุมจักรกล OVERSEER", "en": "OVERSEER MECH", "base": "sentry_bot", "sprite": "boss_overseer", "kind": "ranged", "mech": ["armor", "summon", "enrage"]},
+}
+## roaming mutant bosses for the every-10th-wave fights (rotates; harder ones join further down the road)
+const WAVE_BOSSES := {
+	"acid_matron": {"th": "แม่พันธุ์กรด", "en": "ACID MATRON", "base": "bog_walker", "sprite": "boss_acid", "kind": "ranged", "mech": ["acid", "enrage"], "from": 0},
+	"bloat_king": {"th": "ราชาบวมเน่า", "en": "BLOAT KING", "base": "yeti", "sprite": "boss_bloat", "kind": "melee", "mech": ["summon", "explode"], "from": 0},
+	"sky_harpy": {"th": "ฮาร์ปี้ปีกหนัง", "en": "SKIN-WING HARPY", "base": "vulture", "sprite": "boss_harpy", "kind": "air", "mech": ["solar", "enrage"], "from": 1},
+	"bone_hulk": {"th": "ยักษ์เกราะกระดูก", "en": "BONE HULK", "base": "mutant_ape", "sprite": "boss_hulk", "kind": "melee", "mech": ["armor", "enrage"], "from": 1},
+	"drill_worm": {"th": "หนอนเจาะถนน", "en": "ROAD DRILLER", "base": "yeti", "sprite": "boss_worm", "kind": "melee", "mech": ["burrow"], "from": 2},
+	"screamer": {"th": "ผู้กรีดร้อง", "en": "THE SCREAMER", "base": "vine_crawler", "sprite": "boss_screamer", "kind": "ranged", "mech": ["summon", "enrage"], "from": 2},
+	"necro_priest": {"th": "นักบวชปลุกศพ", "en": "NECRO PRIEST", "base": "bog_walker", "sprite": "boss_priest", "kind": "ranged", "mech": ["revive", "acid"], "from": 3},
+	"mech_spider": {"th": "แมงมุมจักรกล", "en": "MECH SPIDER", "base": "sentry_bot", "sprite": "boss_spider", "kind": "ranged", "mech": ["armor", "summon"], "from": 4},
 }
 
 var enemies: Array = []          # runtime enemy dicts
@@ -257,6 +284,7 @@ func van_stats() -> Dictionary:
 		v.turret_aspd = float(b.get("aspd", 1.0)) * (1.0 + Loot.sum_key([t], "aspd") / 100.0)
 		v.turret_range = float(b.get("range", 200)) * RANGE_SCALE
 		v.turret_splash = int(b.get("splash", 1))
+		v.aa = bool(b.get("aa", false))
 	var ram := Mods.level("spike_ram")
 	v.thorns = (v.thorns + 2.0 * ram * pow(1.12, maxf(0.0, enemy_level() - 1.0) * 0.5)) * (1.0 + 0.4 * ram)
 	v.roof = [0.0, 0.4, 0.7, 1.0][clampi(Mods.level("roof_turret"), 0, 3)]
@@ -266,6 +294,8 @@ func van_stats() -> Dictionary:
 		v.turret_aspd = 1.2
 		v.turret_range = 220.0 * RANGE_SCALE
 		v.roof = 1.0
+	if float(Game.s.get("corrode", 0.0)) > 0.0:
+		v.def *= 0.6       # acid eats the armour
 	v.turret_dps = v.turret_dmg * v.turret_aspd * (1.0 + 0.5 * (v.turret_splash - 1)) * (1.0 + (v.roof if not t.is_empty() else 0.0))
 	return v
 
@@ -366,7 +396,9 @@ func _start_wave() -> void:
 		Game.toast.emit("บอสด่านตรวจปรากฏตัว: %s!" % BOSSES[biome_id()].th, "bad")
 	elif is_boss_wave(w):
 		wave_is_boss = true
-		spawn_queue.append({"t": 0.5, "boss": "boss", "lvl": lvl})
+		var bid := pick_wave_boss(w)
+		spawn_queue.append({"t": 0.5, "boss": "boss", "boss_id": bid, "lvl": lvl})
+		Game.toast.emit("บอสกลายพันธุ์: %s!" % boss_def(bid).th, "bad")
 		for i in 2:
 			spawn_queue.append({"t": 1.2 + i * 1.2, "mob": mobs[rng.randi() % mobs.size()], "lvl": lvl})
 	else:
@@ -376,6 +408,27 @@ func _start_wave() -> void:
 	wave_active = true
 	wave_t = 0.0
 	wave_changed.emit()
+
+
+## every boss wave brings a different boss: biome champion + the roaming mutants unlocked by distance
+func pick_wave_boss(w: int) -> String:
+	var pool := [biome_id()]
+	var depth := int(Game.s.biome) + 3 * int(Game.s.get("lap", 0))
+	for id in WAVE_BOSSES:
+		if depth >= int(WAVE_BOSSES[id].from):
+			pool.append(id)
+	return pool[(w / 10 + int(Game.s.biome) * 3) % pool.size()]
+
+
+func boss_def(id: String) -> Dictionary:
+	if WAVE_BOSSES.has(id):
+		return WAVE_BOSSES[id]
+	return BOSSES.get(id, BOSSES.industrial)
+
+
+func mutation_chance() -> float:
+	var depth := float(Game.s.biome) + 3.0 * float(Game.s.get("lap", 0))
+	return clampf(0.06 + 0.07 * depth + 0.004 * wave(), 0.0, 0.55)
 
 
 func _next_req() -> int:
@@ -391,7 +444,7 @@ func _spawn(q: Dictionary) -> void:
 	var mult_hp := 1.0
 	var mult_dmg := 1.0
 	if q.has("boss"):
-		var bd: Dictionary = BOSSES[biome_id()]
+		var bd: Dictionary = boss_def(str(q.get("boss_id", biome_id())))
 		def = MOBS[bd.base]
 		e.boss = true
 		e.warlord = q.boss == "warlord"
@@ -401,9 +454,21 @@ func _spawn(q: Dictionary) -> void:
 		e.name = ("บอสด่านตรวจ: " if e.warlord else "") + bd.th
 		e.mob = bd.base
 		e.boss_sprite = bd.sprite
+		e.en = bd.en
+		e.mech = (bd.get("mech", []) as Array).duplicate()
+		e.mech_t = 4.0
+		if bd.get("kind", "") == "air":
+			e.boss_air = true
 	else:
-		def = MOBS[q.mob]
-		e.mob = q.mob
+		var mob_id: String = q.mob
+		if not q.has("no_mutate") and rng.randf() < mutation_chance():
+			var mp: Array = MUTANT_POOL.get(biome_id(), [])
+			if not mp.is_empty():
+				mob_id = mp[rng.randi() % mp.size()]
+		def = MOBS[mob_id]
+		e.mob = mob_id
+		e.mech = (def.get("mech", []) as Array).duplicate()
+		e.mutant = def.get("mutant", false)
 		e.name = def.th
 		e.tint = def.get("tint", "")
 		if e.elite:
@@ -416,7 +481,7 @@ func _spawn(q: Dictionary) -> void:
 	e.dmg = float(def.dmg) * pow(DMG_GROWTH, L - 1.0) * mult_dmg
 	e.spd = float(def.spd) * (0.7 if e.boss else 1.0) * rng.randf_range(0.9, 1.1)
 	e.cd = float(def.cd) * (1.3 if e.boss else 1.0)
-	e.kind = def.kind
+	e.kind = "air" if e.get("boss_air", false) else def.kind
 	e.range = float(def.get("range", 0.0)) * RANGE_SCALE
 	e.sprite = e.get("boss_sprite", def.sprite)
 	e.x = SPAWN_X + rng.randf_range(0, 30)
@@ -458,8 +523,12 @@ func tick(dt: float) -> void:
 			_spawn(q)
 	var bruiser_alive := _alive(1)
 	var vs := van_stats()
+	# --- boss / mutant mechanics
+	_tick_mechanics(dt)
 	# --- enemies move & attack
 	for e in enemies:
+		if e.get("burrowed", false):
+			continue
 		if e.stun > 0.0:
 			e.stun = float(e.stun) - dt
 			continue
@@ -473,9 +542,18 @@ func tick(dt: float) -> void:
 		if e.atk_t > 0.0:
 			continue
 		e.atk_t = float(e.cd)
+		var mech: Array = e.get("mech", [])
+		if mech.has("solar") and rng.randf() < 0.55:
+			# skin-wings dive at the solar array on the roof
+			shot.emit("enemy", int(e.id), "solar", -1, "enemy")
+			Game.damage_solar(0.03 if e.boss else 0.012)
+			boss_event.emit("solar", e)
+			continue
 		var target := _enemy_target(e, bruiser_alive)
 		if e.kind != "melee":
-			shot.emit("enemy", int(e.id), "hero" if target >= 0 else "van", target, "enemy")
+			shot.emit("enemy", int(e.id), "hero" if target >= 0 else "van", target, "acid" if mech.has("acid") else "enemy")
+		if mech.has("acid"):
+			Game.corrode(6.0 if e.boss else 3.0)
 		if target >= 0:
 			_damage_hero(target, float(e.dmg))
 		else:
@@ -527,6 +605,13 @@ func tick(dt: float) -> void:
 		turret.t = float(turret.t) - dt
 		if turret.t <= 0.0:
 			var tt := _targets_from(TURRET_POS.x, float(vs.turret_range), int(vs.turret_splash), true)
+			if bool(vs.get("aa", false)):
+				var air := tt.filter(func(x): return x.kind == "air")
+				var air_all := enemies.filter(func(x): return x.kind == "air" and float(x.x) - TURRET_POS.x <= float(vs.turret_range) * 1.3)
+				if not air_all.is_empty():
+					tt = air_all.slice(0, int(vs.turret_splash))
+				elif not air.is_empty():
+					tt = air
 			if not tt.is_empty():
 				turret.t = 1.0 / maxf(0.2, float(vs.turret_aspd))
 				var has_main := not Loot.van_equipped("turret").is_empty()
@@ -534,7 +619,7 @@ func tick(dt: float) -> void:
 					var crit := rng.randf() < 0.05
 					if has_main:
 						shot.emit("turret", 0, "enemy", int(e.id), "turret")
-						_damage_enemy(e, float(vs.turret_dmg) * (1.5 if crit else 1.0), crit, -1, true)
+						_damage_enemy(e, float(vs.turret_dmg) * (1.5 if crit else 1.0) * (2.0 if bool(vs.get("aa", false)) and e.kind == "air" else 1.0), crit, -1, true)
 					if float(vs.roof) > 0.0 and is_instance_valid(self) and float(e.hp) > 0.0:
 						shot.emit("roof", 0, "enemy", int(e.id), "turret")
 						_damage_enemy(e, float(vs.turret_dmg) * float(vs.roof), false, -1, true)
@@ -558,6 +643,72 @@ func tick(dt: float) -> void:
 	for p in _dmg_window:
 		tot += float(p[1])
 	dps_meter = tot / 5.0
+
+
+# =================================================================== boss / mutant mechanics
+func _tick_mechanics(dt: float) -> void:
+	for e in enemies.duplicate():
+		var mech: Array = e.get("mech", [])
+		if mech.is_empty() or not e.boss:
+			continue
+		var frac := float(e.hp) / maxf(1.0, float(e.max))
+		if mech.has("enrage") and frac < 0.3 and not e.get("enraged", false):
+			e.enraged = true
+			e.spd = float(e.spd) * 1.35
+			e.cd = float(e.cd) * 0.65
+			e.dmg = float(e.dmg) * 1.25
+			boss_event.emit("enrage", e)
+			Game.toast.emit("%s คลั่ง! โจมตีเร็วและแรงขึ้น" % e.name, "bad")
+		e.mech_t = float(e.get("mech_t", 4.0)) - dt
+		if e.get("burrowed", false):
+			e.burrow_t = float(e.burrow_t) - dt
+			if e.burrow_t <= 0.0:
+				e.burrowed = false
+				e.x = MELEE_STOP + 4.0
+				boss_event.emit("erupt", e)
+				if _alive(1):
+					_damage_hero(1, float(e.dmg) * 1.6)
+				var hd := float(e.dmg) * 0.6
+				Game.s.hull = maxf(0.0, float(Game.s.hull) - hd)
+				hit.emit("van", -1, hd, true)
+			continue
+		if e.mech_t > 0.0:
+			continue
+		e.mech_t = 9.0 if not e.get("enraged", false) else 6.0
+		var mobs: Array = BIOME_MOBS.get(biome_id(), BIOME_MOBS.industrial)
+		if mech.has("summon") and enemies.size() < 9:
+			for i in 2:
+				spawn_queue.append({"t": 0.2 + i * 0.4, "mob": mobs[rng.randi() % mobs.size()], "lvl": maxi(1, int(e.lvl) - 2)})
+			boss_event.emit("summon", e)
+		if mech.has("revive") and enemies.size() < 9:
+			spawn_queue.append({"t": 0.3, "mob": mobs[rng.randi() % mobs.size()], "lvl": int(e.lvl), "elite": true, "no_mutate": true})
+			boss_event.emit("revive", e)
+		if mech.has("burrow") and frac > 0.05:
+			e.burrowed = true
+			e.burrow_t = 2.6
+			boss_event.emit("burrow", e)
+
+
+func _explode(e: Dictionary) -> void:
+	boss_event.emit("explode", e)
+	var power := float(e.dmg) * (5.0 if e.boss else 3.0)
+	if float(e.x) <= MELEE_STOP + 40.0:
+		if _alive(1):
+			_damage_hero(1, power)
+		var hd := power * 0.3
+		Game.s.hull = maxf(0.0, float(Game.s.hull) - hd)
+		hit.emit("van", -1, hd, true)
+	for o in enemies:
+		if absf(float(o.x) - float(e.x)) < 40.0:
+			_damage_enemy(o, power * 0.5, false, -1, true)
+
+
+## the strongest living boss (for the boss HP bar)
+func current_boss() -> Dictionary:
+	for e in enemies:
+		if e.boss:
+			return e
+	return {}
 
 
 func _alive(slot: int) -> bool:
@@ -632,6 +783,12 @@ func _hero_hit(slot: int, e: Dictionary, mult: float) -> void:
 
 
 func _damage_enemy(e: Dictionary, dmg: float, crit: bool, _slot: int, show: bool) -> void:
+	if e.get("burrowed", false):
+		return
+	if (e.get("mech", []) as Array).has("armor") and float(e.hp) > float(e.max) * 0.6:
+		dmg *= 0.5
+		if float(e.hp) - dmg <= float(e.max) * 0.6:
+			boss_event.emit("armor_break", e)
 	e.hp = float(e.hp) - dmg
 	_dmg_window.append([_clock, dmg])
 	if show:
@@ -715,6 +872,8 @@ func _cast_skill(slot: int) -> bool:
 # =================================================================== rewards
 func _on_kill(e: Dictionary) -> void:
 	enemies.erase(e)
+	if (e.get("mech", []) as Array).has("explode"):
+		_explode(e)
 	var L := float(e.lvl)
 	var bonus_xp := 0.0
 	var bonus_scrap := 0.0

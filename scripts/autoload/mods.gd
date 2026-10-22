@@ -30,7 +30,16 @@ const MODS := {
 	"rain_catcher": {"side": "ext", "th": "ผ้าใบดักน้ำฝน", "en": "RAIN CATCHER", "icon": "water", "max": 2, "bp": "",
 		"cost": [{"scrap": 90}, {"scrap": 240, "components": 6}],
 		"desc": "เก็บน้ำฝน +75%/ระดับ", "per": 0.75},
+	"suspension": {"side": "ext", "th": "ช่วงล่างหนัก", "en": "HEAVY SUSPENSION", "icon": "gear", "max": 3, "bp": "",
+		"cost": [{"scrap": 180, "components": 8}, {"scrap": 420, "components": 22}, {"scrap": 900, "components": 45}],
+		"desc": "รับน้ำหนักได้ +10 ตัน/ระดับ (โช้คอัพเห็นที่ล้อ)", "per": 10.0},
+	"offroad_wheels": {"side": "ext", "th": "ล้อออฟโรด", "en": "OFF-ROAD WHEELS", "icon": "explore", "max": 3, "bp": "",
+		"cost": [{"scrap": 220, "components": 10}, {"scrap": 520, "components": 26}, {"scrap": 1000, "components": 50}],
+		"desc": "รับน้ำหนัก +7 ตัน · ความเร็ว +4%/ระดับ (ยางดอกใหญ่บนรถจริง)", "per": 7.0},
 	# ---------------- internal
+	"engine_tune": {"side": "int", "th": "จูนเครื่องยนต์", "en": "ENGINE TUNE", "icon": "engine", "max": 3, "bp": "bp_engine_tune",
+		"cost": [{"scrap": 300, "components": 15}, {"scrap": 700, "components": 35}, {"scrap": 1500, "components": 70}],
+		"desc": "กำลังเครื่องยนต์ +20%/ระดับ (ลากน้ำหนักได้มากขึ้น)", "per": 0.2},
 	"insulation": {"side": "int", "th": "ฉนวนกันหนาว", "en": "INSULATION", "icon": "snow", "max": 3, "bp": "",
 		"cost": [{"scrap": 150, "components": 5}, {"scrap": 380, "components": 18}, {"scrap": 800, "components": 40}],
 		"desc": "ใช้เชื้อเพลิงทำความร้อน -25%/ระดับ", "per": 0.25},
@@ -54,8 +63,46 @@ const BLUEPRINT_TH := {
 	"bp_roof_turret": "แบบป้อมปืนหลังคา", "bp_tracks": "แบบตีนตะขาบ", "bp_solar_covers": "แบบฝาครอบโซลาร์",
 	"bp_rad_shield": "แบบแผ่นตะกั่ว", "bp_heater": "แบบหม้อต้มทำความร้อน", "bp_air_filter": "แบบระบบกรองอากาศ",
 	"bp_repair_bay": "แบบอู่ซ่อม", "bp_refinery": "แบบโรงกลั่นเชื้อเพลิง", "bp_workshop": "แบบโรงช่าง",
-	"bp_chassis2": "แบบแชสซี MK-II (5 ชั้น)", "bp_chassis3": "แบบแชสซี MK-III (6 ชั้น)",
+	"bp_bus": "แบบรถบัสหุ้มเหล็ก (3 ชั้น)", "bp_rig": "แบบรถพ่วง 18 ล้อ (4 ชั้น)", "bp_train": "แบบรถไฟหุ้มเกราะ",
+	"bp_trailer": "แบบรถพ่วงท้าย (+6 ห้อง)", "bp_engine_tune": "แบบจูนเครื่องยนต์",
 }
+
+
+# ------------------------------------------------------------------ trailers (bought during a run)
+const TRAILER_VAULT := 5
+
+
+func trailer_cost() -> Dictionary:
+	var n := Game.trailers()
+	return Data.TRAILER_COST[n] if n < Data.TRAILER_COST.size() else {}
+
+
+func can_add_trailer() -> String:
+	if Game.trailers() >= Data.MAX_TRAILERS:
+		return "พ่วงครบ %d คันแล้ว" % Data.MAX_TRAILERS
+	if not Meta.has_blueprint("bp_trailer"):
+		return "ต้องมี%s" % BLUEPRINT_TH.bp_trailer
+	if int(Game.s.vault_level) < TRAILER_VAULT:
+		return "ต้องการ Vault Lv.%d" % TRAILER_VAULT
+	if not Game.can_afford(trailer_cost()):
+		return "ทรัพยากรไม่พอ"
+	return ""
+
+
+func add_trailer() -> bool:
+	if can_add_trailer() != "":
+		return false
+	if not Game.pay(trailer_cost()):
+		return false
+	Game.s["trailers"] = Game.trailers() + 1
+	for i in Data.TRAILER_SLOTS:
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}})
+	var kind := "โบกี้" if Game.vehicle_def().trailer == "wagon" else "รถพ่วง"
+	Game.toast.emit("ต่อ%sคันที่ %d แล้ว! +6 ห้อง (รถหนักขึ้น กินน้ำมันมากขึ้น)" % [kind, Game.trailers()], "good")
+	mods_changed.emit()
+	Game.rooms_changed.emit()
+	Game.travel_changed.emit()
+	return true
 
 
 func level(id: String) -> int:

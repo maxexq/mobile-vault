@@ -5,7 +5,8 @@ extends ModalPanel
 
 var forced := false
 var carry: Array = []
-var step := "summary"   # summary | perks | crew
+var step := "story"     # story | summary | perks | crew
+var tier_pick := ""
 var earned := 0
 var _list: VBoxContainer
 
@@ -22,7 +23,8 @@ func _on_backdrop_tap() -> void:
 func open_retire(is_forced: bool) -> void:
 	forced = is_forced
 	close_btn.visible = not forced
-	step = "summary"
+	step = "story"
+	tier_pick = ""
 	carry = []
 	# default picks: highest level survivors
 	var arr: Array = Game.s.dwellers.duplicate()
@@ -37,9 +39,33 @@ func refresh() -> void:
 		_list.remove_child(c)
 		c.queue_free()
 	match step:
+		"story": _build_story()
 		"summary": _build_summary()
 		"perks": _build_perks()
 		"crew": _build_crew()
+
+
+func _build_story() -> void:
+	var st: Dictionary = Meta.STORIES[Meta.story_key()]
+	set_title("%s / %s" % [st.en, st.title])
+	var img := "res://assets/events/%s.png" % st.img
+	if ResourceLoader.exists(img):
+		var fr := UIKit.panel(Color("0c0c0e"), UIKit.C_LINE_DIM)
+		var tr := UIKit.tex_rect(load(img), Vector2(320, 160))
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		fr.add_child(tr)
+		_list.add_child(fr)
+	var body_l := UIKit.wrap_label(str(st.text) % Meta.vehicle_name(), UIKit.FS, UIKit.C_TEXT)
+	body_l.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
+	_list.add_child(body_l)
+	body_l.visible_ratio = 0.0
+	var tw := body_l.create_tween()
+	tw.tween_property(body_l, "visible_ratio", 1.0, 3.0)
+	var nx := UIKit.button("ต่อไป", "yellow", "play")
+	nx.pressed.connect(func():
+		step = "summary"
+		refresh())
+	_list.add_child(nx)
 
 
 func _build_summary() -> void:
@@ -66,13 +92,13 @@ func _build_summary() -> void:
 		h.add_child(UIKit.spacer())
 		h.add_child(UIKit.label(r[1], UIKit.FP, UIKit.C_TEXT, true))
 		_list.add_child(h)
-	_list.add_child(UIKit.label("LEGACY +%d (รวม %d)" % [Meta.legacy_earned(), int(Meta.m().legacy) + (0 if s.get("legacy_banked", false) else Meta.legacy_earned())], UIKit.FP, UIKit.C_GOLD, true))
+	_list.add_child(UIKit.label("RESEARCH +%d (รวม %d)" % [Meta.legacy_earned(), int(Meta.m().legacy) + (0 if s.get("legacy_banked", false) else Meta.legacy_earned())], UIKit.FP, UIKit.C_GOLD, true))
 	var hb := UIKit.hbox(4)
 	if not forced:
 		var cancel := UIKit.button("ยังไม่ใช่ตอนนี้", "gray")
 		cancel.pressed.connect(close)
 		hb.add_child(cancel)
-	var nx := UIKit.button("ถัดไป: มรดก", "yellow", "up")
+	var nx := UIKit.button("ถัดไป: งานวิจัย", "yellow", "up")
 	nx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nx.pressed.connect(func():
 		earned = Meta.bank_legacy()
@@ -83,8 +109,8 @@ func _build_summary() -> void:
 
 
 func _build_perks() -> void:
-	set_title("LEGACY %d / มรดกถาวร" % int(Meta.m().legacy))
-	_list.add_child(UIKit.wrap_label("ใช้แต้มมรดกซื้อความสามารถถาวรให้ทุกรุ่นถัดไป", UIKit.FS_SMALL))
+	set_title("RESEARCH %d / %s" % [int(Meta.m().legacy), Meta.RESEARCH_TH])
+	_list.add_child(UIKit.wrap_label("ใช้%sซื้อความสามารถถาวรให้ทุกรุ่นถัดไป · พาหนะใหม่ต้องมีพิมพ์เขียวด้วย" % Meta.RESEARCH_TH, UIKit.FS_SMALL))
 	for id in Meta.PERKS:
 		var p: Dictionary = Meta.PERKS[id]
 		var lv := Meta.perk(id)
@@ -149,13 +175,26 @@ func _build_crew() -> void:
 				carry.append(did)
 			refresh())
 		_list.add_child(b)
-	var ch := Meta.chassis()
-	_list.add_child(UIKit.label("รถคันใหม่: %s · แชสซี MK-%s (%d ชั้น)" % [Meta.VEHICLE_NAMES[clampi(Meta.generation(), 0, Meta.VEHICLE_NAMES.size() - 1)], ["I", "II", "III"][ch - 1], 3 + ch], UIKit.FS_SMALL, UIKit.C_GOLD))
+	_list.add_child(UIKit.header("VEHICLE", "พาหนะคันใหม่"))
+	if tier_pick == "":
+		tier_pick = Meta.best_tier()
+	var vh := UIKit.flow(3)
+	for t in Data.TIER_ORDER:
+		if not Meta.tier_unlocked(t):
+			continue
+		var vd: Dictionary = Data.VEHICLES[t]
+		var tb := UIKit.button("%s (%d ห้อง)" % [vd.th, int(vd.floors) * 3], "yellow" if t == tier_pick else "gray")
+		var tid: String = t
+		tb.pressed.connect(func():
+			tier_pick = tid
+			refresh())
+		vh.add_child(tb)
+	_list.add_child(vh)
 	var go := UIKit.button("สร้างพาหนะคันใหม่!", "red", "hammer")
 	go.pressed.connect(func():
 		var picks := carry.duplicate()
 		forced = false
 		is_open = false
 		visible = false
-		Meta.next_generation(picks))
+		Meta.next_generation(picks, tier_pick))
 	_list.add_child(go)

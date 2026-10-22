@@ -59,6 +59,7 @@ const BASES := {
 	# --- vault: turret
 	"mg_turret": {"slot": "turret", "th": "ป้อมปืนกล", "en": "MG Turret", "icon": "turret", "sprite": "mg", "dmg": 4.0, "aspd": 2.0, "range": 220, "min_ilvl": 1},
 	"harpoon_gun": {"slot": "turret", "th": "ปืนฉมวก", "en": "Harpoon Gun", "icon": "harpoon", "sprite": "harpoon", "dmg": 15.0, "aspd": 0.5, "range": 260, "min_ilvl": 5},
+	"flak_cannon": {"slot": "turret", "th": "ปืนต่อสู้อากาศยาน", "en": "Flak Cannon", "icon": "turret", "sprite": "flak", "dmg": 6.0, "aspd": 1.4, "range": 240, "splash": 2, "aa": true, "min_ilvl": 8},
 	"tesla_coil": {"slot": "turret", "th": "ขดลวดเทสลา", "en": "Tesla Coil", "icon": "tesla", "sprite": "tesla", "dmg": 7.0, "aspd": 1.0, "range": 200, "splash": 3, "min_ilvl": 12},
 	# --- vault: plating
 	"scrap_plates": {"slot": "plating", "th": "แผ่นเหล็กปะ", "en": "Scrap Plates", "icon": "plates", "hull": 30.0, "def": 4.0, "min_ilvl": 1},

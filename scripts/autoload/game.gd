@@ -15,6 +15,7 @@ signal floating_text(slot: int, text: String, icon: String)
 signal game_started
 signal gear_changed
 signal squad_changed
+signal pets_changed
 
 const AUTOSAVE_SEC := 15.0
 
@@ -51,9 +52,9 @@ func new_game() -> void:
 ## fresh state (also used as the live backdrop behind the title screen)
 func setup_default_state(keep_meta: bool = false) -> void:
 	var meta: Dictionary = s.get("meta", {}) if keep_meta else {}
-	var chassis := int(s.get("chassis", 1)) if keep_meta else 1
+	var tier_id: String = str(s.get("tier", "van")) if keep_meta else "van"
 	s = {
-		"version": 1, "route_v": 2, "chassis": chassis,
+		"version": 1, "route_v": 2, "slots_v": 4, "tier": tier_id, "trailers": 0, "pets": [], "outage": {},
 		"vault_level": 1,
 		"res": {"power": 60.0, "water": 50.0, "food": 50.0, "scrap": 150.0, "fuel": 30.0},
 		"items": {"stimpack": 2, "radaway": 1, "ammo": 5},
@@ -75,15 +76,15 @@ func setup_default_state(keep_meta: bool = false) -> void:
 	for i in slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}})
 	s.rooms[Data.ENGINE_SLOT].type = "engine"
-	s.rooms[4].type = "kitchen"
-	s.rooms[5].type = "water"
+	s.rooms[1].type = "kitchen"
+	s.rooms[2].type = "water"
 	if keep_meta:
 		# a new generation starts with three fresh volunteers (+ the veterans the caller adds)
 		for i in 3:
 			var d := recruit_random()
 			d.lvl = 1 + Meta.generation() / 2
 		s.dwellers[0].room = Data.ENGINE_SLOT
-		s.dwellers[1].room = 4
+		s.dwellers[1].room = 1
 		s.van_gear.turret = Loot.roll_item("turret", 1, 0, "mg_turret")
 		s.items["components"] = 20
 		s.squad = [-1, int(s.dwellers[2].id), -1]
@@ -91,8 +92,8 @@ func setup_default_state(keep_meta: bool = false) -> void:
 	var mark := _add_dweller({"name": "จ่ามาร์ค", "lore": "mark", "variant": "dw_army_brown", "str": 7, "int": 3, "agi": 4, "room": -1, "lvl": 3})
 	var leo := _add_dweller({"name": "ลีโอ", "lore": "leo", "variant": "dw_scav_brown", "str": 4, "int": 3, "agi": 7, "room": -1, "lvl": 2})
 	_add_dweller({"name": "ต้น", "lore": "ton", "variant": "dw_jumpsuit_black", "str": 6, "int": 4, "agi": 3, "room": Data.ENGINE_SLOT, "lvl": 1})
-	_add_dweller({"name": "เชฟบ็อบ", "lore": "bob", "variant": "dw_chef_gray", "str": 3, "int": 4, "agi": 7, "room": 4, "lvl": 2})
-	_add_dweller({"name": "พยาบาลคลารา", "lore": "clara", "variant": "dw_medic_red", "str": 3, "int": 7, "agi": 4, "room": 5, "lvl": 2})
+	_add_dweller({"name": "เชฟบ็อบ", "lore": "bob", "variant": "dw_chef_gray", "str": 3, "int": 4, "agi": 7, "room": 1, "lvl": 2})
+	_add_dweller({"name": "พยาบาลคลารา", "lore": "clara", "variant": "dw_medic_red", "str": 3, "int": 7, "agi": 4, "room": 2, "lvl": 2})
 	# starter defence squad + gear (common)
 	s.squad = [int(leo.id), int(mark.id), -1]
 	leo.gear = {"weapon": Loot.roll_item("weapon", 1, 0, "hunting_rifle"), "backpack": Loot.roll_item("backpack", 1, 0, "school_bag")}
@@ -164,12 +165,62 @@ func _migrate() -> void:
 	for r in s.rooms:
 		r.merge({"job": {}, "level": 1}, false)
 	# v3: fuel, exterior/interior mods, expeditions, prestige; three rooms per floor
-	s.merge({"chassis": 1, "mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true}, false)
+	s.merge({"mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true}, false)
 	(s.res as Dictionary).merge({"fuel": 30.0}, false)
+	_migrate_v4()
 	while s.rooms.size() < slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}})
 	for d in s.dwellers:
 		d.merge({"skills": {}, "infection": 0.0}, false)
+
+
+## v4: vehicle tiers + trailers. Saves made before tiers drive the 18-wheeler (rig); the old
+## MK-II/III chassis becomes the armoured train. Slots are renumbered floor*3+column.
+func _migrate_v4() -> void:
+	if int(s.get("slots_v", 0)) >= 4:
+		s.merge({"tier": "van", "trailers": 0, "pets": [], "outage": {}}, false)
+		return
+	var ch := int(s.get("chassis", 1))
+	s["tier"] = "rig" if ch <= 1 else "train"
+	s.erase("chassis")
+	s.merge({"trailers": 0, "pets": [], "outage": {}}, false)
+	var old: Array = s.rooms
+	var remap := {}
+	var fresh := []
+	for i in Data.ROOMS_PER_FLOOR * 4:
+		fresh.append({"type": "empty", "level": 1, "job": {}})
+	for i in old.size():
+		if i >= Data.V3_SLOT_CELL.size():
+			continue
+		var cell: Array = Data.V3_SLOT_CELL[i]
+		if int(cell[1]) >= 4:
+			continue      # rooms on the removed 5th/6th floor are lost (their crew becomes idle)
+		var ni := int(cell[1]) * Data.ROOMS_PER_FLOOR + int(cell[0])
+		fresh[ni] = old[i]
+		remap[i] = ni
+	s.rooms = fresh
+	for d in s.dwellers:
+		var r := int(d.get("room", -1))
+		if r >= 0:
+			d.room = remap.get(r, -1)
+	if s.get("pet", false):
+		s.pets = [{"kind": "dog", "name": "ข้าวตัง"}]
+	var mm: Dictionary = s.get("meta", {})
+	if not mm.is_empty():
+		var perks: Dictionary = mm.get("perks", {})
+		if perks.has("chassis2") or perks.has("chassis3"):
+			perks["tier_train"] = 1
+		perks.erase("chassis2")
+		perks.erase("chassis3")
+		perks["tier_bus"] = 1
+		perks["tier_rig"] = 1
+		var bps: Array = mm.get("blueprints", [])
+		for pair in [["bp_chassis2", "bp_bus"], ["bp_chassis3", "bp_rig"]]:
+			if bps.has(pair[0]):
+				bps.erase(pair[0])
+				if not bps.has(pair[1]):
+					bps.append(pair[1])
+	s["slots_v"] = 4
 
 
 func save_game() -> void:
@@ -243,16 +294,51 @@ func pop_cap() -> int:
 	return c
 
 
-## three rooms per floor; chassis MK-I/II/III = 4/5/6 floors
+# ------------------------------------------------------------------ vehicle tier / layout
+func tier() -> String:
+	return str(s.get("tier", "van")) if not s.is_empty() else "rig"
+
+
+func vehicle_def() -> Dictionary:
+	return Data.VEHICLES.get(tier(), Data.VEHICLES.van)
+
+
+func floors() -> int:
+	return int(vehicle_def().floors)
+
+
+func trailers() -> int:
+	return clampi(int(s.get("trailers", 0)), 0, Data.MAX_TRAILERS) if not s.is_empty() else 0
+
+
+## main body slots: slot = floor * 3 + column
+func main_slots() -> int:
+	return Data.ROOMS_PER_FLOOR * floors()
+
+
 func slot_count() -> int:
-	return Data.ROOMS_PER_FLOOR * (3 + int(s.get("chassis", 1)))
+	return main_slots() + Data.TRAILER_SLOTS * trailers()
+
+
+## which unit a slot belongs to: -1 = main body, 0/1 = trailer index
+func slot_unit(slot: int) -> int:
+	return -1 if slot < main_slots() else (slot - main_slots()) / Data.TRAILER_SLOTS
+
+
+## (column, floor) inside its unit
+func slot_cell(slot: int) -> Vector2i:
+	var local := slot if slot < main_slots() else (slot - main_slots()) % Data.TRAILER_SLOTS
+	return Vector2i(local % Data.ROOMS_PER_FLOOR, local / Data.ROOMS_PER_FLOOR)
 
 
 func unlocked_slots() -> Array:
-	var n: int = Data.SLOTS_PER_LEVEL[clampi(s.vault_level, 0, Data.MAX_VAULT_LEVEL)] + Data.ROOMS_PER_FLOOR * (int(s.get("chassis", 1)) - 1)
-	n = mini(n, slot_count() - 1)
-	var arr: Array = Data.SLOT_UNLOCK_ORDER.slice(0, n)
-	arr.append(Data.ENGINE_SLOT)
+	var n: int = Data.SLOTS_PER_LEVEL[clampi(s.vault_level, 0, Data.MAX_VAULT_LEVEL)]
+	n = mini(n, main_slots() - 1)
+	var arr: Array = [Data.ENGINE_SLOT]
+	for i in n:
+		arr.append(i + 1)
+	for i in range(main_slots(), slot_count()):
+		arr.append(i)       # trailer rooms are open as soon as the trailer is hitched
 	return arr
 
 
@@ -287,7 +373,7 @@ func solar_output_pm() -> float:
 	if sol.tracking:
 		sun = sqrt(sun)
 	var panels: float = 1.0 + 0.25 * float(sol.panels - 1)
-	return 20.0 * panels * sun * minf(1.0, float(weather_def().solar) * Env.solar_mult()) * (1.0 - 0.6 * float(sol.dirt))
+	return 20.0 * panels * sun * minf(1.0, float(weather_def().solar) * Env.solar_mult()) * (1.0 - 0.6 * float(sol.dirt)) * (1.0 - float(sol.get("damage", 0.0)))
 
 
 func power_flow_pm() -> float:
@@ -307,13 +393,13 @@ func power_flow_pm() -> float:
 func hull_max() -> float:
 	if s.is_empty() or not s.has("van_gear"):
 		return 100.0
-	return 100.0 + float(Combat.van_stats().hull) + Mods.val("armor_plates")
+	return 100.0 + float(vehicle_def().hull) + float(Combat.van_stats().hull) + Mods.val("armor_plates")
 
 
 func speed_factor() -> float:
 	if not is_moving():
 		return 0.0
-	var f: float = weather_def().speed * (1.0 + float(Combat.van_stats().speed) / 100.0) * Env.speed_mult()
+	var f: float = weather_def().speed * (1.0 + float(Combat.van_stats().speed) / 100.0) * Env.speed_mult() * Haul.speed_mult()
 	if s.hull < 30.0:
 		f *= 0.7
 	return f
@@ -369,12 +455,67 @@ func danger_level() -> int:
 	return int(Data.biome(s.biome).danger) + int(s.lap)
 
 
+## crew that actually works the room (strikers sit it out)
 func room_workers(slot: int) -> Array:
+	var out := []
+	for d in s.dwellers:
+		if int(d.room) == slot and not is_away(d) and not d.get("strike", false):
+			out.append(d)
+	return out
+
+
+## everyone physically in the room (incl. strikers) — for the visuals
+func room_occupants(slot: int) -> Array:
 	var out := []
 	for d in s.dwellers:
 		if int(d.room) == slot and not is_away(d):
 			out.append(d)
 	return out
+
+
+# ------------------------------------------------------------------ power outages
+func blackout() -> bool:
+	return not s.is_empty() and float(s.res.power) <= 0.5
+
+
+func room_dark(slot: int) -> bool:
+	if s.is_empty():
+		return false
+	return blackout() or (s.get("outage", {}) as Dictionary).has(str(slot))
+
+
+func outage_mult(slot: int) -> float:
+	if not (s.get("outage", {}) as Dictionary).has(str(slot)):
+		return 1.0
+	return 0.35 if float(Data.room_def(s.rooms[slot].type).power) > 0.0 else 0.7
+
+
+## random short circuits: a room goes dark for a while (faster to fix with a mechanic aboard)
+func _tick_outages(dt: float, offline: bool) -> void:
+	var o: Dictionary = s.get("outage", {})
+	for k in o.keys():
+		var fix := 1.0
+		for d in room_workers(int(k)):
+			fix += 1.5 if Crew.has(d, "mechanic") else 0.5
+		o[k] = float(o[k]) - dt * fix
+		if float(o[k]) <= 0.0:
+			o.erase(k)
+			if not offline:
+				toast.emit("ไฟห้อง%sกลับมาแล้ว" % Data.room_def(s.rooms[int(k)].type).th, "good")
+				rooms_changed.emit()
+	s["outage"] = o
+	if offline or rng.randf() > dt / 420.0:
+		return
+	var cands := []
+	for i in s.rooms.size():
+		if s.rooms[i].type != "empty" and is_slot_unlocked(i) and not o.has(str(i)):
+			cands.append(i)
+	if cands.is_empty():
+		return
+	var slot: int = cands[rng.randi() % cands.size()]
+	o[str(slot)] = rng.randf_range(50.0, 110.0)
+	toast.emit("ไฟช็อต! ห้อง%sมืดสนิท — คนในห้องใช้ไฟฉายซ่อมอยู่" % Data.room_def(s.rooms[slot].type).th, "warn")
+	rooms_changed.emit()
 
 
 func is_away(d: Dictionary) -> bool:
@@ -455,7 +596,7 @@ func room_rate_pm(slot: int) -> Dictionary:
 	var lvl_mult := 1.0 + 0.6 * float(r.level - 1)
 	var stat_mult := 0.5 + stat_sum(slot) / 10.0          # 1 avg worker = 1.0
 	var happy_mult := 0.6 + avg_happiness() / 250.0
-	var mult := lvl_mult * stat_mult * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Env.prod_mult()
+	var mult := lvl_mult * stat_mult * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
 	if def.get("weather_crop", false):
 		mult *= float(weather_def().crop)
 	if def.power > 0.0 and s.res.power <= 0.5:
@@ -473,7 +614,7 @@ func craft_speed(slot: int) -> float:
 	var sk := 0.0
 	for d in workers:
 		sk += Skills.val(d, "craft") / workers.size()
-	return (0.6 + stat_sum(slot) / 12.0) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Env.prod_mult()
+	return (0.6 + stat_sum(slot) / 12.0) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
 
 
 func medical_power() -> float:
@@ -492,7 +633,48 @@ func hull_regen_pm() -> float:
 			if Crew.has(d, "mechanic"):
 				r += 1.5
 			r += Skills.val(d, "repair")
-	return r
+	return r * Synergy.repair_bonus()
+
+
+# ------------------------------------------------------------------ acid corrosion / solar damage (mutations)
+func corrode(sec: float) -> void:
+	var was := float(s.get("corrode", 0.0))
+	s["corrode"] = minf(30.0, was + sec)
+	if was <= 0.0 and started:
+		toast.emit("กรดกัดเกราะรถ! เกราะลดลง ตัวถังค่อยๆ ผุ — ช่างในห้องเครื่อง/อู่ซ่อมช่วยล้างได้", "warn")
+
+
+func damage_solar(amount: float) -> void:
+	var sol: Dictionary = s.solar
+	var was := float(sol.get("damage", 0.0))
+	sol["damage"] = minf(0.8, was + amount)
+	if was < 0.2 and float(sol.damage) >= 0.2 and started:
+		toast.emit("ซอมบี้ปีกหนังจิกแผงโซลาร์พัง! ไฟฟ้าลดลง — ติดป้อม Flak หรือให้มือปืนหลังคาจัดการ", "warn")
+
+
+func _tick_corrosion(m: float) -> void:
+	var c := float(s.get("corrode", 0.0))
+	if c > 0.0:
+		var clean := 1.0 + hull_regen_pm() * 0.15
+		s.hull = maxf(0.0, float(s.hull) - 2.0 * m)
+		s.corrode = maxf(0.0, c - 60.0 * m * clean)
+	var sol: Dictionary = s.solar
+	if float(sol.get("damage", 0.0)) > 0.0:
+		sol.damage = maxf(0.0, float(sol.damage) - (0.04 + hull_regen_pm() * 0.006) * m)
+
+
+func has_pet(kind: String) -> bool:
+	for p in s.get("pets", []):
+		if str(p.kind) == kind:
+			return true
+	return false
+
+
+func _first_quarters() -> int:
+	for i in s.rooms.size():
+		if s.rooms[i].type == "quarters" and is_slot_unlocked(i):
+			return i
+	return -1
 
 
 func _rooms_of(t: String) -> Array:
@@ -539,6 +721,8 @@ func _simulate(dt: float, offline: bool) -> void:
 		s.hull = minf(hull_max(), float(s.hull) + hull_regen_pm() * m)
 	Meta.tick(dt, offline)
 	Expedition.tick(offline)
+	_tick_outages(dt, offline)
+	_tick_corrosion(m)
 	# --- solar + rain collector + vault engine part
 	_add_res("power", (solar_output_pm() + float(Combat.van_stats().power)) * m)
 	_add_res("water", float(wd.water) * (1.0 + Mods.val("rain_catcher")) * m)
@@ -580,9 +764,12 @@ func _simulate(dt: float, offline: bool) -> void:
 		present += 1
 		eat += Crew.food_mult(d)
 		Crew.tick(d, m, med)
-	_add_res("food", -Data.DWELLER_FOOD_PM * eat * m)
+	_add_res("food", -Data.DWELLER_FOOD_PM * eat * m * (0.92 if has_pet("cat") else 1.0))
+	if has_pet("hen"):
+		_add_res("food", 0.6 * m)
 	_add_res("water", -Data.DWELLER_WATER_PM * eat * Env.water_mult() * m)
 	var starving: bool = res.food <= 0.0 or res.water <= 0.0
+	var crowded: bool = s.dwellers.size() > pop_cap()
 	var has_quarters := false
 	for r in s.rooms:
 		if r.type == "quarters":
@@ -597,8 +784,18 @@ func _simulate(dt: float, offline: bool) -> void:
 		var target := 45.0 + Crew.happy_aura(d) + Env.happy_mod(d)
 		if Crew.is_infected(d):
 			target -= 15.0
-		if s.get("pet", false):
-			target += 8.0
+		target += 6.0 * minf(2.0, float((s.get("pets", []) as Array).size()))
+		var home := int(d.room) if int(d.room) >= 0 else _first_quarters()
+		if home >= 0:
+			target += Synergy.happy_mod(home)
+			if room_dark(home):
+				target -= 16.0 if Crew.has(d, "afraid_dark") else 4.0
+		elif is_night() and Crew.has(d, "afraid_dark"):
+			target -= 8.0
+		if crowded:
+			target -= 10.0
+		if res.food < cap("food") * 0.1:
+			target -= 8.0
 		if has_quarters:
 			target += 15.0
 		if not starving:
@@ -615,6 +812,9 @@ func _simulate(dt: float, offline: bool) -> void:
 					xpm *= 1.0 + 2.0 * Skills.val(o, "mentor")
 			give_xp(d, xpm * m, st, offline)
 		d.happy = move_toward(float(d.happy), target, 2.0 * m)
+		Crew.morale_tick(d, dt, offline)
+
+	Crew.flush_deserters()
 
 	# --- travel
 	if is_moving():
@@ -633,6 +833,7 @@ func _simulate(dt: float, offline: bool) -> void:
 		s.km = float(s.km) + km
 		s.stats.km_total = float(s.stats.km_total) + km
 		_add_res("power", -Data.TRAVEL_POWER_PM * m)
+		_add_res("fuel", -Haul.fuel_pm() * m)
 		_add_res("scrap", float(Data.biome(s.biome).scrap_pm) * m)
 		if not offline:
 			_accumulate_float(-1, "scrap", float(Data.biome(s.biome).scrap_pm) * m)
@@ -1254,10 +1455,15 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 		"adopt":
 			if not pay(ch.get("cost", {})):
 				return {"ok": false, "text": "อาหารไม่พอ"}
+			var pet: Dictionary = ch.get("pet", {"kind": "dog", "name": "ข้าวตัง"})
+			if not s.has("pets"):
+				s["pets"] = []
+			s.pets.append(pet.duplicate())
 			s["pet"] = true
 			for d in s.dwellers:
 				d.happy = minf(100.0, float(d.happy) + 15.0)
-			res.text = "ข้าวตังกระโดดขึ้นรถบ้าน วิ่งวนทุกห้อง ทุกคนยิ้มออก (ความสุข +15 และเพิ่มขึ้นช้าๆ ตลอดไป)"
+			res.text = "%s กระโดดขึ้นรถบ้าน วิ่งวนไปทั่วทุกห้อง ทุกคนยิ้มออก (ความสุข +15 และเพิ่มขึ้นช้าๆ ตลอดไป)" % pet.name
+			pets_changed.emit()
 		"push":
 			var hd4 := rng.randf_range(4, 10) * danger * 0.6
 			s.hull = maxf(0.0, float(s.hull) - hd4)

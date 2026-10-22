@@ -192,6 +192,14 @@ func _build_production(r: Dictionary, def: Dictionary) -> void:
 	var cm := Crew.room_mult(slot)
 	if syn != "" or absf(cm - 1.0) > 0.01:
 		v.add_child(UIKit.wrap_label("โบนัสทีม x%.2f %s" % [cm, ("· " + syn) if syn != "" else ""], UIKit.FS_SMALL, UIKit.C_GOLD))
+	for e in Synergy.effects(slot):
+		var good := float(e.mult) + float(e.happy) > 0.0
+		v.add_child(UIKit.wrap_label("%s ติด%s: %s" % ["▲" if good else "▼", Data.room_def(str(e.type)).th, e.th], UIKit.FS_SMALL, UIKit.C_GREEN if good else UIKit.C_RED))
+	if Game.room_dark(slot):
+		v.add_child(UIKit.wrap_label("ไฟดับ! ห้องมืดสนิท ผลิตได้น้อยลง — ช่างเครื่องซ่อมได้เร็วขึ้น" if not Game.blackout() else "แบตเตอรี่หมด! ทั้งรถมืด", UIKit.FS_SMALL, UIKit.C_RED))
+	for d in Game.room_occupants(slot):
+		if d.get("strike", false):
+			v.add_child(UIKit.wrap_label("%s ประท้วงหยุดงาน (ความสุข %d)" % [d.name, int(d.happy)], UIKit.FS_SMALL, UIKit.C_RED))
 	if Env.prod_mult() < 0.99:
 		v.add_child(UIKit.wrap_label("หนาวจัด! ผลิตได้ x%.2f (ต้องการเชื้อเพลิง)" % Env.prod_mult(), UIKit.FS_SMALL, UIKit.C_RED))
 	if def.get("weather_crop", false):

@@ -7,10 +7,10 @@ extends Node2D
 ##  - when the expedition ends the survivors walk back out to the truck; the fallen never come back
 ## Lives in vehicle-local space (first child of the Vehicle, so it draws behind the truck body).
 
-const SITE_X := 284.0          # landmark left edge when parked (truck-local)
+const SITE_GAP := 4.0          # landmark left edge = convoy rear + gap (vehicle-local)
 const DOOR_OFF := 30.0         # door centre inside every lm_* sprite (tools/art/landmarks.py DOOR_X)
 const GROUND_Y := 296.0        # walkers' feet on the road shoulder
-const DECK_EXIT := Vector2(266, 260)
+const DECK_EXIT0 := Vector2(266, 260)
 const WALK_SPEED := 22.0
 
 var vehicle: Vehicle
@@ -42,9 +42,17 @@ func _current_site() -> String:
 	return Expedition.at_site()
 
 
+func site_x() -> float:
+	return vehicle.length() + SITE_GAP
+
+
+func deck_exit() -> Vector2:
+	return DECK_EXIT0 + Vector2(vehicle.rear_shift(), 0)
+
+
 func door_x() -> float:
 	if site_spr.visible and site_spr.texture:
-		return SITE_X + DOOR_OFF
+		return site_x() + DOOR_OFF
 	return 380.0     # generic "scavenge the area": they walk off-screen
 
 
@@ -57,7 +65,7 @@ func _sync(instant: bool) -> void:
 	if id == "":
 		if old != "" and site_spr.visible:
 			var tw := create_tween()
-			tw.tween_property(site_spr, "position:x", SITE_X + 420.0, 2.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+			tw.tween_property(site_spr, "position:x", site_x() + 420.0, 2.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 			tw.tween_callback(func(): site_spr.visible = false)
 		return
 	var spr: String = Expedition.site_def(id).get("sprite", "")
@@ -67,7 +75,7 @@ func _sync(instant: bool) -> void:
 		site_spr.texture = Atlas.tex(spr)
 		site_spr.visible = true
 		var h := float(site_spr.texture.get_height())
-		var target := Vector2(SITE_X, GROUND_Y - h + 2.0)
+		var target := Vector2(site_x(), GROUND_Y - h + 2.0)
 		if instant:
 			site_spr.position = target
 		else:
@@ -89,7 +97,7 @@ func _on_started() -> void:
 	_cache_team()
 	var i := 0
 	for t in _team_cache:
-		_spawn_walker(t.variant, [DECK_EXIT, Vector2(DECK_EXIT.x + 6, GROUND_Y), Vector2(door_x(), GROUND_Y)], i * 0.7, true)
+		_spawn_walker(t.variant, [deck_exit(), Vector2(deck_exit().x + 6, GROUND_Y), Vector2(door_x(), GROUND_Y)], i * 0.7, true)
 		i += 1
 
 
@@ -98,7 +106,7 @@ func _on_finished(_report: Dictionary) -> void:
 	for t in _team_cache:
 		if Game.dweller_by_id(int(t.id)).is_empty():
 			continue     # did not make it back
-		_spawn_walker(t.variant, [Vector2(door_x(), GROUND_Y), Vector2(DECK_EXIT.x + 6, GROUND_Y), DECK_EXIT], i * 0.8, false)
+		_spawn_walker(t.variant, [Vector2(door_x(), GROUND_Y), Vector2(deck_exit().x + 6, GROUND_Y), deck_exit()], i * 0.8, false)
 		i += 1
 	_team_cache.clear()
 	_sync(false)

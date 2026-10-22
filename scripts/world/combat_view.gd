@@ -1,13 +1,19 @@
 class_name CombatView
 extends Node2D
-## Renders the Combat simulation: enemies running after the van, squad on the roof / rear deck,
-## tracers, hit flashes, damage numbers, skill effects, loot chests flying into the vault.
+## Renders the Combat simulation: enemies running after the convoy, squad on the roof / rear deck,
+## tracers, hit flashes, damage numbers, skill effects, loot chests flying into the vault — plus the juice:
+## pixel blood + gibs that splat on the road and slide away, brass casings tinkling onto the asphalt,
+## acid globs, explosions, screen shake, boss mechanic tells, and road zombies the vehicle ploughs through.
 
 const MAX_NUMBERS := 28
 ## The simulation (Combat) keeps its own coordinate space (deck at x=350, ground y=168) so balance is
 ## untouched; the view compresses it next to the truck's rear deck.
 const SIM_DECK_X := 350.0
 const VIEW_DECK_X := 272.0
+const ROAD_SURFACE := 296.0
+const ROAD_PX_PER_SEC := 90.0
+## the convoy's rear moves back with every hitched trailer
+static var rear_shift := 0.0
 const X_K := 0.42
 const VIEW_GROUND_Y := 300.0
 ## where each squad role stands on the truck (feet position, truck-local)
@@ -18,7 +24,9 @@ static var roof_shift := 0.0
 
 
 static func hero_view(slot: int) -> Vector2:
-	return HERO_VIEW[slot] + Vector2(0, roof_shift if slot != 1 else 0.0)
+	if slot == 1:
+		return HERO_VIEW[1] + Vector2(rear_shift, 0)
+	return HERO_VIEW[slot] + Vector2(0, roof_shift)
 
 var vehicle: Vehicle
 var enemy_nodes: Dictionary = {}   # id -> EnemyActor
@@ -27,10 +35,13 @@ var deck: Sprite2D
 var turret: Sprite2D
 var spikes: Sprite2D
 var _numbers := 0
+var debris: Array = []          # [sprite, vel, landed, life]
+var _ram_t := 4.0
+var _road_zombies: Array = []
 
 
 static func sim_to_view(p: Vector2) -> Vector2:
-	var x := VIEW_DECK_X + (p.x - SIM_DECK_X) * X_K
+	var x := VIEW_DECK_X + rear_shift + (p.x - SIM_DECK_X) * X_K
 	var y := VIEW_GROUND_Y - (Combat.GROUND_Y - p.y) * 0.9
 	return Vector2(round(x), round(y))
 
@@ -54,6 +65,7 @@ func setup(v: Vehicle) -> void:
 	Combat.loot_dropped.connect(_on_loot)
 	Combat.heroes_changed.connect(_sync_heroes)
 	Combat.supply_found.connect(_on_supply)
+	Combat.boss_event.connect(_on_boss_event)
 	Game.gear_changed.connect(_sync_vault_parts)
 	Meta.generation_started.connect(func(_g): _sync_heroes())
 	Game.game_started.connect(func():
@@ -79,6 +91,8 @@ func _sync_vault_parts() -> void:
 # ------------------------------------------------------------------ heroes
 func _sync_heroes() -> void:
 	roof_shift = vehicle.roof_dy()
+	rear_shift = vehicle.rear_shift()
+	spikes.position = Vehicle.SPIKES_POS + Vector2(rear_shift, 0)
 	for i in Combat.ROLES.size():
 		var h: Dictionary = Combat.heroes[i] if i < Combat.heroes.size() else {}
 		var node: HeroActor = hero_nodes[i]
@@ -99,7 +113,11 @@ func _sync_heroes() -> void:
 		node.position = hero_view(i)
 
 
-func _process(_d: float) -> void:
+func _process(delta: float) -> void:
+	if rear_shift != vehicle.rear_shift() or roof_shift != vehicle.roof_dy():
+		_sync_heroes()
+	_tick_debris(delta)
+	_tick_ram(delta)
 	for i in hero_nodes.size():
 		var node: HeroActor = hero_nodes[i]
 		if node and i < Combat.heroes.size() and not Combat.heroes[i].is_empty():
@@ -113,6 +131,8 @@ func _process(_d: float) -> void:
 			n.target = sim_to_view(Vector2(float(e.x), float(e.y)))
 			n.hp_ratio = float(e.hp) / maxf(1.0, float(e.max))
 			n.stunned = float(e.stun) > 0.0
+			n.visible = not e.get("burrowed", false)
+			n.enraged = e.get("enraged", false)
 
 
 func hero_global(slot: int) -> Vector2:
@@ -133,9 +153,13 @@ func _on_removed(id: int, killed: bool) -> void:
 		return
 	enemy_nodes.erase(id)
 	if killed:
-		_poof(n.global_position + Vector2(0, -n.height() * 0.5), n.is_boss)
+		var c := n.global_position + Vector2(0, -n.height() * 0.5)
+		_poof(c, n.is_boss)
+		_gore(c, 10 if not n.is_boss else 34, true)
+		_splat(n.global_position)
 		if n.is_boss:
-			get_tree().call_group("shake", "shake", 5.0)
+			get_tree().call_group("shake", "shake", 6.0)
+			_boom(c)
 	n.die(killed)
 
 
@@ -146,6 +170,9 @@ func _on_hit(kind: String, id: int, amount: float, crit: bool) -> void:
 			if n:
 				n.flash()
 				_number(n.global_position + Vector2(randi_range(-4, 4), -n.height() - 6), amount, Color("ffefc0") if not crit else Color("ff9a1a"), crit)
+				_gore(n.global_position + Vector2(0, -n.height() * 0.6), 2 if not crit else 5, false)
+				if n.is_boss and crit:
+					get_tree().call_group("shake", "shake", 1.5)
 		"hero":
 			var hn: HeroActor = hero_nodes[id] if id >= 0 and id < hero_nodes.size() else null
 			if hn:
@@ -172,10 +199,14 @@ func _on_shot(from_kind: String, from_id: int, to_kind: String, to_id: int, styl
 			var hn: HeroActor = hero_nodes[from_id]
 			if hn:
 				hn.attack(style == "melee")
+			if style == "bullet":
+				_casing(a)
 		"turret":
 			a = vehicle.body.to_global(TURRET_MUZZLE)
+			_casing(a)
 		"roof":
 			a = vehicle.body.to_global(Vector2(222, Vehicle.ROOF_Y + vehicle.roof_dy() - 12))
+			_casing(a)
 		"enemy":
 			var en: EnemyActor = enemy_nodes.get(from_id)
 			if en == null:
@@ -190,9 +221,14 @@ func _on_shot(from_kind: String, from_id: int, to_kind: String, to_id: int, styl
 		"hero":
 			b = hero_global(to_id)
 		"van":
-			b = vehicle.body.to_global(Vector2(randi_range(248, 254), randi_range(50, 250)))
+			b = vehicle.body.to_global(Vector2(randi_range(248, 254) + rear_shift, randi_range(int(vehicle.roof_y()) + 10, 250)))
+		"solar":
+			b = vehicle.body.to_global(Vector2(randi_range(66, 118), Vehicle.SOLAR_Y + vehicle.roof_dy() + 8))
 	if style == "melee":
 		_spark(b)
+		return
+	if style == "acid":
+		_glob(a, b)
 		return
 	var col: Color = {"bullet": Color(1, 0.95, 0.6, 0.95), "turret": Color(1, 0.7, 0.3, 0.95), "enemy": Color(1, 0.35, 0.3, 0.9)}.get(style, Color.WHITE)
 	_tracer(a, b, col, 1.0 if style != "turret" else 1.5)
@@ -342,6 +378,186 @@ func _on_supply(kind: String, _amount: float, at: Vector2) -> void:
 	tw.tween_callback(s.queue_free)
 
 
+# ------------------------------------------------------------------ gore / brass / acid / booms
+func _gore(at: Vector2, n: int, kill: bool) -> void:
+	for i in n:
+		var s := Sprite2D.new()
+		var r := randf()
+		s.texture = Atlas.tex("pt_gib" if kill and r < 0.3 else ("pt_shard" if r > 0.92 else "pt_blood"))
+		s.position = at.round()
+		s.z_index = 14
+		add_child(s)
+		var v := Vector2(randf_range(-30, 50), randf_range(-70, -20) * (1.4 if kill else 0.8))
+		debris.append([s, v, false, randf_range(3.0, 6.0)])
+
+
+func _casing(at: Vector2) -> void:
+	if debris.size() > 160:
+		return
+	var s := Sprite2D.new()
+	s.texture = Atlas.tex("pt_casing")
+	s.position = at.round()
+	s.z_index = 14
+	add_child(s)
+	debris.append([s, Vector2(randf_range(-25, -5), randf_range(-45, -25)), false, randf_range(2.0, 4.0)])
+
+
+func _splat(at: Vector2) -> void:
+	var s := Sprite2D.new()
+	s.texture = Atlas.tex("fx_splat_%d" % (randi() % 3))
+	s.position = Vector2(at.x, ROAD_SURFACE).round()
+	s.z_index = 2
+	add_child(s)
+	debris.append([s, Vector2.ZERO, true, 5.0])
+
+
+func _glob(a: Vector2, b: Vector2) -> void:
+	var g := Sprite2D.new()
+	g.texture = Atlas.tex("pt_acid_glob")
+	g.position = a.round()
+	g.z_index = 15
+	add_child(g)
+	var mid := (a + b) * 0.5 + Vector2(0, -18)
+	var tw := g.create_tween()
+	tw.tween_method(func(t: float):
+		var p := a.lerp(mid, t).lerp(mid.lerp(b, t), t)
+		g.position = p.round(), 0.0, 1.0, 0.45)
+	tw.tween_callback(func():
+		for k in 4:
+			var d := Sprite2D.new()
+			d.texture = Atlas.tex("pt_acid")
+			d.position = b.round()
+			d.z_index = 14
+			add_child(d)
+			debris.append([d, Vector2(randf_range(-30, 30), randf_range(-40, -10)), false, 1.2])
+		g.queue_free())
+
+
+func _boom(at: Vector2) -> void:
+	var s := Sprite2D.new()
+	s.position = at.round()
+	s.z_index = 18
+	add_child(s)
+	var tw := s.create_tween()
+	for k in 3:
+		tw.tween_callback(func(): s.texture = Atlas.tex("fx_boom_%d" % k))
+		tw.tween_interval(0.08)
+	tw.tween_callback(s.queue_free)
+
+
+## debris falls with gravity, lands on the road, then slides away with the asphalt and fades
+func _tick_debris(delta: float) -> void:
+	var road_v := ROAD_PX_PER_SEC * Game.speed_factor() if Game.started else 0.0
+	for i in range(debris.size() - 1, -1, -1):
+		var d: Array = debris[i]
+		var s: Sprite2D = d[0]
+		if not is_instance_valid(s):
+			debris.remove_at(i)
+			continue
+		d[3] = float(d[3]) - delta
+		if not d[2]:
+			var v: Vector2 = d[1]
+			v.y += 220.0 * delta
+			d[1] = v
+			var p := s.get_meta("fp", s.position) as Vector2
+			p += v * delta
+			if p.y >= ROAD_SURFACE + randf_range(-2.0, 2.0):
+				p.y = ROAD_SURFACE + float(randi() % 3) - 1.0
+				d[2] = true
+			s.set_meta("fp", p)
+			s.position = p.round()
+		else:
+			var p2 := s.get_meta("fp", s.position) as Vector2
+			p2.x += road_v * delta
+			s.set_meta("fp", p2)
+			s.position = p2.round()
+		if float(d[3]) < 0.6:
+			s.modulate.a = maxf(0.0, float(d[3]) / 0.6)
+		if float(d[3]) <= 0.0:
+			s.queue_free()
+			debris.remove_at(i)
+
+
+# ------------------------------------------------------------------ boss tells
+func _on_boss_event(kind: String, e: Dictionary) -> void:
+	var n: EnemyActor = enemy_nodes.get(int(e.id))
+	var at := n.global_position + Vector2(0, -n.height() * 0.5) if n else sim_to_view(Vector2(float(e.x), float(e.y)))
+	match kind:
+		"enrage":
+			_text(at + Vector2(-10, -26), "RAGE!", Color("d4523c"))
+			get_tree().call_group("shake", "shake", 4.0)
+		"armor_break":
+			_text(at + Vector2(-20, -26), "ARMOR BREAK", Color("e0b048"))
+			for k in 8:
+				var s := Sprite2D.new()
+				s.texture = Atlas.tex("pt_shard")
+				s.position = at.round()
+				s.z_index = 14
+				add_child(s)
+				debris.append([s, Vector2(randf_range(-50, 50), randf_range(-80, -30)), false, 2.5])
+			get_tree().call_group("shake", "shake", 2.5)
+		"summon", "revive":
+			_poof(at + Vector2(18, 0), true)
+			_text(at + Vector2(-14, -26), "SUMMON" if kind == "summon" else "RISE!", Color("b090c0"))
+		"burrow":
+			_gore(Vector2(at.x, ROAD_SURFACE - 4), 10, false)
+			_text(at + Vector2(-14, -20), "BURROW", Color("c8a46a"))
+		"erupt":
+			_boom(vehicle.body.to_global(Vector2(Vehicle.DECK.x + rear_shift, 280)))
+			get_tree().call_group("shake", "shake", 5.0)
+		"explode":
+			_boom(at)
+			_gore(at, 26, true)
+			get_tree().call_group("shake", "shake", 4.0)
+		"solar":
+			_spark(vehicle.body.to_global(Vector2(randi_range(66, 118), Vehicle.SOLAR_Y + vehicle.roof_dy() + 6)))
+
+
+# ------------------------------------------------------------------ road zombies the vehicle ploughs through
+func _tick_ram(delta: float) -> void:
+	var moving := Game.started and Game.is_moving()
+	var road_v := ROAD_PX_PER_SEC * Game.speed_factor()
+	if moving:
+		_ram_t -= delta
+		if _ram_t <= 0.0:
+			_ram_t = randf_range(5.0, 12.0) / (1.0 + 0.3 * float(Game.s.get("biome", 0)))
+			var z := AnimatedSprite2D.new()
+			var sf := SpriteFrames.new()
+			if not sf.has_animation("walk"):
+				sf.add_animation("walk")
+			sf.set_animation_speed("walk", 4.0)
+			sf.add_frame("walk", Atlas.tex("en_walker_0"))
+			sf.add_frame("walk", Atlas.tex("en_walker_1"))
+			z.sprite_frames = sf
+			z.centered = false
+			z.offset = Vector2(-6, -20)
+			z.play("walk")
+			z.z_index = 6
+			var fp := vehicle.to_global(Vector2(-90 - randf_range(0, 30), ROAD_SURFACE))
+			z.set_meta("fp", fp)
+			z.position = fp.round()
+			add_child(z)
+			_road_zombies.append(z)
+	for i in range(_road_zombies.size() - 1, -1, -1):
+		var z: AnimatedSprite2D = _road_zombies[i]
+		var fp := z.get_meta("fp") as Vector2
+		fp.x += (road_v + 8.0) * delta if moving else 8.0 * delta
+		z.set_meta("fp", fp)
+		z.position = fp.round()
+		var front := vehicle.to_global(Vector2(-14 if Mods.level("spike_ram") > 0 else 0, 0)).x
+		if fp.x >= front:
+			_road_zombies.remove_at(i)
+			var at := fp + Vector2(0, -10)
+			_gore(at, 16, true)
+			_splat(fp + Vector2(6, 0))
+			get_tree().call_group("shake", "shake", 1.5 if Mods.level("spike_ram") == 0 else 2.5)
+			vehicle.spark()
+			var dmg := 0.6 * (1.0 - 0.25 * Mods.level("spike_ram"))
+			Game.s.hull = maxf(0.0, float(Game.s.hull) - dmg)
+			Game._add_res("scrap", 0.5 + Mods.level("spike_ram"))
+			z.queue_free()
+
+
 # =================================================================== actors
 class EnemyActor extends Node2D:
 	var spr: AnimatedSprite2D
@@ -349,6 +565,7 @@ class EnemyActor extends Node2D:
 	var hp_ratio := 1.0
 	var stunned := false
 	var is_boss := false
+	var enraged := false
 	var title := ""
 	var _h := 16.0
 	var _w := 14.0
@@ -408,7 +625,10 @@ class EnemyActor extends Node2D:
 		if stunned:
 			spr.speed_scale = 0.0
 		_flash -= delta
-		spr.modulate = Color(4, 4, 4) if _flash > 0.0 else _base_mod
+		var base := _base_mod
+		if enraged and int(_t * 6.0) % 2 == 0:
+			base = Color(1.6, 0.5, 0.45)
+		spr.modulate = Color(4, 4, 4) if _flash > 0.0 else base
 		queue_redraw()
 
 	func _draw() -> void:
@@ -416,7 +636,7 @@ class EnemyActor extends Node2D:
 		var w := maxf(14.0, _w) if not is_boss else maxf(30.0, _w)
 		var y := -_h - 4.0
 		var x0 := -floorf(w / 2.0)
-		if hp_ratio < 0.999 or is_boss:
+		if hp_ratio < 0.999 and not is_boss:
 			draw_rect(Rect2(o + Vector2(x0 - 1, y - 1), Vector2(w + 2, 4)), Color("0b0a10"))
 			draw_rect(Rect2(o + Vector2(x0, y), Vector2(floorf(w * clampf(hp_ratio, 0, 1)), 2)), Color("f0644a") if not is_boss else Color("ff9a1a"))
 		if stunned:

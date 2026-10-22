@@ -183,7 +183,13 @@ def ic_thermo(i):
     rect(i, 6, 1, 4, 10, c("gray6")); ellipse(i, 4, 9, 8, 7, c("red2")); vline(i, 7, 4, 7, c("red2")); px(i, 6, 11, c("red4"))
 
 
-ICONS = dict(pill=ic_pill, blueprint=ic_blueprint, thermo=ic_thermo, power=ic_power, water=ic_water, food=ic_food, scrap=ic_scrap, people=ic_people, happy=ic_happy, sad=ic_sad,
+def ic_eye(i):
+    ellipse(i, 1, 4, 14, 8, c("cream3")); ellipse(i, 5, 4, 7, 8, c("teal2")); ellipse(i, 7, 6, 3, 4, OL); px(i, 7, 6, c("gray6"))
+def ic_zoom(i):
+    ellipse(i, 1, 1, 10, 10, c("gray4")); ellipse(i, 3, 3, 6, 6, c("blue2")); px(i, 4, 4, c("gray6")); line(i, 9, 9, 14, 14, c("wood2"), 2)
+
+
+ICONS = dict(eye=ic_eye, zoom=ic_zoom, pill=ic_pill, blueprint=ic_blueprint, thermo=ic_thermo, power=ic_power, water=ic_water, food=ic_food, scrap=ic_scrap, people=ic_people, happy=ic_happy, sad=ic_sad,
              hammer=ic_hammer, map=ic_map, chest=ic_chest, up=ic_up, wrench=ic_wrench, skull=ic_skull, gear=ic_gear,
              medkit=ic_medkit, radaway=ic_radaway, stimpack=ic_stimpack, rifle=ic_rifle, pistol=ic_pistol, ammo=ic_ammo,
              armor=ic_armor, meat=ic_meat, can=ic_can, seed=ic_seed, fuel=ic_fuel, hull=ic_hull, sun=ic_sun, rain=ic_rain,
