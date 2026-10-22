@@ -3,11 +3,14 @@ extends Node
 ##  * Web export  -> browser localStorage (via JavaScriptBridge)
 ##  * Desktop/editor -> user://savegame.json
 ## The game state is a plain Dictionary serialized as JSON.
+## This stays the save the game reads and writes; the Cloud autoload mirrors it to Supabase.
 
 const KEY := "mobile_vault_save_v1"
 const FILE_PATH := "user://savegame.json"
 
 signal flush_requested   # emitted when the page is being hidden/closed (web)
+signal written           # the game save changed (Cloud marks it for upload)
+signal wiped             # the game save was erased
 
 var _local_storage: JavaScriptObject
 var _js_on_hide: JavaScriptObject   # keep a reference or the callback gets freed
@@ -38,12 +41,15 @@ func write(data: Dictionary) -> bool:
 	var text := JSON.stringify(data)
 	if is_web() and _local_storage:
 		_local_storage.setItem(KEY, text)
+		written.emit()
 		return true
 	var f := FileAccess.open(FILE_PATH, FileAccess.WRITE)
 	if f == null:
 		push_warning("Save failed: %s" % FileAccess.get_open_error())
 		return false
 	f.store_string(text)
+	f.close()
+	written.emit()
 	return true
 
 
@@ -89,3 +95,4 @@ func wipe() -> void:
 		_local_storage.removeItem(KEY)
 	elif FileAccess.file_exists(FILE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(FILE_PATH))
+	wiped.emit()

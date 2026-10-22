@@ -113,7 +113,9 @@ func load_game() -> bool:
 	s = d
 	_migrate()
 	started = true
-	var elapsed := Time.get_unix_time_from_system() - float(s.get("saved_at", Time.get_unix_time_from_system()))
+	# Cloud.now() is the server clock once the cloud has answered, so a moved phone clock can't fake time away
+	var now := Cloud.now()
+	var elapsed := maxf(0.0, now - float(s.get("saved_at", now)))
 	Trace.rec("save", "loaded save", {"away_sec": int(elapsed), "bytes": JSON.stringify(s).length()})
 	game_started.emit()
 	if elapsed > 30.0:
@@ -239,7 +241,7 @@ func _migrate_v4() -> void:
 func save_game() -> void:
 	if not started:
 		return
-	s.saved_at = Time.get_unix_time_from_system()
+	s.saved_at = Cloud.now()
 	Save.write(s)
 
 

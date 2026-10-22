@@ -167,6 +167,8 @@ func _ready() -> void:
 	weather._set_weather("rain")
 	vehicle.refresh_rooms()
 	hud.title_screen.refresh_buttons()
+	Cloud.pulled.connect(hud.title_screen.refresh_buttons)
+	Cloud.conflict.connect(func(): hud.open_settings("data"))
 	var args := OS.get_cmdline_user_args()
 	if "--migrate-test" in args:
 		var mt: Node = load("res://tools/migrate_test.gd").new()

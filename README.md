@@ -44,7 +44,7 @@ Verified: this preset was exported with the official 4.7.2 templates and played 
 Test locally: `python3 -m http.server 8000 -d build/web` → open `http://localhost:8000` (must be served over http, not file://).
 Upload the whole `build/web` folder to itch.io (HTML game), GitHub Pages, Netlify, etc.
 
-Save data: browser **localStorage** (key `mobile_vault_save_v1`), auto-saved every 15 s and when the tab is hidden/closed. Desktop builds fall back to `user://savegame.json`.
+Save data: browser **localStorage** (key `mobile_vault_save_v1`), auto-saved every 15 s and when the tab is hidden/closed. Desktop builds fall back to `user://savegame.json`. With `cloud_config.json` present the save is also mirrored to Supabase (see 4i).
 
 ## 4. Gameplay loop
 
@@ -146,6 +146,17 @@ Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins 
 | Rules | Costs come out of the **packed supplies** (so they also lower the trip's odds), injuries hit the team member best at the job (lower HP = lower team power and a higher death risk on a failed trip), refugees need a free bunk, and rewards (scaled by site danger and lap) come home with the team. If everyone dies, nothing comes back. The clock keeps running: close the pop-up and answer later from the HUD chip ("สั่งการ") or the expedition panel. If nobody answers before the team returns (or the game was closed), the team plays it safe and picks the last choice. The last 3 encounters are never rolled again, so the same one never shows up twice in a row. |
 | Hooks | `scripts/autoload/encounter.gd` (`Encounter`, autoload after `Expedition`): data in `ENCOUNTERS`, state in `Game.s.exp.enc` (`{id, at, st: wait/open/done, bonus, recruits, lose, text}`), anti-repeat list in `Game.s.enc_recent`; signals `encounter_ready(id)` / `encounter_resolved(id, result)`. UI `scripts/ui/encounter_popup.gd`, art `tools/art/encounters.py` → `assets/events/enc_*.png`. God mode → EXPEDITION: trigger any encounter on the running trip. |
 
+## 4i. Cloud save (Supabase)
+
+Local-first: the game still reads and writes localStorage / `user://`; `scripts/autoload/cloud.gd` mirrors that save (plus Settings) to one row per player in Supabase, using `HTTPRequest` against the REST API (no addon).
+
+- **Setup (once):** run `supabase/migrations/0001_cloud_save.sql` in the Supabase SQL Editor, enable *Authentication → Allow anonymous sign-ins*, then copy `cloud_config.example.json` to `cloud_config.json` (git-ignored) with the Project URL and the **anon / publishable** key. Never put the `service_role` / secret key in the game. Without the file the cloud is off and the game is offline-only, as before.
+- **Accounts:** first launch signs in anonymously; the session (refresh token) is kept in localStorage `mobile_vault_auth_v1`. Linking an email/Google login is the next step.
+- **Migration:** a browser that already has a save uploads it as revision 1 on the first online start.
+- **Sync:** upload at most once a minute while playing and on tab hide; offline keeps saving locally and retries every 30 s. Writes go through `rpc_save`, which rejects a stale revision, so when two devices both moved on the Settings → เซฟ tab asks which save to keep. Sync state lives in localStorage `mobile_vault_cloud_v1`.
+- **Clock:** every reply carries `server_time`; `Cloud.now()` stamps `saved_at` and measures offline time, so moving the phone clock no longer grants offline progress once the cloud has answered.
+- **Tests:** the autotest runs the cloud against `tools/cloud_fake.gd` (same revision rules as the SQL). Test runners never use `cloud_config.json`.
+
 ## 4c. True pixel art pipeline
 
 - Window: `canvas_items` stretch + **integer** scale mode. `main.gd` picks the design size so it is exactly window ÷ S (S = whole number, base 360×640 portrait / 560×320 landscape) → full-bleed, no letterbox, 1 art pixel = S screen pixels.
@@ -174,7 +185,7 @@ Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins 
 Cheat switches are never saved; any god action marks the save `stats.cheated = true` and is written to the trace.
 
 **Data & logging**
-- Save: one JSON document (`Game.s`) in browser `localStorage` key `mobile_vault_save_v1` (desktop: `user://savegame.json`), autosaved every 15 s and when the tab is hidden/closed. Nothing leaves the device.
+- Save: one JSON document (`Game.s`) in browser `localStorage` key `mobile_vault_save_v1` (desktop: `user://savegame.json`), autosaved every 15 s and when the tab is hidden/closed. When the cloud is configured it is also uploaded to Supabase (section 4i); otherwise nothing leaves the device.
 - Trace (`scripts/autoload/trace.gd`): every session gets an id; events (build/upgrade/demolish, road events + choices, boss waves / boss deaths / squad wipes, strikes, desertions, deaths, expeditions with odds and loot, mods, trailers, vault level, biome, generation, wreck, save/load with offline time, warnings/bad toasts, every god action) + a state sample every 30 s (FPS, resources, hull, km, wave, enemies, crew, happiness, load, node count). Engine/script errors are captured with a Godot `Logger` (`OS.add_logger`). The last 400 entries persist across reloads (`localStorage` key `mobile_vault_trace_v1` / `user://trace.json`) and every entry is also printed to the browser console as `[trace] …`.
 - Remote monitoring is not enabled. `Trace.sink_url` is the hook for an opt-in endpoint (Vercel function, PostHog, Sentry…) once one is chosen; add a consent prompt before sending anything.
 
@@ -188,6 +199,7 @@ scripts/
   autoload/data.gd            design data: rooms, recipes, items, biomes, weather, events
   autoload/game.gd            simulation, economy, events, offline progress, save/load
   autoload/save_system.gd     localStorage (JavaScriptBridge) / user:// fallback
+  autoload/cloud.gd           Supabase cloud save: anonymous auth, rpc_load / rpc_save, conflicts, server clock
   autoload/atlas.gd           texture atlas -> AtlasTexture / SpriteFrames cache
   autoload/lore.gd            logbook entries, crew bios, idle chatter lines
   world/chatter.gd            speech bubbles above survivors

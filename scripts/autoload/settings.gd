@@ -54,8 +54,12 @@ func _load() -> void:
 	if text == "":
 		return
 	var d = JSON.parse_string(text)
-	if not d is Dictionary:
-		return
+	if d is Dictionary:
+		_merge(d)
+
+
+## copies known keys from `d` into v, with the same type checks as loading from storage
+func _merge(d: Dictionary) -> void:
 	for k in DEFAULTS:
 		if not d.has(k):
 			continue
@@ -71,6 +75,18 @@ func _load() -> void:
 		v.ui_scale = "auto"
 	if not v.zoom in ["auto", "wide", "normal"]:
 		v.zoom = "auto"
+
+
+## settings that came with a cloud save from another device
+func apply_remote(d: Dictionary) -> void:
+	var before := v.duplicate()
+	_merge(d)
+	for k in v:
+		if v[k] != before[k]:
+			if not (k == "fullscreen" and OS.has_feature("web")):
+				_apply(k)
+			changed.emit(k)
+	persist()
 
 
 func persist() -> void:
