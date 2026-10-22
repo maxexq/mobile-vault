@@ -3,9 +3,10 @@ extends Control
 ## Start menu over the live scene: a green terminal boot log types itself out, then the menu.
 
 signal start_requested(new_game: bool)
+signal settings_requested(tab: String)
 
 const BOOT := [
-	"MAMMOTH-7 OS v4.3 ........ OK",
+	"MAMMOTH-7 OS v%s ........ OK",
 	"REACTOR / ENGINE ......... ONLINE",
 	"HULL INTEGRITY ........... 100%",
 	"SIGNAL 104.7 ............. DETECTED",
@@ -16,7 +17,7 @@ var _panel: PanelContainer
 var _log: Label
 var _menu: VBoxContainer
 var _continue: Button
-var _fx_btn: Button
+var _settings_btn: Button
 var _chars := 0.0
 var _boot_text := ""
 
@@ -24,7 +25,7 @@ var _boot_text := ""
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_boot_text = "\n".join(BOOT)
+	_boot_text = "\n".join(BOOT).replace("%s", BuildInfo.GAME_VERSION)
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", UIKit.window_style())
 	add_child(_panel)
@@ -52,15 +53,17 @@ func _ready() -> void:
 	var nb := UIKit.button("เริ่มการเดินทางใหม่  NEW RUN", "yellow", "up")
 	nb.pressed.connect(func(): _go(true))
 	_menu.add_child(nb)
-	_fx_btn = UIKit.button("", "gray", "gear")
-	_fx_btn.pressed.connect(func():
-		FX.use_gpu = not FX.use_gpu
-		_update_fx())
-	_menu.add_child(_fx_btn)
-	var note := UIKit.label("v4.3 · GODOT 4.7.2 · AUTOSAVE", UIKit.FP, UIKit.C_LINE_DIM, true)
+	_settings_btn = UIKit.button("ตั้งค่า  SETTINGS", "gray", "gear")
+	_settings_btn.pressed.connect(func(): settings_requested.emit("game"))
+	_menu.add_child(_settings_btn)
+	var note := UIKit.label(BuildInfo.short_line(), UIKit.FP, UIKit.C_LINE_DIM, true)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	note.mouse_filter = Control.MOUSE_FILTER_STOP
+	note.tooltip_text = "แตะเพื่อดูข้อมูลเวอร์ชัน"
+	note.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			settings_requested.emit("about"))
 	_menu.add_child(note)
-	_update_fx()
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 
@@ -69,10 +72,6 @@ func _process(delta: float) -> void:
 	if _chars < _boot_text.length():
 		_chars += delta * 70.0
 		_log.text = _boot_text.substr(0, int(_chars)) + ("_" if int(_chars * 0.2) % 2 == 0 else "")
-
-
-func _update_fx() -> void:
-	_fx_btn.text = "เอฟเฟกต์: %s" % ("GPU (สวย)" if FX.use_gpu else "CPU (ประหยัด)")
 
 
 func refresh_buttons() -> void:

@@ -380,6 +380,8 @@ func _on_supply(kind: String, _amount: float, at: Vector2) -> void:
 
 # ------------------------------------------------------------------ gore / brass / acid / booms
 func _gore(at: Vector2, n: int, kill: bool) -> void:
+	if not bool(Settings.get_value("gore")):
+		return
 	for i in n:
 		var s := Sprite2D.new()
 		var r := randf()
@@ -403,6 +405,8 @@ func _casing(at: Vector2) -> void:
 
 
 func _splat(at: Vector2) -> void:
+	if not bool(Settings.get_value("gore")):
+		return
 	var s := Sprite2D.new()
 	s.texture = Atlas.tex("fx_splat_%d" % (randi() % 3))
 	s.position = Vector2(at.x, ROAD_SURFACE).round()

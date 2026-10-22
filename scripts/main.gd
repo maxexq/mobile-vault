@@ -152,6 +152,9 @@ func _ready() -> void:
 	cm.shader = load("res://shaders/crt.gdshader")
 	crt.material = cm
 	crt_layer.add_child(crt)
+	crt.visible = bool(Settings.get_value("crt"))
+	zoom_mode = str(Settings.get_value("zoom"))
+	Settings.changed.connect(_on_setting_changed)
 
 	Game.floating_text.connect(_spawn_float)
 	get_viewport().size_changed.connect(_on_resize)
@@ -198,6 +201,8 @@ func _on_resize() -> void:
 	var real := Vector2(DisplayServer.window_get_size())
 	var base := Vector2(PORTRAIT_BASE if is_portrait() else LANDSCAPE_BASE)
 	var s := maxf(1.0, floorf(minf(real.x / base.x, real.y / base.y)))
+	if Settings.get_value("ui_scale") == "small":
+		s = maxf(1.0, s - 1.0)
 	var want := Vector2i(int(floorf(real.x / s)), int(floorf(real.y / s)))
 	want = Vector2i(maxi(want.x, 200), maxi(want.y, 200))
 	if get_window().content_scale_size != want:
@@ -234,6 +239,7 @@ func _auto_wide() -> bool:
 
 func set_zoom_mode(m: String) -> void:
 	zoom_mode = m
+	Settings.set_value("zoom", m)
 	_apply_world_scale()
 	Game.toast.emit({"normal": "มุมกล้อง: ปกติ", "wide": "มุมกล้อง: มุมกว้าง", "auto": "มุมกล้อง: อัตโนมัติ (กว้างตอนสู้บอส/ลากพ่วง)"}[m], "info")
 
@@ -295,7 +301,23 @@ func _process(delta: float) -> void:
 
 
 func shake(amount: float) -> void:
+	if amount >= 4.0:
+		Settings.buzz(int(amount * 10.0))
+	if not bool(Settings.get_value("shake")):
+		return
 	_shake = maxf(_shake, amount)
+
+
+func _on_setting_changed(key: String) -> void:
+	match key:
+		"crt":
+			crt.visible = bool(Settings.get_value("crt"))
+		"ui_scale":
+			_on_resize()
+		"zoom":
+			if zoom_mode != str(Settings.get_value("zoom")):
+				zoom_mode = str(Settings.get_value("zoom"))
+				_apply_world_scale()
 
 
 func screen_to_world(p: Vector2) -> Vector2:
