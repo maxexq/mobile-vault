@@ -590,6 +590,107 @@ def mod_heater():
     add("mod_heater", img)
 
 
+def mod_roof_deck():
+    """roof rest deck (ดาดฟ้า) 76x60 on stilts above the rear roof (anchor: (184, roof-60)).
+    Planks at y=34..37 (26px above the roof), stilts down to the roof, a tarp lean-to with a cot on the
+    left where the reserve defender rests. Lv2: corrugated roof, sandbag wall at the rear edge, a brazier.
+    Lv3: lookout mast with an amber searchlight + camo net. Faces LEFT like the truck (rear = right)."""
+    W, H, FY = 76, 60, 34
+    for lv in (1, 2, 3):
+        img = new(W, H)
+        # stilts + cross braces (behind the planks)
+        for x in (3, 36, 70):
+            rect(img, x, FY + 3, 4, H - FY - 3, OL)
+            vline(img, x + 1, FY + 4, H - FY - 5, c("orange1"))
+            vline(img, x + 2, FY + 4, H - FY - 5, c("orange2"))
+        for x0, x1 in ((7, 36), (40, 70)):
+            line(img, x0, FY + 6, x1, H - 4, OL)
+            line(img, x0, H - 4, x1, FY + 6, OL)
+        # rope / ladder from the roof on the front side
+        for y in range(FY + 6, H - 1, 4):
+            hline(img, 0, y, 4, c("wood3"))
+        # planks
+        rect(img, 0, FY, W, 5, OL)
+        rect(img, 1, FY + 1, W - 2, 3, c("wood2"))
+        hline(img, 1, FY + 1, W - 2, c("wood4"))
+        for x in range(6, W - 2, 9):
+            vline(img, x, FY + 1, 3, c("wood0"))
+        speckle(img, 1, FY + 1, W - 2, 3, [c("wood1"), c("wood3")], density=0.18, rng=random.Random(70 + lv))
+        # lean-to over the cot (front half): tarp lv1, corrugated sheet lv2+
+        top = 12
+        vline(img, 2, top, FY - top, OL)
+        vline(img, 3, top + 1, FY - top - 1, c("gray3"))
+        vline(img, 33, top + 6, FY - top - 6, OL)
+        vline(img, 34, top + 7, FY - top - 7, c("gray3"))
+        if lv == 1:
+            poly(img, [(0, top), (36, top + 6), (36, top + 9), (0, top + 3)], c("green2"), OL)
+            hline(img, 1, top + 1, 6, c("green4"))
+            for x in range(5, 34, 7):
+                px(img, x, top + 2 + x // 6, c("green1"))
+            # sagging edge
+            for x in range(6, 33, 6):
+                px(img, x, top + 4 + x // 6, c("green1"))
+        else:
+            poly(img, [(0, top - 1), (37, top + 5), (37, top + 9), (0, top + 3)], c("gray4"), OL)
+            for x in range(2, 36, 3):
+                line(img, x, top + x // 6, x, top + 2 + x // 6, c("gray5"))
+            for x in range(4, 36, 9):
+                px(img, x, top + 2 + x // 6, c("orange2"))   # rust spots
+        # cot (stretcher on two trestles) under the lean-to: the reserve sits/lies here
+        rect(img, 7, FY - 5, 24, 3, OL)
+        hline(img, 8, FY - 4, 22, c("cream2"))
+        hline(img, 8, FY - 5, 22, c("cream3"))
+        for x in (9, 27):
+            line(img, x - 1, FY - 2, x + 2, FY - 1, OL)
+            line(img, x + 2, FY - 2, x - 1, FY - 1, OL)
+        rect(img, 8, FY - 7, 5, 3, c("cream1"))       # rolled blanket / pillow
+        frame(img, 8, FY - 7, 5, 3, OL)
+        # supply crate + canteen
+        rect(img, 40, FY - 7, 9, 7, OL)
+        rect(img, 41, FY - 6, 7, 5, c("wood2"))
+        hline(img, 41, FY - 4, 7, c("wood1"))
+        px(img, 44, FY - 5, c("yellow2"))
+        rect(img, 36, FY - 4, 3, 4, OL)
+        px(img, 37, FY - 3, c("green3"))
+        # rear railing (rope lv1, steel lv2+)
+        rc = c("wood3") if lv == 1 else c("gray4")
+        vline(img, W - 2, FY - 12, 12, OL)
+        vline(img, 52, FY - 10, 10, OL)
+        hline(img, 52, FY - 10, W - 52, rc)
+        hline(img, 52, FY - 5, W - 52, rc)
+        if lv >= 2:
+            # sandbag wall at the rear edge (cover for the roof gunner)
+            for row, (y, xs) in enumerate(((FY - 4, range(58, 74, 6)), (FY - 8, range(61, 74, 6)))):
+                for x in xs:
+                    ellipse(img, x - 1, y - 1, 8, 5, OL)
+                    ellipse(img, x, y, 6, 3, c("sand2"))
+                    hline(img, x + 1, y, 4, c("sand3"))
+            # brazier: the only warm light up here
+            rect(img, 50, FY - 4, 6, 4, OL)
+            hline(img, 51, FY - 3, 4, c("gray3"))
+            px(img, 51, FY - 5, c("lamp0"))
+            px(img, 52, FY - 6, c("lamp1"))
+            px(img, 53, FY - 5, c("lamp2"))
+            px(img, 54, FY - 7, c("lamp0"))
+            px(img, 54, FY - 5, c("lamp1"))
+        if lv >= 3:
+            # camo net draped over the lean-to
+            for x in range(1, 37, 2):
+                px(img, x, top - 1 + x // 6 + (x % 4 == 1), c("green3") if x % 3 else c("green1"))
+            # lookout mast + searchlight (beam drawn in game)
+            vline(img, 57, 4, FY - 4, OL)
+            vline(img, 58, 5, FY - 5, c("gray3"))
+            vline(img, 59, 4, FY - 4, OL)
+            for y in range(9, FY - 10, 5):
+                hline(img, 56, y, 5, c("gray4"))
+            rect(img, 52, 0, 12, 7, OL)
+            rect(img, 53, 1, 9, 5, c("gray3"))
+            hline(img, 53, 1, 9, c("gray5"))
+            rect(img, 63, 0, 4, 7, OL)
+            rect(img, 64, 1, 2, 5, c("lamp2"))
+        add(f"mod_roof_deck_{lv}", img)
+
+
 def gen_mods():
     mod_spike_ram()
     mod_roof_turret()
@@ -600,6 +701,7 @@ def gen_mods():
     mod_rad_shield()
     mod_rain_catcher()
     mod_heater()
+    mod_roof_deck()
 
 
 def gen_truck():

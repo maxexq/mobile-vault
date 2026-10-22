@@ -85,6 +85,8 @@ func _where(d: Dictionary) -> Array:
 		return ["EXPEDITION %dM%02dS" % [int(left) / 60, int(left) % 60], UIKit.C_ORANGE]
 	if Game.squad_role(d) >= 0:
 		return [Combat.ROLES[Game.squad_role(d)].en, UIKit.C_RED]
+	if Game.is_deck(d):
+		return ["ROOF DECK", UIKit.C_RED]
 	if int(d.room) >= 0:
 		if Game.is_constructing(int(d.room)):
 			return ["BUILDING " + Data.room_def(Game.s.rooms[int(d.room)].type).en, UIKit.C_ORANGE]
@@ -249,6 +251,17 @@ func _build_manage(d: Dictionary) -> void:
 		var did2: int = d.id
 		b.pressed.connect(func(): Game.set_squad(ri, did2))
 		sq.add_child(b)
+	if Mods.level("roof_deck") > 0:
+		var on_deck := Game.is_deck(d)
+		var db := UIKit.button("ตัวสำรองดาดฟ้า", "yellow" if on_deck else "green")
+		db.disabled = on_deck
+		var did3: int = d.id
+		db.pressed.connect(func(): Game.set_deck(did3))
+		sq.add_child(db)
+		if on_deck:
+			var off := UIKit.button("ลงจากดาดฟ้า", "gray")
+			off.pressed.connect(func(): Game.set_deck(-1))
+			sq.add_child(off)
 	if cur_role >= 0:
 		var out := UIKit.button("ออกจากทีม", "gray")
 		out.pressed.connect(func(): Game.set_squad(cur_role, -1))
