@@ -162,7 +162,7 @@ Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins 
 | Rules | Costs come out of the **packed supplies** (so they also lower the trip's odds), injuries hit the team member best at the job (lower HP = lower team power and a higher death risk on a failed trip), refugees need a free bunk, and rewards (scaled by site danger and lap) come home with the team. If everyone dies, nothing comes back. The clock keeps running: close the pop-up and answer later from the HUD chip ("สั่งการ") or the expedition panel. If nobody answers before the team returns (or the game was closed), the team plays it safe and picks the last choice. The last 3 encounters are never rolled again, so the same one never shows up twice in a row. |
 | Hooks | `scripts/autoload/encounter.gd` (`Encounter`, autoload after `Expedition`): data in `ENCOUNTERS`, state in `Game.s.exp.enc` (`{id, at, st: wait/open/done, bonus, recruits, lose, text}`), anti-repeat list in `Game.s.enc_recent`; signals `encounter_ready(id)` / `encounter_resolved(id, result)`. UI `scripts/ui/encounter_popup.gd`, art `tools/art/encounters.py` → `assets/events/enc_*.png`. God mode → EXPEDITION: trigger any encounter on the running trip. |
 
-## 4j. Roof rest deck (ดาดฟ้าพักทีมป้องกัน)
+## 4k. Roof rest deck (ดาดฟ้าพักทีมป้องกัน)
 
 A rooftop rest spot for the defence squad, bought as an exterior mod (MODS → **ดาดฟ้าพักทีมป้องกัน / ROOF REST DECK**, 3 levels: 160 scrap + 6 comp / 380 + 18 / 800 + 40, 1.5 t). It is a plank deck on stilts over the rear roof (fuel drums fit underneath); the roof gunner and the field medic stand on it.
 
