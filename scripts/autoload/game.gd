@@ -136,6 +136,9 @@ func _migrate() -> void:
 		s["route_v"] = 2
 	s.merge({"stall": 0.0, "stats": {"events": 0, "km_total": 0.0}, "lap": 0, "gear": [], "next_uid": 1,
 		"van_gear": {"turret": null, "plating": null, "engine": null, "spikes": null}, "squad": [-1, -1, -1]}, false)
+	for i in (s.squad as Array).size():
+		s.squad[i] = int(s.squad[i])    # JSON round-trip turns the ids into floats
+	_free_away_squad()
 	s.merge({"combat": {}}, false)
 	(s.combat as Dictionary).merge({"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1}, false)
 	for d in s.dwellers:
@@ -550,7 +553,24 @@ func is_away(d: Dictionary) -> bool:
 func squad_role(d: Dictionary) -> int:
 	if not s.has("squad"):
 		return -1
-	return (s.squad as Array).find(int(d.id))
+	# compare as ints: a save loaded from JSON stores the ids as floats, and Array.find()
+	# never matches an int against a float, so a squad member could slip out unnoticed
+	var did := int(d.id)
+	for i in (s.squad as Array).size():
+		if int(s.squad[i]) == did:
+			return i
+	return -1
+
+
+## anyone out of the vehicle (expedition / exploring) can't hold a defence slot; old saves could keep one
+func _free_away_squad() -> void:
+	for i in (s.squad as Array).size():
+		var did := int(s.squad[i])
+		if did < 0:
+			continue
+		var d := dweller_by_id(did)
+		if d.is_empty() or is_away(d):
+			s.squad[i] = -1
 
 
 func set_squad(role: int, did: int) -> void:

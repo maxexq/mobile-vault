@@ -378,12 +378,34 @@ func _run() -> void:
 	main.hud.open_expedition("market")
 	await wait(0.6)
 	await shot("expedition_plan")
-	var team_ids := []
+	# a defence squad member goes on the trip: a save loaded from JSON holds the squad ids as floats
+	var guard := Game.dweller_by_id(int(Game.s.squad[1]))
+	Game.s.squad = JSON.parse_string(JSON.stringify(Game.s.squad))
+	_check("squad role survives JSON floats", not guard.is_empty() and Game.squad_role(guard) == 1)
+	var team_ids := [int(guard.id)]
 	for dd in Game.s.dwellers:
-		if not Game.is_away(dd) and team_ids.size() < 2:
+		if not Game.is_away(dd) and team_ids.size() < 2 and not team_ids.has(int(dd.id)):
 			team_ids.append(int(dd.id))
+	var ep: ExpeditionPanel = main.hud.panels.expedition
+	ep.open_site("market")
+	ep.picked = team_ids.duplicate()
+	ep.refresh()
+	await wait(0.3)
+	_check("planner tags defence squad member", _find_text(ep, "อยู่ในทีมป้องกันรถ"))
+	await shot("expedition_plan_squad_tag")
 	var started := Expedition.start("market", team_ids, {"food": 10, "water": 10, "stimpack": 1, "ammo": 0, "antibiotics": 0})
 	_check("expedition start (team of 2)", started and Expedition.active())
+	_check("defence slot freed on expedition", int(Game.s.squad[1]) == -1 and Game.squad_role(guard) < 0)
+	var sub := {}
+	for dd in Game.s.dwellers:
+		if not Game.is_away(dd) and Game.squad_role(dd) < 0:
+			sub = dd
+			break
+	if not sub.is_empty():
+		Game.set_squad(1, int(sub.id))
+	_check("new member fills freed slot", not sub.is_empty() and int(Game.s.squad[1]) == int(sub.id))
+	Game.set_squad(0, int(guard.id))
+	_check("away member can't rejoin squad", Game.squad_role(guard) < 0)
 	main.hud.panels.expedition.close()
 	await wait(2.2)
 	await shot("expedition_walkout")
@@ -696,6 +718,15 @@ func _construction_checks() -> void:
 
 
 ## keep random road events from popping over the v4 screenshots
+func _find_text(n: Node, s: String) -> bool:
+	if n is Label and (n as Label).text.contains(s):
+		return true
+	for c in n.get_children():
+		if _find_text(c, s):
+			return true
+	return false
+
+
 func _no_events() -> void:
 	Game.s.event_t = 1.0e9
 	if Game.active_event != "":
