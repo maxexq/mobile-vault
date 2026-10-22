@@ -235,6 +235,10 @@ func bio(d: Dictionary) -> Dictionary:
 
 
 # ------------------------------------------------------------------ chatter
+const RECENT_LINES := 12
+var _recent_lines: Array = []    # last lines said by anyone, so they don't come straight back
+
+
 ## a context-aware idle line for this dweller ("" if nothing to say)
 func pick_line(d: Dictionary, rng: RandomNumberGenerator) -> String:
 	var pools: Array = []
@@ -271,10 +275,21 @@ func pick_line(d: Dictionary, rng: RandomNumberGenerator) -> String:
 	var total := 0
 	for p in pools:
 		total += int(p[1])
-	var roll := rng.randi() % maxi(1, total)
-	for p in pools:
-		roll -= int(p[1])
-		if roll < 0:
-			var arr: Array = p[0]
-			return str(arr[rng.randi() % arr.size()])
-	return ""
+	# re-roll a few times so the crew doesn't repeat a line someone said a moment ago
+	var line := ""
+	for attempt in 4:
+		line = ""
+		var roll := rng.randi() % maxi(1, total)
+		for p in pools:
+			roll -= int(p[1])
+			if roll < 0:
+				var arr: Array = p[0]
+				line = str(arr[rng.randi() % arr.size()])
+				break
+		if line != "" and not _recent_lines.has(line):
+			break
+	if line != "":
+		_recent_lines.append(line)
+		while _recent_lines.size() > RECENT_LINES:
+			_recent_lines.pop_front()
+	return line

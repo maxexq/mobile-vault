@@ -1504,9 +1504,69 @@ func solar_upgrade(kind: String) -> bool:
 
 # =================================================================== random events
 func _trigger_random_event() -> void:
-	var pool: Array = Data.biome(s.biome).events
-	var id: String = pool[rng.randi() % pool.size()]
-	trigger_event(id)
+	if active_event != "":
+		return    # don't burn a draw from the bag on an event that can't show
+	var id := next_event_id()
+	if id != "":
+		trigger_event(id)
+
+
+## Shuffle bag per biome: every event of the biome shows once before any repeats, in a fresh random
+## order each round, and none of the last EVENT_NO_REPEAT events can come straight back (also across
+## a bag refill or a biome change). The bag lives in the save, so reloading doesn't reset it.
+## Ids are strings, so the JSON round-trip keeps them intact.
+const EVENT_NO_REPEAT := 3
+
+func next_event_id() -> String:
+	var pool: Array = []
+	for e in Data.biome(s.biome).events:
+		if Data.EVENTS.has(e) and not pool.has(e):
+			pool.append(e)
+	if pool.is_empty():
+		return ""
+	var bag: Array = []
+	if int(s.get("ev_bag_biome", -1)) == int(s.biome):
+		for e in s.get("ev_bag", []):
+			if pool.has(str(e)):
+				bag.append(str(e))
+	if bag.is_empty():
+		bag = _shuffled(pool)
+	var recent: Array = s.get("ev_recent", [])
+	var keep := mini(EVENT_NO_REPEAT, pool.size() - 1)
+	var blocked: Array = recent.slice(maxi(0, recent.size() - keep)) if keep > 0 else []
+	var id := ""
+	for i in bag.size():
+		if not blocked.has(bag[i]):
+			id = bag[i]
+			bag.remove_at(i)
+			break
+	if id == "":
+		# what's left of the bag was all seen just now: take an unblocked one from the next round
+		var fresh := _shuffled(pool)
+		for e in fresh:
+			if not blocked.has(e):
+				id = e
+				break
+		bag = fresh
+		bag.erase(id)
+	recent.append(id)
+	while recent.size() > EVENT_NO_REPEAT:
+		recent.pop_front()
+	s["ev_bag"] = bag
+	s["ev_bag_biome"] = int(s.biome)
+	s["ev_recent"] = recent
+	return id
+
+
+## Fisher-Yates with Game.rng (Array.shuffle() uses the global seed, see @GlobalScope docs)
+func _shuffled(arr: Array) -> Array:
+	var out := arr.duplicate()
+	for i in range(out.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = out[i]
+		out[i] = out[j]
+		out[j] = tmp
+	return out
 
 
 func trigger_event(id: String) -> void:
