@@ -605,6 +605,7 @@ func _run() -> void:
 	await wait(0.4)
 	await _settings_test()
 	_event_variety_test()
+	await _cloud_test()
 	print("[autotest] DONE")
 	get_tree().quit()
 
@@ -1126,3 +1127,87 @@ func _event_variety_test() -> void:
 		if lines[i] == lines[i - 1]:
 			dup = true
 	_check("chatter: no line said twice in a row", not dup and lines[0] != "")
+
+
+func _fake_run(gen: int) -> Dictionary:
+	return {"rooms": [], "res": {}, "dwellers": [], "meta": {"gen": gen}, "saved_at": Cloud.now()}
+
+
+func _local_gen() -> int:
+	return int(Save.read().get("meta", {}).get("gen", -1))
+
+
+## Supabase cloud save against tools/cloud_fake.gd (same rev rules as the SQL migration)
+func _cloud_test() -> void:
+	var fake = load("res://tools/cloud_fake.gd").new()
+	_check("cloud: off without cloud_config.json in tests", not Cloud.enabled())
+	Cloud.session = {}
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": ""}
+	Save.write(_fake_run(3))      # a player who already has a local save when the cloud ships
+	await Cloud.start_for_test(fake)
+	var uid := Cloud.user_id()
+	_check("cloud: anonymous sign-in", uid != "" and fake.calls.has("/auth/v1/signup"))
+	_check("cloud: existing local save migrated as rev 1", fake.rows.has(uid) and int(fake.rows[uid].rev) == 1 and int(fake.rows[uid].data.meta.gen) == 3)
+	_check("cloud: synced state", Cloud.state == Cloud.State.OK and not Cloud.meta.dirty and int(Cloud.meta.rev) == 1)
+	_check("cloud: server clock drives now()", absf(Cloud.now() - fake.clock) < 5.0)
+	_check("cloud: settings uploaded with the save", fake.rows[uid].settings.has("master"))
+	# another device moved on: this one (not playing, nothing new here) takes it
+	fake.write_from_other_device(uid, _fake_run(7), {"fps": 30})
+	await Cloud.sync()
+	_check("cloud: newer cloud save pulled", _local_gen() == 7 and int(Cloud.meta.rev) == 2 and not Cloud.meta.dirty)
+	_check("cloud: settings from the cloud applied", int(Settings.get_value("fps")) == 30 and Engine.max_fps == 30)
+	_check("cloud: CONTINUE shows after a pull", main.hud.title_screen._continue.visible)
+	Settings.reset_defaults()
+	# both changed: the player must choose
+	Save.write(_fake_run(8))
+	fake.write_from_other_device(uid, _fake_run(9))
+	await Cloud.sync()
+	_check("cloud: conflict detected", Cloud.state == Cloud.State.CONFLICT and int(Cloud.remote.rev) == 3)
+	_check("cloud: local save kept during conflict", _local_gen() == 8)
+	await wait(0.4)
+	_check("cloud: conflict opens the save tab", main.hud.settings_panel.is_open and main.hud.settings_panel.tab == "data")
+	await shot("cloud_conflict")
+	await Cloud.use_local()
+	_check("cloud: keep this device overwrites cloud", Cloud.state == Cloud.State.OK and int(fake.rows[uid].data.meta.gen) == 8 and int(Cloud.meta.rev) == 4)
+	Save.write(_fake_run(11))
+	fake.write_from_other_device(uid, _fake_run(10))
+	await Cloud.sync()
+	Cloud.use_cloud()
+	_check("cloud: take cloud save", _local_gen() == 10 and Cloud.state == Cloud.State.OK and int(Cloud.meta.rev) == 5 and not Cloud.meta.dirty)
+	await wait(0.3)
+	await shot("cloud_synced")
+	main.hud.settings_panel.close()
+	# offline: the local save keeps working and goes up later
+	fake.online = false
+	Save.write(_fake_run(12))
+	await Cloud.sync()
+	_check("cloud: offline falls back to local", Cloud.state == Cloud.State.OFFLINE and _local_gen() == 12 and Cloud.meta.dirty)
+	fake.online = true
+	await Cloud.sync()
+	_check("cloud: catches up when back online", Cloud.state == Cloud.State.OK and int(fake.rows[uid].data.meta.gen) == 12)
+	# expired access token -> refresh token -> retried call
+	fake.expire_tokens()
+	Save.write(_fake_run(13))
+	await Cloud.upload()
+	_check("cloud: token refreshed", fake.calls.has("/auth/v1/token?grant_type=refresh_token") and int(fake.rows[uid].data.meta.gen) == 13 and Cloud.user_id() == uid)
+	# an empty local save never blanks the cloud unless progress was reset on purpose
+	Save.wipe()
+	Cloud.meta.wiped = false
+	await Cloud.upload()
+	_check("cloud: lost local storage does not blank the cloud", int(fake.rows[uid].data.meta.gen) == 13)
+	Cloud.meta.rev = 0
+	await Cloud.sync()
+	_check("cloud: cleared browser restores from cloud", _local_gen() == 13)
+	Save.wipe()
+	await Cloud.upload()
+	_check("cloud: progress reset reaches the cloud", (fake.rows[uid].data as Dictionary).is_empty() and not Cloud.meta.wiped)
+	# saved_at uses the server clock
+	Game.setup_default_state()
+	Game.started = true
+	Game.save_game()
+	_check("cloud: saved_at stamped with server time", absf(float(Save.read().saved_at) - fake.clock) < 5.0)
+	Game.started = false
+	Save.wipe()
+	Cloud.transport = null
+	Cloud.state = Cloud.State.OFF
+	Cloud.url = ""

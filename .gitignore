@@ -2,3 +2,4 @@
 build/
 *.tmp
 build_info.json
+cloud_config.json
