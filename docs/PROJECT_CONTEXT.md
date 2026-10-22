@@ -155,6 +155,13 @@
 
 ---
 
+### v4.3 · Settings
+- **เมนูตั้งค่า** (`scripts/ui/settings_panel.gd`) เปิดจากปุ่มเฟืองบน HUD และปุ่ม SETTINGS บนหน้าแรก มี 3 แท็บ:
+  ตั้งค่า (เสียง Master/Music/SFX, ภาษา, ขนาดพิกเซล, มุมกล้อง, CRT, GPU/CPU FX, 30/60 FPS, เต็มจอ, จอสั่น, เลือด, สั่นเครื่อง, ดูบทแนะนำซ้ำ) ·
+  เซฟ (บันทึก, ส่งออก/นำเข้าไฟล์ JSON, รีเซ็ตแบบแตะยืนยัน 2 ครั้ง) · เกี่ยวกับ (เวอร์ชันเกม, build, Godot, renderer, GPU, แพลตฟอร์ม, คัดลอกไว้แจ้งบั๊ก)
+- **Autoload `Settings`** เก็บแยกจากเซฟใน `localStorage["mobile_vault_settings_v1"]` (desktop `user://settings.json`) รีเซ็ต/นำเข้าเซฟ/prestige แล้วค่ายังอยู่
+- **`BuildInfo`** (`scripts/build_info.gd`) คือที่เดียวของเลขเวอร์ชัน (`GAME_VERSION`) ส่วน commit/branch/เวลา build อ่านจาก `res://build_info.json` ที่ `tools/stamp_build.sh` เขียนก่อน export (git-ignore ไว้ ถ้าไม่มีจะขึ้น `dev`)
+
 ## 5. Workflow / คำสั่ง
 
 ```bash
@@ -175,7 +182,7 @@ $GODOT --headless --path . -- --migrate-test      # ใช้ savegame.json ท�
 python3 tools/generate_pixel_art.py
 
 # web export → copy ไป web/ (Vercel serve โฟลเดอร์นี้)
-$GODOT --headless --path . --export-release "Web" build/web/index.html && cp build/web/* web/
+sh tools/stamp_build.sh && $GODOT --headless --path . --export-release "Web" build/web/index.html && cp build/web/* web/
 ```
 
 ### Deploy ไป claude.ai artifact
