@@ -83,6 +83,7 @@ func _run() -> void:
 	main.hud.panels.inventory.refresh()
 	await wait(0.4)
 	await shot("loot_forge")
+	await _loot_tabs_test()
 	main.hud.panels.inventory.close()
 	await wait(0.4)
 	main.hud.open_loot_pick("weapon", int(Game.s.squad[0]))
@@ -1327,3 +1328,55 @@ func _cloud_test() -> void:
 	Cloud.transport = null
 	Cloud.state = Cloud.State.OFF
 	Cloud.url = ""
+
+
+## Regression: on the items/forge tab the panel rebuilt itself on every resources_changed (each
+## frame), freeing the tab buttons before a tap's release, so the other tabs could not be tapped.
+func _loot_tabs_test() -> void:
+	var inv: LootPanel = main.hud.panels.inventory
+	inv.move_to_front()  # road-event popups fired by the sim may sit on top during the run
+	for from in ["items", "forge"]:
+		inv.tab = from
+		inv.refresh()
+		await wait(0.2)
+		var btns: Array = inv._tabs.get_children().filter(func(c): return c is Button)
+		await wait(0.5)  # ~30 simulation frames of resources_changed
+		var alive := btns.size() == 3
+		for b in btns:
+			alive = alive and is_instance_valid(b) and b.get_parent() == inv._tabs
+		_check("loot tabs: %s tab keeps its tab buttons across resource ticks" % from, alive)
+		if not alive:
+			continue
+		var target := "gear" if from == "items" else "items"
+		# a real tap: touch-down now, release a few frames later (BaseButton fires on release)
+		var btn: Button = btns[0] if target == "gear" else btns[1]
+		var pos := btn.get_global_rect().get_center()
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.position = pos
+		ev.global_position = pos
+		ev.pressed = true
+		var mv := InputEventMouseMotion.new()
+		mv.position = pos
+		mv.global_position = pos
+		get_viewport().push_input(mv, true)
+		await wait(0.05)
+		var hov := get_viewport().gui_get_hovered_control()
+		_check("loot tabs: %s tab button is the control under the finger" % from, hov != null and (hov == btn or btn.is_ancestor_of(hov)))
+		get_viewport().push_input(ev, true)
+		await wait(0.15)
+		var up: InputEventMouseButton = ev.duplicate()
+		up.pressed = false
+		get_viewport().push_input(up, true)
+		await wait(0.2)
+		_check("loot tabs: tap %s -> %s switches tab" % [from, target], inv.tab == target)
+	# the item counts still follow the resources without a rebuild
+	inv.tab = "items"
+	inv.refresh()
+	await wait(0.2)
+	var lbl: Label = inv._amounts.get("scrap")
+	Game.s.res.scrap = 123.0
+	Game.resources_changed.emit()
+	_check("loot tabs: items amounts update in place", is_instance_valid(lbl) and lbl == inv._amounts.get("scrap") and lbl.text.begins_with("123"))
+	inv.tab = "gear"
+	inv.refresh()
