@@ -16,6 +16,7 @@ var _syncs: Array[Callable] = []
 var _reset_btn: Button
 var _reset_t := 0.0
 var _note: Label
+var _shown_conflict := false
 
 
 func _build() -> void:
@@ -28,6 +29,13 @@ func _build() -> void:
 	body.add_child(_note)
 	Settings.changed.connect(func(_k): _sync())
 	Settings.import_failed.connect(func(why): _say(why, UIKit.C_RED))
+	Cloud.status_changed.connect(func():
+		# the conflict choice adds/removes buttons, so that change rebuilds the tab; the rest updates labels
+		if is_open and tab == "data":
+			if (Cloud.state == Cloud.State.CONFLICT) != _shown_conflict:
+				refresh()
+			else:
+				_sync())
 
 
 func open_tab(t: String) -> void:
@@ -57,6 +65,7 @@ func refresh() -> void:
 			tab = key
 			refresh())
 		_tabs.add_child(b)
+	_shown_conflict = Cloud.state == Cloud.State.CONFLICT
 	match tab:
 		"game": _tab_game()
 		"data": _tab_data()
@@ -230,8 +239,12 @@ func _tab_data() -> void:
 		_info("SAVED", Time.get_datetime_string_from_unix_time(at + bias, true) if at > 0 else "-")
 		_info("SIZE", "%.1f KB" % (JSON.stringify(d).length() / 1024.0))
 		_info("RUN", "รุ่นที่ %d · Vault %d · %.1f กม." % [int(d.get("meta", {}).get("gen", 1)), int(d.get("vault_level", 1)), float(d.get("stats", {}).get("km_total", d.get("km", 0.0)))])
-		_info("STORE", "localStorage ของเบราว์เซอร์" if OS.has_feature("web") else ProjectSettings.globalize_path(Save.FILE_PATH))
-	_list.add_child(UIKit.wrap_label("เกมเซฟเองทุก 15 วินาที และตอนสลับแอป เซฟอยู่ในเบราว์เซอร์นี้เท่านั้น ถ้าล้างข้อมูลเว็บ เซฟจะหาย ควรส่งออกไฟล์เก็บไว้", UIKit.FS_SMALL, UIKit.C_DIM))
+		_info("STORE", ("localStorage ของเบราว์เซอร์" if OS.has_feature("web") else ProjectSettings.globalize_path(Save.FILE_PATH)) + (" + Supabase" if Cloud.enabled() else ""))
+	if Cloud.enabled():
+		_list.add_child(UIKit.wrap_label("เกมเซฟลงเครื่องทุก 15 วินาที และส่งขึ้นคลาวด์ทุกนาทีเมื่อออนไลน์ ถ้าออฟไลน์จะเก็บในเครื่องไว้ก่อนแล้วส่งตามทีหลัง", UIKit.FS_SMALL, UIKit.C_DIM))
+	else:
+		_list.add_child(UIKit.wrap_label("เกมเซฟเองทุก 15 วินาที และตอนสลับแอป เซฟอยู่ในเบราว์เซอร์นี้เท่านั้น ถ้าล้างข้อมูลเว็บ เซฟจะหาย ควรส่งออกไฟล์เก็บไว้", UIKit.FS_SMALL, UIKit.C_DIM))
+	_cloud_rows()
 	var sb := _action("บันทึกตอนนี้", "green", "chest", func():
 		Game.save_game()
 		_say("บันทึกแล้ว"))
@@ -248,6 +261,52 @@ func _tab_data() -> void:
 	_list.add_child(UIKit.wrap_label("ลบรถ ลูกเรือ ของ และรุ่นทั้งหมด แล้วกลับไปหน้าแรก ย้อนคืนไม่ได้ (ค่าตั้งค่ายังอยู่)", UIKit.FS_SMALL, UIKit.C_DIM))
 	_reset_btn = _action("รีเซ็ตความคืบหน้า", "red", "skull", _on_reset_pressed)
 	_reset_btn.disabled = d.is_empty() and not Game.started
+
+
+func _cloud_rows() -> void:
+	_head("CLOUD", "คลาวด์")
+	if not Cloud.enabled():
+		_info("STATUS", Cloud.status_text())
+		return
+	var st := _info("STATUS", "")
+	var acc := _info("ACCOUNT", "")
+	var last := _info("SYNC", "")
+	_syncs.append(func():
+		(st.get_child(1) as Label).text = Cloud.status_text()
+		(acc.get_child(1) as Label).text = ("ผู้เล่นนิรนาม · " + Cloud.user_id().left(8)) if Cloud.user_id() != "" else "-"
+		(last.get_child(1) as Label).text = "rev %d · %s" % [int(Cloud.meta.rev), _when(Cloud.last_sync_at) if Cloud.last_sync_at > 0 else "ยังไม่ได้ซิงก์"])
+	if Cloud.state == Cloud.State.CONFLICT:
+		var r := Cloud.remote
+		var rd: Dictionary = r.get("data", {}) if r.get("data") is Dictionary else {}
+		var ld := Save.read()
+		_list.add_child(UIKit.wrap_label("คลาวด์มีเซฟจากอีกเครื่อง (%s) ที่เครื่องนี้ยังไม่เคยเห็น เลือกเซฟที่จะเก็บไว้ อีกอันจะถูกแทนที่" % _when(float(r.get("updated_at", 0))), UIKit.FS_SMALL, UIKit.C_RED))
+		_info("CLOUD", _run_text(rd))
+		_info("DEVICE", _run_text(ld))
+		_action("ใช้เซฟจากคลาวด์", "blue", "up", func():
+			_say("กำลังโหลดเซฟจากคลาวด์...")
+			Cloud.use_cloud())
+		_action("ใช้เซฟเครื่องนี้ (ทับคลาวด์)", "red", "chest", func():
+			_say("กำลังส่งเซฟเครื่องนี้ขึ้นคลาวด์...")
+			await Cloud.use_local()
+			refresh())
+		return
+	_action("ซิงก์ตอนนี้", "green", "up", func():
+		if Game.started:
+			Game.save_game()
+		_say("กำลังซิงก์...")
+		await Cloud.sync()
+		_say(Cloud.status_text(), UIKit.C_GOLD if Cloud.state == Cloud.State.OK else UIKit.C_RED))
+
+
+func _when(unix: float) -> String:
+	var bias := int(Time.get_time_zone_from_system().get("bias", 0)) * 60
+	return Time.get_datetime_string_from_unix_time(int(unix) + bias, true)
+
+
+func _run_text(d: Dictionary) -> String:
+	if d.is_empty():
+		return "ไม่มีเซฟ"
+	return "รุ่นที่ %d · Vault %d · %.1f กม. · %s" % [int(d.get("meta", {}).get("gen", 1)), int(d.get("vault_level", 1)), float(d.get("stats", {}).get("km_total", d.get("km", 0.0))), _when(float(d.get("saved_at", 0)))]
 
 
 func _on_reset_pressed() -> void:
