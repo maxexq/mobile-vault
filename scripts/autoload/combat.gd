@@ -370,6 +370,20 @@ func challenge_warlord() -> void:
 	wave_changed.emit()
 
 
+## tester tool: replace whatever is on the road with exactly these spawns
+func debug_spawn(queue: Array, boss: bool) -> void:
+	_clear_enemies()
+	spawn_queue = queue.duplicate(true)
+	wave_active = true
+	wave_is_boss = boss
+	wave_is_warlord = false
+	for q in queue:
+		if str(q.get("boss", "")) == "warlord":
+			wave_is_warlord = true
+	wave_t = 0.0
+	wave_changed.emit()
+
+
 func _clear_enemies() -> void:
 	for e in enemies:
 		enemy_removed.emit(int(e.id), false)
@@ -785,6 +799,8 @@ func _hero_hit(slot: int, e: Dictionary, mult: float) -> void:
 func _damage_enemy(e: Dictionary, dmg: float, crit: bool, _slot: int, show: bool) -> void:
 	if e.get("burrowed", false):
 		return
+	if Dev.on("one_hit"):
+		dmg = maxf(dmg, float(e.max) * 3.0)
 	if (e.get("mech", []) as Array).has("armor") and float(e.hp) > float(e.max) * 0.6:
 		dmg *= 0.5
 		if float(e.hp) - dmg <= float(e.max) * 0.6:
@@ -797,6 +813,9 @@ func _damage_enemy(e: Dictionary, dmg: float, crit: bool, _slot: int, show: bool
 
 func _damage_hero(slot: int, raw: float) -> void:
 	var h: Dictionary = heroes[slot]
+	if Dev.on("invincible"):
+		hit.emit("hero", slot, 0.0, false)
+		return
 	var st: Dictionary = h.st
 	if rng.randf() * 100.0 < float(st.get("dodge", 0.0)):
 		hit.emit("dodge", slot, 0.0, false)

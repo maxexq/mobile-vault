@@ -452,6 +452,88 @@ func _run() -> void:
 	await wait(1.6)
 	await shot("train_two_wagons_wide")
 	main.set_zoom_mode("auto")
+	# ---- tester console (god mode) + trace log
+	_check("dev tools unlocked in debug builds", Dev.unlocked)
+	# release builds: the hidden 7-tap unlock on the VAULT chip (real input events through the GUI)
+	Dev.unlocked = false
+	Dev.changed.emit()
+	var chip: Control = main.hud.lvl_lbl.get_parent()
+	var cpos := chip.get_global_rect().get_center()
+	var cpos_win: Vector2 = chip.get_viewport().get_screen_transform() * chip.get_global_transform_with_canvas().origin + chip.size * 0.5 * chip.get_viewport().get_screen_transform().get_scale()
+	for k in 7:
+		for pressed in [true, false]:
+			var ev := InputEventMouseButton.new()
+			ev.button_index = MOUSE_BUTTON_LEFT
+			ev.pressed = pressed
+			ev.position = cpos_win
+			ev.global_position = cpos_win
+			Input.parse_input_event(ev)
+			await get_tree().process_frame
+		await wait(0.12)
+	await wait(0.3)
+	print("[autotest] chip at ", cpos, " window ", cpos_win, " unlocked=", Dev.unlocked)
+	_check("secret 7-tap unlock on the VAULT chip", Dev.unlocked and main.hud._god_btn.visible)
+	Dev.unlocked = true
+	Dev.set_flag("free", true)
+	var scrap_before := float(Game.s.res.scrap)
+	var free_slot := -1
+	for i in Game.s.rooms.size():
+		if Game.is_slot_unlocked(i) and Game.s.rooms[i].type == "empty":
+			free_slot = i
+			break
+	_check("god: free build", free_slot >= 0 and Game.build_room(free_slot, "kitchen") and is_equal_approx(float(Game.s.res.scrap), scrap_before))
+	Dev.set_flag("free", false)
+	Dev.set_tier("van")
+	_check("god: swap chassis keeps trailers", Game.tier() == "van" and Game.slot_count() == 6 + 12 and main.vehicle.room_views.size() == 18)
+	Dev.set_tier("train")
+	Dev.set_flag("invincible", true)
+	Dev.set_hull(0.1)
+	await wait(0.2)
+	_check("god: invincible refills hull", float(Game.s.hull) >= Game.hull_max() - 0.01)
+	Dev.spawn_boss("mech_spider")
+	await wait(1.5)
+	var gb := Combat.current_boss()
+	_check("god: spawn a chosen boss", not gb.is_empty() and str(gb.name).contains(str(Combat.WAVE_BOSSES.mech_spider.th)))
+	await shot("god_boss_spawned")
+	Dev.set_flag("one_hit", true)
+	for k in 20:
+		if Combat.current_boss().is_empty():
+			break
+		await wait(0.5)
+	_check("god: one-hit kills", Combat.current_boss().is_empty())
+	Dev.set_flag("one_hit", false)
+	Dev.set_flag("invincible", false)
+	Dev.set_speed(5.0)
+	_check("god: game speed", is_equal_approx(Engine.time_scale, 5.0))
+	Dev.set_speed(1.0)
+	var exported := Dev.export_save()
+	_check("god: save export/import round-trip", Dev.import_save(exported) and Game.tier() == "train")
+	_check("trace: god actions + boss logged", Trace.filtered("god").size() >= 8 and Trace.filtered("combat").size() >= 1)
+	_check("trace: build logged", Trace.filtered("build").size() >= 1)
+	_check("trace: save marked as cheated", Game.s.stats.get("cheated", false))
+	Dev.set_overlay(true)
+	main.hud.open_panel("god")
+	await wait(0.6)
+	await shot("god_panel_main")
+	main.hud.panels.god.tab = "fight"
+	main.hud.panels.god.refresh()
+	await wait(0.4)
+	await shot("god_panel_fight")
+	main.hud.panels.god.tab = "log"
+	main.hud.panels.god.refresh()
+	await wait(0.4)
+	await shot("god_panel_log")
+	main.hud.panels.god.tab = "veh"
+	main.hud.panels.god.refresh()
+	await wait(0.4)
+	await shot("god_panel_vehicle")
+	main.hud.panels.god.close()
+	Dev.set_overlay(false)
+	var this_session := Trace.entries.filter(func(e): return str(e.sid) == Trace.session)
+	var errs := this_session.filter(func(e): return str(e.cat) == "error")
+	print("[autotest] trace entries this session: %d, errors: %d" % [this_session.size(), errs.size()])
+	for e in errs:
+		print("[autotest] trace error: ", Trace.fmt_entry(e))
 	print("[autotest] v3/v4 checks done: %d failed total" % _fails)
 	# portrait phone
 	get_window().size = Vector2i(780, 1688)

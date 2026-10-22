@@ -63,6 +63,7 @@ var _boss_was := false
 var _view_box: HBoxContainer
 var _xray_btn: Button
 var _zoom_btn: Button
+var _god_btn: Button
 signal zoom_pressed
 signal xray_toggled(on: bool)
 
@@ -92,6 +93,15 @@ func _ready() -> void:
 	_zoom_btn.tooltip_text = "ซูม: อัตโนมัติ / กว้าง / ปกติ"
 	_zoom_btn.pressed.connect(func(): zoom_pressed.emit())
 	_view_box.add_child(_zoom_btn)
+	# tester console: only exists once Dev is unlocked (debug build, ?god=1, or 7 taps on the VAULT chip)
+	_god_btn = UIKit.button("GOD", "gray")
+	_god_btn.custom_minimum_size = Vector2(34, 22)
+	_god_btn.add_theme_font_override("font", UIKit.font_pixel)
+	_god_btn.add_theme_font_size_override("font_size", UIKit.FP)
+	_god_btn.pressed.connect(func(): open_panel("god"))
+	_view_box.add_child(_god_btn)
+	Dev.changed.connect(_sync_god_btn)
+	_sync_god_btn()
 	add_child(_view_box)
 	toast_box = UIKit.vbox(2)
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -101,7 +111,7 @@ func _ready() -> void:
 
 	room_closeup = RoomCloseup.new()
 	add_child(room_closeup)
-	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen"]:
+	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen", "god"]:
 		var p: ModalPanel
 		match k:
 			"build": p = BuildPanel.new()
@@ -115,6 +125,7 @@ func _ready() -> void:
 			"skills": p = SkillPanel.new()
 			"expedition": p = ExpeditionPanel.new()
 			"nextgen": p = NextGenPanel.new()
+			"god": p = GodPanel.new()
 		add_child(p)
 		panels[k] = p
 	(panels.build as BuildPanel).placement_requested.connect(func(t): build_placement_requested.emit(t))
@@ -203,6 +214,10 @@ func _build_top() -> void:
 	var vb := _chip_box(UIKit.C_LINE_DIM)
 	lvl_lbl = UIKit.label("VAULT 1", UIKit.FP, UIKit.C_GOLD, true)
 	vb.add_child(lvl_lbl)
+	vb.mouse_filter = Control.MOUSE_FILTER_STOP
+	vb.gui_input.connect(func(e: InputEvent):
+		if (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT) or (e is InputEventScreenTouch and e.pressed):
+			Dev.secret_tap())
 	_info_row.add_child(vb)
 	# population / happiness
 	var pc := _chip_box()
@@ -706,3 +721,16 @@ func any_modal_open() -> bool:
 		if panels[k].is_open:
 			return true
 	return event_popup.is_open or title_screen.visible
+
+
+func _sync_god_btn() -> void:
+	_god_btn.visible = Dev.unlocked
+	UIKit.style_button(_god_btn, "red" if Dev.any_active() else "gray")
+
+
+func _unhandled_key_input(e: InputEvent) -> void:
+	if Dev.unlocked and e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_F1 or e.keycode == KEY_QUOTELEFT):
+		if panels.god.is_open:
+			panels.god.close()
+		else:
+			open_panel("god")

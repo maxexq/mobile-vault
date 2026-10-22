@@ -1,0 +1,312 @@
+class_name GodPanel
+extends ModalPanel
+## Tester console ("GOD MODE"). Only reachable when Dev.unlocked. Every button calls a Dev.* action, so the
+## same actions are scriptable from tools/autotest.gd and every use lands in the Trace log.
+##  tabs: ทั่วไป (switches, speed, time, weather) · ทรัพยากร · รถ · ลูกเรือ · ต่อสู้ · โลก · LOG/เซฟ
+
+var tab := "main"
+var _tabs: HFlowContainer
+var _list: VBoxContainer
+var _log_cat := ""
+var _save_box: TextEdit
+
+const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["log", "LOG/เซฟ"]]
+
+
+func _build() -> void:
+	_tabs = UIKit.flow(3)
+	body.add_child(_tabs)
+	_list = make_list(4)
+	Dev.changed.connect(func(): if is_open and tab == "main": refresh())
+
+
+func refresh() -> void:
+	for c in _tabs.get_children():
+		_tabs.remove_child(c)
+		c.queue_free()
+	for c in _list.get_children():
+		_list.remove_child(c)
+		c.queue_free()
+	for t in TABS:
+		var key: String = t[0]
+		var b := UIKit.button(t[1], "yellow" if tab == key else "gray")
+		b.pressed.connect(func():
+			tab = key
+			refresh())
+		_tabs.add_child(b)
+	set_title("GOD MODE / แผงผู้ทดสอบ · " + str(TABS.filter(func(x): return x[0] == tab)[0][1]))
+	if not Game.started or Game.s.is_empty():
+		_list.add_child(UIKit.wrap_label("เริ่มเกมก่อนแล้วค่อยเปิดแผงนี้", UIKit.FS, UIKit.C_TEXT))
+		return
+	match tab:
+		"main": _tab_main()
+		"res": _tab_res()
+		"veh": _tab_vehicle()
+		"crew": _tab_crew()
+		"fight": _tab_fight()
+		"world": _tab_world()
+		"log": _tab_log()
+
+
+# ------------------------------------------------------------------ helpers
+func _head(en: String, th: String) -> void:
+	_list.add_child(UIKit.header(en, th))
+
+
+func _row(buttons: Array, label: String = "") -> HFlowContainer:
+	var f := UIKit.flow(3)
+	if label != "":
+		var l := UIKit.label(label, UIKit.FS_SMALL, UIKit.C_DIM)
+		l.custom_minimum_size.x = 64
+		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		f.add_child(l)
+	for b in buttons:
+		f.add_child(b)
+	_list.add_child(f)
+	return f
+
+
+## button that runs fn, then refreshes the panel (keep_open) or closes it to watch the result
+func _b(text: String, fn: Callable, color: String = "gray", close_after: bool = false) -> Button:
+	var b := UIKit.button(text, color)
+	b.pressed.connect(func():
+		fn.call()
+		if close_after:
+			close()
+		else:
+			refresh())
+	return b
+
+
+func _note(text: String) -> void:
+	_list.add_child(UIKit.wrap_label(text, UIKit.FS_SMALL, UIKit.C_DIM))
+
+
+# ------------------------------------------------------------------ tabs
+func _tab_main() -> void:
+	var cheated: bool = Game.s.stats.get("cheated", false)
+	_note("ทุกการกดถูกบันทึกลง LOG · เซฟนี้%s" % (" ถูกทำเครื่องหมายว่า 'ใช้ god mode แล้ว'" if cheated else "ยังไม่เคยใช้ god mode"))
+	_head("SWITCHES", "สวิตช์โกง (ไม่ถูกเซฟ รีเซ็ตทุกครั้งที่เปิดเกม)")
+	for k in Dev.FLAGS:
+		var key: String = k
+		var on := Dev.on(key)
+		var b := UIKit.button(("[ON] " if on else "[OFF] ") + str(Dev.FLAGS[k]), "green" if on else "gray")
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.pressed.connect(func(): Dev.set_flag(key, not Dev.on(key)))
+		_list.add_child(b)
+	_head("SPEED", "ความเร็วเกม (จำลองทุกระบบเร็วขึ้น)")
+	var sp := []
+	for x in Dev.SPEEDS:
+		var v: float = x
+		sp.append(_b("x%s" % str(v).trim_suffix(".0"), func(): Dev.set_speed(v), "yellow" if Dev.speed == v else "gray"))
+	_row(sp)
+	_head("FAST-FORWARD", "ข้ามเวลา (จำลองแบบออฟไลน์)")
+	_row([_b("+10 นาที", func(): Dev.fast_forward(600.0)), _b("+1 ชม.", func(): Dev.fast_forward(3600.0)), _b("+4 ชม.", func(): Dev.fast_forward(14400.0))])
+	_head("TIME / WEATHER", "ช่วงเวลาและสภาพอากาศ")
+	_row([_b("เช้า", func(): Dev.set_tod(0.3)), _b("เที่ยง", func(): Dev.set_tod(0.5)), _b("เย็น", func(): Dev.set_tod(0.7)), _b("กลางคืน", func(): Dev.set_tod(0.95))])
+	var wb := []
+	for w in Data.WEATHER:
+		var wid: String = w
+		wb.append(_b(str(Data.WEATHER[w].get("th", w)), func(): Dev.weather(wid), "yellow" if Game.s.weather == wid else "gray"))
+	_row(wb)
+	_head("OVERLAY", "ข้อมูลดีบักบนจอ")
+	_row([_b("FPS/ดีบัก: " + ("เปิด" if Dev.overlay else "ปิด"), func(): Dev.set_overlay(not Dev.overlay), "green" if Dev.overlay else "gray"),
+		_b("ซ่อนปุ่ม GOD", func(): Dev.lock(), "red", true)])
+
+
+func _tab_res() -> void:
+	_row([_b("เติมทุกอย่างเต็ม", func(): Dev.res_all(true), "green"), _b("ทุกอย่างเป็น 0", func(): Dev.res_all(false), "red")])
+	_note("ทดสอบอดอยาก: กด 'เป็น 0' แล้วเร่งเวลา · ทดสอบแบตหมด: ไปแท็บรถ > ไฟดับ")
+	_head("RESOURCES", "ปรับทีละอย่าง")
+	for k in Game.s.res:
+		var key: String = k
+		var cur := float(Game.s.res[k])
+		_row([_b("0", func(): Dev.res_set(key, 0.0)), _b("-100", func(): Dev.res_set(key, cur - 100.0)),
+			_b("+100", func(): Dev.res_set(key, cur + 100.0)), _b("เต็ม", func(): Dev.res_set(key, Game.cap(key)), "green")],
+			"%s %d/%d" % [Data.item_name(k), int(cur), int(Game.cap(k))])
+	_head("ITEMS", "ไอเท็ม")
+	for k in ["components", "ammo", "stimpack", "radaway", "antibiotics"]:
+		var key: String = k
+		var cur := int(Game.s.items.get(k, 0))
+		_row([_b("0", func(): Dev.res_set(key, 0.0)), _b("+10", func(): Dev.res_set(key, cur + 10.0)), _b("+100", func(): Dev.res_set(key, cur + 100.0))],
+			"%s %d" % [Data.item_name(k), cur])
+	_head("META", "ข้ามรอบ (prestige)")
+	_row([_b("พิมพ์เขียวทั้งหมด", func(): Dev.all_blueprints(), "green"), _b("แต้มวิจัย +100", func(): Dev.legacy_add(100))],
+		"มี %d แต้ม" % int(Meta.m().get("legacy", 0)))
+
+
+func _tab_vehicle() -> void:
+	_head("CHASSIS", "เปลี่ยนรถทันที (ห้องที่ยังพอดีอยู่ครบ)")
+	var tb := []
+	for t in Data.TIER_ORDER:
+		var tid: String = t
+		tb.append(_b(str(Data.VEHICLES[t].th), func(): Dev.set_tier(tid), "yellow" if Game.tier() == tid else "gray"))
+	_row(tb)
+	_row([_b("0", func(): Dev.set_trailers(0), "yellow" if Game.trailers() == 0 else "gray"), _b("1", func(): Dev.set_trailers(1), "yellow" if Game.trailers() == 1 else "gray"),
+		_b("2", func(): Dev.set_trailers(2), "yellow" if Game.trailers() == 2 else "gray")], "โบกี้พ่วง")
+	var vb := []
+	for n in range(1, Data.MAX_VAULT_LEVEL + 1):
+		var lv: int = n
+		vb.append(_b(str(lv), func(): Dev.set_vault(lv), "yellow" if int(Game.s.vault_level) == lv else "gray"))
+	_row(vb, "Vault Lv")
+	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
+		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
+	_head("ROOMS & MODS", "ห้องและมอด")
+	_row([_b("สร้างห้องทุกช่องว่าง", func(): Dev.rooms_fill(), "green"), _b("ทุกห้อง Lv สูงสุด", func(): Dev.rooms_max())])
+	_row([_b("มอดเต็มทุกตัว", func(): Dev.mods_all(true), "green"), _b("ถอดมอดทั้งหมด", func(): Dev.mods_all(false))])
+	_note("น้ำหนักตอนนี้: " + Haul.status_text())
+	_head("HAZARDS", "ทดสอบภัย")
+	_row([_b("ไฟช็อต 1 ห้อง", func(): Dev.blackout(false), "gray", true), _b("แบตหมด (ไฟดับทั้งรถ)", func(): Dev.blackout(true), "gray", true)])
+	_row([_b("กรดกัดเกราะ", func(): Dev.hazards("acid")), _b("โซลาร์เสียหาย", func(): Dev.hazards("solar")),
+		_b("รังสี +40", func(): Dev.hazards("rads")), _b("ติดเชื้อ", func(): Dev.hazards("infect"))])
+
+
+func _tab_crew() -> void:
+	_row([_b("+1 คน", func(): Dev.recruit(1), "green"), _b("+3 คน", func(): Dev.recruit(3), "green"), _b("รักษาทุกคน", func(): Dev.heal_all())])
+	_row([_b("สุข 100", func(): Dev.happy_all(100.0)), _b("สุข 20", func(): Dev.happy_all(20.0)), _b("สุข 0", func(): Dev.happy_all(0.0), "red")], "ทุกคน")
+	_row([_b("หมา", func(): Dev.add_pet("dog")), _b("แมว", func(): Dev.add_pet("cat")), _b("ไก่", func(): Dev.add_pet("hen")), _b("ล้าง", func(): Dev.clear_pets())],
+		"สัตว์เลี้ยง %d" % (Game.s.get("pets", []) as Array).size())
+	_head("CREW", "ทีละคน")
+	for d in Game.s.dwellers:
+		var dd: Dictionary = d
+		var tags := []
+		if Game.is_away(dd):
+			tags.append("ออกสำรวจ")
+		if Crew.is_striking(dd):
+			tags.append("ประท้วง")
+		_list.add_child(UIKit.label("%s Lv%d · HP %d · สุข %d %s" % [dd.name, dd.lvl, int(dd.hp), int(dd.happy), " · ".join(tags)], UIKit.FS_SMALL, UIKit.C_TEXT))
+		_row([_b("+5 Lv", func(): Dev.level_up(dd, 5)), _b("ประท้วง", func(): Dev.force_strike(dd)), _b("หนีทันที", func(): Dev.desert_now(dd), "red"),
+			_b("ตาย", func(): Dev.kill(dd), "red")])
+
+
+func _tab_fight() -> void:
+	var w := Combat.wave()
+	_row([_b("1", func(): Dev.wave_set(1)), _b("-10", func(): Dev.wave_set(w - 10)), _b("-1", func(): Dev.wave_set(w - 1)),
+		_b("+1", func(): Dev.wave_set(w + 1)), _b("+10", func(): Dev.wave_set(w + 10))], "เวฟ %d" % w)
+	_row([_b("ฆ่าศัตรูทั้งหมด", func(): Dev.kill_enemies(), "red", true), _b("รักษาทีมรบ", func(): Dev.heal_all())])
+	_head("BOSSES", "เรียกบอส (ปิดแผงเพื่อดูศึก)")
+	var bb := [_b("บอสด่าน: " + str(Combat.BOSSES[Combat.biome_id()].th), func(): Dev.spawn_boss("warlord"), "red", true)]
+	for id in Combat.WAVE_BOSSES:
+		var bid: String = id
+		bb.append(_b(str(Combat.WAVE_BOSSES[id].th), func(): Dev.spawn_boss(bid), "gray", true))
+	_row(bb)
+	_head("MOBS", "เรียกศัตรูทีละชนิด ×3")
+	var mb := []
+	for id in Combat.MOBS:
+		var mid: String = id
+		mb.append(_b(str(Combat.MOBS[id].th), func(): Dev.spawn_mob(mid, 3), "yellow" if Combat.MOBS[id].get("mutant", false) else "gray", true))
+	_row(mb)
+	_head("LOOT", "ดรอปไอเท็มเข้าคลัง ×3")
+	var lb := []
+	for r in 6:
+		var rr: int = r
+		var b := _b(str(Loot.rarity(rr).th), func(): Dev.drop_gear(rr, 3))
+		b.add_theme_color_override("font_color", Loot.rarity(rr).col)
+		lb.append(b)
+	_row(lb)
+
+
+func _tab_world() -> void:
+	var bb := []
+	for i in Data.BIOMES.size():
+		var bi: int = i
+		bb.append(_b(str(Data.BIOMES[i].th), func(): Dev.goto_biome(bi), "yellow" if int(Game.s.biome) == bi else "gray"))
+	_row(bb)
+	_row([_b("ไปด่านตรวจ", func(): Dev.goto_checkpoint()), _b("ผ่านบอสด่านนี้", func(): Dev.beat_warlord()), _b("รอบ +1", func(): Dev.lap_add())],
+		"รอบ %d · %.1f กม." % [int(Game.s.get("lap", 0)) + 1, float(Game.s.km)])
+	_head("EVENTS", "เรียกอีเว้นต์บนถนน")
+	var eb := []
+	for id in Data.EVENTS:
+		var eid: String = id
+		eb.append(_b(str(Data.EVENTS[id].get("th", id)), func(): Dev.event(eid), "gray", true))
+	_row(eb)
+	_head("EXPEDITION", "จุดสำรวจ")
+	if Expedition.active():
+		_row([_b("จบการสำรวจทันที", func(): Dev.finish_expedition(), "green")])
+	else:
+		var sb := []
+		for id in Expedition.SITES:
+			var sid: String = id
+			sb.append(_b(str(Expedition.SITES[id].th), func(): Dev.arrive(sid), "gray", true))
+		_row(sb)
+	_head("PRESTIGE", "รุ่นต่อไป")
+	var nextgen := UIKit.button("เปิดหน้ารุ่นต่อไป", "yellow")
+	nextgen.pressed.connect(_open_nextgen)
+	_row([nextgen, _b("รถพังใน 3 วิ", func(): Dev.force_wreck(), "red", true)])
+
+
+func _open_nextgen() -> void:
+	close()
+	(get_parent() as HUD).open_nextgen(false)
+
+
+func _tab_log() -> void:
+	var cats := ["", "error", "god", "build", "event", "combat", "crew", "expedition", "vehicle", "meta", "save", "toast", "sample", "session"]
+	var cb := []
+	for c in cats:
+		var cc: String = c
+		cb.append(_b("ทั้งหมด" if c == "" else c, func(): _log_cat = cc, "yellow" if _log_cat == cc else "gray"))
+	_row(cb)
+	var rows := Trace.filtered(_log_cat)
+	var errs := Trace.filtered("error").size()
+	_note("session %s · %d รายการ (ข้อผิดพลาด %d) · เก็บล่าสุด %d รายการไว้ในเครื่อง" % [Trace.session, Trace.entries.size(), errs, Trace.KEEP])
+	var dl := UIKit.button("ดาวน์โหลด JSON", "green")
+	dl.pressed.connect(func(): Game.toast.emit("บันทึก: " + Trace.download(), "info"))
+	var cp := UIKit.button("คัดลอก", "gray")
+	cp.pressed.connect(_copy_log)
+	_row([dl, cp, _b("ล้าง log", func(): Trace.clear(), "red")])
+	var box := UIKit.panel(Color("0c0c0e"), UIKit.C_LINE_DARK)
+	var v := UIKit.vbox(1)
+	box.add_child(v)
+	for i in range(rows.size() - 1, maxi(-1, rows.size() - 61), -1):
+		var e: Dictionary = rows[i]
+		var col := UIKit.C_DIM
+		match str(e.cat):
+			"error": col = UIKit.C_RED
+			"god": col = UIKit.C_GREEN
+			"combat": col = UIKit.C_ORANGE
+			"crew", "toast": col = UIKit.C_GOLD
+		var l := UIKit.label(Trace.fmt_entry(e), UIKit.FS_SMALL, col)
+		l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_child(l)
+	_list.add_child(box)
+	_head("SAVE", "เซฟ (ส่งให้ผู้ทดสอบคนอื่นเพื่อทำซ้ำบั๊ก)")
+	_save_box = TextEdit.new()
+	_save_box.custom_minimum_size = Vector2(0, 70)
+	_save_box.placeholder_text = "วาง JSON เซฟตรงนี้แล้วกด 'โหลดจากกล่อง'"
+	_save_box.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	_list.add_child(_save_box)
+	var ex := UIKit.button("ส่งออกเซฟ", "gray")
+	ex.pressed.connect(_export_save)
+	var im := UIKit.button("โหลดจากกล่อง", "yellow")
+	im.pressed.connect(_import_save)
+	var sv := UIKit.button("เซฟตอนนี้", "green")
+	sv.pressed.connect(_save_now)
+	_row([ex, im, sv])
+
+
+func _copy_log() -> void:
+	DisplayServer.clipboard_set(Trace.export_text())
+	Game.toast.emit("คัดลอก log แล้ว", "info")
+
+
+func _export_save() -> void:
+	var t := Dev.export_save()
+	_save_box.text = t
+	DisplayServer.clipboard_set(t)
+	Game.toast.emit("คัดลอกเซฟแล้ว (%d ตัวอักษร)" % t.length(), "info")
+
+
+func _import_save() -> void:
+	if Dev.import_save(_save_box.text):
+		Game.toast.emit("โหลดเซฟแล้ว", "good")
+		close()
+	else:
+		Game.toast.emit("JSON เซฟไม่ถูกต้อง", "warn")
+
+
+func _save_now() -> void:
+	Game.save_game()
+	Trace.rec("save", "manual save")
+	Game.toast.emit("เซฟแล้ว", "good")

@@ -110,6 +110,7 @@ func load_game() -> bool:
 	_migrate()
 	started = true
 	var elapsed := Time.get_unix_time_from_system() - float(s.get("saved_at", Time.get_unix_time_from_system()))
+	Trace.rec("save", "loaded save", {"away_sec": int(elapsed), "bytes": JSON.stringify(s).length()})
 	game_started.emit()
 	if elapsed > 30.0:
 		_offline_progress(minf(elapsed, Data.OFFLINE_CAP_SEC))
@@ -1113,6 +1114,8 @@ func add_item(id: String, n: int) -> void:
 
 
 func can_afford(cost: Dictionary) -> bool:
+	if Dev.on("free"):
+		return true
 	for k in cost:
 		if s.res.has(k):
 			if float(s.res[k]) < float(cost[k]):
@@ -1126,6 +1129,8 @@ func pay(cost: Dictionary) -> bool:
 	if not can_afford(cost):
 		toast.emit("ทรัพยากรไม่พอ: ต้องการ %s" % cost_text(cost), "warn")
 		return false
+	if Dev.on("free"):
+		return true
 	for k in cost:
 		if s.res.has(k):
 			s.res[k] = float(s.res[k]) - float(cost[k])
@@ -1210,6 +1215,7 @@ func build_room(slot: int, room_type: String) -> bool:
 	if not pay({"scrap": def.cost}):
 		return false
 	s.rooms[slot] = {"type": room_type, "level": 1, "job": {}}
+	Trace.rec("build", "build %s @%d" % [room_type, slot])
 	toast.emit("สร้าง %s สำเร็จ!" % def.th, "good")
 	rooms_changed.emit()
 	return true
@@ -1223,6 +1229,7 @@ func upgrade_room(slot: int) -> bool:
 	if not pay({"scrap": c}):
 		return false
 	r.level = int(r.level) + 1
+	Trace.rec("build", "upgrade %s @%d -> Lv%d" % [r.type, slot, r.level])
 	toast.emit("%s อัปเกรดเป็น Lv.%d" % [Data.room_def(r.type).th, r.level], "good")
 	rooms_changed.emit()
 	return true
@@ -1235,6 +1242,7 @@ func demolish_room(slot: int) -> void:
 	for d in room_workers(slot):
 		d.room = -1
 	_add_res("scrap", float(Data.room_def(r.type).cost) * 0.5)
+	Trace.rec("build", "demolish %s @%d" % [r.type, slot])
 	s.rooms[slot] = {"type": "empty", "level": 1, "job": {}}
 	rooms_changed.emit()
 	dwellers_changed.emit()
@@ -1323,6 +1331,7 @@ func event_danger(id: String) -> int:
 
 ## resolves an event choice; returns {"ok":bool, "text":String}
 func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictionary:
+	Trace.rec("event", "choice %s #%d" % [id, choice_idx], {"defenders": defender_ids.size()})
 	var ev: Dictionary = Data.EVENTS[id]
 	var ch: Dictionary = ev.choices[choice_idx]
 	var danger := event_danger(id)

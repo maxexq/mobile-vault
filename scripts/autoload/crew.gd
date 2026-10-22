@@ -196,6 +196,7 @@ func morale_tick(d: Dictionary, dt: float, offline: bool) -> void:
 			if float(d.strike_t) >= 90.0:
 				d["strike"] = true
 				d["desert_t"] = 0.0
+				Trace.rec("crew", "strike: %s" % d.name, {"happy": snappedf(h, 0.1)})
 				if not offline:
 					Game.toast.emit("%s ประท้วงหยุดงาน! ขวัญกำลังใจต่ำ (อาหาร/ห้องพัก/งานที่ถนัด/ยา ช่วยได้)" % d.name, "bad")
 				Game.dwellers_changed.emit()
@@ -235,6 +236,7 @@ func flush_deserters() -> void:
 
 
 func desert(d: Dictionary) -> void:
+	Trace.rec("crew", "deserted: %s" % d.name, {"happy": snappedf(float(d.happy), 0.1)})
 	var stolen := []
 	for k in ["food", "water", "scrap"]:
 		var amt := floorf(float(Game.s.res[k]) * 0.12)
@@ -268,6 +270,10 @@ func cure(d: Dictionary) -> void:
 
 # ------------------------------------------------------------------ death & memorial
 func kill(d: Dictionary, cause: String) -> void:
+	if Dev.on("invincible") and cause != "ทดสอบระบบ":
+		d.hp = d.max_hp
+		return
+	Trace.rec("crew", "died: %s (%s)" % [d.name, cause], {"lvl": d.lvl})
 	for slot in Loot.HERO_SLOTS:
 		var it := Loot.equipped_on(d, slot)
 		if not it.is_empty():

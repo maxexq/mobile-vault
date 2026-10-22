@@ -121,6 +121,30 @@ Files: `scripts/autoload/combat.gd` (simulation), `scripts/autoload/loot.gd` (it
 - Every texture is snapped to one **grim 16-bit apocalypse** master palette (`tools/art/common.py`): soot-black outlines, rust, grime, bone, smog — the only saturated colours are emissive accents (lamp amber, radioactive green, warning red). Rooms are dark with one caged bulb throwing a dithered warm pool of light; walls carry soot, damp stains, rust drips and cracks; the truck and landmarks get a rust/grime weathering pass; far parallax layers melt into a dithered horizon haze.
 - UI: rusted riveted-steel windows with a red title plate, soot-black panels, bone text and amber accents (9-slice frames in `assets/ui`); a mood shader (`shaders/crt.gdshader`) adds a heavy vignette and per-design-pixel grain; fonts rendered without anti-aliasing / oversampling.
 
+## 4f. Tester tools: GOD MODE + trace log
+
+**How to open (hidden from players)**
+- Debug builds (running from the editor / debug export): always available.
+- Release / web builds: tap the **VAULT** chip in the top bar **7 times** within 5 s, or open the page with `?god=1` (e.g. `https://<your-vercel-app>/?god=1`). Remembered in `user://dev.cfg`. A **GOD** button appears next to the eye/zoom buttons (turns red while a cheat is active); F1 or ` toggles it on desktop. "ซ่อนปุ่ม GOD" locks it again.
+
+**Tabs**
+| Tab | What you can do |
+|---|---|
+| ทั่วไป | switches: invincible (hull / crew / squad), one-hit kills, free build/upgrade/buy, resources always full, no random road events · game speed ×1/2/5/10/20 · fast-forward +10 min / +1 h / +4 h (offline simulation) · time of day · any weather · FPS/debug overlay |
+| ทรัพยากร | fill / empty everything, set each resource and item, all blueprints, +100 research points |
+| รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, build every empty slot, max room levels, all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
+| ลูกเรือ | recruit, heal, happiness 100/20/0 for everyone, pets, per survivor: +5 levels, force strike, desert now, kill |
+| ต่อสู้ | set wave, kill all enemies, heal squad, spawn the biome warlord or any of the 8 mutant bosses, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
+| โลก | jump to any biome, go to checkpoint, mark warlord beaten, lap +1, trigger any road event, arrive at any expedition site, finish the current expedition, open the next-generation screen, wreck the vehicle in 3 s |
+| LOG/เซฟ | trace viewer with category filter, download JSON / copy / clear; export the save as JSON (copied to the clipboard) and load a pasted save — testers can hand each other exact situations |
+
+Cheat switches are never saved; any god action marks the save `stats.cheated = true` and is written to the trace.
+
+**Data & logging**
+- Save: one JSON document (`Game.s`) in browser `localStorage` key `mobile_vault_save_v1` (desktop: `user://savegame.json`), autosaved every 15 s and when the tab is hidden/closed. Nothing leaves the device.
+- Trace (`scripts/autoload/trace.gd`): every session gets an id; events (build/upgrade/demolish, road events + choices, boss waves / boss deaths / squad wipes, strikes, desertions, deaths, expeditions with odds and loot, mods, trailers, vault level, biome, generation, wreck, save/load with offline time, warnings/bad toasts, every god action) + a state sample every 30 s (FPS, resources, hull, km, wave, enemies, crew, happiness, load, node count). Engine/script errors are captured with a Godot `Logger` (`OS.add_logger`). The last 400 entries persist across reloads (`localStorage` key `mobile_vault_trace_v1` / `user://trace.json`) and every entry is also printed to the browser console as `[trace] …`.
+- Remote monitoring is not enabled. `Trace.sink_url` is the hook for an opt-in endpoint (Vercel function, PostHog, Sentry…) once one is chosen; add a consent prompt before sending anything.
+
 ## 5. Project layout
 
 ```
@@ -141,6 +165,10 @@ scripts/
   world/pet_actor.gd          roaming pets
   autoload/haul.gd            weight / engine capacity / speed / fuel burn
   autoload/synergy.gd         room adjacency rules
+  autoload/dev.gd             tester switches + god actions (hidden unlock)
+  autoload/trace.gd           local event trace, state sampler, error capture, export
+  ui/god_panel.gd             GOD MODE console
+  ui/expedition_feed.gd       live helmet-cam view of the scavenging squad
   ui/boss_bar.gd              boss HP bar
   world/dweller_actor.gd      idle / walk / sit / work state machine (AnimatedSprite2D)
   world/weather_fx.gd         rain, snow, sand, fog, leaves, lightning, haze, day/night CanvasModulate

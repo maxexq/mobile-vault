@@ -29,6 +29,8 @@ Expedition="*res://scripts/autoload/expedition.gd"
 Meta="*res://scripts/autoload/meta.gd"
 Haul="*res://scripts/autoload/haul.gd"
 Synergy="*res://scripts/autoload/synergy.gd"
+Trace="*res://scripts/autoload/trace.gd"
+Dev="*res://scripts/autoload/dev.gd"
 
 [display]
 

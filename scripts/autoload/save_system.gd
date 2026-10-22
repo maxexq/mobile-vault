@@ -65,6 +65,25 @@ func has_save() -> bool:
 	return not read().is_empty()
 
 
+## small side channels (trace log): own localStorage key on web, own file on desktop
+func write_key(key: String, path: String, text: String) -> void:
+	if is_web() and _local_storage:
+		_local_storage.setItem(key, text)
+		return
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f:
+		f.store_string(text)
+
+
+func read_key(key: String, path: String) -> String:
+	if is_web() and _local_storage:
+		var v = _local_storage.getItem(key)
+		return str(v) if v != null else ""
+	if FileAccess.file_exists(path):
+		return FileAccess.get_file_as_string(path)
+	return ""
+
+
 func wipe() -> void:
 	if is_web() and _local_storage:
 		_local_storage.removeItem(KEY)

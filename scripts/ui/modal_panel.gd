@@ -109,6 +109,7 @@ static func _is_latin(s: String) -> bool:
 func open() -> void:
 	visible = true
 	is_open = true
+	add_to_group("modal_open")
 	_layout()
 	refresh()
 	# CRT power-on: the frame opens from a bright horizontal line
@@ -123,6 +124,7 @@ func close() -> void:
 	if not is_open:
 		return
 	is_open = false
+	remove_from_group("modal_open")
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(box, "modulate:a", 0.0, 0.1)
 	tw.tween_property(dim, "modulate:a", 0.0, 0.1)

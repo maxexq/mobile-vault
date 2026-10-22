@@ -90,6 +90,7 @@ func can_add_trailer() -> String:
 
 
 func add_trailer() -> bool:
+	Trace.rec("vehicle", "add trailer request (have %d)" % Game.trailers())
 	if can_add_trailer() != "":
 		return false
 	if not Game.pay(trailer_cost()):
@@ -142,6 +143,7 @@ func install(id: String) -> bool:
 	if not Game.s.has("mods"):
 		Game.s["mods"] = {}
 	Game.s.mods[id] = level(id) + 1
+	Trace.rec("vehicle", "mod %s Lv%d" % [id, level(id)])
 	Game.toast.emit("ติดตั้ง %s Lv.%d แล้ว!" % [d.th, level(id)], "good")
 	if id == "armor_plates":
 		Game.s.hull = minf(Game.hull_max(), float(Game.s.hull) + float(d.per))
