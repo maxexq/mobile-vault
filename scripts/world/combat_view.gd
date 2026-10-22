@@ -23,14 +23,28 @@ const TURRET_MUZZLE := Vector2(271, 116)
 static var roof_shift := 0.0
 
 
+## with a roof rest deck the roof crew stands on its planks (gunner by the sandbags, medic mid-deck)
+const DECK_HERO_X := [250.0, 0.0, 226.0]
+
+
 static func hero_view(slot: int) -> Vector2:
 	if slot == 1:
 		return HERO_VIEW[1] + Vector2(rear_shift, 0)
+	var lift := Vehicle.deck_lift()
+	if lift > 0.0:
+		return Vector2(DECK_HERO_X[slot], HERO_VIEW[slot].y + roof_shift - lift)
 	return HERO_VIEW[slot] + Vector2(0, roof_shift)
+
+
+## the cot on the roof deck (feet position, truck-local)
+static func deck_cot_view() -> Vector2:
+	return Vector2(Vehicle.ROOF_DECK_COT.x, Vehicle.ROOF_Y + roof_shift - Vehicle.ROOF_DECK_H + Vehicle.ROOF_DECK_COT.y)
 
 var vehicle: Vehicle
 var enemy_nodes: Dictionary = {}   # id -> EnemyActor
 var hero_nodes: Array = [null, null, null]
+var rest_node: RestActor        # whoever is resting on the roof deck's cot
+var _deck_lv := -1
 var deck: Sprite2D
 var turret: Sprite2D
 var spikes: Sprite2D
@@ -66,6 +80,10 @@ func setup(v: Vehicle) -> void:
 	Combat.heroes_changed.connect(_sync_heroes)
 	Combat.supply_found.connect(_on_supply)
 	Combat.boss_event.connect(_on_boss_event)
+	Combat.tagged_in.connect(_on_tagged_in)
+	Mods.mods_changed.connect(_sync_heroes)
+	Game.squad_changed.connect(_sync_heroes)
+	Game.dwellers_changed.connect(_sync_rest)
 	Game.gear_changed.connect(_sync_vault_parts)
 	Meta.generation_started.connect(func(_g): _sync_heroes())
 	Game.game_started.connect(func():
@@ -111,10 +129,50 @@ func _sync_heroes() -> void:
 			hero_nodes[i] = node
 		node.set_dead(not h.alive)
 		node.position = hero_view(i)
+	_sync_rest()
+
+
+## the reserve dozes on the cot; while subbing in, the defender they replaced lies there instead
+func _sync_rest() -> void:
+	if vehicle == null or Game.s.is_empty():
+		return
+	var d := Game.deck_dweller()
+	var resting := d
+	for slot in Combat.sub_out:
+		resting = Game.dweller_by_id(int(Combat.sub_out[slot]))
+	if resting.is_empty():
+		if rest_node:
+			rest_node.queue_free()
+			rest_node = null
+		return
+	if rest_node == null or rest_node.did != int(resting.id):
+		if rest_node:
+			rest_node.queue_free()
+		rest_node = RestActor.new()
+		vehicle.body.add_child(rest_node)
+		rest_node.setup(resting)
+	rest_node.hurt = not Combat.sub_out.is_empty()
+	rest_node.position = deck_cot_view()
+
+
+func _on_tagged_in(slot: int, _did: int, _out: int) -> void:
+	_sync_heroes()
+	var node: HeroActor = hero_nodes[slot]
+	if node == null:
+		return
+	# jump down from the cot to the fallen defender's spot
+	var to := node.position
+	node.position = deck_cot_view()
+	var mid := Vector2((node.position.x + to.x) * 0.5, minf(node.position.y, to.y) - 18.0)
+	var tw := node.create_tween()
+	tw.tween_property(node, "position", mid, 0.18).set_ease(Tween.EASE_OUT)
+	tw.tween_property(node, "position", to, 0.22).set_ease(Tween.EASE_IN)
+	node.shout()
 
 
 func _process(delta: float) -> void:
-	if rear_shift != vehicle.rear_shift() or roof_shift != vehicle.roof_dy():
+	if rear_shift != vehicle.rear_shift() or roof_shift != vehicle.roof_dy() or _deck_lv != Mods.level("roof_deck"):
+		_deck_lv = Mods.level("roof_deck")
 		_sync_heroes()
 	_tick_debris(delta)
 	_tick_ram(delta)
@@ -661,6 +719,39 @@ class EnemyActor extends Node2D:
 		else:
 			tw.tween_property(self, "modulate:a", 0.0, 0.3)
 		tw.tween_callback(queue_free)
+
+
+class RestActor extends Node2D:
+	## a defender resting on the roof deck cot: sits, nods off, little "z"s drift up
+	var did := -1
+	var hurt := false
+	var spr: AnimatedSprite2D
+	var _t := 0.0
+
+	func setup(d: Dictionary) -> void:
+		did = int(d.id)
+		spr = AnimatedSprite2D.new()
+		spr.sprite_frames = Atlas.dweller_frames(d.variant)
+		spr.centered = false
+		spr.offset = Vector2(-Atlas.DW_W / 2, -Atlas.DW_H)
+		spr.play("sit")
+		spr.pause()
+		add_child(spr)
+		z_index = 7
+
+	func _process(delta: float) -> void:
+		_t += delta
+		spr.modulate = Color(0.7, 0.62, 0.62) if hurt else Color.WHITE
+		queue_redraw()
+
+	func _draw() -> void:
+		# z z z drifting up and to the left (wind of the drive)
+		for k in 3:
+			var p := fmod(_t * 0.5 + k / 3.0, 1.0)
+			var pos := Vector2(round(-2.0 - p * 6.0), round(-22.0 - p * 12.0))
+			var col := Color("f0c060") if not hurt else Color("f0644a")
+			col.a = 1.0 - p
+			draw_string(UIKit.font_pixel, pos, "z" if not hurt else "+", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, col)
 
 
 class HeroActor extends Node2D:

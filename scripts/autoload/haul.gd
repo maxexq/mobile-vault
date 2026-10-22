@@ -10,7 +10,7 @@ const LEVEL_W := 1.0           # per extra room level
 const TRAILER_W := 14.0
 const MOD_W := {"armor_plates": 4.0, "spike_ram": 1.5, "roof_turret": 2.0, "fuel_tanks": 1.5, "tracks": 6.0,
 	"rad_shield": 3.0, "rain_catcher": 0.5, "solar_covers": 0.5, "storage_racks": 1.0, "repair_bay": 1.5,
-	"heater": 1.0, "insulation": 1.0, "water_recycler": 1.0, "air_filter": 0.5}
+	"heater": 1.0, "insulation": 1.0, "water_recycler": 1.0, "air_filter": 0.5, "roof_deck": 1.5}
 const FUEL_PER_TON := 0.006    # fuel per minute per ton while driving (x overload)
 
 

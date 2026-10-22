@@ -71,7 +71,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 		"stats": {"events": 0, "km_total": 0.0},
 		"saved_at": Time.get_unix_time_from_system(),
 		"gear": [], "van_gear": {"turret": null, "plating": null, "engine": null, "spikes": null},
-		"squad": [-1, -1, -1], "next_uid": 1,
+		"squad": [-1, -1, -1], "deck": -1, "next_uid": 1,
 		"combat": {"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1},
 		"mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true,
 	}
@@ -604,10 +604,45 @@ func set_squad(role: int, did: int) -> void:
 	rooms_changed.emit()
 
 
+## roof rest deck (ดาดฟ้า, Mods "roof_deck"): one reserve defender rests up there and jumps in for the
+## first squad member who falls in a wave (Combat). Stored as a dweller id in s.deck; working in a room,
+## joining the squad, leaving on an expedition or leaving the vehicle takes them off the deck by itself.
+func deck_dweller() -> Dictionary:
+	if s.is_empty() or Mods.level("roof_deck") <= 0:
+		return {}
+	var did := int(s.get("deck", -1))
+	if did < 0:
+		return {}
+	var d := dweller_by_id(did)
+	if d.is_empty() or is_away(d) or int(d.room) >= 0 or squad_role(d) >= 0:
+		return {}
+	return d
+
+
+func is_deck(d: Dictionary) -> bool:
+	var r := deck_dweller()
+	return not r.is_empty() and int(r.id) == int(d.id)
+
+
+func set_deck(did: int) -> void:
+	if did >= 0:
+		var d := dweller_by_id(did)
+		if d.is_empty() or is_away(d) or Mods.level("roof_deck") <= 0:
+			return
+		var r := squad_role(d)
+		if r >= 0:
+			s.squad[r] = -1
+		d.room = -1
+	s["deck"] = did
+	squad_changed.emit()
+	dwellers_changed.emit()
+	rooms_changed.emit()
+
+
 func idle_dwellers() -> Array:
 	var out := []
 	for d in s.dwellers:
-		if int(d.room) < 0 and not is_away(d) and squad_role(d) < 0:
+		if int(d.room) < 0 and not is_away(d) and squad_role(d) < 0 and not is_deck(d):
 			out.append(d)
 	return out
 
@@ -868,8 +903,14 @@ func _simulate(dt: float, offline: bool) -> void:
 		if not starving:
 			target += 15.0
 		var role := squad_role(d)
+		var deck_lv := Mods.level("roof_deck")
 		if role >= 0:
 			target += 20.0 if _best_stat(d) == Combat.ROLES[role].stat else 10.0
+			target += 2.0 * deck_lv    # a place to sit down between waves
+		elif deck_lv > 0 and is_deck(d):
+			# the reserve dozes in the open air on the cot: rests up, heals, stays sharp
+			target += 16.0 + 3.0 * deck_lv
+			d.hp = minf(float(d.max_hp), float(d.hp) + float(d.max_hp) * 0.006 * deck_lv * m)
 		elif int(d.room) >= 0:
 			var st: String = Data.room_def(s.rooms[int(d.room)].type).get("stat", "")
 			var xpm := 1.5 * (1.2 if Crew.has(d, "genius") else 1.0)

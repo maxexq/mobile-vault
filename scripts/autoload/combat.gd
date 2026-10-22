@@ -16,6 +16,7 @@ signal squad_wiped
 signal heroes_changed
 signal supply_found(kind: String, amount: float, at: Vector2)
 signal boss_event(kind: String, e: Dictionary)   # enrage | armor_break | summon | burrow | erupt | explode | acid | solar
+signal tagged_in(slot: int, did: int, out_did: int)   # the roof-deck reserve jumped in for a fallen defender
 
 const STEP := 0.1
 ## enemies scale a little faster than gear (Loot.ILVL_GROWTH = 1.12) -> pushing hits a wall,
@@ -124,16 +125,28 @@ var _clock := 0.0
 var rng := RandomNumberGenerator.new()
 var dps_meter := 0.0
 var _dmg_window: Array = []
+## roof rest deck (Mods "roof_deck", reserve = Game.deck_dweller()): the reserve jumps in for the first
+## squad member who falls in a wave and holds that slot until the wave ends (then the line-up is restored)
+const DECK_TAG_DELAY := [0.0, 6.0, 4.0, 2.5]    # seconds after someone falls, per deck level
+const DECK_TAG_HP := [0.0, 0.6, 0.8, 1.0]       # HP the reserve comes in with
+const DECK_RESERVE_XP := 0.4                    # share of kill XP the reserve picks up while watching
+var sub := {}          # role slot -> reserve dweller id (this wave only)
+var sub_out := {}      # role slot -> the fallen defender resting on the deck
+var tag_t := -1.0
 
 
 func _ready() -> void:
 	rng.randomize()
 	Game.biome_changed.connect(func(_i, _inst): reset_wave(1))
-	Game.squad_changed.connect(rebuild_heroes)
+	Game.squad_changed.connect(func():
+		_end_subs(false)
+		rebuild_heroes())
+	(func(): Mods.mods_changed.connect(rebuild_heroes)).call_deferred()
 	Game.gear_changed.connect(rebuild_heroes)
 	Game.dwellers_changed.connect(rebuild_heroes)
 	Game.game_started.connect(func():
 		_clear_enemies()
+		_end_subs(false)
 		rebuild_heroes()
 		gap_t = 2.0)
 
@@ -260,8 +273,26 @@ func hero_stats(d: Dictionary, role_idx: int) -> Dictionary:
 	st.dodge = minf(50.0, st.dodge + Skills.val(d, "dodge"))
 	st.heal *= (1.25 if Crew.has(d, "healer") else 1.0) * (1.0 + Skills.val(d, "medic"))
 	st.signature = Skills.rank(d, "c5") > 0
+	_deck_cover(st, d, role_idx)
 	st.dps = st.dmg * st.aspd * (1.0 + st.crit / 100.0 * (st.critd - 100.0) / 100.0) * (1.0 + 0.5 * (st.splash - 1))
 	return st
+
+
+## the roof crew (gunner + medic) fight from the roof deck: shade / sandbags / lookout
+func _deck_cover(st: Dictionary, d: Dictionary, role_idx: int) -> void:
+	var lv := Mods.level("roof_deck")
+	if lv <= 0 or ROLES[role_idx].id == "bruiser" or Game.s.is_empty():
+		return
+	if Game.squad_role(d) != role_idx and not Game.is_deck(d):
+		return
+	st.regen = float(st.regen) + 0.3 * lv
+	if lv >= 2:
+		st.def = float(st.def) * 1.15
+		st.dodge = minf(50.0, float(st.dodge) + 3.0)
+	if lv >= 3:
+		st.range = float(st.range) * 1.1
+		st.crit = float(st.crit) + 5.0
+	st.dps = st.dmg * st.aspd * (1.0 + st.crit / 100.0 * (st.critd - 100.0) / 100.0) * (1.0 + 0.5 * (st.splash - 1))
 
 
 func van_stats() -> Dictionary:
@@ -321,7 +352,7 @@ func rebuild_heroes() -> void:
 	var old := heroes
 	heroes = []
 	for i in ROLES.size():
-		var did: int = int(Game.s.squad[i]) if i < Game.s.squad.size() else -1
+		var did := slot_did(i)
 		if did < 0 or i >= slots_unlocked():
 			heroes.append({})
 			continue
@@ -331,7 +362,7 @@ func rebuild_heroes() -> void:
 			continue
 		var st := hero_stats(d, i)
 		var prev: Dictionary = old[i] if i < old.size() else {}
-		var h := {"slot": i, "did": did, "st": st, "max": st.hp, "hp": st.hp, "atk_t": rng.randf_range(0.0, 0.5), "skill_t": float(ROLES[i].cd) * 0.6, "heal_t": 3.5, "alive": true}
+		var h := {"slot": i, "did": did, "st": st, "max": st.hp, "hp": st.hp, "atk_t": rng.randf_range(0.0, 0.5), "skill_t": float(ROLES[i].cd) * 0.6, "heal_t": 3.5, "alive": true, "sub": sub.has(i)}
 		if not prev.is_empty() and int(prev.did) == did:
 			h.hp = clampf(float(prev.hp) / maxf(1.0, float(prev.max)) * st.hp, 0.0, st.hp)
 			h.alive = prev.alive
@@ -339,6 +370,64 @@ func rebuild_heroes() -> void:
 			h.skill_t = prev.skill_t
 		heroes.append(h)
 	heroes_changed.emit()
+
+
+## who fights in a role slot right now (the deck reserve while subbing in)
+func slot_did(i: int) -> int:
+	if sub.has(i):
+		return int(sub[i])
+	return int(Game.s.squad[i]) if i < Game.s.squad.size() else -1
+
+
+## the reserve can still come down this wave
+func _tag_ready() -> bool:
+	return wave_active and sub.is_empty() and not Game.deck_dweller().is_empty()
+
+
+func _tick_tag_in(dt: float) -> void:
+	if not _tag_ready():
+		tag_t = -1.0
+		return
+	var fallen := -1
+	for i in heroes.size():
+		if not heroes[i].is_empty() and not heroes[i].alive:
+			fallen = i
+			break
+	if fallen < 0:
+		tag_t = -1.0
+		return
+	var lv := clampi(Mods.level("roof_deck"), 1, 3)
+	if tag_t < 0.0:
+		tag_t = DECK_TAG_DELAY[lv]
+		return
+	tag_t -= dt
+	if tag_t > 0.0:
+		return
+	tag_t = -1.0
+	var rd := Game.deck_dweller()
+	var out := int(heroes[fallen].did)
+	sub[fallen] = int(rd.id)
+	sub_out[fallen] = out
+	var st := hero_stats(rd, fallen)
+	var hp: float = float(st.hp) * DECK_TAG_HP[lv] * clampf(float(rd.hp) / maxf(1.0, float(rd.max_hp)), 0.3, 1.0)
+	heroes[fallen] = {"slot": fallen, "did": int(rd.id), "st": st, "max": st.hp, "hp": hp, "atk_t": 0.4,
+		"skill_t": float(ROLES[fallen].cd) * 0.5, "heal_t": 2.0, "alive": true, "sub": true}
+	var od := Game.dweller_by_id(out)
+	Game.toast.emit("%s กระโดดลงจากดาดฟ้ามาแทน %s!" % [rd.name, od.get("name", "?")], "good")
+	Trace.rec("combat", "deck tag-in", {"slot": fallen, "in": int(rd.id), "out": out, "wave": wave()})
+	tagged_in.emit(fallen, int(rd.id), out)
+	heroes_changed.emit()
+
+
+## wave over: the reserve climbs back up, the original line-up returns (rested)
+func _end_subs(rebuild: bool = true) -> void:
+	tag_t = -1.0
+	if sub.is_empty():
+		return
+	sub.clear()
+	sub_out.clear()
+	if rebuild:
+		rebuild_heroes()
 
 
 func hero_pos(slot: int) -> Vector2:
@@ -351,6 +440,7 @@ func reset_wave(w: int) -> void:
 		return
 	cs().wave = maxi(1, w)
 	_clear_enemies()
+	_end_subs()
 	gap_t = 2.0
 	wave_changed.emit()
 
@@ -646,10 +736,13 @@ func tick(dt: float) -> void:
 		wave_t += dt
 	if wave_active and spawn_queue.is_empty() and enemies.is_empty():
 		_on_wave_cleared()
-	elif _squad_count() > 0 and _alive_count() == 0:
-		_on_wipe()
-	elif wave_active and wave_t > (WARLORD_TIMEOUT if wave_is_warlord else WAVE_TIMEOUT):
-		_on_wipe(true)
+	else:
+		_tick_tag_in(dt)
+		# a reserve still waiting on the roof deck keeps the fight going
+		if _squad_count() > 0 and _alive_count() == 0 and not _tag_ready():
+			_on_wipe()
+		elif wave_active and wave_t > (WARLORD_TIMEOUT if wave_is_warlord else WAVE_TIMEOUT):
+			_on_wipe(true)
 	# dps meter (5 s window)
 	while not _dmg_window.is_empty() and _clock - float(_dmg_window[0][0]) > 5.0:
 		_dmg_window.pop_front()
@@ -915,6 +1008,9 @@ func _on_kill(e: Dictionary) -> void:
 			var d := Game.dweller_by_id(int(h.did))
 			if not d.is_empty():
 				Game.give_xp(d, xp, ROLES[int(h.slot)].stat)
+	var rd := Game.deck_dweller()
+	if not rd.is_empty() and sub.is_empty():
+		Game.give_xp(rd, xp * DECK_RESERVE_XP, Game._best_stat(rd))
 	Game._add_res("scrap", scrap)
 	# backpacks: chance to scavenge food / water from every kill
 	if supply > 0.0 and rng.randf() < minf(0.85, supply / 100.0 * 0.5 + (0.5 if e.boss else 0.0)):
@@ -971,6 +1067,7 @@ func _on_wave_cleared() -> void:
 	if not wave_is_warlord and bool(cs().push):
 		cs().wave = w + 1
 		cs().best = maxi(int(cs().get("best", 1)), w + 1)
+	_end_subs()
 	# survivors patch up, the fallen get back on their feet
 	for h in heroes:
 		if h.is_empty():
@@ -994,6 +1091,7 @@ func _on_wipe(timeout: bool = false) -> void:
 		if bool(cs().push):
 			cs().wave = maxi(1, wave() - 3)
 	_clear_enemies()
+	_end_subs()
 	gap_t = 6.0
 	for h in heroes:
 		if not h.is_empty():
@@ -1022,5 +1120,8 @@ func offline_rewards(sec: float) -> Dictionary:
 			var d := Game.dweller_by_id(did)
 			if not d.is_empty():
 				Game.give_xp(d, xp, ROLES[i].stat, true)
+	var rd := Game.deck_dweller()
+	if not rd.is_empty():
+		Game.give_xp(rd, xp * DECK_RESERVE_XP, Game._best_stat(rd), true)
 	Game._add_res("scrap", scrap)
 	return {"kills": kills, "scrap": int(scrap), "xp": int(xp)}

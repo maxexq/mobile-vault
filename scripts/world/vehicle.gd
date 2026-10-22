@@ -21,6 +21,10 @@ const ANTENNA := Vector2(113, 1)
 const ROOF_Y := 36
 const DECK := Vector2(266, 260)
 const TURRET_POS := Vector2(254, 110)
+## roof rest deck (ดาดฟ้า, Mods "roof_deck"): 76x60 sprite on stilts over the rear roof, planks 26px up
+const ROOF_DECK_X := 182
+const ROOF_DECK_H := 26
+const ROOF_DECK_COT := Vector2(201, 0)    # where the reserve sits, relative to the planks (x truck-local)
 const SPIKES_POS := Vector2(272, 236)
 const SIZE := Vector2(280, 300)
 const ROAD_Y := 300.0             # tyre contact line (local)
@@ -284,9 +288,14 @@ func solar_global_rect() -> Rect2:
 	return Rect2(to_global(Vector2(60, 4 + roof_dy())), Vector2(64, 32))
 
 
+## how far the roof crew stands above the roof (0 without a deck)
+static func deck_lift() -> float:
+	return float(ROOF_DECK_H) if Mods.level("roof_deck") > 0 else 0.0
+
+
 ## top of the vehicle incl. roof props (local y) – the camera keeps this on screen
 func top_y() -> float:
-	return roof_y() - 40.0
+	return roof_y() - 40.0 - deck_lift()
 
 
 func refresh_rooms() -> void:
@@ -414,6 +423,9 @@ func _refresh_mods() -> void:
 	var tur := Mods.level("roof_turret")
 	if tur > 0:
 		_mod_sprite("mod_roof_turret_%d" % mini(tur, 3), Vector2(200, ROOF_Y + dy - 18))
+	var deck := Mods.level("roof_deck")
+	if deck > 0:
+		_mod_sprite("mod_roof_deck_%d" % mini(deck, 3), Vector2(ROOF_DECK_X, ROOF_Y + dy - 60))
 	for k in mini(Mods.level("fuel_tanks"), 3):
 		var fy := 140 - 24 * k
 		if fy > roof_y() + 6:

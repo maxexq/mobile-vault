@@ -579,6 +579,7 @@ func _run() -> void:
 	for e in errs:
 		print("[autotest] trace error: ", Trace.fmt_entry(e))
 	print("[autotest] v3/v4 checks done: %d failed total" % _fails)
+	await _roof_deck_test()
 	# portrait phone
 	get_window().size = Vector2i(780, 1688)
 	await wait(1.5)
@@ -1699,3 +1700,119 @@ func _large_room_test() -> void:
 	Game.rooms_changed.emit()
 	await wait(0.4)
 	print("[autotest] large rooms done: %d failed total" % _fails)
+
+
+## roof rest deck (ดาดฟ้า): reserve seat, rest on the cot, tag-in for a fallen defender, cover bonuses
+func _roof_deck_test() -> void:
+	_no_events()
+	Game.s.mods.erase("roof_deck")
+	Mods.mods_changed.emit()
+	var free := []
+	for d in Game.s.dwellers:
+		if Game.squad_role(d) < 0 and not Game.is_away(d):
+			free.append(d)
+	# a gunner on duty (earlier checks may have sent the squad away)
+	if int(Game.s.squad[0]) < 0 and free.size() > 1:
+		Game.set_squad(0, int(free.pop_back().id))
+	var cand: Dictionary = free[0] if not free.is_empty() else {}
+	_check("deck: a free dweller to rest up there", not cand.is_empty())
+	if cand.is_empty():
+		return
+	var rid := int(cand.id)
+	Game.set_deck(rid)
+	_check("deck: no reserve seat before the deck is built", Game.deck_dweller().is_empty() and Vehicle.deck_lift() == 0.0)
+	Game.s.res.scrap = 5000.0
+	Game.s.items.components = 500
+	_check("deck: install Lv1", Mods.install("roof_deck") and Mods.level("roof_deck") == 1)
+	_check("deck: roof crew stands on the planks", Vehicle.deck_lift() > 0.0 and CombatView.hero_view(0).y < CombatView.HERO_VIEW[0].y + CombatView.roof_shift)
+	var room_before := int(cand.room)
+	Game.set_deck(rid)
+	_check("deck: reserve set, off their room", Game.is_deck(cand) and int(cand.room) == -1 and (room_before >= -1))
+	_check("deck: reserve is not idle", not Game.idle_dwellers().has(cand))
+	# JSON round-trip turns the id into a float
+	Game.s.deck = JSON.parse_string(JSON.stringify([rid]))[0]
+	_check("deck: float id after load still matches", Game.is_deck(cand))
+	cand.hp = float(cand.max_hp) * 0.4
+	var hp0 := float(cand.hp)
+	for i in 10:
+		Game._simulate(1.0, true)
+	_check("deck: reserve heals while resting", float(cand.hp) > hp0)
+	# --- tag-in during a wave
+	Combat._end_subs()
+	Combat.reset_wave(3)
+	Combat.rebuild_heroes()
+	Combat._start_wave()
+	var orig := int(Combat.heroes[0].did) if not Combat.heroes[0].is_empty() else -1
+	_check("deck: gunner on duty", orig >= 0)
+	if orig < 0:
+		return
+	Combat.heroes[0].alive = false
+	Combat.heroes[0].hp = 0.0
+	for i in int(Combat.DECK_TAG_DELAY[1] / Combat.STEP) + 5:
+		Combat.tick(Combat.STEP)
+		if not Combat.sub.is_empty():
+			break
+	_check("deck: reserve jumps in for the fallen gunner", Combat.sub.has(0) and int(Combat.heroes[0].did) == rid and Combat.heroes[0].alive)
+	_check("deck: fallen gunner rests on the cot", int(Combat.sub_out.get(0, -1)) == orig)
+	await wait(0.6)
+	await shot("deck_tag_in")
+	Combat._on_wave_cleared()
+	_check("deck: wave over restores the line-up", Combat.sub.is_empty() and int(Combat.heroes[0].did) == orig and Combat.heroes[0].alive)
+	# --- a pending reserve keeps the fight going even when everyone is down
+	Combat._start_wave()
+	for i in 3:
+		Combat.tick(Combat.STEP)
+	for h in Combat.heroes:
+		if not h.is_empty():
+			h.alive = false
+			h.hp = 0.0
+	Combat.tick(Combat.STEP)
+	_check("deck: no wipe while the reserve can still come down", Combat.wave_active)
+	for i in int(Combat.DECK_TAG_DELAY[1] / Combat.STEP) + 5:
+		Combat.tick(Combat.STEP)
+		if not Combat.sub.is_empty():
+			break
+	_check("deck: reserve fights on alone", Combat._alive_count() == 1 and not Combat.sub.is_empty())
+	Combat._end_subs()
+	Combat.reset_wave(3)
+	# --- cover bonuses for the roof crew
+	var gd := Game.dweller_by_id(orig)
+	var def1 := float(Combat.hero_stats(gd, 0).def)
+	var rng1 := float(Combat.hero_stats(gd, 0).range)
+	_check("deck: install Lv2 + Lv3", Mods.install("roof_deck") and Mods.install("roof_deck") and Mods.level("roof_deck") == 3)
+	var st3 := Combat.hero_stats(gd, 0)
+	_check("deck: sandbags + lookout buff the gunner", float(st3.def) > def1 * 1.1 and float(st3.range) > rng1 * 1.05)
+	# same person as a rear bruiser: no roof cover
+	_check("deck: rear bruiser gets no roof cover", float(Combat.hero_stats(gd, 1).regen) < float(st3.regen))
+	# --- reserve XP from kills and offline
+	var xp0 := float(cand.xp) + float(cand.lvl) * 1000.0
+	Combat.offline_rewards(600.0)
+	_check("deck: reserve learns while watching (offline)", float(cand.xp) + float(cand.lvl) * 1000.0 > xp0)
+	# --- UI
+	main.hud.panels.squad.tab = "squad"
+	main.hud.open_panel("squad")
+	await wait(0.6)
+	_check("deck: squad panel shows the reserve card", _find_text(main.hud.panels.squad, "ROOF DECK RESERVE"))
+	await shot("deck_squad_panel")
+	main.hud.panels.squad.choosing = main.hud.panels.squad.DECK
+	main.hud.panels.squad.refresh()
+	await wait(0.4)
+	await shot("deck_chooser")
+	main.hud.panels.squad.close()
+	await wait(0.4)
+	await shot("deck_world_lv3")
+	# --- leaving the deck by itself
+	var free_slot := -1
+	for i in Game.s.rooms.size():
+		if Game.s.rooms[i].type != "empty" and Game.is_slot_unlocked(i) and not Game.is_site(i) and Game.room_workers(i).size() < Data.ROOM_WORKERS:
+			free_slot = i
+			break
+	if free_slot >= 0:
+		Game.assign(cand, free_slot)
+		_check("deck: going to work takes them off the deck", not Game.is_deck(cand))
+		Game.set_deck(rid)
+	Game.set_squad(2 if Combat.slots_unlocked() > 2 else 0, rid)
+	_check("deck: joining the squad takes them off the deck", Game.deck_dweller().is_empty())
+	if Game.squad_role(cand) == 0 and orig >= 0:
+		Game.set_squad(0, orig)
+	print("[autotest] roof deck checks done: %d failed total" % _fails)
