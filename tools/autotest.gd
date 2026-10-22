@@ -1782,8 +1782,8 @@ func _roof_deck_test() -> void:
 	_check("deck: install Lv2 + Lv3", Mods.install("roof_deck") and Mods.install("roof_deck") and Mods.level("roof_deck") == 3)
 	var st3 := Combat.hero_stats(gd, 0)
 	_check("deck: sandbags + lookout buff the gunner", float(st3.def) > def1 * 1.1 and float(st3.range) > rng1 * 1.05)
-	var bd := Game.dweller_by_id(int(Game.s.squad[1]))
-	_check("deck: rear bruiser gets no roof cover", float(Combat.hero_stats(bd, 1).regen) < float(st3.regen))
+	# same person as a rear bruiser: no roof cover
+	_check("deck: rear bruiser gets no roof cover", float(Combat.hero_stats(gd, 1).regen) < float(st3.regen))
 	# --- reserve XP from kills and offline
 	var xp0 := float(cand.xp) + float(cand.lvl) * 1000.0
 	Combat.offline_rewards(600.0)
