@@ -64,6 +64,7 @@ var _view_box: HBoxContainer
 var _xray_btn: Button
 var _zoom_btn: Button
 var _god_btn: Button
+var tutorial_overlay: TutorialOverlay
 signal zoom_pressed
 signal xray_toggled(on: bool)
 
@@ -155,6 +156,10 @@ func _ready() -> void:
 		_refresh_travel())
 	_set_hud_visible(false)
 	_apply_layout.call_deferred()
+	# first-run guide sits above every window but lets taps through to them
+	tutorial_overlay = TutorialOverlay.new()
+	tutorial_overlay.hud = self
+	add_child(tutorial_overlay)
 
 
 func _set_hud_visible(v: bool) -> void:
