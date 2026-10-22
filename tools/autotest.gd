@@ -395,6 +395,7 @@ func _run() -> void:
 	await shot("expedition_plan_squad_tag")
 	var started := Expedition.start("market", team_ids, {"food": 10, "water": 10, "stimpack": 1, "ammo": 0, "antibiotics": 0})
 	_check("expedition start (team of 2)", started and Expedition.active())
+	Game.s.exp.erase("enc")     # keep this run deterministic; encounters are tested in _encounter_test()
 	_check("defence slot freed on expedition", int(Game.s.squad[1]) == -1 and Game.squad_role(guard) < 0)
 	var sub := {}
 	for dd in Game.s.dwellers:
@@ -456,6 +457,7 @@ func _run() -> void:
 	if main.hud.panels.expedition.is_open:
 		main.hud.panels.expedition.close()
 	Expedition.skip_site()
+	await _encounter_test()
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
 	Meta.m().legacy = 9999
 	Meta.add_blueprint("bp_bus")
@@ -921,3 +923,133 @@ func _settings_test() -> void:
 	await shot("settings_from_title")
 	_check("settings: opens over the title menu", main.hud.settings_panel.visible and main.hud.settings_panel.get_index() > main.hud.title_screen.get_index())
 	main.hud.settings_panel.close()
+
+
+# ------------------------------------------------------------------ v4.4 expedition special encounters
+func _enc_start(sup: Dictionary) -> bool:
+	var ids := []
+	for dd in Game.s.dwellers:
+		if not Game.is_away(dd) and ids.size() < 2:
+			ids.append(int(dd.id))
+	Game.s.res.food = maxf(float(Game.s.res.food), 300.0)
+	Game.s.res.water = maxf(float(Game.s.res.water), 300.0)
+	Game.s.items["ammo"] = maxi(int(Game.s.items.get("ammo", 0)), 30)
+	Game.s.items["stimpack"] = maxi(int(Game.s.items.get("stimpack", 0)), 5)
+	var ok := Expedition.start("scav", ids, sup)
+	if ok:
+		Game.s.exp.erase("enc")
+	return ok
+
+
+func _enc_finish() -> Dictionary:
+	var got := {}
+	var cb := func(r): got.merge(r)
+	Expedition.expedition_finished.connect(cb)
+	# the save is JSON: ids/numbers come back as floats
+	Game.s.exp = JSON.parse_string(JSON.stringify(Game.s.exp))
+	Game.s.exp.start = float(Game.s.exp.start) - 99999.0
+	Expedition.tick(false)
+	Expedition.expedition_finished.disconnect(cb)
+	await wait(0.6)
+	if main.hud.panels.expedition.is_open:
+		main.hud.panels.expedition.report = {}
+		main.hud.panels.expedition.close()
+	await wait(0.3)
+	return got
+
+
+func _encounter_test() -> void:
+	var sup := {"food": 10, "water": 10, "stimpack": 1, "ammo": 10, "antibiotics": 0}
+	_check("encounter: rare (under 30 percent per trip) even in the worst site", Encounter.chance_for("market") < 0.3 and Encounter.chance_for("helios") < 0.3 and Encounter.chance_for("market") > 0.05)
+	Game.s["enc_recent"] = ["survivor", "vault", "floor"]
+	var rep_bad := false
+	for i in 200:
+		if Encounter.pick(7) in ["survivor", "vault", "floor"]:
+			rep_bad = true
+	_check("encounter: never repeats one of the last 3", not rep_bad)
+	var low_bad := false
+	Game.s["enc_recent"] = []
+	for i in 200:
+		if Encounter.pick(1) in ["cry", "toxic"]:
+			low_bad = true
+	_check("encounter: dangerous ones stay out of easy sites", not low_bad)
+	# 1) hidden survivor -> invite aboard: the refugee walks home with the team
+	_check("encounter: expedition starts", _enc_start(sup))
+	Encounter.trigger_now("survivor")
+	await wait(0.8)
+	_check("encounter: pops up while the team is out", Encounter.pending() and main.hud.encounter_popup.is_open)
+	_check("encounter: remembered for anti-repeat", Encounter.recent().has("survivor"))
+	await shot("encounter_survivor")
+	main.hud.encounter_popup.close()
+	main.hud._refresh_expedition()
+	_check("encounter: HUD chip asks for orders", main.hud._exp_lbl.text.contains("จุดพิเศษ"))
+	main.hud.panels.expedition.report = {}
+	main.hud.open_expedition("scav")
+	await wait(0.8)
+	_check("encounter: expedition panel shows the radio button", main.hud.panels.expedition._enc_btn.visible)
+	await shot("encounter_panel_button")
+	main.hud.panels.expedition._enc_btn.pressed.emit()
+	await wait(0.6)
+	_check("encounter: radio button reopens the choice", main.hud.encounter_popup.is_open and not main.hud.panels.expedition.is_open)
+	var pop0: int = Game.s.dwellers.size()
+	var ch0: Dictionary = Encounter.def("survivor").choices[0]
+	var room := Encounter.room_free()
+	if room:
+		main.hud.encounter_popup.choose(0)
+		await wait(0.5)
+		await shot("encounter_result")
+		_check("encounter: invite resolves", not Encounter.pending() and int(Encounter.state().recruits) == 1)
+	else:
+		_check("encounter: invite blocked when bunks are full", Encounter.blocked(ch0) != "")
+		main.hud.encounter_popup.choose(1)
+		await wait(0.5)
+		await shot("encounter_result")
+		_check("encounter: share food spends packed supplies", int(Expedition.state().sup.food) == 0 and not Encounter.pending())
+	main.hud.encounter_popup.close()
+	var r1 := await _enc_finish()
+	_check("encounter: report carries the encounter", r1.has("enc") and str(r1.get("enc", {}).get("id", "")) == "survivor")
+	if room:
+		_check("encounter: refugee joined on return", Game.s.dwellers.size() == pop0 + 1)
+	# 2) buried safe -> pry it open: rare loot or an injury, plus extra time
+	_check("encounter: second expedition starts", _enc_start(sup))
+	Encounter.trigger_now("vault")
+	await wait(0.6)
+	var dur0 := float(Expedition.state().dur)
+	var hp0 := 0.0
+	for d in Expedition.team():
+		hp0 += float(d.hp)
+	var stash0: int = Loot.stash().size()
+	Encounter.rng.seed = 7
+	var res: Dictionary = Encounter.choose(0)
+	var hp1 := 0.0
+	for d in Expedition.team():
+		hp1 += float(d.hp)
+	_check("encounter: risky choice costs time", is_equal_approx(float(Expedition.state().dur), dur0 + 60.0))
+	if res.ok:
+		_check("encounter: pry success banks rare gear", int(Encounter.state().bonus.get("_gear_rare", 0)) == 1)
+	else:
+		_check("encounter: pry failure injures the explorer", hp1 < hp0)
+	main.hud.encounter_popup.close()
+	await _enc_finish()
+	if res.ok:
+		_check("encounter: rare gear delivered", Loot.stash().size() > stash0)
+	# 3) toxic pharmacy: a choice the team didn't pack for is refused
+	_check("encounter: third expedition starts", _enc_start(sup))
+	Encounter.trigger_now("toxic")
+	await wait(0.6)
+	await shot("encounter_toxic")
+	var dose: Dictionary = Encounter.def("toxic").choices[1]
+	_check("encounter: needs antibiotics in the pack", Encounter.blocked(dose) != "")
+	Encounter.choose(1)
+	_check("encounter: refused choice keeps it open", Encounter.pending())
+	main.hud.encounter_popup.close()
+	# ...and nobody answers: the team plays it safe when it walks back
+	var r3 := await _enc_finish()
+	_check("encounter: unanswered -> team leaves it", str(r3.get("enc", {}).get("text", "")).begins_with("ทีมตัดสินใจเอง"))
+	# 4) an encounter still scheduled when the trip ends never happens; old saves without one still finish
+	_check("encounter: fourth expedition starts", _enc_start(sup))
+	Encounter.roll("cry")
+	Game.s.exp.enc.at = Time.get_unix_time_from_system() + 99999999.0
+	var r4 := await _enc_finish()
+	_check("encounter: scheduled-but-unreached is dropped", not r4.has("enc") and not Expedition.active())
+

@@ -222,6 +222,7 @@ func start(id: String, ids: Array, sup: Dictionary) -> bool:
 			Game.s.squad[role] = -1
 			freed.append(Game.dweller_by_id(int(did)).name)
 	Game.s["exp"] = {"site": id, "team": ids.duplicate(), "sup": sup.duplicate(), "start": now, "dur": dur, "log": [], "seed": randi()}
+	Encounter.roll()
 	Game.toast.emit("ทีมสำรวจออกเดินทางไป %s — รถจอดรอจนกว่าทีมจะกลับ" % site_def(id).th, "info")
 	if not freed.is_empty():
 		Game.toast.emit("%s ออกจากทีมป้องกันรถ — ช่องว่างแล้ว เลือกคนใหม่ได้ที่เมนู Squad" % ", ".join(freed), "warn")
@@ -237,11 +238,13 @@ func start(id: String, ids: Array, sup: Dictionary) -> bool:
 func tick(offline: bool) -> void:
 	if not active():
 		return
+	Encounter.tick(offline)
 	if Time.get_unix_time_from_system() >= float(state().start) + float(state().dur):
 		finish(offline)
 
 
 func finish(offline: bool) -> Dictionary:
+	Encounter.settle()     # an unanswered special encounter: the team plays it safe
 	var e := state()
 	var id: String = e.site
 	var def := site_def(id)
@@ -285,7 +288,7 @@ func finish(offline: bool) -> Dictionary:
 		Game.give_xp(d, 10.0 + 8.0 * float(def.danger), "", offline)
 	# ---- loot
 	var loot: Dictionary = def.loot
-	var mult := (1.0 if ok else 0.3) * (1.0 + 0.15 * int(Game.s.get("lap", 0)))
+	var mult := (1.0 if ok else 0.3) * (1.0 + 0.15 * int(Game.s.get("lap", 0))) * Encounter.loot_factor()
 	for d in members:
 		if Crew.has(d, "scavenger"):
 			mult += 0.3 / members.size()
@@ -318,6 +321,7 @@ func finish(offline: bool) -> Dictionary:
 			got += ", ผู้รอดชีวิต " + nd.name
 		if loot.has("lore") and Lore.unlock(str(loot.lore)):
 			got += ", บันทึกใหม่"
+	got += Encounter.apply(rep, members.size() - rep.dead.size())
 	rep.loot = got
 	if SITES.has(id):
 		mark_done(id)
