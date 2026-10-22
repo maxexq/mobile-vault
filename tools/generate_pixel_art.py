@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""
+Mobile Vault – procedural Kairosoft-style pixel-art generator (true pixel: one master palette, no scaling).
+
+Generates every texture the game needs:
+  assets/atlas/atlas.png + atlas.json   all small sprites (truck, rooms, dwellers, enemies, icons...)
+  assets/bg/<biome>_<layer>.png          tall seamless parallax layers (sky strip, sun, clouds, far, mid, near, road)
+  assets/events/<event>.png              160x80 event illustrations
+  assets/ui/*.png                        Kairosoft-style cream/brown 9-slice frames
+
+Run:  python3 tools/generate_pixel_art.py      (needs Pillow)
+"""
+import json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from art.common import pack_atlas, OUT_ATLAS
+from art import rooms, truck, chars, ui, bg, events, landmarks
+
+
+def main():
+    rooms.gen_rooms()
+    truck.gen_truck()
+    dvars = chars.gen_dwellers()
+    chars.gen_enemies()
+    chars.gen_bosses()
+    landmarks.gen_landmarks()
+    ui.gen_icons()
+    ui.gen_particles()
+    ui.gen_combat_props()
+    ui.gen_ui_frames()
+    pack_atlas()
+    bg.gen_backgrounds()
+    events.gen_events()
+    with open(os.path.join(OUT_ATLAS, "dweller_variants.json"), "w") as f:
+        json.dump(dvars, f)
+    print("done")
+
+
+if __name__ == "__main__":
+    main()
