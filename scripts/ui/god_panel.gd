@@ -224,6 +224,12 @@ func _tab_world() -> void:
 	_head("EXPEDITION", "จุดสำรวจ")
 	if Expedition.active():
 		_row([_b("จบการสำรวจทันที", func(): Dev.finish_expedition(), "green")])
+		if Encounter.state().is_empty():
+			var encb := []
+			for id in Encounter.ENCOUNTERS:
+				var nid: String = id
+				encb.append(_b(str(Encounter.ENCOUNTERS[id].th), func(): Dev.encounter(nid), "gray", true))
+			_row(encb, "จุดพิเศษ (สุ่มเจอ ~%d%%)" % int(Encounter.chance_for(str(Expedition.state().site)) * 100.0))
 	else:
 		var sb := []
 		for id in Expedition.SITES:

@@ -57,6 +57,7 @@ var _exp_btn: Button
 var _scav_btn: Button
 var room_closeup: RoomCloseup
 var event_popup: EventPopup
+var encounter_popup: EncounterPopup
 var title_screen: TitleScreen
 var boss_bar: BossBar
 var _boss_was := false
@@ -139,6 +140,8 @@ func _ready() -> void:
 	(panels.build as BuildPanel).placement_requested.connect(func(t): build_placement_requested.emit(t))
 	event_popup = EventPopup.new()
 	add_child(event_popup)
+	encounter_popup = EncounterPopup.new()
+	add_child(encounter_popup)
 	title_screen = TitleScreen.new()
 	add_child(title_screen)
 	# settings opens from the title menu too, so it sits above the title screen
@@ -160,8 +163,13 @@ func _ready() -> void:
 		if not any_modal_open():
 			open_expedition(id))
 	Expedition.expedition_finished.connect(func(_r):
+		if encounter_popup.is_open:
+			encounter_popup.close()
 		if not any_modal_open():
 			panels.expedition.open())
+	Encounter.encounter_ready.connect(func(_id):
+		if not any_modal_open():
+			encounter_popup.show_encounter())
 	Meta.wrecked.connect(func(): open_nextgen(true))
 	Meta.generation_started.connect(func(_g):
 		_refresh_res()
@@ -336,7 +344,9 @@ func _build_bottom() -> void:
 	_exp_btn = UIKit.button("เปิด", "yellow")
 	_exp_btn.custom_minimum_size = Vector2(40, 20)
 	_exp_btn.pressed.connect(func():
-		if Expedition.active():
+		if Encounter.pending():
+			open_encounter()
+		elif Expedition.active():
 			panels.expedition.open()
 		elif Expedition.at_site() != "":
 			open_expedition(Expedition.at_site()))
@@ -599,6 +609,9 @@ func _refresh_expedition() -> void:
 		var tl := Expedition.time_left()
 		_exp_lbl.text = "ทีมสำรวจ %s · %d:%02d" % [Expedition.site_def(str(Expedition.state().site)).th, int(tl) / 60, int(tl) % 60]
 		_exp_btn.text = "ดู"
+		if Encounter.pending():
+			_exp_lbl.text = "จุดพิเศษ! ทีมรอคำสั่ง · %d:%02d" % [int(tl) / 60, int(tl) % 60]
+			_exp_btn.text = "สั่งการ"
 	elif Expedition.at_site() != "":
 		_exp_lbl.text = "พบ %s!" % Expedition.site_def(Expedition.at_site()).th
 		_exp_btn.text = "สำรวจ"
@@ -617,6 +630,15 @@ func open_expedition(site_id: String) -> void:
 		panels.expedition.open()
 	else:
 		(panels.expedition as ExpeditionPanel).open_site(site_id)
+
+
+func open_encounter() -> void:
+	if not Encounter.pending():
+		return
+	for k in panels:
+		if panels[k].is_open:
+			panels[k].close()
+	encounter_popup.show_encounter()
 
 
 func open_nextgen(forced: bool) -> void:
@@ -747,7 +769,7 @@ func any_modal_open() -> bool:
 	for k in panels:
 		if panels[k].is_open:
 			return true
-	return event_popup.is_open or title_screen.visible
+	return event_popup.is_open or encounter_popup.is_open or title_screen.visible
 
 
 func _sync_god_btn() -> void:

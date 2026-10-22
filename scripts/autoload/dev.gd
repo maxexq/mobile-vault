@@ -524,6 +524,14 @@ func finish_expedition() -> void:
 	Expedition.tick(false)
 
 
+func encounter(id: String) -> void:
+	if not Expedition.active():
+		return
+	act("encounter " + id)
+	Encounter.trigger_now(id)
+	changed.emit()
+
+
 func force_wreck() -> void:
 	act("force wreck")
 	Game.s.hull = 0.0
