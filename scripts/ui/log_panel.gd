@@ -15,6 +15,11 @@ func _build() -> void:
 	_tabs = UIKit.hbox(3)
 	body.add_child(_tabs)
 	_list = make_list(3)
+	var tb := UIKit.button("ดูบทแนะนำอีกครั้ง  TUTORIAL", "blue", "book")
+	tb.pressed.connect(func():
+		close()
+		Tutorial.restart())
+	body.add_child(tb)
 	Lore.unlocked.connect(func(_id): if is_open: refresh())
 
 

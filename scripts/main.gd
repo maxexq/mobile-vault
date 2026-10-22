@@ -138,6 +138,9 @@ func _ready() -> void:
 	hud.layout_changed.connect(_fit_camera)
 	hud.zoom_pressed.connect(cycle_zoom)
 	hud.xray_toggled.connect(func(on: bool): vehicle.set_xray(on))
+	hud.tutorial_overlay.main = self
+	Tutorial.hud = hud
+	Tutorial.main = self
 	# CRT scanlines / vignette over everything
 	var crt_layer := CanvasLayer.new()
 	crt_layer.layer = 50

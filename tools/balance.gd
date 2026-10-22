@@ -18,6 +18,7 @@ func _ready() -> void:
 				Combat.disconnect(sig.name, c.callable)
 	Save.wipe()
 	Game.new_game()
+	Tutorial.skip()
 	Combat.rebuild_heroes()
 	var drops := [0, 0, 0, 0, 0, 0]
 	Combat.loot_dropped.connect(func(it, _at): drops[int(it.rar)] += 1)
