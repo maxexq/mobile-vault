@@ -187,6 +187,21 @@ func _migrate() -> void:
 			d["role"] = "builder" if str(d.get("lore", "")) == "ton" else ""
 	for r in s.rooms:
 		r.merge({"build": {}}, false)
+	_fix_large_rooms()
+
+
+## v4.4: an annex cell must sit right of its room (a hand-edited / imported save could break that);
+## crew always work on the anchor cell
+func _fix_large_rooms() -> void:
+	for i in s.rooms.size():
+		if not is_annex(i):
+			continue
+		var a := room_anchor(i)
+		if is_annex(a) or not str(s.rooms[a].type) in Data.MERGEABLE or room_cells(a).size() > Data.MAX_SPAN:
+			s.rooms[i] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	for d in s.dwellers:
+		if int(d.room) >= 0 and int(d.room) < s.rooms.size():
+			d.room = room_anchor(int(d.room))
 
 
 ## v4: vehicle tiers + trailers. Saves made before tiers drive the 18-wheeler (rig); the old
@@ -308,7 +323,7 @@ func pop_cap() -> int:
 	var c := Data.BASE_POP_CAP
 	for i in s.rooms.size():
 		if s.rooms[i].type == "quarters" and not is_site(i):
-			c += 4 * int(s.rooms[i].level)
+			c += int(round(4.0 * float(s.rooms[i].level) * room_scale(i)))
 	return c
 
 
@@ -400,8 +415,7 @@ func power_flow_pm() -> float:
 		var r: Dictionary = s.rooms[slot]
 		if r.type == "empty" or not is_slot_unlocked(slot) or is_site(slot):
 			continue
-		var def := Data.room_def(r.type)
-		f -= float(def.power) * float(r.level)
+		f -= room_power_pm(slot)
 		f += float(room_rate_pm(slot).get("power", 0.0))
 	if is_moving():
 		f -= Data.TRAVEL_POWER_PM
@@ -538,7 +552,7 @@ func _tick_outages(dt: float, offline: bool) -> void:
 		return
 	var cands := []
 	for i in s.rooms.size():
-		if s.rooms[i].type != "empty" and is_slot_unlocked(i) and not o.has(str(i)):
+		if not s.rooms[i].type in ["empty", "annex"] and is_slot_unlocked(i) and not o.has(str(i)):
 			cands.append(i)
 	if cands.is_empty():
 		return
@@ -619,7 +633,7 @@ func science_boost() -> float:
 	for i in s.rooms.size():
 		var r: Dictionary = s.rooms[i]
 		if r.type == "science" and not room_workers(i).is_empty():
-			b += float(Data.ROOMS.science.boost) * float(r.level)
+			b += float(Data.ROOMS.science.boost) * float(r.level) * room_scale(i)
 	return b
 
 
@@ -641,9 +655,9 @@ func room_rate_pm(slot: int) -> Dictionary:
 	if workers.is_empty() or not def.has("produce"):
 		return out
 	var lvl_mult := 1.0 + 0.6 * float(r.level - 1)
-	var stat_mult := 0.5 + stat_sum(slot) / 10.0          # 1 avg worker = 1.0
+	var stat_mult := 0.5 * float(work_span(slot)) + stat_sum(slot) / 10.0          # 1 avg worker per cell = 1.0 per cell
 	var happy_mult := 0.6 + avg_happiness() / 250.0
-	var mult := lvl_mult * stat_mult * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
+	var mult := lvl_mult * stat_mult * span_efficiency(slot) * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
 	if def.get("weather_crop", false):
 		mult *= float(weather_def().crop)
 	if def.power > 0.0 and s.res.power <= 0.5:
@@ -661,14 +675,15 @@ func craft_speed(slot: int) -> float:
 	var sk := 0.0
 	for d in workers:
 		sk += Skills.val(d, "craft") / workers.size()
-	return (0.6 + stat_sum(slot) / 12.0) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
+	var n := float(work_span(slot))
+	return (0.6 + stat_sum(slot) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
 
 
 func medical_power() -> float:
 	var p := 0.0
 	for i in s.rooms.size():
 		if s.rooms[i].type == "medical" and is_slot_unlocked(i) and not room_workers(i).is_empty():
-			p += float(s.rooms[i].level) * Crew.room_mult(i)
+			p += float(s.rooms[i].level) * Crew.room_mult(i) * room_scale(i)
 	return p
 
 
@@ -676,7 +691,7 @@ func hull_regen_pm() -> float:
 	var r := Mods.val("repair_bay")
 	for slot in [Data.ENGINE_SLOT] + _rooms_of("workshop"):
 		for d in room_workers(slot):
-			r += (2.0 if s.rooms[slot].type == "engine" else 1.5) * float(s.rooms[slot].level) / 2.0
+			r += (2.0 if s.rooms[slot].type == "engine" else 1.5) * float(s.rooms[slot].level) / 2.0 * span_efficiency(slot)
 			if Crew.has(d, "mechanic"):
 				r += 1.5
 			r += Skills.val(d, "repair")
@@ -740,7 +755,7 @@ func armory_bonus() -> float:
 	var b := 0.0
 	for i in s.rooms.size():
 		if s.rooms[i].type == "armory" and not is_site(i):
-			b += 2.0 * float(s.rooms[i].level)
+			b += 2.0 * float(s.rooms[i].level) * room_scale(i)
 	return b
 
 
@@ -786,7 +801,7 @@ func _simulate(dt: float, offline: bool) -> void:
 		_tick_build(slot, dt, offline)
 		var def := Data.room_def(r.type)
 		if def.power > 0.0:
-			_add_res("power", -float(def.power) * float(r.level) * m)
+			_add_res("power", -room_power_pm(slot) * m)
 		var rate := room_rate_pm(slot)
 		for k in rate:
 			var amt: float = rate[k] * m
@@ -795,7 +810,7 @@ func _simulate(dt: float, offline: bool) -> void:
 				_accumulate_float(slot, k, amt)
 		_tick_job(slot, dt, offline)
 		if def.has("heal") and not room_workers(slot).is_empty():
-			var hm := Crew.room_mult(slot)
+			var hm := Crew.room_mult(slot) * room_scale(slot)
 			for d in s.dwellers:
 				if not is_away(d):
 					d.hp = minf(float(d.max_hp), float(d.hp) + float(def.heal) * float(r.level) * hm * m)
@@ -865,9 +880,11 @@ func _simulate(dt: float, offline: bool) -> void:
 					xpm *= 1.5
 					target += 12.0
 			target += 20.0 if st != "" and _best_stat(d) == st else 8.0
+			var mentor := 0.0     # the best mentor in the room (a large room's crew don't multiply it)
 			for o in room_workers(int(d.room)):
 				if o != d:
-					xpm *= 1.0 + 2.0 * Skills.val(o, "mentor")
+					mentor = maxf(mentor, Skills.val(o, "mentor"))
+			xpm *= 1.0 + 2.0 * mentor
 			give_xp(d, xpm * m, st, offline)
 		d.happy = move_toward(float(d.happy), target, 2.0 * m)
 		Crew.morale_tick(d, dt, offline)
@@ -919,12 +936,12 @@ func _simulate(dt: float, offline: bool) -> void:
 				_trigger_random_event()
 
 	# --- radio recruitment (passive)
-	var radio_lvl := 0
+	var radio_lvl := 0.0
 	for i in s.rooms.size():
 		if s.rooms[i].type == "radio" and not room_workers(i).is_empty():
-			radio_lvl += int(s.rooms[i].level)
-	if radio_lvl > 0:
-		s.recruit_t = float(s.recruit_t) - dt * float(radio_lvl)
+			radio_lvl += float(s.rooms[i].level) * room_scale(i)
+	if radio_lvl > 0.0:
+		s.recruit_t = float(s.recruit_t) - dt * radio_lvl
 		if s.recruit_t <= 0.0:
 			s.recruit_t = 240.0
 			if s.dwellers.size() < pop_cap():
@@ -1090,14 +1107,14 @@ func recruit_random() -> Dictionary:
 	var d := _add_dweller({"name": nm, "variant": variant, "str": stats.str, "int": stats.int, "agi": stats.agi, "lvl": 1 + int(s.lap), "role": role})
 	# builders head straight for an open building site; everybody else to a free room matching their best stat
 	for i in s.rooms.size():
-		if role == "builder" and is_constructing(i) and is_slot_unlocked(i) and site_crew(i).size() < Data.ROOM_WORKERS:
+		if role == "builder" and is_constructing(i) and is_slot_unlocked(i) and site_crew(i).size() < room_capacity(i):
 			d.room = i
 			break
 	for i in s.rooms.size():
 		var r: Dictionary = s.rooms[i]
 		if int(d.room) >= 0:
 			break
-		if r.type != "empty" and is_slot_unlocked(i) and not is_site(i) and room_workers(i).size() < Data.ROOM_WORKERS and Data.room_def(r.type).get("stat") == best:
+		if not r.type in ["empty", "annex"] and is_slot_unlocked(i) and not is_site(i) and room_workers(i).size() < room_capacity(i) and Data.room_def(r.type).get("stat") == best:
 			d.room = i
 			break
 	dwellers_changed.emit()
@@ -1106,8 +1123,9 @@ func recruit_random() -> Dictionary:
 
 func assign(d: Dictionary, slot: int) -> bool:
 	if slot >= 0:
-		if (site_crew(slot) if is_site(slot) else room_workers(slot)).size() >= Data.ROOM_WORKERS:
-			toast.emit("ห้องนี้เต็มแล้ว (สูงสุด %d คน)" % Data.ROOM_WORKERS, "warn")
+		slot = room_anchor(slot)
+		if (site_crew(slot) if is_site(slot) else room_workers(slot)).size() >= room_capacity(slot):
+			toast.emit("ห้องนี้เต็มแล้ว (สูงสุด %d คน)" % room_capacity(slot), "warn")
 			return false
 		if s.rooms[slot].type == "empty":
 			return false
@@ -1306,12 +1324,13 @@ func build_room(slot: int, room_type: String) -> bool:
 
 
 func upgrade_room(slot: int) -> bool:
+	slot = room_anchor(slot)
 	var r: Dictionary = s.rooms[slot]
 	if int(r.level) >= Data.ROOM_MAX_LEVEL or is_constructing(slot):
 		return false
 	if not pay({"scrap": upgrade_cost(slot)}):
 		return false
-	var t := upgrade_time(int(r.level) + 1)
+	var t := upgrade_time(int(r.level) + 1, room_span(slot))
 	r["build"] = {"kind": "upgrade", "total": t, "left": t}
 	Trace.rec("build", "start upgrade %s @%d -> Lv%d (%ds)" % [r.type, slot, int(r.level) + 1, int(t)])
 	toast.emit("เริ่มอัปเกรด %s → Lv.%d (ห้องยังทำงานระหว่างนี้)" % [Data.room_def(r.type).th, int(r.level) + 1], "info")
@@ -1351,10 +1370,13 @@ func build_cost(room_type: String) -> int:
 
 
 func upgrade_cost(slot: int) -> int:
+	slot = room_anchor(slot)
 	var lv := int(s.rooms[slot].level)
 	if lv >= Data.ROOM_MAX_LEVEL:
 		return 0
-	return int(round(float(Data.ROOM_UPGRADE_COST[lv + 1]) * Crew.build_cost_mult()))
+	var n := room_span(slot)
+	var span_mult := 1.0 if n <= 1 else float(n) * Data.SPAN_UPGRADE_DISCOUNT
+	return int(round(float(Data.ROOM_UPGRADE_COST[lv + 1]) * span_mult * Crew.build_cost_mult()))
 
 
 ## work seconds to put a room up (cheap rooms are quick, the science lab takes a while)
@@ -1362,8 +1384,8 @@ func build_time(room_type: String) -> float:
 	return Data.BUILD_BASE_SEC + Data.BUILD_SEC_PER_SCRAP * float(Data.room_def(room_type).cost)
 
 
-func upgrade_time(to_level: int) -> float:
-	return float(Data.UPGRADE_SEC[clampi(to_level, 0, Data.ROOM_MAX_LEVEL)])
+func upgrade_time(to_level: int, span: int = 1) -> float:
+	return float(Data.UPGRADE_SEC[clampi(to_level, 0, Data.ROOM_MAX_LEVEL)]) * (1.0 + Data.SPAN_UPGRADE_TIME * float(maxi(span, 1) - 1))
 
 
 ## work seconds per real second on this site
@@ -1426,11 +1448,16 @@ func _finish_build(slot: int, offline: bool) -> void:
 	var def := Data.room_def(r.type)
 	if kind == "upgrade":
 		r.level = mini(int(r.level) + 1, Data.ROOM_MAX_LEVEL)
+		for c in room_cells(slot):
+			s.rooms[c].level = r.level
 	for d in site_crew(slot):
 		give_xp(d, 4.0 * (1.5 if Crew.is_builder(d) else 1.0), "str", offline)
 	Trace.rec("build", "finished %s %s @%d Lv%d" % [kind, r.type, slot, r.level])
 	if offline:
-		_offline_built.append("%s%s" % [def.th, (" Lv.%d" % r.level) if kind == "upgrade" else ""])
+		_offline_built.append("%s%s" % [def.th, (" Lv.%d" % r.level) if kind == "upgrade" else (" x%d" % room_span(slot) if kind == "merge" else "")])
+	elif kind == "merge":
+		toast.emit("ทุบผนังเสร็จ! %s ขนาด %d ช่อง ทำงานได้ x%.2f" % [def.th, room_span(slot), room_scale(slot)], "good")
+		floating_text.emit(slot, "x%d" % room_span(slot), "hammer")
 	elif kind == "upgrade":
 		toast.emit("%s อัปเกรดเป็น Lv.%d เสร็จแล้ว!" % [def.th, r.level], "good")
 		floating_text.emit(slot, "Lv.%d" % r.level, "up")
@@ -1443,16 +1470,195 @@ func _finish_build(slot: int, offline: bool) -> void:
 
 
 func demolish_room(slot: int) -> void:
+	slot = room_anchor(slot)
 	var r: Dictionary = s.rooms[slot]
-	if r.type in ["empty", "engine"]:
+	if r.type in ["empty", "engine", "annex"]:
 		return
-	for d in room_workers(slot):
-		d.room = -1
-	_add_res("scrap", float(Data.room_def(r.type).cost) * 0.5)
-	Trace.rec("build", "demolish %s @%d" % [r.type, slot])
-	s.rooms[slot] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	for d in s.dwellers:
+		if int(d.room) == slot:
+			d.room = -1
+	var cells := room_cells(slot)
+	_add_res("scrap", float(Data.room_def(r.type).cost) * 0.5 * cells.size())
+	Trace.rec("build", "demolish %s @%d x%d" % [r.type, slot, cells.size()])
+	for c in cells:
+		s.rooms[c] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+		(s.get("outage", {}) as Dictionary).erase(str(c))
 	rooms_changed.emit()
 	dwellers_changed.emit()
+
+
+# ------------------------------------------------------------------ large rooms (v4.4)
+func is_annex(slot: int) -> bool:
+	return not s.is_empty() and slot >= 0 and slot < s.rooms.size() and str(s.rooms[slot].type) == "annex"
+
+
+## the cell that holds a room's data: annex cells walk left (same floor, same unit) to it
+func room_anchor(slot: int) -> int:
+	var a := slot
+	while is_annex(a) and slot_cell(a).x > 0:
+		a -= 1
+	return a
+
+
+## every cell the room covers, left to right (the anchor first)
+func room_cells(slot: int) -> Array:
+	var a := room_anchor(slot)
+	var out := [a]
+	if s.is_empty() or a < 0 or a >= s.rooms.size():
+		return out
+	var c := a + 1
+	while c < s.rooms.size() and slot_cell(c).x > 0 and is_annex(c):
+		out.append(c)
+		c += 1
+	return out
+
+
+func room_span(slot: int) -> int:
+	return room_cells(slot).size()
+
+
+## the walls are still coming down: the room works as its parts (no big-room bonus yet)
+func is_merging(slot: int) -> bool:
+	return str(build_info(room_anchor(slot)).get("kind", "")) == "merge"
+
+
+func work_span(slot: int) -> int:
+	return room_span(slot)
+
+
+func span_efficiency(slot: int) -> float:
+	if is_merging(slot):
+		return 1.0
+	return float(Data.SPAN_EFFICIENCY[clampi(room_span(slot), 1, Data.MAX_SPAN)])
+
+
+## how many single rooms this room is worth (level effects, healing, pop cap, armory...)
+func room_scale(slot: int) -> float:
+	return float(work_span(slot)) * span_efficiency(slot)
+
+
+## crew seats: 2 per cell
+func room_capacity(slot: int) -> int:
+	return Data.ROOM_WORKERS * room_span(slot)
+
+
+## battery drain per minute (large rooms share wiring: 90% per cell)
+func room_power_pm(slot: int) -> float:
+	var r: Dictionary = s.rooms[slot]
+	var n := room_span(slot)
+	return float(Data.room_def(r.type).get("power", 0.0)) * float(r.level) * float(n) * (1.0 if n <= 1 else Data.SPAN_POWER_MULT)
+
+
+## why the room at `slot` can't be knocked through into the room at `other` ("" = it can)
+func merge_block(slot: int, other: int) -> String:
+	if s.is_empty() or other < 0 or other >= s.rooms.size():
+		return "ไม่มีห้องข้างๆ"
+	var a := room_anchor(slot)
+	var b := room_anchor(other)
+	if a == b:
+		return "เป็นห้องเดียวกันแล้ว"
+	var ca := room_cells(a)
+	var cb := room_cells(b)
+	if slot_unit(a) != slot_unit(b) or slot_cell(a).y != slot_cell(b).y or not (int(ca[-1]) + 1 == int(cb[0]) or int(cb[-1]) + 1 == int(ca[0])):
+		return "ต้องอยู่ติดกันบนชั้นเดียวกัน"
+	if not is_slot_unlocked(a) or not is_slot_unlocked(b):
+		return "ช่องยังล็อกอยู่"
+	var ra: Dictionary = s.rooms[a]
+	var rb: Dictionary = s.rooms[b]
+	if not str(ra.type) in Data.MERGEABLE:
+		return "ห้องนี้ขยายไม่ได้"
+	if str(ra.type) != str(rb.type):
+		return "ต้องเป็นห้องชนิดเดียวกัน"
+	if ca.size() + cb.size() > Data.MAX_SPAN:
+		return "ใหญ่สุด %d ช่อง" % Data.MAX_SPAN
+	if is_constructing(a) or is_constructing(b):
+		return "รอให้งานก่อสร้างเสร็จก่อน"
+	if int(ra.level) != int(rb.level):
+		return "ต้องเลเวลเท่ากัน (Lv.%d / Lv.%d)" % [int(ra.level), int(rb.level)]
+	if not (ra.job as Dictionary).is_empty() and not (rb.job as Dictionary).is_empty():
+		return "รอให้การผลิตห้องใดห้องหนึ่งเสร็จก่อน"
+	return ""
+
+
+## neighbouring rooms (anchors) this room could be knocked through into right now
+func merge_candidates(slot: int) -> Array:
+	var out := []
+	var cells := room_cells(slot)
+	for c in [int(cells[0]) - 1, int(cells[-1]) + 1]:
+		if c >= 0 and c < s.rooms.size() and slot_unit(c) == slot_unit(int(cells[0])) and slot_cell(c).y == slot_cell(int(cells[0])).y:
+			if merge_block(slot, c) == "":
+				out.append(room_anchor(c))
+	return out
+
+
+func merge_cost(slot: int, other: int) -> Dictionary:
+	var a := room_anchor(slot)
+	var n := room_span(a) + room_span(other)
+	var lv := int(s.rooms[a].level)
+	var scrap := float(Data.room_def(s.rooms[a].type).get("cost", 0)) * Data.MERGE_SCRAP_MULT * float(lv) * float(n - 1)
+	return {"scrap": int(round(scrap * Crew.build_cost_mult())), "components": Data.MERGE_COMPONENTS * (n - 1)}
+
+
+func merge_time(slot: int, other: int) -> float:
+	var n := room_span(slot) + room_span(other)
+	return Data.MERGE_BASE_SEC + Data.MERGE_SEC_PER_LEVEL * float(s.rooms[room_anchor(slot)].level) * float(n - 1)
+
+
+## knock the wall through: both rooms become one large room on the left-most cell. It keeps working (as two
+## rooms) while the crew tear the wall down; the big-room bonus starts when the work is done.
+func merge_rooms(slot: int, other: int) -> bool:
+	var why := merge_block(slot, other)
+	if why != "":
+		toast.emit("รวมห้องไม่ได้: " + why, "warn")
+		return false
+	var cost := merge_cost(slot, other)
+	var t := merge_time(slot, other)
+	if not pay(cost):
+		return false
+	var a := mini(room_anchor(slot), room_anchor(other))
+	var b := maxi(room_anchor(slot), room_anchor(other))
+	var ra: Dictionary = s.rooms[a]
+	var rb: Dictionary = s.rooms[b]
+	if (ra.job as Dictionary).is_empty() and not (rb.job as Dictionary).is_empty():
+		ra.job = rb.job
+	for d in s.dwellers:
+		if int(d.room) == b:
+			d.room = a
+	var outage: Dictionary = s.get("outage", {})
+	for c in room_cells(b):
+		s.rooms[c] = {"type": "annex", "level": int(ra.level), "job": {}, "build": {}}
+		outage.erase(str(c))
+	ra["build"] = {"kind": "merge", "total": t, "left": t}
+	Trace.rec("build", "start merge %s @%d x%d (%ds)" % [ra.type, a, room_span(a), int(t)])
+	toast.emit("เริ่มทุบผนังรวม%s เป็น %d ช่อง (ห้องยังทำงานระหว่างนี้)" % [Data.room_def(ra.type).th, room_span(a)], "info")
+	construction_started.emit(a, "merge")
+	if Dev.on("instant_build"):
+		_finish_build(a, false)
+	rooms_changed.emit()
+	dwellers_changed.emit()
+	return true
+
+
+## put the walls back: every cell becomes its own room again (same type and level, free, instant).
+## Crew beyond the left room's 2 seats move to the new right-hand rooms.
+func split_room(slot: int) -> bool:
+	var a := room_anchor(slot)
+	var cells := room_cells(a)
+	if cells.size() <= 1 or is_constructing(a):
+		return false
+	var ra: Dictionary = s.rooms[a]
+	for i in range(1, cells.size()):
+		s.rooms[cells[i]] = {"type": ra.type, "level": int(ra.level), "job": {}, "build": {}}
+	var k := 0
+	for d in site_crew(a):
+		var to: int = cells[mini(k / Data.ROOM_WORKERS, cells.size() - 1)]
+		d.room = to
+		k += 1
+	Trace.rec("build", "split %s @%d x%d" % [ra.type, a, cells.size()])
+	toast.emit("แยก%sกลับเป็น %d ห้อง" % [Data.room_def(ra.type).th, cells.size()], "info")
+	rooms_changed.emit()
+	dwellers_changed.emit()
+	return true
 
 
 func vault_upgrade_cost() -> int:

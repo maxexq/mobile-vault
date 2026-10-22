@@ -304,7 +304,7 @@ func mods_all(maxed: bool) -> void:
 func rooms_fill() -> void:
 	var types := []
 	for k in Data.ROOMS:
-		if k != "engine" and k != "empty" and k != "locked":
+		if not k in ["engine", "empty", "locked", "annex"]:
 			types.append(k)
 	var i := 0
 	for slot in Game.s.rooms.size():

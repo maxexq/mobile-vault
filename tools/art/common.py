@@ -312,7 +312,7 @@ def add(name, img, q=True):
     atlas_items[name] = quantize(img) if q else img
 
 
-def pack_atlas(max_w=1024):
+def pack_atlas(max_w=2048):
     import json
     items = sorted(atlas_items.items(), key=lambda kv: (-kv[1].height, -kv[1].width, kv[0]))
     x = y = 0

@@ -726,6 +726,7 @@ def gen_rooms():
             ceiling_lamp(img, lx)
         add("room_" + k, img)
     gen_construction()
+    gen_wide_rooms()
 
 
 # ------------------------------------------------------------------ v4.3 construction site
@@ -832,3 +833,358 @@ def gen_construction():
         add(f"fx_weld_{f}", fx_weld(f))
     for f in range(3):
         add(f"fx_dust_{f}", fx_dust(f))
+
+
+# ------------------------------------------------------------------ v4.4 large rooms (2 or 3 cells knocked through)
+# A large room is the room's own wall/floor drawn at the full width, the original furniture in the left cell, the
+# same furniture mirrored in the right cell and (3 cells) a type-specific centre piece. Where the partition wall
+# stood there is a steel post; where the ladder shaft crosses the room (main body, cells 0|1) the ladder keeps
+# running through it. Keys: room_<type>_x<gap>[_<gap>] with the gaps (px) between the cells, as laid out in
+# scripts/world/vehicle.gd (main body 10 then 2, trailers 2 and 2).
+MERGE_TYPES = ["quarters", "kitchen", "water", "hydroponics", "medical", "refinery", "workshop", "armory", "science", "radio"]
+WIDE_GAPS = [(2,), (10,), (2, 2), (10, 2)]
+
+
+def _cell_x(gaps):
+    xs = [0]
+    for g in gaps:
+        xs.append(xs[-1] + RW_CELL + g)
+    return xs
+
+
+RW_CELL = 64
+
+
+def _seam_post(img, x, w):
+    """steel post + cut wall stubs where the partition used to be"""
+    cx = x + w // 2 - 1
+    rect(img, cx - 1, 0, 4, 6, OL)                     # beam stub under the slab
+    rect(img, cx, 1, 2, 4, c("gray4"))
+    rect(img, cx, 6, 2, FLOOR - 6, OL)
+    vline(img, cx, 6, FLOOR - 6, c("gray3"))
+    for y in range(9, FLOOR - 2, 7):
+        px(img, cx, y, c("gray5"))                     # rivets
+    for xx in range(x - 2, x + w + 2):
+        tint_px(img, xx, FLOOR, c("ol0"), 0.3)          # patched floor seam
+    for k in range(4):
+        tint_px(img, cx - 2, 8 + k * 9, c("orange1"), 0.45)
+        tint_px(img, cx + 3, 12 + k * 9, c("orange1"), 0.45)
+
+
+def _seam_ladder(img, x, w):
+    """the vehicle's ladder shaft keeps running through the knocked-through room"""
+    rect(img, x, 4, w, RH - 4, c("night2"))
+    vline(img, x, 4, RH - 4, OL)
+    vline(img, x + w - 1, 4, RH - 4, OL)
+    vline(img, x + 2, 0, RH, c("yellow1"))
+    vline(img, x + w - 3, 0, RH, c("yellow1"))
+    for yy in range(1, RH, 4):
+        hline(img, x + 2, yy, w - 4, c("yellow2"))
+    for xx in range(x + 1, x + w - 1):                 # hazard edge of the hatches in ceiling and floor
+        px(img, xx, 3, c("yellow2") if (xx // 2) % 2 else OL)
+        px(img, xx, FLOOR, c("yellow2") if (xx // 2) % 2 else OL)
+
+
+# --- centre pieces (64 px cell of a 3-wide room) -------------------------------------------
+def _mid_quarters(img, x):
+    # common room: sagging couch, crate table with a candle, old tube TV, string lights
+    box(img, x + 6, 32, 30, 10, "red", 1)
+    rect(img, x + 6, 27, 30, 6, OL)
+    rect(img, x + 7, 28, 28, 4, c("red2"))
+    vline(img, x + 16, 28, 4, OL)
+    vline(img, x + 26, 28, 4, OL)
+    legs(img, x + 6, 42, 30, 4)
+    floor_shadow(img, x + 6, 30)
+    box(img, x + 40, 36, 10, 10, "wood", 2)
+    rect(img, x + 44, 32, 2, 4, c("cream3"))
+    px(img, x + 44, 31, c("lamp2"))
+    box(img, x + 50, 24, 12, 12, "gray", 3)
+    screen(img, x + 51, 25, 10, 8, "teal")
+    box(img, x + 51, 36, 10, 10, "wood", 1)
+    for k in range(0, 60, 6):
+        px(img, x + 2 + k, 7 + (k // 6) % 2, c(["lamp1", "red3", "toxic3"][(k // 6) % 3]))
+
+
+def _mid_kitchen(img, x):
+    # long serving counter, a huge stock pot on a gas ring, pans on a rail
+    hline(img, x + 4, 9, 56, c("gray4"))
+    for k in range(4):
+        px(img, x + 10 + k * 13, 10, OL)
+        ellipse(img, x + 7 + k * 13, 11, 7, 7, OL)
+        ellipse(img, x + 8 + k * 13, 12, 5, 5, c("gray3"))
+    box(img, x + 2, 32, 60, 14, "cream", 1)
+    rect(img, x + 2, 31, 60, 2, OL)
+    for k in range(4):
+        rect(img, x + 6 + k * 14, 37, 9, 7, OL)
+        rect(img, x + 7 + k * 14, 38, 7, 5, c("cream2"))
+    rect(img, x + 22, 21, 20, 10, OL)
+    rect(img, x + 23, 22, 18, 8, c("gray4"))
+    hline(img, x + 23, 22, 18, c("gray5"))
+    rect(img, x + 20, 23, 2, 2, OL)
+    rect(img, x + 42, 23, 2, 2, OL)
+    for (sx, sy) in ((26, 17), (31, 14), (36, 17), (29, 11)):
+        ellipse(img, x + sx, sy, 4, 4, c("gray5"))
+    floor_shadow(img, x + 2, 60)
+
+
+def _mid_hydro(img, x):
+    # vertical grow tower under a purple grow lamp, drip line from the ceiling
+    rect(img, x + 18, 5, 28, 3, OL)
+    rect(img, x + 19, 6, 26, 1, c("purple3"))
+    light_cone(img, x + 32, 8, 24, 34, 36, c("purple3"), 0.18)
+    for k in range(4):
+        y = 14 + k * 8
+        rect(img, x + 16, y, 32, 4, OL)
+        rect(img, x + 17, y + 1, 30, 2, c("wood2"))
+        for p in range(5):
+            px_ = x + 18 + p * 6
+            ellipse(img, px_, y - 4, 5, 4, c("green3" if (p + k) % 2 else "green2"))
+            px(img, px_ + 2, y - 5, c("green4"))
+    vline(img, x + 15, 10, 36, OL)
+    vline(img, x + 48, 10, 36, OL)
+    pipe_v(img, x + 30, 4, 6, "teal", 2)
+    floor_shadow(img, x + 15, 34)
+    plant_pot(img, x + 4, 46, "green", "orange", 10)
+    plant_pot(img, x + 54, 46, "green", "red", 9, "red3")
+
+
+def _mid_water(img, x):
+    # big settling tank with sight glass, pump and gauges
+    rect(img, x + 12, 6, 40, 40, OL)
+    rect(img, x + 13, 7, 38, 38, c("blue2"))
+    rect(img, x + 14, 7, 6, 38, c("blue3"))
+    for y in (12, 26, 40):
+        hline(img, x + 13, y, 38, OL)
+        for xx in range(x + 15, x + 50, 5):
+            px(img, xx, y + 1, c("gray5"))
+    rect(img, x + 28, 14, 8, 24, OL)
+    rect(img, x + 29, 15, 6, 22, c("sky1"))
+    rect(img, x + 29, 22, 6, 15, c("teal2"))
+    hline(img, x + 29, 22, 6, c("teal3"))
+    gauge(img, x + 40, 15)
+    gauge(img, x + 40, 29, "green2")
+    pipe_h(img, x, 42, 13, "gray", 4)
+    pipe_h(img, x + 51, 42, 13, "gray", 4)
+    floor_shadow(img, x + 12, 40)
+
+
+def _mid_medical(img, x):
+    # operating table under a big surgical lamp, IV stand, curtain rail
+    hline(img, x + 2, 6, 60, c("gray4"))
+    for k in range(0, 14, 2):
+        vline(img, x + 4 + k, 7, 26, c("cream1") if k % 4 else c("cream2"))
+    vline(img, x + 32, 4, 6, OL)
+    poly(img, [(x + 24, 10), (x + 40, 10), (x + 37, 15), (x + 27, 15)], c("gray4"), OL)
+    hline(img, x + 28, 15, 9, c("lamp2"))
+    light_cone(img, x + 32, 16, 10, 26, 18, c("lamp2"), 0.2)
+    rect(img, x + 18, 32, 28, 5, OL)
+    rect(img, x + 19, 33, 26, 2, c("sky3"))
+    rect(img, x + 19, 35, 26, 1, c("teal2"))
+    vline(img, x + 31, 37, 9, OL)
+    rect(img, x + 25, 44, 13, 2, OL)
+    floor_shadow(img, x + 18, 28)
+    vline(img, x + 52, 14, 32, c("gray3"))
+    rect(img, x + 49, 14, 7, 1, c("gray3"))
+    rect(img, x + 50, 16, 4, 7, OL)
+    rect(img, x + 51, 17, 2, 5, c("red2"))
+    hline(img, x + 49, 45, 7, OL)
+
+
+def _mid_armory(img, x):
+    # pegboard of rifles, an ammo crate stack and a gun-cleaning bench
+    rect(img, x + 4, 7, 56, 22, OL)
+    rect(img, x + 5, 8, 54, 20, c("wood1"))
+    for y in range(10, 27, 4):
+        for xx in range(x + 7, x + 58, 4):
+            px(img, xx, y, c("wood0"))
+    for k in range(5):
+        xx = x + 9 + k * 10
+        vline(img, xx, 10, 16, OL)
+        vline(img, xx + 1, 10, 16, c("gray3"))
+        rect(img, xx - 1, 21, 4, 5, c("wood3"))
+        frame(img, xx - 1, 21, 4, 5, OL)
+    for (bx, by, bw, bh) in ((4, 34, 14, 12), (18, 38, 12, 8), (8, 26, 12, 8)):
+        box(img, x + bx, by, bw, bh, "green", 2)
+        rect(img, x + bx + bw // 2 - 2, by + 2, 4, 3, c("yellow2"))
+    box(img, x + 34, 34, 26, 4, "wood", 2)
+    legs(img, x + 34, 38, 26, 8)
+    rect(img, x + 38, 31, 14, 3, OL)
+    rect(img, x + 39, 32, 12, 1, c("gray3"))
+    floor_shadow(img, x + 4, 56)
+
+
+def _mid_science(img, x):
+    # humming mainframe: tape reels, blinking lamps, a big green CRT
+    box(img, x + 4, 8, 22, 38, "gray", 3)
+    box(img, x + 38, 8, 22, 38, "gray", 3)
+    for bx in (4, 38):
+        for k in range(2):
+            ellipse(img, x + bx + 3 + k * 9, 11, 7, 7, OL)
+            ellipse(img, x + bx + 4 + k * 9, 12, 5, 5, c("gray5"))
+            px(img, x + bx + 6 + k * 9, 14, OL)
+        for k in range(12):
+            px(img, x + bx + 4 + (k % 6) * 3, 24 + (k // 6) * 3, c(["toxic3", "red3", "lamp1", "teal3"][k % 4]))
+        hline(img, x + bx + 2, 32, 18, OL)
+    screen(img, x + 27, 14, 10, 12, "green", graph=True)
+    box(img, x + 26, 30, 12, 16, "gray", 4)
+    for k in range(3):
+        hline(img, x + 28, 34 + k * 3, 8, c("gray2"))
+    floor_shadow(img, x + 4, 56)
+
+
+def _mid_radio(img, x):
+    # floor-standing transmitter rack, a pin map of the safe zones, a mic on a boom
+    box(img, x + 4, 8, 20, 38, "gray", 2)
+    for k in range(4):
+        rect(img, x + 7, 11 + k * 8, 14, 5, OL)
+        rect(img, x + 8, 12 + k * 8, 12, 3, c("night1"))
+        px(img, x + 9 + k * 3, 13 + k * 8, c(["toxic3", "orange3", "red3", "lamp1"][k]))
+    rect(img, x + 30, 8, 30, 20, OL)
+    rect(img, x + 31, 9, 28, 18, c("cream2"))
+    for (mx, my, mw, mh) in ((33, 11, 9, 6), (44, 13, 12, 8), (35, 19, 8, 6)):
+        ellipse(img, x + mx, my, mw, mh, c("green3"))
+    for (mx, my) in ((36, 13), (49, 17), (38, 22), (55, 12)):
+        px(img, x + mx, my, c("red3"))
+    line(img, x + 36, 13, x + 49, 17, c("red2"))
+    line(img, x + 49, 17, x + 38, 22, c("red2"))
+    box(img, x + 30, 34, 30, 4, "wood", 2)
+    legs(img, x + 30, 38, 30, 8)
+    line(img, x + 44, 34, x + 50, 26, OL)
+    rect(img, x + 49, 24, 4, 3, c("gray4"))
+    floor_shadow(img, x + 4, 56)
+
+
+def _mid_refinery(img, x):
+    # tall fractionating column, condenser coil and a pressure manifold
+    rect(img, x + 22, 4, 18, 42, OL)
+    rect(img, x + 23, 4, 16, 42, c("gray4"))
+    vline(img, x + 24, 4, 42, c("gray5"))
+    for y in (10, 18, 26, 34):
+        hline(img, x + 21, y, 20, OL)
+        hline(img, x + 23, y + 1, 16, c("gray3"))
+    rect(img, x + 27, 20, 8, 5, OL)
+    rect(img, x + 28, 21, 6, 3, c("orange3"))
+    for k in range(5):
+        ellipse(img, x + 44, 12 + k * 6, 12, 5, None, c("teal2"))
+    pipe_h(img, x + 2, 14, 20, "orange", 1)
+    pipe_v(img, x + 6, 14, 32, "orange", 1)
+    gauge(img, x + 10, 22)
+    gauge(img, x + 10, 32, "green2")
+    for k, col in enumerate(("red3", "orange3", "lamp1")):
+        poly(img, [(x + 26 + k, 46), (x + 31, 40 + k * 2), (x + 36 - k, 46)], c(col))
+    barrel(img, x + 48, 33, "yellow", 10, 13, "fuel")
+    floor_shadow(img, x + 22, 18)
+
+
+def _mid_workshop(img, x):
+    # engine hoist with a dangling block over the pit, chain and tyres
+    rect(img, x + 6, 5, 52, 3, OL)
+    hline(img, x + 7, 6, 50, c("yellow2"))
+    for y in range(8, 24, 2):
+        px(img, x + 32, y, c("gray4"))
+    box(img, x + 22, 24, 20, 12, "red", 1)
+    for k in range(3):
+        rect(img, x + 25 + k * 6, 20, 4, 4, OL)
+        rect(img, x + 26 + k * 6, 21, 2, 3, c("gray4"))
+    gauge(img, x + 29, 27)
+    rect(img, x + 14, 44, 36, 2, OL)
+    for xx in range(x + 14, x + 50, 4):
+        px(img, xx, 45, c("yellow2"))
+    ellipse(img, x + 2, 34, 12, 12, OL)
+    ellipse(img, x + 50, 34, 12, 12, OL)
+    ellipse(img, x + 4, 36, 8, 8, c("gray2"))
+    ellipse(img, x + 52, 36, 8, 8, c("gray2"))
+    floor_shadow(img, x + 2, 60)
+
+
+MID = {"quarters": _mid_quarters, "kitchen": _mid_kitchen, "hydroponics": _mid_hydro, "water": _mid_water,
+       "medical": _mid_medical, "armory": _mid_armory, "science": _mid_science, "radio": _mid_radio,
+       "refinery": _mid_refinery, "workshop": _mid_workshop}
+
+
+def _furniture(fn):
+    """the room's own furniture layer: the finished room minus its bare walls (same random draws)"""
+    rec = {}
+    real_base = globals()["base"]
+
+    def spy(*a, **kw):
+        rec["a"], rec["kw"] = a, kw
+        return real_base(*a, **kw)
+
+    globals()["base"] = spy
+    st = rr.getstate()
+    full = fn()
+    globals()["base"] = real_base
+    after = rr.getstate()
+    rr.setstate(st)
+    bare = real_base(*rec["a"], **rec["kw"])
+    rr.setstate(after)
+    layer = new(RW_CELL, RH)
+    for y in range(RH):
+        for x in range(RW_CELL):
+            p = get(full, x, y)
+            if p != get(bare, x, y):
+                px(layer, x, y, p)
+    return layer, rec
+
+
+def _light_multi(img, lamps):
+    """light() for a wide room: the nearest bulb wins"""
+    W = img.width
+    for y in range(4, RH):
+        for x in range(W):
+            d = 1.0
+            for lx in lamps:
+                dx = (x - lx) / 36.0
+                dy = (y - 8) / 60.0
+                d = min(d, math.hypot(dx * 1.1, dy))
+            dark = 0.12 + 0.5 * d
+            edge = min(x, W - 1 - x)
+            if edge < 4:
+                dark += (4 - edge) * 0.05
+            p = get(img, x, y)
+            if p[3] == 0:
+                continue
+            q = blend(p, c("night0"), dark if bayer(x, y) < 0.5 else dark - 0.06)
+            if d < 0.45:
+                warm = (0.45 - d) * (0.5 if bayer(x + 1, y) < 0.5 else 0.42)
+                q = blend(q, c("lamp1"), warm)
+            px(img, x, y, q)
+
+
+def wide_room(t, gaps):
+    global RW
+    fn = ROOMS[t]
+    furn, rec = _furniture(fn)
+    xs = _cell_x(gaps)
+    W = xs[-1] + RW_CELL
+    RW = W
+    try:
+        img = base(*rec["a"], **rec["kw"])
+        paste(img, furn, xs[0], 0)
+        paste(img, flip(furn), xs[-1], 0)
+        if len(xs) == 3:
+            MID[t](img, xs[1])
+        grime(img, random.Random(len(t) * 13 + W))
+        for k, g in enumerate(gaps):
+            sx = xs[k] + RW_CELL
+            if g >= 8:
+                _seam_ladder(img, sx, g)
+            else:
+                _seam_post(img, sx, g)
+        lx = LAMPS.get(t, 32)
+        lamps = [xs[0] + lx, xs[-1] + RW_CELL - 1 - lx] + ([xs[1] + 32] if len(xs) == 3 else [])
+        _light_multi(img, lamps)
+        for lp in lamps:
+            ceiling_lamp(img, lp)
+    finally:
+        RW = RW_CELL
+    return img
+
+
+def gen_wide_rooms():
+    st = rr.getstate()
+    for t in MERGE_TYPES:
+        for gaps in WIDE_GAPS:
+            add("room_%s_x%s" % (t, "_".join(str(g) for g in gaps)), wide_room(t, gaps))
+    rr.setstate(st)

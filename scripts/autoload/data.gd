@@ -138,6 +138,13 @@ const ROOMS := {
 			{"id": "patch_kit", "th": "ทำแผ่นปะตัวถัง", "en": "HULL PATCH KIT", "cost": {"scrap": 25}, "time": 60.0, "out": {"_hull": 35}},
 		],
 	},
+	## v4.4: the 2nd / 3rd cell of a large room (the room's data lives on its left-most cell, see Game.room_anchor)
+	"annex": {
+		"th": "ส่วนขยายห้อง", "en": "ANNEX", "cost": 0, "unlock": 99, "stat": "",
+		"produce": {}, "power": 0.0,
+		"effect_th": "ส่วนหนึ่งของห้องขนาดใหญ่", "effect_en": "PART OF A LARGE ROOM",
+		"recipes": [],
+	},
 	"engine": {
 		"th": "ห้องเครื่องยนต์", "en": "ENGINE / GENERATOR", "cost": 0, "unlock": 99, "stat": "str",
 		"produce": {"power": 5.0}, "power": 0.0,
@@ -156,6 +163,20 @@ const BUILD_SEC_PER_SCRAP := 0.35
 const UPGRADE_SEC := [0, 0, 150.0, 300.0]     # work seconds to reach level index
 const BUILD_IDLE_SPEED := 0.5
 const RUSH_SEC_PER_COMPONENT := 15.0          # 1 component skips this many work seconds
+## v4.4 large rooms: two or three rooms of the same type and level side by side on one floor (same unit) can be
+## knocked through into one big room (Fallout-Shelter style). The left-most cell keeps the room, the others turn
+## into "annex" cells. A span-n room takes n x ROOM_WORKERS crew and works like n rooms x SPAN_EFFICIENCY[n]
+## (shared machines, no walls in the way); it only gets the bonus once the knock-through is finished.
+const MERGEABLE := ["quarters", "kitchen", "water", "hydroponics", "medical", "refinery", "workshop", "armory", "science", "radio"]
+const MAX_SPAN := 3
+const SPAN_EFFICIENCY := [1.0, 1.0, 1.10, 1.25]
+const MERGE_SCRAP_MULT := 0.6        # x room cost x level x (span - 1)
+const MERGE_COMPONENTS := 6          # x (span - 1)
+const MERGE_BASE_SEC := 45.0
+const MERGE_SEC_PER_LEVEL := 35.0    # x level x (span - 1)
+const SPAN_UPGRADE_DISCOUNT := 0.8   # a large room upgrades for span x 80% of the single-room price
+const SPAN_UPGRADE_TIME := 0.5       # +50% upgrade work per extra cell
+const SPAN_POWER_MULT := 0.9         # power use per cell of a large room
 
 # ------------------------------------------------------------------ ITEMS
 const ITEMS := {
