@@ -604,6 +604,7 @@ func _run() -> void:
 	main.hud.panels.map.close()
 	await wait(0.4)
 	await _settings_test()
+	_event_variety_test()
 	print("[autotest] DONE")
 	get_tree().quit()
 
@@ -1053,3 +1054,75 @@ func _encounter_test() -> void:
 	var r4 := await _enc_finish()
 	_check("encounter: scheduled-but-unreached is dropped", not r4.has("enc") and not Expedition.active())
 
+
+## random road events: shuffle bag per biome, no back-to-back repeats, survives a save round-trip
+func _event_variety_test() -> void:
+	var keep := {}
+	for k in ["biome", "ev_bag", "ev_bag_biome", "ev_recent"]:
+		if Game.s.has(k):
+			keep[k] = Game.s[k]
+	Game.s.biome = 0
+	for k in ["ev_bag", "ev_bag_biome", "ev_recent"]:
+		Game.s.erase(k)
+	var pool: Array = Data.biome(0).events
+	var first: Array = []
+	for i in pool.size():
+		first.append(Game.next_event_id())
+	var all_once := true
+	for e in pool:
+		if first.count(e) != 1:
+			all_once = false
+	_check("events: one bag shows every biome event once", all_once and first.size() == pool.size())
+	var seq: Array = first.duplicate()
+	for i in 300:
+		if i == 137:
+			# mid-bag save/load: the bag and history come back from JSON and keep going
+			var back: Dictionary = JSON.parse_string(JSON.stringify(Game.s))
+			for k in ["ev_bag", "ev_bag_biome", "ev_recent"]:
+				Game.s[k] = back[k]
+		seq.append(Game.next_event_id())
+	var gap_ok := true
+	var min_gap := 999
+	for i in seq.size():
+		for j in range(maxi(0, i - Game.EVENT_NO_REPEAT), i):
+			if seq[j] == seq[i]:
+				gap_ok = false
+		var prev := -1
+		for j in range(i - 1, -1, -1):
+			if seq[j] == seq[i]:
+				prev = j
+				break
+		if prev >= 0:
+			min_gap = mini(min_gap, i - prev)
+	_check("events: no repeat within %d draws (min gap %d)" % [Game.EVENT_NO_REPEAT, min_gap], gap_ok)
+	var counts := {}
+	for e in seq:
+		counts[e] = int(counts.get(e, 0)) + 1
+	var lo := 9999
+	var hi := 0
+	for e in pool:
+		lo = mini(lo, int(counts.get(e, 0)))
+		hi = maxi(hi, int(counts.get(e, 0)))
+	_check("events: even spread over %d draws (min %d / max %d)" % [seq.size(), lo, hi], hi - lo <= 2)
+	var rounds_differ := false
+	for r in range(1, seq.size() / pool.size()):
+		if seq.slice(r * pool.size(), (r + 1) * pool.size()) != first:
+			rounds_differ = true
+	_check("events: order changes between rounds (not a fixed pattern)", rounds_differ)
+	var recent: Array = Game.s.ev_recent.duplicate()
+	Game.s.biome = 1
+	var next := Game.next_event_id()
+	_check("events: biome change keeps the no-repeat window", next != "" and not recent.has(next) and Data.biome(1).events.has(next))
+	for k in ["ev_bag", "ev_bag_biome", "ev_recent"]:
+		Game.s.erase(k)
+	Game.s.merge(keep, true)
+	var d: Dictionary = Game.s.dwellers[0]
+	var lrng := RandomNumberGenerator.new()
+	var lines: Array = []
+	for i in 6:
+		lines.append(Lore.pick_line(d, lrng))
+	var dup := false
+	for i in range(1, lines.size()):
+		if lines[i] == lines[i - 1]:
+			dup = true
+	_check("chatter: no line said twice in a row", not dup and lines[0] != "")
