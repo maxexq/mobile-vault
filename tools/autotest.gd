@@ -604,12 +604,67 @@ func _run() -> void:
 	await shot("wide_map")
 	main.hud.panels.map.close()
 	await wait(0.4)
+	await _event_layout_test()
 	await _inspection_test()
 	await _settings_test()
 	_event_variety_test()
 	await _cloud_test()
 	print("[autotest] DONE")
 	get_tree().quit()
+
+
+## event windows: Thai text + choice buttons stay inside the frame (wide + portrait), outcome flair
+func _event_layout_test() -> void:
+	var pop: EventPopup = main.hud.event_popup
+	for win in [Vector2i(1280, 640), Vector2i(720, 1280)]:
+		get_window().size = win
+		await wait(0.8)
+		var tag := "wide" if win.x > win.y else "tall"
+		for ev in ["radstorm", "cultists", "survivor"]:
+			Game.active_event = ""
+			Game.trigger_event(ev)
+			await wait(0.7)
+			var r := pop.box.get_global_rect().grow(1.0)
+			var bad := _outside(pop.body, r)
+			_check("event layout %s/%s: all text inside the window %s" % [tag, ev, bad], bad.is_empty())
+			var btns := _find_type(pop.body, "ChoiceButton")
+			_check("event layout %s/%s: one tall-enough button per choice" % [tag, ev], btns.size() == (Data.EVENTS[ev].choices as Array).size() and btns.all(func(b): return b.size.y >= b.get_combined_minimum_size().y - 0.5))
+			await shot("event_layout_%s_%s" % [tag, ev])
+		Game.s.res.food = maxf(float(Game.s.res.food), 50.0)
+		Game.s.res.water = maxf(float(Game.s.res.water), 50.0)
+		pop._resolve(1)   # survivor: give supplies -> food/water rows + happier crew
+		await wait(1.4)
+		var labels := _find_type(pop.body, "Label").map(func(l): return str(l.text))
+		_check("event outcome %s: stamp shown" % tag, labels.has("SURVIVED"))
+		_check("event outcome %s: food loss row counts to -15" % tag, labels.has("-15"))
+		_check("event outcome %s: crew happiness chips" % tag, labels.any(func(t): return t.ends_with(":)")))
+		_check("event outcome %s: inside window" % tag, _outside(pop.body, pop.box.get_global_rect().grow(1.0)).is_empty())
+		await shot("event_outcome_%s" % tag)
+		pop.close()
+		await wait(0.3)
+	get_window().size = Vector2i(1280, 640)
+	await wait(0.6)
+
+
+## names of visible controls under n that poke out of rect r horizontally
+func _outside(n: Node, r: Rect2) -> Array:
+	var out := []
+	for c in n.get_children():
+		if c is Control and c.is_visible_in_tree():
+			var g: Rect2 = c.get_global_rect()
+			if (c is Label or c is ChoiceButton) and (g.position.x < r.position.x or g.end.x > r.end.x):
+				out.append("%s(%s)" % [c.get_class(), str(c.text).left(12) if c is Label else "btn"])
+			out.append_array(_outside(c, r))
+	return out
+
+
+func _find_type(n: Node, cls: String) -> Array:
+	var out := []
+	for c in n.get_children():
+		if c.get_class() == cls or (c.get_script() and c.get_script().get_global_name() == cls):
+			out.append(c)
+		out.append_array(_find_type(c, cls))
+	return out
 
 
 ## v4.3 construction: build time, builder crew + traits, upgrades, rush, offline, save round-trip
