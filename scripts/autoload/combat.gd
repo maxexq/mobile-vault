@@ -1,6 +1,7 @@
 extends Node
-## Idle auto-battle (Taskbar-Hero style) fought from the moving Mobile Vault.
-## Enemies chase the van from behind (the right side of the screen) in waves.
+## Idle auto-battle fought from the moving Mobile Vault.
+## Enemies chase the van from behind (the right side of the screen) in waves. Threat (threat.gd) decides
+## when a raid of waves comes; Settings "pacing" = classic keeps the old back-to-back waves.
 ## Squad (3 roles) + vault turret/spikes fight automatically; kills give XP, scrap and gear drops.
 ## Every 10th wave is a boss; each biome ends with a checkpoint WARLORD that must be beaten to move on.
 ## Pure simulation: the world view (combat_view.gd) only listens to the signals below.
@@ -489,8 +490,7 @@ func _start_wave() -> void:
 	wave_is_warlord = false
 	wave_is_boss = false
 	var lvl := enemy_level()
-	var want_warlord: bool = cs().get("warlord_next", false) or (Game.at_checkpoint() and int(Game.s.vault_level) >= _next_req() and not boss_beaten(int(Game.s.biome)) and warlord_cd <= 0.0)
-	if want_warlord:
+	if warlord_due():
 		cs().warlord_next = false
 		wave_is_warlord = true
 		lvl = warlord_level()
@@ -512,6 +512,11 @@ func _start_wave() -> void:
 	wave_active = true
 	wave_t = 0.0
 	wave_changed.emit()
+
+
+## the checkpoint warlord shows up on the next wave (challenged, or the vault is ready to move on)
+func warlord_due() -> bool:
+	return cs().get("warlord_next", false) or (Game.at_checkpoint() and int(Game.s.vault_level) >= _next_req() and not boss_beaten(int(Game.s.biome)) and warlord_cd <= 0.0)
 
 
 ## every boss wave brings a different boss: biome champion + the roaming mutants unlocked by distance
@@ -615,10 +620,14 @@ func tick(dt: float) -> void:
 	warlord_cd = maxf(0.0, warlord_cd - dt)
 	if heroes.is_empty() or heroes.size() != ROLES.size():
 		rebuild_heroes()
-	# --- wave flow
+	# --- wave flow: classic = back-to-back waves, otherwise the threat director decides
+	var raid_wave := Threat.tick(dt)
 	if not wave_active:
-		gap_t -= dt
-		if gap_t <= 0.0:
+		if Threat.classic():
+			gap_t -= dt
+			if gap_t <= 0.0:
+				_start_wave()
+		elif raid_wave:
 			_start_wave()
 	for q in spawn_queue.duplicate():
 		q.t = float(q.t) - dt
@@ -1000,7 +1009,7 @@ func _on_kill(e: Dictionary) -> void:
 	var vs := van_stats()
 	bonus_scrap += float(vs.scrap)
 	luck += float(vs.loot)
-	var mult := 12.0 if e.boss else (3.0 if e.elite else 1.0)
+	var mult := (12.0 if e.boss else (3.0 if e.elite else 1.0)) * Threat.reward_mult()
 	var xp := (2.0 + L * 0.25) * mult * (1.0 + bonus_xp / 100.0)
 	var scrap := (0.3 + L * 0.12) * mult * (1.0 + bonus_scrap / 100.0)
 	for h in heroes:
@@ -1012,6 +1021,7 @@ func _on_kill(e: Dictionary) -> void:
 	if not rd.is_empty() and sub.is_empty():
 		Game.give_xp(rd, xp * DECK_RESERVE_XP, Game._best_stat(rd))
 	Game._add_res("scrap", scrap)
+	Threat.on_kill(scrap)
 	# backpacks: chance to scavenge food / water from every kill
 	if supply > 0.0 and rng.randf() < minf(0.85, supply / 100.0 * 0.5 + (0.5 if e.boss else 0.0)):
 		var kind := "food" if rng.randf() < 0.5 else "water"
@@ -1035,7 +1045,7 @@ func _on_kill(e: Dictionary) -> void:
 		drops = 2
 		min_rar = 2
 	else:
-		var chance := (0.30 if e.elite else 0.065) * (1.0 + luck / 100.0)
+		var chance := (0.30 if e.elite else 0.065) * (1.0 + luck / 100.0) * Threat.reward_mult()
 		if rng.randf() < chance:
 			drops = 1
 			min_rar = 1 if e.elite else 0
@@ -1067,6 +1077,7 @@ func _on_wave_cleared() -> void:
 	if not wave_is_warlord and bool(cs().push):
 		cs().wave = w + 1
 		cs().best = maxi(int(cs().get("best", 1)), w + 1)
+	Threat.on_wave_cleared()
 	_end_subs()
 	# survivors patch up, the fallen get back on their feet
 	for h in heroes:
@@ -1091,6 +1102,7 @@ func _on_wipe(timeout: bool = false) -> void:
 		if bool(cs().push):
 			cs().wave = maxi(1, wave() - 3)
 	_clear_enemies()
+	Threat.on_wipe()
 	_end_subs()
 	gap_t = 6.0
 	for h in heroes:
@@ -1101,13 +1113,15 @@ func _on_wipe(timeout: bool = false) -> void:
 	wave_changed.emit()
 
 
-## idle rewards while the game was closed: XP + scrap only (no gear), like TBH
+## idle rewards while the game was closed: XP + scrap only (no gear), like TBH.
+## Threat pacing pays the expected raids instead (Threat.offline_kpm)
 func offline_rewards(sec: float) -> Dictionary:
 	if Game.s.is_empty() or not _has_squad():
 		return {}
 	var kpm := minf(kills_per_min(), 30.0)
 	if kpm <= 0.0:
 		kpm = 4.0
+	kpm = Threat.offline_kpm(kpm)
 	var kills := int(kpm * sec / 60.0 * 0.5)
 	if kills <= 0:
 		return {}

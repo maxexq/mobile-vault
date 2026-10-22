@@ -453,6 +453,16 @@ func wave_set(w: int) -> void:
 	act("wave %d" % w)
 
 
+func force_raid() -> void:
+	Threat.force_warning()
+	act("force raid")
+
+
+func threat_set(v: float) -> void:
+	Game.s.combat.threat = v
+	act("threat %d" % int(v))
+
+
 func spawn_boss(id: String) -> void:
 	Combat.debug_spawn([{"t": 0.3, "boss": "warlord" if id == "warlord" else "boss", "boss_id": id, "lvl": Combat.warlord_level() if id == "warlord" else Combat.enemy_level()}], true)
 	act("spawn boss " + id)

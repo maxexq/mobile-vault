@@ -57,6 +57,7 @@ func _run() -> void:
 	await _tutorial_test()
 	await shot("main_industrial_rain")
 	Combat.reset_wave(6)
+	Threat.force_raid()
 	await wait(6.0)
 	await shot("combat_wave")
 	await wait(1.2)
@@ -251,6 +252,7 @@ func _run() -> void:
 	# the explorer is back with the new assault rifle: put them on the gun so ranged / flying enemies die too
 	Game.set_squad(0, int(d.id))
 	Combat.rebuild_heroes()
+	Threat.force_raid(3)
 	for i in 600:
 		Combat.tick(0.1)
 	_check("combat kills enemies", int(Game.s.combat.kills) > 0)
@@ -369,6 +371,7 @@ func _run() -> void:
 	# boss fight: big HP bar + wide auto zoom
 	_no_events()
 	Combat.reset_wave(20)
+	Threat.force_raid(1)
 	await wait(5.0)
 	await shot("boss_fight_bar")
 	await wait(4.0)
@@ -614,6 +617,7 @@ func _run() -> void:
 	await wait(0.4)
 	await _event_layout_test()
 	await _inspection_test()
+	await _threat_test()
 	await _settings_test()
 	_event_variety_test()
 	await _cloud_test()
@@ -1565,6 +1569,129 @@ func _loot_tabs_test() -> void:
 	_check("loot tabs: items amounts update in place", is_instance_valid(lbl) and lbl == inv._amounts.get("scrap") and lbl.text.begins_with("123"))
 	inv.tab = "gear"
 	inv.refresh()
+
+
+## v4.5 threat pacing: what draws enemies in, the quiet -> warning -> raid -> salvage cycle,
+## rewards per hour vs the classic back-to-back waves, offline pay, classic toggle
+func _threat_test() -> void:
+	_no_events()
+	Settings.set_value("pacing", "threat")
+	Combat.reset_wave(1)
+	Threat.reset()
+	Game.s.combat.threat = 0.0
+	Game.s.weather = "clear"
+	Game.s.tod = 0.5
+	var day := Threat.rate_pm()
+	_check("threat: builds up while travelling", day > 0.0)
+	Game.s.tod = 0.0
+	var night := Threat.rate_pm()
+	_check("threat: night draws more enemies than day", night > day)
+	Game.s.weather = "storm"
+	_check("threat: a storm masks noise and light", Threat.rate_pm() < night)
+	Game.s.weather = "clear"
+	Game.s.tod = 0.5
+	_check("threat: no raid roll below the floor", Threat.raid_chance() == 0.0)
+	Game.s.combat.threat = 100.0
+	_check("threat: full meter always raids", Threat.raid_chance() >= 1.0)
+	Game.s.combat.threat = 0.0
+	for i in 300:
+		Combat.tick(0.1)
+	_check("threat: quiet road has no enemies", not Combat.wave_active and Combat.enemies.is_empty() and Threat.phase == "quiet")
+	main.hud._refresh_combat()
+	_check("threat: HUD shows the quiet phase + meter", main.hud._wave_lbl.text == "QUIET" and main.hud._threat_bar.visible)
+	await shot("threat_quiet")
+	Threat.force_warning()
+	_check("threat: warning phase before the raid", Threat.phase == "warning")
+	main.hud._refresh_combat()
+	await shot("threat_warning")
+	var seen_salvage := false
+	for i in 1800:
+		Combat.tick(0.1)
+		if Threat.phase == "salvage":
+			seen_salvage = true
+			break
+	_check("threat: raid ends in salvage", seen_salvage)
+	_check("threat: threat drops after the raid", Threat.threat() < 60.0)
+	# ---- rewards per hour: classic vs threat, same squad / wave, farm mode, view detached
+	var detached := []
+	for sig in Combat.get_signal_list():
+		for c in Combat.get_signal_connection_list(sig.name):
+			if c.callable.get_object() is Node and (c.callable.get_object() as Node).is_inside_tree():
+				detached.append([sig.name, c.callable, c.flags])
+				Combat.disconnect(sig.name, c.callable)
+	var push_was: bool = Game.s.combat.push
+	Game.s.combat.push = false
+	var res := {}
+	for mode in ["classic", "threat"]:
+		Settings.set_value("pacing", mode)
+		Combat.reset_wave(8)
+		Threat.reset()
+		Game.s.combat.threat = 20.0
+		Game.s.combat.fight_share = 0.3
+		Combat.rebuild_heroes()
+		var scrap0 := float(Game.s.res.scrap)
+		Game.s.res.scrap = 0.0
+		var k0 := int(Game.s.combat.kills)
+		for k in Threat.stats:
+			Threat.stats[k] = 0.0
+		var fight := 0
+		var raids := 0
+		var was := false
+		var steps := 36000   # 60 sim minutes
+		for i in steps:
+			Combat.tick(0.1)
+			Game.s.res.scrap = minf(float(Game.s.res.scrap), 1.0e9)
+			if Combat.wave_active:
+				fight += 1
+			if Threat.phase == "raid" and not was:
+				raids += 1
+			was = Threat.phase == "raid"
+		res[mode] = {"scrap": float(Game.s.res.scrap), "kills": int(Game.s.combat.kills) - k0, "fight": float(fight) / steps, "raids": raids,
+			"share": snappedf(Threat.fight_share(), 0.01), "mult": snappedf(Threat.reward_mult(), 0.01), "parts": Threat.stats.duplicate()}
+		Game.s.res.scrap = scrap0
+		print("[autotest] pacing %s: %s" % [mode, res[mode]])
+	Game.s.combat.push = push_was
+	for d in detached:
+		Combat.connect(d[0], d[1], d[2])
+	# combat scrap only: gear auto-salvage depends on how full the stash already was
+	var earned := func(r: Dictionary) -> float:
+		return float(r.parts.kill_scrap) + float(r.parts.salvage) + float(r.parts.scavenge)
+	var ratio: float = earned.call(res.threat) / maxf(1.0, earned.call(res.classic))
+	print("[autotest] threat/classic combat scrap per hour = %.2f" % ratio)
+	_check("threat: fighting is a minority of the time (<60%)", float(res.threat.fight) < 0.6)
+	_check("threat: classic fights almost all the time (>80%)", float(res.classic.fight) > 0.8)
+	_check("threat: several raids per hour", int(res.threat.raids) >= 10)
+	_check("threat: scrap per hour within 80-120% of classic", ratio >= 0.8 and ratio <= 1.2)
+	# ---- offline pay follows the measured raids
+	Settings.set_value("pacing", "threat")
+	Game.s.combat.raid_kpm = 20.0
+	Game.s.combat.fight_share = 0.25
+	_check("threat: raid bonus = target / fight share", absf(Threat.reward_mult() - Threat.TARGET_PAY / 0.25) < 0.01)
+	_check("threat: offline kpm = raid kpm x share x bonus", absf(Threat.offline_kpm(25.0) - 20.0 * Threat.TARGET_PAY) < 0.01)
+	Game.s.combat.fight_share = 0.02
+	_check("threat: raid bonus is capped", Threat.reward_mult() <= Threat.MULT_MAX)
+	Game.s.combat.fight_share = 0.3
+	Settings.set_value("pacing", "classic")
+	_check("threat: classic offline unchanged", Threat.offline_kpm(25.0) == 25.0 and Threat.reward_mult() == 1.0)
+	# ---- classic toggle: waves come back to back again
+	Combat.reset_wave(1)
+	for i in 40:
+		Combat.tick(0.1)
+	_check("threat: classic mode starts waves on its own", Combat.wave_active)
+	main.hud._refresh_combat()
+	_check("threat: meter hidden in classic", not main.hud._threat_bar.visible)
+	Settings.set_value("pacing", "threat")
+	Combat.reset_wave(1)
+	Threat.reset()
+	Dev.threat_set(90.0)
+	_check("god: set threat", absf(Threat.threat() - 90.0) < 0.01)
+	Dev.force_raid()
+	_check("god: force a raid (warning first)", Threat.phase == "warning")
+	Combat.reset_wave(1)
+	Threat.reset()
+	Game.s.combat.threat = 0.0
+	_check("threat: save keeps the meter", Game.s.combat.has("threat") and Game.s.combat.has("raid_kpm") and Game.s.combat.has("fight_share"))
+	print("[autotest] threat checks done: %d failed total" % _fails)
 
 
 func _rate(slot: int, k: String) -> float:

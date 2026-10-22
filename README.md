@@ -76,7 +76,8 @@ All tuning numbers live in `scripts/autoload/data.gd`.
 | Loot | 10 slots: **weapon / armor / helmet / boots / gadget / backpack** per dweller, turret / plating / engine / spikes on the vault. Boots give **dodge**, a better **backpack** = more drop chance + **supply** (kills drop food/water, expeditions bring more supplies and gear). 6 rarities (Common → Mythic), item level = enemy level, 0–4 random affixes, legendary names. Bosses always drop Rare+. |
 | Forge | Enhance (+N up to the rarity cap, costs components + scrap), synthesize 3 → 1 of the next rarity, salvage (single / bulk / auto on drop), lock items. |
 | Scaling | Enemies grow ×1.17 HP / ×1.145 dmg per level, gear ×1.12 per item level, so pushing hits a wall; rarity, enhancement, levels and skills move it. Balance sim (`-- --balance --minutes=480`) reaches desert ≈40 min, forest ≈2 h, bayou ≈3.7 h, tundra ≈5.6 h. |
-| Offline | Like TBH: offline time gives XP + scrap only (no gear). |
+| Offline | Like TBH: offline time gives XP + scrap only (no gear). With threat pacing it pays the measured raid kills/min × 0.6 × 1.6. |
+| Threat pacing (v4.5, default) | Enemies come in **raids**, not non-stop. A **threat** meter (0–100) fills from the biome's danger, engine noise (speed), being parked (scent), night, noisy rooms (workshop, refinery, engine, armory, radio) and lit rooms (hydroponics, science, medical, quarters; ×2 at night), full trailers and fresh blood; storm/fog ×0.6, sandstorm ×0.5, snow ×0.8. Cycle: **quiet** (no enemies, roadside scavenging every 30 s) → **warning** (8 s of signs) → **raid** of 2–4 waves (more at high threat) → **salvage** (60 % of the raid's scrap + 30 % chance of an extra item) → threat ×0.35. Raid kills pay ×1.6 XP / scrap / drop chance so the hourly haul stays near the old pacing (autotest checks 80–120 %). The checkpoint warlord still comes at once. Settings → การต่อสู้ → จังหวะศัตรู: **คลาสสิก** brings back the back-to-back waves. HUD chip shows QUIET / INCOMING! / SALVAGE + the meter; tap-hold for the breakdown. |
 
 Files: `scripts/autoload/combat.gd` (simulation), `scripts/autoload/loot.gd` (items), `scripts/world/combat_view.gd` (visuals), `scripts/ui/squad_panel.gd`, `scripts/ui/loot_panel.gd`.
 
@@ -207,7 +208,7 @@ Local-first: the game still reads and writes localStorage / `user://`; `scripts/
 | ทรัพยากร | fill / empty everything, set each resource and every usable/material item, all items +10/+100 · forge: test kit (3 items of every rarity + scrap/components), max +level on everything equipped, clear the stash · all blueprints, +100 research points |
 | รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, build every empty slot, max room levels · construction: finish now / +50 % / instant-build switch · all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
 | ลูกเรือ | recruit, heal, happiness 100/20/0 for everyone, pets · spawn a builder (hard hat) plain or with engineer / quick hands / architect / clumsy · strangers at the door: every kind (human / infected / mimic / thief / raider mole) × rare / very rare, clear the queue · per survivor: traits shown, builder on/off, reroll traits, +5 levels, force strike, desert now, kill |
-| ต่อสู้ | set wave, kill all enemies, heal squad · defence squad: auto-fill with the strongest idle crew, auto-equip best gear, clear · spawn the biome warlord or any mutant boss, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
+| ต่อสู้ | set wave, kill all enemies, heal squad · force a raid (warning first), set threat 0 / 90 · defence squad: auto-fill with the strongest idle crew, auto-equip best gear, clear · spawn the biome warlord or any mutant boss, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
 | โลก | jump to any biome, go to checkpoint, mark warlord beaten, lap +1 · road events: trigger any, draw the next card from the shuffle bag, reshuffle (bag size + last 3 shown) · expedition: force any special encounter (sends a free scavenging team when none is out), clear the no-repeat history, arrive at any site, finish the trip · open the next-generation screen, wreck the vehicle in 3 s |
 | ระบบ | version rows (game / build / engine) + copy · tutorial: replay from the start, skip, jump to any step · cloud save: status/rev, sync now, force upload, forget the link, resolve a conflict · settings: save size, reset to defaults |
 | LOG/เซฟ | trace viewer with category filter, download JSON / copy / clear; export the save as JSON (copied to the clipboard) and load a pasted save — testers can hand each other exact situations |
@@ -244,6 +245,7 @@ scripts/
   autoload/trace.gd           local event trace, state sampler, error capture, export
   ui/god_panel.gd             GOD MODE console
   ui/expedition_feed.gd       live helmet-cam view of the scavenging squad
+  autoload/threat.gd          threat meter + raid director (quiet / warning / raid / salvage), classic toggle
   autoload/encounter.gd       rare special encounters during an expedition (choices, risks, refugees)
   ui/encounter_popup.gd       encounter decision pop-up
   ui/boss_bar.gd              boss HP bar

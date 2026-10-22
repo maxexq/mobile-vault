@@ -220,6 +220,8 @@ func _tab_fight() -> void:
 	_row([_b("1", func(): Dev.wave_set(1)), _b("-10", func(): Dev.wave_set(w - 10)), _b("-1", func(): Dev.wave_set(w - 1)),
 		_b("+1", func(): Dev.wave_set(w + 1)), _b("+10", func(): Dev.wave_set(w + 10))], "เวฟ %d" % w)
 	_row([_b("ฆ่าศัตรูทั้งหมด", func(): Dev.kill_enemies(), "red", true), _b("รักษาทีมรบ", func(): Dev.heal_all())])
+	_row([_b("ให้ถูกบุกเลย", func(): Dev.force_raid(), "red"), _b("ภัย 0", func(): Dev.threat_set(0.0)), _b("ภัย 90", func(): Dev.threat_set(90.0))],
+		"ภัยคุกคาม %d%% · %s" % [int(Threat.threat()), "คลาสสิก" if Threat.classic() else Threat.PHASE_TH.get(Threat.phase, "")])
 	var names := []
 	for i in (Game.s.squad as Array).size():
 		var sd := Game.dweller_by_id(int(Game.s.squad[i]))

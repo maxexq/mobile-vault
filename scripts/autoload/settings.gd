@@ -24,6 +24,7 @@ const DEFAULTS := {
 	"shake": true,
 	"gore": true,
 	"vibrate": true,
+	"pacing": "threat",      # threat (enemies come in raids drawn by noise / light) | classic (back-to-back waves)
 }
 
 var v: Dictionary = DEFAULTS.duplicate()
@@ -75,6 +76,8 @@ func _merge(d: Dictionary) -> void:
 		v.ui_scale = "auto"
 	if not v.zoom in ["auto", "wide", "normal"]:
 		v.zoom = "auto"
+	if not v.pacing in ["threat", "classic"]:
+		v.pacing = "threat"
 
 
 ## settings that came with a cloud save from another device

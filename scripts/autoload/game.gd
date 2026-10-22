@@ -72,7 +72,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 		"saved_at": Time.get_unix_time_from_system(),
 		"gear": [], "van_gear": {"turret": null, "plating": null, "engine": null, "spikes": null},
 		"squad": [-1, -1, -1], "deck": -1, "next_uid": 1,
-		"combat": {"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1},
+		"combat": {"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1, "threat": 0.0, "raid_kpm": 0.0, "fight_share": 0.3},
 		"mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true,
 	}
 	if not meta.is_empty():
@@ -142,7 +142,7 @@ func _migrate() -> void:
 		s.squad[i] = int(s.squad[i])    # JSON round-trip turns the ids into floats
 	_free_away_squad()
 	s.merge({"combat": {}}, false)
-	(s.combat as Dictionary).merge({"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1}, false)
+	(s.combat as Dictionary).merge({"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1, "threat": 0.0, "raid_kpm": 0.0, "fight_share": 0.3}, false)
 	for d in s.dwellers:
 		d.merge({"rads": 0.0, "away_until": 0.0, "xp": 0.0, "happy": 70.0}, false)
 		if not d.has("gear"):
