@@ -42,40 +42,17 @@ func refresh() -> void:
 		return
 	var ev := Encounter.def(Encounter.current_id())
 	set_title("RADIO: %s / %s" % [ev.en, ev.th])
-	var wide := get_viewport_rect().size.x >= 520.0
-	var h := BoxContainer.new()
-	h.vertical = not wide
-	h.add_theme_constant_override("separation", 6)
-	h.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_child(h)
-	var img_frame := UIKit.panel(Color("000000"), UIKit.C_GOLD)
-	img_frame.get_theme_stylebox("panel").set_content_margin_all(1)
-	img_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	img_frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	var avail := get_viewport_rect().size.x - 30.0
-	var k := 2 if avail >= 320.0 else 1
-	var img := TextureRect.new()
-	img.texture = load("res://assets/events/%s.png" % ev.image)
-	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	img.stretch_mode = TextureRect.STRETCH_SCALE
-	img.custom_minimum_size = Vector2(160 * k, 80 * k)
-	img.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	img_frame.add_child(img)
-	h.add_child(img_frame)
-	var sc := UIKit.scroll()
-	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	h.add_child(sc)
-	var v := UIKit.vbox(4)
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sc.add_child(v)
+	var v := media_layout(load("res://assets/events/%s.png" % ev.image), UIKit.C_GOLD)
 	var site_th: String = Expedition.site_def(str(Expedition.state().site)).th
 	v.add_child(UIKit.label("จุดพิเศษใน %s" % site_th, UIKit.FS_SMALL, UIKit.C_GOLD))
 	v.add_child(UIKit.wrap_label(ev.desc, UIKit.FS, UIKit.C_TEXT))
-	var team := UIKit.hbox(3)
+	var team := UIKit.flow(3)
 	for d in Expedition.team():
-		team.add_child(UIKit.portrait(d.variant))
+		var who := UIKit.hbox(2)
+		team.add_child(who)
+		who.add_child(UIKit.portrait(d.variant))
 		var hp_col := UIKit.C_GREEN if float(d.hp) > float(d.max_hp) * 0.4 else UIKit.C_RED
-		team.add_child(UIKit.label("%s %d%%" % [d.name, int(100.0 * float(d.hp) / float(d.max_hp))], UIKit.FS_SMALL, hp_col))
+		who.add_child(UIKit.label("%s %d%%" % [d.name, int(100.0 * float(d.hp) / float(d.max_hp))], UIKit.FS_SMALL, hp_col))
 	v.add_child(team)
 	var choices: Array = ev.choices
 	for i in choices.size():
@@ -87,28 +64,10 @@ func refresh() -> void:
 	v.add_child(later)
 
 
-func _choice_button(ch: Dictionary, i: int) -> Button:
-	var b := Button.new()
-	b.custom_minimum_size = Vector2(0, 36)
-	b.focus_mode = Control.FOCUS_NONE
-	UIKit.style_button(b, ch.get("color", "green"))
-	var vv := UIKit.vbox(0)
-	vv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vv.alignment = BoxContainer.ALIGNMENT_CENTER
-	vv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := UIKit.label("> %s  %s" % [ch.th, ch.en], UIKit.FS, UIKit.C_WHITE)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vv.add_child(l)
-	var sub := Encounter.choice_sub(ch)
-	if sub != "":
-		var s := UIKit.label(sub, UIKit.FS_SMALL, Color(UIKit.C_WHITE, 0.75))
-		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		vv.add_child(s)
-	b.add_child(vv)
+func _choice_button(ch: Dictionary, i: int) -> ChoiceButton:
+	var b := ChoiceButton.new(ch.th, ch.en, Encounter.choice_sub(ch), ch.get("color", "green"))
 	b.disabled = Encounter.blocked(ch) != ""
-	b.pressed.connect(func():
-		UIKit.pop(b)
-		choose(i))
+	b.pressed.connect(func(): choose(i))
 	return b
 
 

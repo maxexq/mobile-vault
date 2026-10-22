@@ -18,6 +18,7 @@ var frame_color := UIKit.C_LINE
 var dim_alpha := 0.6
 var is_open := false
 var margin := 6
+var media: PanelContainer   # illustration frame built by the last media_layout()
 
 
 func _ready() -> void:
@@ -147,6 +148,53 @@ func make_list(sep: int = 4) -> VBoxContainer:
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sc.add_child(l)
 	return l
+
+
+## illustration (160x80 pixel art) + scrolling text column for event-style terminals.
+## Landscape screens get a wider window with the art at x2 beside the text; otherwise the art sits on top
+## of the text (x2 when it fits) so the text column always spans the window and Thai lines can wrap.
+func media_layout(tex: Texture2D, line: Color) -> VBoxContainer:
+	var vp := get_viewport_rect().size
+	var side := vp.x > vp.y and vp.x >= 560.0
+	max_size.x = 640.0 if side else 420.0
+	_layout()
+	var inner := box.custom_minimum_size.x - 18.0
+	# keep at least ~220 px for the text column beside the art
+	var k := 2 if (inner - 330.0 >= 220.0 if side else inner >= 322.0) else 1
+	var sc := UIKit.scroll()
+	var v := UIKit.vbox(4)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(v)
+	var frame := media_frame(tex, line, k)
+	media = frame
+	if side:
+		var h := UIKit.hbox(8)
+		h.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		h.add_child(frame)
+		h.add_child(sc)
+		body.add_child(h)
+	else:
+		frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		v.add_child(frame)
+		body.add_child(sc)
+	return v
+
+
+## 160x80 illustration in a thin frame at integer scale k
+static func media_frame(tex: Texture2D, line: Color, k: int) -> PanelContainer:
+	var frame := UIKit.panel(Color("000000"), line)
+	frame.get_theme_stylebox("panel").set_content_margin_all(1)
+	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var img := TextureRect.new()
+	img.texture = tex
+	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	img.stretch_mode = TextureRect.STRETCH_SCALE
+	img.custom_minimum_size = Vector2(160 * k, 80 * k)
+	img.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(img)
+	return frame
 
 
 ## virtual
