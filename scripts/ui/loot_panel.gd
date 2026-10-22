@@ -11,6 +11,9 @@ var pick_slot := ""               # set when opened from a gear slot
 var pick_did := -1                # dweller id for pick mode (-2 = vault)
 var _tabs: HBoxContainer
 var _list: VBoxContainer
+var _comp_label: Label
+var _amounts := {}                # res/item id -> amount Label on the items tab (updated in place)
+var _sig := ""                    # layout signature of the open tab, see _layout_sig()
 
 const FILTERS := [["all", "ALL"], ["weapon", "rifle"], ["armor", "armor"], ["helmet", "helmet"], ["boots", "boots"], ["backpack", "backpack"], ["gadget", "chip"], ["van", "engine"]]
 const AUTO_SALV := [[-1, "ปิด"], [0, "ทั่วไป"], [1, "ทั่วไป+ดี"]]
@@ -22,7 +25,49 @@ func _build() -> void:
 	body.add_child(_tabs)
 	_list = make_list(4)
 	Game.gear_changed.connect(func(): if is_open: refresh())
-	Game.resources_changed.connect(func(): if is_open and tab != "gear": refresh())
+	Game.resources_changed.connect(_on_resources_changed)
+
+
+## resources_changed fires every simulation frame. Rebuilding here would free the tab buttons
+## between touch-down and touch-up, so taps on the other tabs never registered. Only rebuild
+## when the layout changes; otherwise just retext the numbers.
+func _on_resources_changed() -> void:
+	if not is_open:
+		return
+	if tab != "gear" and _layout_sig() != _sig:
+		refresh()
+		return
+	if is_instance_valid(_comp_label):
+		_comp_label.text = str(int(Game.s.items.get("components", 0)))
+	for k in _amounts:
+		var l: Label = _amounts[k]
+		if is_instance_valid(l):
+			l.text = _amount_text(k)
+
+
+## What decides the tab's widgets (not just their numbers); a change here needs a rebuild.
+func _layout_sig() -> String:
+	match tab:
+		"items":
+			var ids: Array = []
+			for id in Game.s.items:
+				var it: Dictionary = Data.ITEMS.get(id, {})
+				if not it.is_empty() and not (it.kind in ["weapon", "armor"]):
+					ids.append(str(id))
+			ids.sort()
+			return "items:" + ",".join(ids) + ":%d" % box.size.x
+		"forge":
+			var bits := "forge:%d:" % int(Game.s.combat.get("auto_salvage", -1))
+			for r in range(Loot.RARITY.size() - 1):
+				bits += "1" if float(Game.s.res.scrap) >= 15 * (r + 1) else "0"
+			return bits
+	return tab
+
+
+func _amount_text(k: String) -> String:
+	if Game.s.res.has(k):
+		return "%d / %d" % [int(Game.s.res[k]), int(Game.cap(k))]
+	return "x%d" % int(Game.s.items.get(k, 0))
 
 
 func open_pick(slot: String, did: int) -> void:
@@ -58,6 +103,7 @@ func refresh() -> void:
 	for c in _list.get_children():
 		_list.remove_child(c)
 		c.queue_free()
+	_amounts = {}
 	for t in [["gear", "%d/%d" % [Loot.stash().size(), Loot.STASH_CAP], "chest"], ["items", "ไอเทม", "can"], ["forge", "หลอม", "cog"]]:
 		var b := UIKit.button(t[1], "yellow" if tab == t[0] else "gray", t[2])
 		var key: String = t[0]
@@ -73,6 +119,7 @@ func refresh() -> void:
 	var cl := UIKit.label(str(int(Game.s.items.get("components", 0))), UIKit.FP, UIKit.C_GOLD, true)
 	cl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	comp.add_child(cl)
+	_comp_label = cl
 	_tabs.add_child(comp)
 	match tab:
 		"gear":
@@ -86,6 +133,7 @@ func refresh() -> void:
 			_build_items()
 		"forge":
 			_build_forge()
+	_sig = _layout_sig()
 
 
 func _find(uid: int) -> Dictionary:
@@ -323,16 +371,16 @@ func _build_items() -> void:
 	grid.add_theme_constant_override("v_separation", 4)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for k in ["power", "water", "food", "scrap"]:
-		grid.add_child(_card(Data.item_icon(k), Data.item_name(k), "%d / %d" % [int(Game.s.res[k]), int(Game.cap(k))], "", ""))
+		grid.add_child(_card(Data.item_icon(k), Data.item_name(k), k, "", ""))
 	for id in Game.s.items:
 		var it: Dictionary = Data.ITEMS.get(id, {})
 		if it.is_empty() or it.kind in ["weapon", "armor"]:
 			continue
-		grid.add_child(_card(it.icon, it.th, "x%d" % Game.s.items[id], it.get("desc", ""), id if id == "dried_meat" else ""))
+		grid.add_child(_card(it.icon, it.th, str(id), it.get("desc", ""), id if id == "dried_meat" else ""))
 	_list.add_child(grid)
 
 
-func _card(icon: String, title: String, amount: String, desc: String, use_id: String) -> Control:
+func _card(icon: String, title: String, amount_key: String, desc: String, use_id: String) -> Control:
 	var p := UIKit.panel()
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var h := UIKit.hbox(4)
@@ -343,7 +391,9 @@ func _card(icon: String, title: String, amount: String, desc: String, use_id: St
 	var tl := UIKit.label(title, UIKit.FS_SMALL)
 	tl.clip_text = true
 	v.add_child(tl)
-	v.add_child(UIKit.label(amount, UIKit.FP, UIKit.C_GOLD, true))
+	var al := UIKit.label(_amount_text(amount_key), UIKit.FP, UIKit.C_GOLD, true)
+	_amounts[amount_key] = al
+	v.add_child(al)
 	h.add_child(v)
 	if use_id != "":
 		var b := UIKit.button("ใช้", "green")
