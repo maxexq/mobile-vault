@@ -481,6 +481,7 @@ func _clear_enemies() -> void:
 	enemies.clear()
 	spawn_queue.clear()
 	wave_active = false
+	_end_subs()     # the wave is gone (warlord challenge, debug spawns): the reserve climbs back up
 
 
 func _start_wave() -> void:

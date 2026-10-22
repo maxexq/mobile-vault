@@ -1865,6 +1865,12 @@ func _large_room_test() -> void:
 	print("[autotest] large rooms done: %d failed total" % _fails)
 
 
+## a wave that stays open for the whole check: one spawn queued far in the future, so neither the squad,
+## the turret nor threat pacing can clear it (keeps the tag-in checks deterministic)
+func _deck_hold_wave() -> void:
+	Combat.debug_spawn([{"t": 999.0, "mob": "rad_rat", "lvl": 1}], false)
+
+
 ## roof rest deck (ดาดฟ้า): reserve seat, rest on the cot, tag-in for a fallen defender, cover bonuses
 func _roof_deck_test() -> void:
 	_no_events()
@@ -1904,7 +1910,7 @@ func _roof_deck_test() -> void:
 	Combat._end_subs()
 	Combat.reset_wave(3)
 	Combat.rebuild_heroes()
-	Combat._start_wave()
+	_deck_hold_wave()
 	var orig := int(Combat.heroes[0].did) if not Combat.heroes[0].is_empty() else -1
 	_check("deck: gunner on duty", orig >= 0)
 	if orig < 0:
@@ -1922,7 +1928,7 @@ func _roof_deck_test() -> void:
 	Combat._on_wave_cleared()
 	_check("deck: wave over restores the line-up", Combat.sub.is_empty() and int(Combat.heroes[0].did) == orig and Combat.heroes[0].alive)
 	# --- a pending reserve keeps the fight going even when everyone is down
-	Combat._start_wave()
+	_deck_hold_wave()
 	for i in 3:
 		Combat.tick(Combat.STEP)
 	for h in Combat.heroes:
