@@ -174,12 +174,13 @@ Local-first: the game still reads and writes localStorage / `user://`; `scripts/
 **Tabs**
 | Tab | What you can do |
 |---|---|
-| ทั่วไป | switches: invincible (hull / crew / squad), one-hit kills, free build/upgrade/buy, resources always full, no random road events · game speed ×1/2/5/10/20 · fast-forward +10 min / +1 h / +4 h (offline simulation) · time of day · any weather · FPS/debug overlay |
-| ทรัพยากร | fill / empty everything, set each resource and item, all blueprints, +100 research points |
-| รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, build every empty slot, max room levels, all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
-| ลูกเรือ | recruit, heal, happiness 100/20/0 for everyone, pets, per survivor: +5 levels, force strike, desert now, kill |
-| ต่อสู้ | set wave, kill all enemies, heal squad, spawn the biome warlord or any of the 8 mutant bosses, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
-| โลก | jump to any biome, go to checkpoint, mark warlord beaten, lap +1, trigger any road event, arrive at any expedition site, finish the current expedition, open the next-generation screen, wreck the vehicle in 3 s |
+| ทั่วไป | switches: invincible (hull / crew / squad), one-hit kills, free build/upgrade/buy, resources always full, no random road events, instant construction · game speed ×1/2/5/10/20 · fast-forward +10 min / +1 h / +4 h (offline simulation) · time of day · any weather · FPS/debug overlay |
+| ทรัพยากร | fill / empty everything, set each resource and every usable/material item, all items +10/+100 · forge: test kit (3 items of every rarity + scrap/components), max +level on everything equipped, clear the stash · all blueprints, +100 research points |
+| รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, build every empty slot, max room levels · construction: finish now / +50 % / instant-build switch · all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
+| ลูกเรือ | recruit, heal, happiness 100/20/0 for everyone, pets · spawn a builder (hard hat) plain or with engineer / quick hands / architect / clumsy · strangers at the door: every kind (human / infected / mimic / thief / raider mole) × rare / very rare, clear the queue · per survivor: traits shown, builder on/off, reroll traits, +5 levels, force strike, desert now, kill |
+| ต่อสู้ | set wave, kill all enemies, heal squad · defence squad: auto-fill with the strongest idle crew, auto-equip best gear, clear · spawn the biome warlord or any mutant boss, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
+| โลก | jump to any biome, go to checkpoint, mark warlord beaten, lap +1 · road events: trigger any, draw the next card from the shuffle bag, reshuffle (bag size + last 3 shown) · expedition: force any special encounter (sends a free scavenging team when none is out), clear the no-repeat history, arrive at any site, finish the trip · open the next-generation screen, wreck the vehicle in 3 s |
+| ระบบ | version rows (game / build / engine) + copy · tutorial: replay from the start, skip, jump to any step · cloud save: status/rev, sync now, force upload, forget the link, resolve a conflict · settings: save size, reset to defaults |
 | LOG/เซฟ | trace viewer with category filter, download JSON / copy / clear; export the save as JSON (copied to the clipboard) and load a pasted save — testers can hand each other exact situations |
 
 Cheat switches are never saved; any god action marks the save `stats.cheated = true` and is written to the trace.
