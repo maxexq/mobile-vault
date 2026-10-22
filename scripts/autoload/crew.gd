@@ -27,7 +27,19 @@ const TRAITS := {
 	"grumpy":     {"th": "ขี้บ่น", "en": "GRUMPY", "icon": "sad", "rooms": [], "aff": 0.0, "bad": true, "desc": "ผลิตเอง +15% แต่เพื่อนร่วมห้องความสุข -8"},
 	"afraid_dark": {"th": "กลัวความมืด", "en": "AFRAID OF DARK", "icon": "moon", "rooms": [], "aff": 0.0, "bad": true, "desc": "ไฟดับ/กลางคืน ความสุขลดหนัก (-16)"},
 	"coward":     {"th": "ขี้ขลาด", "en": "COWARD", "icon": "flee", "rooms": [], "aff": 0.0, "bad": true, "desc": "สำรวจเสี่ยงขึ้น 30% แต่ทำงานในรถ +10%"},
+	# construction (v4.3) — "build" = extra construction speed while working a building site
+	"engineer":   {"th": "วิศวกร", "en": "ENGINEER", "icon": "gear", "rooms": ["workshop"], "aff": 0.2, "build": 0.4, "desc": "ก่อสร้าง/อัปเกรดเร็วขึ้น 40% · โรงช่าง +20%"},
+	"quick_hands": {"th": "มือไว", "en": "QUICK HANDS", "icon": "hammer", "rooms": [], "aff": 0.0, "build": 0.25, "desc": "ก่อสร้าง/อัปเกรดเร็วขึ้น 25%"},
+	"architect":  {"th": "สถาปนิก", "en": "ARCHITECT", "icon": "int", "rooms": [], "aff": 0.0, "desc": "ออกแบบประหยัดวัสดุ: ค่าสร้าง/อัปเกรดห้อง -15% (มีคนเดียวก็พอ)"},
+	"clumsy":     {"th": "ซุ่มซ่าม", "en": "CLUMSY", "icon": "sad", "rooms": [], "aff": 0.0, "bad": true, "build": -0.3, "desc": "ก่อสร้างช้าลง 30% (ค้อนชอบหล่นใส่เท้า)"},
 }
+## roles: what a refugee did before the fall. Builders (ช่างก่อสร้าง) put rooms up twice as fast.
+const ROLES := {
+	"builder": {"th": "ช่างก่อสร้าง", "en": "BUILDER", "icon": "hammer", "build": 1.0, "desc": "สร้าง/อัปเกรดห้องเร็วขึ้น 100% · ได้ XP จากงานก่อสร้าง +50%"},
+}
+const BUILDER_CHANCE := 0.25
+## mechanics know their way around a toolbox too
+const MECHANIC_BUILD := 0.15
 ## named crew have fixed traits (fits their bios)
 const FIXED := {"mark": ["brawler", "tough"], "leo": ["sharpshooter", "scavenger"], "ton": ["mechanic", "night_owl"],
 	"bob": ["cook", "glutton"], "clara": ["healer", "cheerful"], "bruno": ["brawler", "light_eater"]}
@@ -67,6 +79,48 @@ func traits(d: Dictionary) -> Array:
 
 func has(d: Dictionary, t: String) -> bool:
 	return traits(d).has(t)
+
+
+func role(d: Dictionary) -> String:
+	return str(d.get("role", ""))
+
+
+func is_builder(d: Dictionary) -> bool:
+	return role(d) == "builder"
+
+
+## construction multiplier of one person (1.0 = an average pair of hands)
+func build_mult(d: Dictionary) -> float:
+	var m := 1.0 + float(ROLES.get(role(d), {}).get("build", 0.0))
+	for t in traits(d):
+		m += float(TRAITS[t].get("build", 0.0))
+	if has(d, "mechanic"):
+		m += MECHANIC_BUILD
+	return maxf(0.2, m)
+
+
+## work seconds this person adds per real second on a building site (STR helps carry beams)
+func build_speed(d: Dictionary) -> float:
+	return 0.6 * (0.7 + 0.06 * float(d.str)) * build_mult(d)
+
+
+## the cheapest-build discount: one architect anywhere on board is enough
+func build_cost_mult() -> float:
+	for d in Game.s.dwellers:
+		if has(d, "architect") and not Game.is_away(d):
+			return 0.85
+	return 1.0
+
+
+## short "ช่างก่อสร้าง · วิศวกร" tag for cards
+func build_tags(d: Dictionary) -> String:
+	var parts := []
+	if ROLES.has(role(d)):
+		parts.append(ROLES[role(d)].th)
+	for t in traits(d):
+		if TRAITS[t].has("build") or t == "architect":
+			parts.append(TRAITS[t].th)
+	return " · ".join(parts)
 
 
 func affinity(d: Dictionary, room_type: String) -> float:

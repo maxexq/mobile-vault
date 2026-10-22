@@ -2,7 +2,8 @@ class_name DwellerActor
 extends Node2D
 ## Little pixel survivor living inside a room: idles, wanders, sits, uses the room's equipment and — when off
 ## duty in the quarters (or idle anywhere) — plays little micro-animations: strumming a guitar, sipping coffee,
-## cleaning a rifle. Striking crew sit down with a protest sign.
+## cleaning a rifle. Striking crew sit down with a protest sign. On a construction site (v4.3) the crew haul
+## planks around and swing hammers at the frame until the room is done.
 
 enum State { IDLE, WALK, WORK, SIT, FUN }
 
@@ -10,7 +11,7 @@ enum State { IDLE, WALK, WORK, SIT, FUN }
 const WORK_SPOTS := {
 	"kitchen": [11, 29, 48], "hydroponics": [11, 27, 45, 56], "water": [10, 24, 50], "medical": [10, 35, 53],
 	"armory": [16, 27, 56], "science": [13, 40, 48], "radio": [10, 24, 42], "engine": [22, 32, 53], "quarters": [11, 46],
-	"refinery": [12, 36, 52], "workshop": [10, 26, 48],
+	"refinery": [12, 36, 52], "workshop": [10, 26, 48], "construct": [12, 26, 40, 52],
 }
 const SIT_ROOMS := ["quarters", "kitchen", "radio", "workshop"]
 const FUN_ANIMS := ["guitar", "coffee", "clean"]
@@ -21,6 +22,8 @@ const X_MAX := 57.0
 var did := -1
 var room_type := ""
 var striking := false
+## the room this dweller is in is being built / upgraded
+var building := false
 var spr: AnimatedSprite2D
 var state := State.IDLE
 var timer := 0.0
@@ -59,12 +62,12 @@ func _enter(st: State) -> void:
 			spr.play("idle")
 		State.WALK:
 			target_x = randf_range(X_MIN, X_MAX)
-			spr.play("walk")
+			spr.play("carry" if building else "walk")
 		State.WORK:
-			var spots: Array = WORK_SPOTS.get(room_type, [28])
+			var spots: Array = WORK_SPOTS.get("construct" if building else room_type, [28])
 			target_x = float(spots[randi() % spots.size()]) + randf_range(-2, 2)
-			timer = randf_range(3.0, 7.0)
-			spr.play("walk")
+			timer = randf_range(4.0, 8.0) if building else randf_range(3.0, 7.0)
+			spr.play("carry" if building and randf() < 0.5 else "walk")
 		State.SIT:
 			timer = randf_range(4.0, 9.0)
 			spr.play("sit")
@@ -75,6 +78,16 @@ func _enter(st: State) -> void:
 				spr.play(_fun)
 			else:
 				spr.play("sit")
+
+
+## a hammer blow lands this frame (RoomView kicks up dust / sparks there)
+func striking_now() -> bool:
+	return building and spr.animation == "hammer" and spr.frame == 2
+
+
+## where the hammer hits, room-local
+func hit_point() -> Vector2:
+	return position + Vector2(-6.0 if spr.flip_h else 6.0, -6.0)
 
 
 func _process(delta: float) -> void:
@@ -90,7 +103,9 @@ func _process(delta: float) -> void:
 			timer -= delta
 			if timer <= 0.0:
 				var r := randf()
-				if _off_duty() and r < 0.45:
+				if building:
+					_enter(State.WORK if r < 0.75 else State.WALK)
+				elif _off_duty() and r < 0.45:
 					_enter(State.FUN)
 				elif r < 0.45:
 					_enter(State.WORK)
@@ -103,14 +118,15 @@ func _process(delta: float) -> void:
 			if absf(dx) > 0.6:
 				position.x += signf(dx) * minf(absf(dx), speed * delta)
 				spr.flip_h = dx < 0.0
-				if spr.animation != "walk":
+				if spr.animation != "walk" and spr.animation != "carry":
 					spr.play("walk")
 			else:
 				if state == State.WALK:
 					_enter(State.IDLE)
 				else:
-					if spr.animation != "work":
-						spr.play("work")
+					var anim := "hammer" if building else "work"
+					if spr.animation != anim:
+						spr.play(anim)
 					timer -= delta
 					if timer <= 0.0:
 						_enter(State.IDLE)

@@ -86,6 +86,8 @@ func _where(d: Dictionary) -> Array:
 	if Game.squad_role(d) >= 0:
 		return [Combat.ROLES[Game.squad_role(d)].en, UIKit.C_RED]
 	if int(d.room) >= 0:
+		if Game.is_constructing(int(d.room)):
+			return ["BUILDING " + Data.room_def(Game.s.rooms[int(d.room)].type).en, UIKit.C_ORANGE]
 		return [Data.room_def(Game.s.rooms[int(d.room)].type).en, UIKit.C_GOLD]
 	return ["IDLE", UIKit.C_DIM]
 
@@ -105,7 +107,7 @@ func _row(d: Dictionary) -> Control:
 	h.add_child(UIKit.tex_rect(Atlas.tex("pt_" + d.variant), Vector2(20, 20)))
 	var v := UIKit.vbox(0)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(UIKit.label("%s" % d.name, UIKit.FS_SMALL, UIKit.C_TEXT))
+	v.add_child(UIKit.label("%s%s" % [d.name, ("  [%s]" % Crew.ROLES[Crew.role(d)].th) if Crew.ROLES.has(Crew.role(d)) else ""], UIKit.FS_SMALL, UIKit.C_TEXT))
 	var w := _where(d)
 	v.add_child(UIKit.label("LV%d · %s" % [d.lvl, w[0]], UIKit.FP, w[1], true))
 	h.add_child(v)
@@ -165,8 +167,14 @@ func _build_manage(d: Dictionary) -> void:
 	# --- traits, status, skills
 	_list.add_child(UIKit.header("TRAITS", "นิสัย/ความถนัด"))
 	var tf := UIKit.flow(3)
+	var chips: Array = []
+	if Crew.ROLES.has(Crew.role(d)):
+		var rd: Dictionary = Crew.ROLES[Crew.role(d)]
+		chips.append({"icon": rd.icon, "th": "อาชีพ: " + str(rd.th), "desc": rd.desc})
 	for t in Crew.traits(d):
-		var td: Dictionary = Crew.TRAITS[t]
+		chips.append(Crew.TRAITS[t])
+	chips.append({"icon": "hammer", "th": "ความเร็วก่อสร้าง x%.2f" % (Crew.build_speed(d) / 0.6), "desc": "เทียบกับคนทั่วไป (STR ช่วยแบกคาน)"})
+	for td in chips:
 		var chip := UIKit.panel(UIKit.C_BG2, UIKit.C_RED if td.get("bad", false) else UIKit.C_LINE_DIM)
 		var ch := UIKit.hbox(2)
 		chip.add_child(ch)

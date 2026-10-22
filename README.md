@@ -113,6 +113,17 @@ Files: `scripts/autoload/combat.gd` (simulation), `scripts/autoload/loot.gd` (it
 | Cutaway / X-ray | The eye button toggles the closed armoured shell vs the cut-away interior; with the shell closed, the first tap on the vehicle peeks inside for a few seconds. |
 | Prestige stories | Wreck → "the hull is gone, but the SOS got out", retire → "the blueprints reach the command centre": an illustrated, typewritten story screen before banking **genetic research points**. |
 
+## 4g. v4.3 — construction time + builders
+
+| System | How it works |
+|---|---|
+| Construction time | Building a room no longer finishes instantly: the slot becomes a **building site** (bare steel frame, tarp, sandbags) and the finished interior rises from the floor up behind scaffolding as work progresses. Time = `BUILD_BASE_SEC + BUILD_SEC_PER_SCRAP × cost` work-seconds (kitchen ≈ 1:22). A site produces nothing, draws no power and adds no beds until done. Room **upgrades** also take time (`UPGRADE_SEC`), but the room keeps working at its old level meanwhile. Progress keeps running offline. |
+| Builders | Crew assigned to a site haul planks and swing hammers (new `hammer` / `carry` frames, dust puffs on every blow, welding sparks along the rising edge). Site speed = `BUILD_IDLE_SPEED` + Σ `Crew.build_speed(d)` (STR helps). Finishing gives STR XP. |
+| Builder role | Refugees can arrive with the **ช่างก่อสร้าง / BUILDER** role (~25 %, hard hat + hi-vis vest outfit): ×2 construction speed, +50 % XP and happier on a site, and they head straight to an open site. Ton is the vault's first builder (old saves too). |
+| Builder traits | **วิศวกร ENGINEER** +40 % build (+20 % workshop), **มือไว QUICK HANDS** +25 %, **สถาปนิก ARCHITECT** −15 % build/upgrade cost while on board, **ซุ่มซ่าม CLUMSY** −30 %; mechanics get +15 %. |
+| Rush / cancel | The close-up shows progress, time left, the builder crew and their multipliers; **finish now** costs components (1 per 15 work-seconds left); cancelling a site refunds half the scrap. |
+| Hooks | `Game.construction_started(slot, kind)` / `construction_finished(slot, kind)` (`kind` = `build` or `upgrade`), state in `Game.s.rooms[i].build` (`{kind, total, left}`, empty when idle). God mode: *instant build* switch + *finish all construction*. |
+
 ## 4c. True pixel art pipeline
 
 - Window: `canvas_items` stretch + **integer** scale mode. `main.gd` picks the design size so it is exactly window ÷ S (S = whole number, base 360×640 portrait / 560×320 landscape) → full-bleed, no letterbox, 1 art pixel = S screen pixels.
