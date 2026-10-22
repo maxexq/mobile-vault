@@ -48,6 +48,12 @@ func _run() -> void:
 	await wait(0.3)
 	main.hud.title_screen._go(true)
 	await wait(2.5)
+	if "--only=large" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _large_room_test()
+		print("[autotest] DONE")
+		get_tree().quit()
+		return
 	await _tutorial_test()
 	await shot("main_industrial_rain")
 	Combat.reset_wave(6)
@@ -610,6 +616,7 @@ func _run() -> void:
 	await _settings_test()
 	_event_variety_test()
 	await _cloud_test()
+	await _large_room_test()
 	print("[autotest] DONE")
 	get_tree().quit()
 
@@ -1557,3 +1564,138 @@ func _loot_tabs_test() -> void:
 	_check("loot tabs: items amounts update in place", is_instance_valid(lbl) and lbl == inv._amounts.get("scrap") and lbl.text.begins_with("123"))
 	inv.tab = "gear"
 	inv.refresh()
+
+
+func _rate(slot: int, k: String) -> float:
+	return float(Game.room_rate_pm(slot).get(k, 0.0))
+
+
+## v4.4 large rooms: knock 2-3 same-type neighbours through into one room
+func _large_room_test() -> void:
+	get_window().size = Vector2i(1280, 640)
+	Game.setup_default_state()
+	Game.s.tier = "rig"
+	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	while Game.s.rooms.size() < Game.slot_count():
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	for i in range(1, Game.s.rooms.size()):
+		Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	for i in [3, 4, 5]:
+		Game.s.rooms[i] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[8] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.outage = {}
+	Game.s.res.scrap = 8000.0
+	Game.s.items["components"] = 300
+	for d in Game.s.dwellers:
+		d.room = -1
+	var crew := []
+	for i in 6:
+		var d := Game._add_dweller({"name": "ทดสอบ%d" % i, "variant": "dw_chef_gray", "str": 5, "int": 5, "agi": 5})
+		d.traits = []
+		d.skills = {}
+		d.happy = 70.0
+		crew.append(d)
+	Game.assign(crew[0], 3)
+	Game.assign(crew[1], 3)
+	Game.assign(crew[2], 4)
+	Game.assign(crew[3], 4)
+	Game.rooms_changed.emit()
+	_check("large: same-type neighbour is a merge candidate", Game.merge_candidates(3) == [4])
+	_check("large: rooms must touch", Game.merge_block(3, 5) != "")
+	Game.s.rooms[5].type = "water"
+	_check("large: different types can't merge", Game.merge_block(4, 5).contains("ชนิด") and Game.merge_block(5, 8) != "")
+	Game.s.rooms[5].type = "kitchen"
+	Game.s.rooms[4].level = 2
+	_check("large: levels must match", Game.merge_block(3, 4).contains("เลเวล"))
+	Game.s.rooms[4].level = 1
+	_check("large: engine room never merges", Game.merge_block(0, 1) != "")
+	var single := _rate(3, "food") + _rate(4, "food")
+	var scrap0 := float(Game.s.res.scrap)
+	var comp0 := int(Game.s.items.components)
+	var cost := Game.merge_cost(3, 4)
+	_check("large: merge costs scrap + components", int(cost.scrap) > 0 and int(cost.components) == Data.MERGE_COMPONENTS)
+	_check("large: merge starts", Game.merge_rooms(4, 3))
+	_check("large: paid", is_equal_approx(float(Game.s.res.scrap), scrap0 - float(cost.scrap)) and int(Game.s.items.components) == comp0 - int(cost.components))
+	_check("large: right cell becomes an annex of the left", Game.is_annex(4) and Game.room_anchor(4) == 3 and Game.room_span(3) == 2)
+	_check("large: crew moved to the anchor, 4 seats", Game.room_workers(3).size() == 4 and Game.room_capacity(3) == 4)
+	print("[autotest] rates single %.3f merging %.3f" % [single, _rate(3, "food")])
+	_check("large: still works during the knock-through (no bonus yet)", Game.is_merging(3) and absf(_rate(3, "food") - single) < 0.01 * single and not Game.is_site(3))
+	var t0 := float(Game.build_info(3).left)
+	Game._simulate(1.0, false)
+	_check("large: knock-through progresses", float(Game.build_info(3).left) < t0)
+	Game._finish_build(3, false)
+	_check("large: 2-wide room +10%", absf(_rate(3, "food") - single * 1.10) < 0.01 * single and is_equal_approx(Game.room_scale(3), 2.2))
+	_check("large: power use 90% per cell", is_equal_approx(Game.room_power_pm(3), float(Data.ROOMS.kitchen.power) * 2.0 * 0.9))
+	Game.assign(crew[3], -1)
+	Game.assign(crew[3], 4)
+	_check("large: assigning to an annex cell goes to the anchor", int(crew[3].room) == 3)
+	_check("large: seats are capped at 2 per cell", not Game.assign(crew[4], 4))
+	main.vehicle.refresh_rooms()
+	var rv3: RoomView = main.vehicle.room_views[3]
+	_check("large: room view spans both cells", is_equal_approx(rv3.w, 138.0) and not main.vehicle.room_views[4].visible and rv3.seams.size() == 1)
+	_check("large: wide art exists for this layout", Atlas.has(rv3.wide_key("kitchen")))
+	# third cell
+	_check("large: 2+1 merges into 3", Game.merge_candidates(5) == [3])
+	Game.merge_rooms(5, 3)
+	Game._finish_build(3, false)
+	Game.assign(crew[4], 5)
+	Game.assign(crew[5], 5)
+	_check("large: 3-wide room, 6 seats, x3.75", Game.room_cells(5) == [3, 4, 5] and Game.room_capacity(3) == 6 and is_equal_approx(Game.room_scale(3), 3.75))
+	_check("large: max 3 cells", Game.merge_block(3, 8) != "" and Game.merge_candidates(3).is_empty())
+	_check("large: upgrade costs span x 80%", Game.upgrade_cost(4) == int(round(float(Data.ROOM_UPGRADE_COST[2]) * 3.0 * 0.8 * Crew.build_cost_mult())))
+	_check("large: upgrade takes longer", Game.upgrade_time(2, 3) > Game.upgrade_time(2))
+	Game.upgrade_room(5)
+	Game._finish_build(3, false)
+	_check("large: upgrade levels every cell", int(Game.s.rooms[3].level) == 2 and int(Game.s.rooms[5].level) == 2)
+	# synergy: a 2-wide hydroponics above counts once
+	Game.s.rooms[6] = {"type": "hydroponics", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[7] = {"type": "annex", "level": 1, "job": {}, "build": {}}
+	var hyd := Synergy.effects(3).filter(func(e): return str(e.type) == "hydroponics")
+	_check("large: neighbouring large room counts once", hyd.size() == 1 and Synergy.neighbours(3).has(6) and not Synergy.neighbours(3).has(7))
+	Game.s.rooms[6] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[7] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	# quarters pop cap scales
+	var pop0 := Game.pop_cap()
+	Game.s.rooms[9] = {"type": "quarters", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[10] = {"type": "annex", "level": 1, "job": {}, "build": {}}
+	_check("large: 2-wide quarters house 2.2x", Game.pop_cap() - pop0 == 9)
+	Game.s.rooms[9] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[10] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	# save round-trip (ids/rooms come back as floats) + broken annex cleanup
+	Game.s.rooms[6] = {"type": "annex", "level": 1, "job": {}, "build": {}}
+	Game.s = JSON.parse_string(JSON.stringify(Game.s))
+	Game._migrate()
+	_check("large: survives a JSON round-trip", Game.room_span(3) == 3 and Game.room_workers(3).size() == 6 and is_equal_approx(Game.room_scale(4), 3.75))
+	_check("large: orphan annex is cleared on load", str(Game.s.rooms[6].type) == "empty")
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	await wait(1.0)
+	main.vehicle.peek(9999.0)
+	await wait(0.8)
+	await shot("large_room_vehicle")
+	main.open_closeup(4)
+	await wait(1.6)
+	_check("large: close-up opens the whole room", main.hud.room_closeup.slot == 3)
+	await shot("large_room_closeup")
+	main.hud.room_closeup.close()
+	await wait(0.6)
+	get_window().size = Vector2i(780, 1688)
+	await wait(1.2)
+	main.open_closeup(3)
+	await wait(1.6)
+	await shot("large_room_portrait")
+	main.hud.room_closeup.close()
+	await wait(0.6)
+	get_window().size = Vector2i(1280, 640)
+	await wait(0.6)
+	# split back + demolish
+	_check("large: split gives 3 rooms back", Game.split_room(4) and Game.room_span(3) == 1 and str(Game.s.rooms[5].type) == "kitchen" and int(Game.s.rooms[5].level) == 2)
+	_check("large: split shares the crew out", Game.room_workers(3).size() <= 2 and Game.room_workers(4).size() <= 2 and Game.room_workers(5).size() <= 2)
+	Game.merge_rooms(3, 4)
+	Game._finish_build(3, false)
+	var sc := float(Game.s.res.scrap)
+	Game.demolish_room(4)
+	_check("large: demolish clears every cell", str(Game.s.rooms[3].type) == "empty" and str(Game.s.rooms[4].type) == "empty" and float(Game.s.res.scrap) > sc)
+	Game.rooms_changed.emit()
+	await wait(0.4)
+	print("[autotest] large rooms done: %d failed total" % _fails)

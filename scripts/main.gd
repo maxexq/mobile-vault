@@ -406,6 +406,7 @@ func _on_tap(screen_pos: Vector2) -> void:
 
 # ------------------------------------------------------------------ room close-up (integer zoom)
 func open_closeup(slot: int) -> void:
+	slot = Game.room_anchor(slot)
 	_closeup_slot = slot
 	vehicle.peek(9999.0)
 	if view_k > 1.0:
@@ -426,8 +427,10 @@ func open_closeup(slot: int) -> void:
 func closeup_zoom() -> int:
 	var vp := vp_size()
 	var focus: Rect2 = hud.room_closeup.focus_rect()
-	var z := int(minf(focus.size.x / Vehicle.ROOM_SIZE.x, focus.size.y / Vehicle.ROOM_SIZE.y))
-	return clampi(z, 2, 3) if vp.x >= 200 else 1
+	var sz := vehicle.room_size(_closeup_slot) if _closeup_slot >= 0 else Vehicle.ROOM_SIZE
+	var z := int(minf(focus.size.x / sz.x, focus.size.y / sz.y))
+	# a large room (v4.4) still has to fit: it may drop to 1x instead of overflowing the screen
+	return clampi(z, 2 if sz.x <= Vehicle.ROOM_SIZE.x else 1, 3) if vp.x >= 200 else 1
 
 
 func _closeup_target() -> Dictionary:

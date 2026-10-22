@@ -55,7 +55,7 @@
 | World render | SubViewport ที่ design res → TextureRect nearest |
 | Wide zoom | ขยายขนาด viewport (`view_k = S / world_scale`) แทนการย่อภาพ ภาพจึงยังเป็นพิกเซลเต็มเม็ด |
 | Art | สร้างด้วย Python + Pillow (`tools/generate_pixel_art.py` → `tools/art/*.py`) ทุกภาพผ่าน `quantize` เข้าพาเลตกลาง `common.RAMPS` |
-| Atlas | atlas เดียวขนาด 1024×2048 (~351 regions) |
+| Atlas | atlas เดียวขนาด 2048×2048 (~410 regions รวมห้องกว้าง 2–3 ช่อง) |
 | Fonts | Chakra Petch (ไทย) + Silkscreen (pixel) **Silkscreen ไม่มีตัวไทย** ข้อความไทยต้องใช้ font_main |
 | Save | `Game.s` (Dictionary เดียว) → JSON → `localStorage["mobile_vault_save_v1"]` (desktop: `user://savegame.json`) |
 | Autosave | ทุก 15 วินาที และตอน `visibilitychange` / `pagehide` |

@@ -274,14 +274,15 @@ func _build_manage(d: Dictionary) -> void:
 	var rooms := UIKit.flow(3)
 	for i in Game.s.rooms.size():
 		var r: Dictionary = Game.s.rooms[i]
-		if r.type == "empty" or not Game.is_slot_unlocked(i):
+		if r.type == "empty" or r.type == "annex" or not Game.is_slot_unlocked(i):
 			continue
 		var def := Data.room_def(r.type)
 		var n := Game.room_workers(i).size()
 		var here: bool = int(d.room) == i
 		var good: bool = Game._best_stat(d) == def.stat
-		var b := UIKit.button("%s %d/%d%s" % [def.th, n, Data.ROOM_WORKERS, "*" if good else ""], "yellow" if here else ("green" if good else "gray"))
-		b.disabled = here or n >= Data.ROOM_WORKERS
+		var cap := Game.room_capacity(i)
+		var b := UIKit.button("%s%s %d/%d%s" % [def.th, (" x%d" % Game.room_span(i)) if Game.room_span(i) > 1 else "", n, cap, "*" if good else ""], "yellow" if here else ("green" if good else "gray"))
+		b.disabled = here or n >= cap
 		var slot: int = i
 		b.pressed.connect(func(): Game.assign(d, slot))
 		rooms.add_child(b)
