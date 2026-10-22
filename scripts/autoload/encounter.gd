@@ -351,7 +351,10 @@ func apply(rep: Dictionary, survivors: int) -> String:
 		if Game.s.dwellers.size() >= Game.pop_cap():
 			rep.lines.append("ไม่มีที่ว่างบนรถ ผู้รอดชีวิตจึงแยกทางไป")
 			break
-		var nd := Game.recruit_random()
+		var nd := Game.offer_recruit("exp_special", 1.0)
+		if nd.is_empty():
+			got += ", คนแปลกหน้าฝีมือดีรอตรวจที่ประตู"
+			continue
 		if float(enc.get("recruit_infect", 0.0)) > 0.0:
 			Crew.infect(nd, float(enc.recruit_infect))
 		got += ", ผู้รอดชีวิต " + str(nd.name)

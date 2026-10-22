@@ -124,6 +124,19 @@ Files: `scripts/autoload/combat.gd` (simulation), `scripts/autoload/loot.gd` (it
 | Rush / cancel | The close-up shows progress, time left, the builder crew and their multipliers; **finish now** costs components (1 per 15 work-seconds left); cancelling a site refunds half the scrap. |
 | Hooks | `Game.construction_started(slot, kind)` / `construction_finished(slot, kind)` (`kind` = `build` or `upgrade`), state in `Game.s.rooms[i].build` (`{kind, total, left}`, empty when idle). God mode: *instant build* switch + *finish all construction*. |
 
+## 4i. v4.4 — strangers at the door (inspection)
+
+Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins (radio, road event, SOS broadcast, expedition loot, boss captive, expedition encounters) goes through `Game.offer_recruit(source)`. Usually they board at once; **rarely (~6 % rare, ~1.5 % very rare)** the stranger is exceptional (top stat 7–9 / 9–11, +2/+4 levels, 2–3 good traits) and waits at the door for inspection instead.
+
+| Part | How it works |
+|---|---|
+| The knock | A blinking red strip above the travel bar ("มีคนเคาะประตู!") opens the door window. Up to 2 strangers wait; one left unanswered for 10 min walks away. |
+| What they really are | **Human** (≈55 %, less each lap), **infected** (hid a bite), **mimic** (not human), **thief**, **raider mole**. |
+| Checks | 7 checks, 1 point each, **3 points** (+1 staffed medical room, +1 a healer aboard), so you never see everything: eyes (bloodshot / glassy), teeth (rotten / too perfect), hands & nails (black veins / spotless / gang tattoo), forearm (bitten bandage / raider brand), bag (lockpicks + other people's IDs / live radio + our route on a map — may be refused), temperature (fever / cold), story (shaky). Each check shows a flashlit 96×48 pixel close-up. |
+| Circumstantial | Tells are probabilities: impostors never show all signs (but always at least one), honest people sometimes look tired, feverish or have an old biker tattoo. The field guide in the window lists what each sign may mean. |
+| The call | **Let in** (joins with the hidden secret), **turn away** (never know), **shoot** (right: their loot — antibiotics / components / scrap + stimpack / ammo; wrong: everyone −20 happiness and a name on the memorial wall). |
+| Later | Admitted impostors go off after a few minutes: infected fall sick and may infect a roommate, a mimic drags someone off at night (a strong rear bruiser may fight it off), a thief disappears with 20–35 % of food/water/scrap/fuel and 30 % of meds/components, a raider opens the rear door (hull −30, scrap −30 %, 2 people hurt). Logged in `s.insp_log` + Trace. |
+| Code | `scripts/autoload/inspection.gd`, `scripts/ui/inspection_panel.gd`, art `tools/art/inspect.py` → `assets/inspect/`. God mode → ลูกเรือ: spawn any kind of stranger. |
 ## 4h. Expedition special encounters
 
 | System | How it works |

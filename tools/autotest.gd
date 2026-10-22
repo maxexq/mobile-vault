@@ -603,6 +603,7 @@ func _run() -> void:
 	await shot("wide_map")
 	main.hud.panels.map.close()
 	await wait(0.4)
+	await _inspection_test()
 	await _settings_test()
 	_event_variety_test()
 	await _cloud_test()
@@ -1129,6 +1130,121 @@ func _event_variety_test() -> void:
 	_check("chatter: no line said twice in a row", not dup and lines[0] != "")
 
 
+## v4.4 strangers at the door: rare elite recruits, circumstantial tells, inspection points, the call,
+## delayed secrets (infected / mimic / thief / raider), JSON round-trip, timeout, UI screenshots
+func _inspection_test() -> void:
+	for k in Dev.flags:
+		Dev.flags[k] = false
+	Game.s.erase("insp")
+	# rarity: ~6 % rare + ~1.5 % very rare of all recruit offers
+	var rare := 0
+	var vrare := 0
+	for i in 20000:
+		match Inspection.roll_grade():
+			"rare": rare += 1
+			"very_rare": vrare += 1
+	_check("inspect: elite recruits are rare (%d rare / %d very rare of 20000)" % [rare, vrare],
+		rare > 900 and rare < 1500 and vrare > 180 and vrare < 450)
+	# every bad apple leaves at least one real clue; humans are mostly clean
+	var clue_ok := true
+	for kind in ["infected", "mimic", "thief", "raider"]:
+		for i in 200:
+			if Inspection._tell_count(kind, Inspection._roll_signs(kind)) < 1:
+				clue_ok = false
+	_check("inspect: impostors always show >= 1 tell", clue_ok)
+	var flagged := 0
+	for i in 400:
+		var sg := Inspection._roll_signs("human")
+		for chk in Inspection.CHECKS:
+			if str(sg[chk]) != "normal":
+				flagged += 1
+				break
+	_check("inspect: honest people sometimes look suspicious (%d/400)" % flagged, flagged > 40 and flagged < 300)
+	# the recruit hook: an elite roll queues a stranger instead of boarding
+	var n0: int = Game.s.dwellers.size()
+	var r := Game.offer_recruit("test", 1000.0)
+	_check("inspect: elite offer waits at the door", r.is_empty() and Inspection.pending() and Game.s.dwellers.size() == n0)
+	Game.s.insp.queue.clear()
+	var c := Inspection.queue_candidate("test", "very_rare", "mimic")
+	_check("inspect: very rare stranger has a top stat + 3 good traits",
+		int(c[str(c.best)]) >= 9 and (c.traits as Array).size() == 3 and (c.traits as Array).all(func(t): return not Crew.TRAITS[t].get("bad", false)))
+	var pts := int(c.points)
+	Inspection.check(c, "eyes")
+	Inspection.check(c, "eyes")
+	_check("inspect: a check costs one point, re-looking is free", int(c.points) == pts - 1 and c.seen.has("eyes"))
+	for chk in Inspection.CHECKS:
+		Inspection.check(c, chk)
+	_check("inspect: can't check everything (points run out)", int(c.points) == 0 and c.seen.size() == pts and c.seen.size() < Inspection.CHECKS.size())
+	# save round-trip: JSON turns ints into floats; the stranger must still work
+	Inspection.queue_candidate("test", "rare", "thief")
+	Game.s.insp = JSON.parse_string(JSON.stringify(Game.s.insp))
+	var back := Inspection.queue()[1] as Dictionary
+	var sg2 := Inspection.check(back, "story")
+	_check("inspect: stranger survives a save round-trip", Inspection.queue().size() == 2 and sg2 != "" and int(back.points) == int(back.max_points) - 1)
+	Inspection.queue_candidate("test", "rare", "human")
+	_check("inspect: at most %d strangers wait" % Inspection.MAX_QUEUE, Inspection.queue().size() == Inspection.MAX_QUEUE)
+	# open the door UI on the mimic and look at a detail
+	main.hud.open_door()
+	await wait(0.6)
+	var panel: InspectionPanel = main.hud.panels.door
+	_check("inspect: door panel opens", panel.is_open and _find_text(panel, str(Inspection.current().name)))
+	panel._last_check = "eyes"
+	panel.refresh()
+	await wait(0.3)
+	await shot("inspect_door")
+	panel._guide = true
+	panel.refresh()
+	await wait(0.3)
+	await shot("inspect_guide")
+	panel.close()
+	await wait(0.3)
+	# turn away / shoot
+	Game.s.insp.queue.clear()
+	var h := Inspection.queue_candidate("test", "rare", "human")
+	Game.s.dwellers[0].happy = 80.0
+	var happy0 := 80.0
+	var mem0 := (Game.s.get("memorial", []) as Array).size()
+	Inspection.shoot(h)
+	_check("inspect: shooting an innocent hurts morale + memorial", float(Game.s.dwellers[0].happy) <= happy0 - 19.0 and Game.s.memorial.size() == mem0 + 1)
+	var th := Inspection.queue_candidate("test", "rare", "thief")
+	var scrap0 := float(Game.s.res.scrap)
+	Inspection.shoot(th)
+	_check("inspect: shooting a thief recovers their loot", float(Game.s.res.scrap) > scrap0 and int(Game.s.insp.stats.caught) >= 1)
+	var rf := Inspection.queue_candidate("test", "rare", "raider")
+	_check("inspect: turning away clears the door", Inspection.refuse(rf) != "" and not Inspection.pending())
+	# admitted impostors go off later
+	while Game.s.dwellers.size() > Game.pop_cap() - 4:
+		Game.s.dwellers.pop_back()
+	for d in Game.s.dwellers:
+		d.hp = d.max_hp
+	var inf := Inspection.admit(Inspection.queue_candidate("test", "rare", "infected"))
+	_check("inspect: admitted infected hides a secret", not inf.is_empty() and inf.has("secret") and not Crew.is_infected(inf))
+	Inspection.tick(400.0, false)
+	_check("inspect: infection breaks out later", Crew.is_infected(inf) and not inf.has("secret"))
+	var food0 := float(Game.s.res.food)
+	Game.s.res.food = maxf(food0, 100.0)
+	food0 = float(Game.s.res.food)
+	var thf := Inspection.admit(Inspection.queue_candidate("test", "rare", "thief"))
+	thf.secret = JSON.parse_string(JSON.stringify(thf.secret))   # as loaded from a save
+	Inspection.tick(400.0, false)
+	_check("inspect: thief robs the larder and runs", not Game.s.dwellers.has(thf) and float(Game.s.res.food) < food0)
+	var hull0 := float(Game.s.hull)
+	var rd := Inspection.admit(Inspection.queue_candidate("test", "rare", "raider"))
+	Inspection.tick(400.0, false)
+	_check("inspect: raider mole sabotages the hull", not Game.s.dwellers.has(rd) and float(Game.s.hull) < hull0)
+	var before: int = Game.s.dwellers.size()
+	var mm := Inspection.admit(Inspection.queue_candidate("test", "rare", "mimic"))
+	Inspection.tick(400.0, false)
+	_check("inspect: mimic shows itself and leaves (maybe with a victim)", not Game.s.dwellers.has(mm) and Game.s.dwellers.size() <= before)
+	var hm := Inspection.admit(Inspection.queue_candidate("test", "rare", "human"))
+	Inspection.tick(400.0, false)
+	_check("inspect: an honest elite just stays", Game.s.dwellers.has(hm) and not hm.has("secret") and int(hm.str) + int(hm["int"]) + int(hm.agi) >= 15)
+	_check("inspect: revelations logged", (Game.s.get("insp_log", []) as Array).size() >= 4)
+	# nobody answers -> they walk away
+	Inspection.queue_candidate("test", "rare", "human")
+	Inspection.tick(Inspection.WAIT_SEC + 1.0, false)
+	_check("inspect: unanswered stranger leaves", not Inspection.pending())
+	print("[autotest] inspection checks done: %d failed total" % _fails)
 func _fake_run(gen: int) -> Dictionary:
 	return {"rooms": [], "res": {}, "dwellers": [], "meta": {"gen": gen}, "saved_at": Cloud.now()}
 

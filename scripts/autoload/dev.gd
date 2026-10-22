@@ -366,6 +366,12 @@ func recruit(n: int = 1) -> void:
 	Game.dwellers_changed.emit()
 
 
+## a stranger at the door for inspection (grade "rare"/"very_rare", kind "" = random)
+func stranger(kind: String = "", grade: String = "rare") -> void:
+	Inspection.queue_candidate("god", grade, kind)
+	act("stranger %s %s" % [grade, kind])
+
+
 func heal_all() -> void:
 	for d in Game.s.dwellers:
 		d.hp = d.max_hp
