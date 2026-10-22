@@ -2,7 +2,8 @@ class_name GodPanel
 extends ModalPanel
 ## Tester console ("GOD MODE"). Only reachable when Dev.unlocked. Every button calls a Dev.* action, so the
 ## same actions are scriptable from tools/autotest.gd and every use lands in the Trace log.
-##  tabs: ทั่วไป (switches, speed, time, weather) · ทรัพยากร · รถ · ลูกเรือ · ต่อสู้ · โลก · LOG/เซฟ
+##  tabs: ทั่วไป (switches, speed, time, weather) · ทรัพยากร (+ไอเท็ม/เตาหลอม) · รถ (+ก่อสร้าง) · ลูกเรือ (+ช่าง/คนแปลกหน้า)
+##        · ต่อสู้ (+ทีมป้องกัน) · โลก (+สำรับอีเว้นต์/จุดพิเศษ) · ระบบ (บทสอน, เวอร์ชัน, คลาวด์, ตั้งค่า) · LOG/เซฟ
 
 var tab := "main"
 var _tabs: HFlowContainer
@@ -10,7 +11,7 @@ var _list: VBoxContainer
 var _log_cat := ""
 var _save_box: TextEdit
 
-const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["log", "LOG/เซฟ"]]
+const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["sys", "ระบบ"], ["log", "LOG/เซฟ"]]
 
 
 func _build() -> void:
@@ -18,6 +19,7 @@ func _build() -> void:
 	body.add_child(_tabs)
 	_list = make_list(4)
 	Dev.changed.connect(func(): if is_open and tab == "main": refresh())
+	Cloud.status_changed.connect(func(): if is_open and tab == "sys": refresh())
 
 
 func refresh() -> void:
@@ -45,6 +47,7 @@ func refresh() -> void:
 		"crew": _tab_crew()
 		"fight": _tab_fight()
 		"world": _tab_world()
+		"sys": _tab_sys()
 		"log": _tab_log()
 
 
@@ -125,11 +128,18 @@ func _tab_res() -> void:
 			_b("+100", func(): Dev.res_set(key, cur + 100.0)), _b("เต็ม", func(): Dev.res_set(key, Game.cap(key)), "green")],
 			"%s %d/%d" % [Data.item_name(k), int(cur), int(Game.cap(k))])
 	_head("ITEMS", "ไอเท็ม")
-	for k in ["components", "ammo", "stimpack", "radaway", "antibiotics"]:
+	_row([_b("ทุกชนิด +10", func(): Dev.items_all(10), "green"), _b("ทุกชนิด +100", func(): Dev.items_all(100), "green")])
+	for k in Data.ITEMS:
+		if not str(Data.ITEMS[k].kind) in ["use", "mat"]:
+			continue
 		var key: String = k
 		var cur := int(Game.s.items.get(k, 0))
 		_row([_b("0", func(): Dev.res_set(key, 0.0)), _b("+10", func(): Dev.res_set(key, cur + 10.0)), _b("+100", func(): Dev.res_set(key, cur + 100.0))],
 			"%s %d" % [Data.item_name(k), cur])
+	_head("FORGE", "อุปกรณ์และเตาหลอม (คลัง %d/%d)" % [Loot.stash().size(), Loot.STASH_CAP])
+	_row([_b("ชุดทดสอบหลอม (3 ชิ้นทุกระดับ)", func(): Dev.forge_kit(), "green"), _b("ของที่สวมตีบวกสูงสุด", func(): Dev.gear_max_plus(), "yellow")])
+	_row([_b("ล้างคลังอุปกรณ์", func(): Dev.stash_clear(), "red")])
+	_note("ดรอปทีละระดับอยู่ที่แท็บต่อสู้ > LOOT · เปิดเตาหลอมจริงที่เมนู Loot > หลอม")
 	_head("META", "ข้ามรอบ (prestige)")
 	_row([_b("พิมพ์เขียวทั้งหมด", func(): Dev.all_blueprints(), "green"), _b("แต้มวิจัย +100", func(): Dev.legacy_add(100))],
 		"มี %d แต้ม" % int(Meta.m().get("legacy", 0)))
@@ -153,7 +163,11 @@ func _tab_vehicle() -> void:
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
 	_head("ROOMS & MODS", "ห้องและมอด")
 	_row([_b("สร้างห้องทุกช่องว่าง", func(): Dev.rooms_fill(), "green"), _b("ทุกห้อง Lv สูงสุด", func(): Dev.rooms_max())])
-	_row([_b("ก่อสร้างที่ค้างเสร็จทันที", func(): Dev.finish_construction(), "yellow")])
+	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
+	var ib := Dev.on("instant_build")
+	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),
+		_b(("[ON] " if ib else "[OFF] ") + "สร้างเสร็จทันทีเสมอ", func(): Dev.set_flag("instant_build", not Dev.on("instant_build")), "green" if ib else "gray")])
+	_note("ช่างก่อสร้างและ trait ด้านช่าง: แท็บลูกเรือ > BUILDERS")
 	_row([_b("มอดเต็มทุกตัว", func(): Dev.mods_all(true), "green"), _b("ถอดมอดทั้งหมด", func(): Dev.mods_all(false))])
 	_note("น้ำหนักตอนนี้: " + Haul.status_text())
 	_head("HAZARDS", "ทดสอบภัย")
@@ -167,9 +181,21 @@ func _tab_crew() -> void:
 	_row([_b("สุข 100", func(): Dev.happy_all(100.0)), _b("สุข 20", func(): Dev.happy_all(20.0)), _b("สุข 0", func(): Dev.happy_all(0.0), "red")], "ทุกคน")
 	_row([_b("หมา", func(): Dev.add_pet("dog")), _b("แมว", func(): Dev.add_pet("cat")), _b("ไก่", func(): Dev.add_pet("hen")), _b("ล้าง", func(): Dev.clear_pets())],
 		"สัตว์เลี้ยง %d" % (Game.s.get("pets", []) as Array).size())
-	_row([_b("สุ่ม", func(): Dev.stranger("")), _b("คน", func(): Dev.stranger("human"), "green"), _b("ติดเชื้อ", func(): Dev.stranger("infected"), "red"),
-		_b("เลียนแบบ", func(): Dev.stranger("mimic"), "red"), _b("ขโมย", func(): Dev.stranger("thief"), "red"), _b("โจร", func(): Dev.stranger("raider"), "red"),
-		_b("หายากมาก", func(): Dev.stranger("", "very_rare"), "yellow")], "คนแปลกหน้า %d" % Inspection.queue().size())
+	_head("BUILDERS", "ช่างก่อสร้าง (หมวกเหลือง) + trait ด้านช่าง")
+	var bb := [_b("ช่างธรรมดา", func(): Dev.spawn_builder(""), "green")]
+	for t in ["engineer", "quick_hands", "architect", "clumsy"]:
+		var tid: String = t
+		bb.append(_b("ช่าง+" + str(Crew.TRAITS[t].th), func(): Dev.spawn_builder(tid), "red" if Crew.TRAITS[t].get("bad", false) else "gray"))
+	_row(bb)
+	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
+	for g in Inspection.GRADES:
+		var gid: String = g
+		var sb := [_b("สุ่ม", func(): Dev.stranger("", gid))]
+		for k in Inspection.KINDS:
+			var kid: String = k
+			sb.append(_b(str(Inspection.KINDS[k].th), func(): Dev.stranger(kid, gid), "green" if k == "human" else "red"))
+		_row(sb, str(Inspection.GRADES[g].th))
+	_row([_b("ล้างคิว", func(): Dev.stranger_clear(), "red")])
 	_head("CREW", "ทีละคน")
 	for d in Game.s.dwellers:
 		var dd: Dictionary = d
@@ -179,8 +205,14 @@ func _tab_crew() -> void:
 		if Crew.is_striking(dd):
 			tags.append("ประท้วง")
 		_list.add_child(UIKit.label("%s Lv%d · HP %d · สุข %d %s" % [dd.name, dd.lvl, int(dd.hp), int(dd.happy), " · ".join(tags)], UIKit.FS_SMALL, UIKit.C_TEXT))
+		var tl := []
+		for t in Crew.traits(dd):
+			tl.append(str(Crew.TRAITS.get(t, {}).get("th", t)))
+		_note(("[ช่าง] " if Crew.is_builder(dd) else "") + ", ".join(tl))
 		_row([_b("+5 Lv", func(): Dev.level_up(dd, 5)), _b("ประท้วง", func(): Dev.force_strike(dd)), _b("หนีทันที", func(): Dev.desert_now(dd), "red"),
 			_b("ตาย", func(): Dev.kill(dd), "red")])
+		_row([_b("เลิกเป็นช่าง" if Crew.is_builder(dd) else "เป็นช่าง", func(): Dev.toggle_builder(dd), "yellow" if Crew.is_builder(dd) else "gray"),
+			_b("สุ่ม trait ใหม่", func(): Dev.reroll_traits(dd))])
 
 
 func _tab_fight() -> void:
@@ -188,6 +220,12 @@ func _tab_fight() -> void:
 	_row([_b("1", func(): Dev.wave_set(1)), _b("-10", func(): Dev.wave_set(w - 10)), _b("-1", func(): Dev.wave_set(w - 1)),
 		_b("+1", func(): Dev.wave_set(w + 1)), _b("+10", func(): Dev.wave_set(w + 10))], "เวฟ %d" % w)
 	_row([_b("ฆ่าศัตรูทั้งหมด", func(): Dev.kill_enemies(), "red", true), _b("รักษาทีมรบ", func(): Dev.heal_all())])
+	var names := []
+	for i in (Game.s.squad as Array).size():
+		var sd := Game.dweller_by_id(int(Game.s.squad[i]))
+		names.append("-" if sd.is_empty() else str(sd.name))
+	_head("SQUAD", "ทีมป้องกัน %s (ปลดล็อก %d ช่อง · DPS %d)" % [" / ".join(names), Combat.slots_unlocked(), int(Combat.squad_dps())])
+	_row([_b("จัดทีมอัตโนมัติ", func(): Dev.squad_auto(), "green"), _b("ใส่อุปกรณ์ดีสุด", func(): Dev.squad_gear()), _b("ถอดทั้งทีม", func(): Dev.squad_clear(), "red")])
 	_head("BOSSES", "เรียกบอส (ปิดแผงเพื่อดูศึก)")
 	var bb := [_b("บอสด่าน: " + str(Combat.BOSSES[Combat.biome_id()].th), func(): Dev.spawn_boss("warlord"), "red", true)]
 	for id in Combat.WAVE_BOSSES:
@@ -219,6 +257,9 @@ func _tab_world() -> void:
 	_row([_b("ไปด่านตรวจ", func(): Dev.goto_checkpoint()), _b("ผ่านบอสด่านนี้", func(): Dev.beat_warlord()), _b("รอบ +1", func(): Dev.lap_add())],
 		"รอบ %d · %.1f กม." % [int(Game.s.get("lap", 0)) + 1, float(Game.s.km)])
 	_head("EVENTS", "เรียกอีเว้นต์บนถนน")
+	var bag: Array = Game.s.get("ev_bag", []) if int(Game.s.get("ev_bag_biome", -1)) == int(Game.s.biome) else []
+	_note("สำรับด่านนี้เหลือ %d ใบ · ล่าสุด: %s" % [bag.size(), ", ".join(Game.s.get("ev_recent", []).map(func(e): return str(Data.EVENTS.get(e, {}).get("th", e))))])
+	_row([_b("จั่วใบถัดไป", func(): Dev.event_draw(), "yellow", true), _b("สับสำรับใหม่", func(): Dev.event_deck_reset())])
 	var eb := []
 	for id in Data.EVENTS:
 		var eid: String = id
@@ -227,13 +268,15 @@ func _tab_world() -> void:
 	_head("EXPEDITION", "จุดสำรวจ")
 	if Expedition.active():
 		_row([_b("จบการสำรวจทันที", func(): Dev.finish_expedition(), "green")])
-		if Encounter.state().is_empty():
-			var encb := []
-			for id in Encounter.ENCOUNTERS:
-				var nid: String = id
-				encb.append(_b(str(Encounter.ENCOUNTERS[id].th), func(): Dev.encounter(nid), "gray", true))
-			_row(encb, "จุดพิเศษ (สุ่มเจอ ~%d%%)" % int(Encounter.chance_for(str(Expedition.state().site)) * 100.0))
-	else:
+	if not Expedition.active() or Encounter.state().is_empty() or str(Encounter.state().get("st", "")) == "wait":
+		var encb := []
+		for id in Encounter.ENCOUNTERS:
+			var nid: String = id
+			encb.append(_b(str(Encounter.ENCOUNTERS[id].th), func(): Dev.encounter_anywhere(nid), "gray", true))
+		_row(encb, "จุดพิเศษ")
+		_note("ถ้ายังไม่มีทีมสำรวจ จะส่งทีมคุ้ยซากฟรีให้ก่อน · ห้ามซ้ำ 3 ครั้งล่าสุด: %s" % ", ".join(Encounter.recent().map(func(e): return str(Encounter.def(str(e)).get("th", e)))))
+		_row([_b("ล้างประวัติจุดพิเศษ", func(): Dev.encounter_recent_clear())])
+	if not Expedition.active():
 		var sb := []
 		for id in Expedition.SITES:
 			var sid: String = id
@@ -243,6 +286,39 @@ func _tab_world() -> void:
 	var nextgen := UIKit.button("เปิดหน้ารุ่นต่อไป", "yellow")
 	nextgen.pressed.connect(_open_nextgen)
 	_row([nextgen, _b("รถพังใน 3 วิ", func(): Dev.force_wreck(), "red", true)])
+
+
+func _tab_sys() -> void:
+	_head("VERSION", "เวอร์ชัน")
+	for r in BuildInfo.rows().slice(0, 5):
+		_note("%s: %s" % [r[0], r[1]])
+	var cp := UIKit.button("คัดลอกข้อมูลเวอร์ชัน", "gray")
+	cp.pressed.connect(func():
+		DisplayServer.clipboard_set(BuildInfo.as_text())
+		Game.toast.emit("คัดลอกข้อมูลเวอร์ชันแล้ว", "info"))
+	_row([cp])
+	_head("TUTORIAL", "บทสอนเล่น")
+	var tst := Tutorial.state()
+	_note("สถานะ: " + ("กำลังสอน ขั้น %d/%d (%s)" % [Tutorial.step() + 1, Tutorial.STEPS.size(), Tutorial.step_id()] if Tutorial.active()
+		else ("จบแล้ว" if bool(tst.get("done", true)) else "ยังไม่เริ่ม")))
+	_row([_b("เล่นใหม่ตั้งแต่ต้น", func(): Dev.tutorial_restart(), "green", true), _b("ข้ามบทสอน", func(): Dev.tutorial_skip(), "red")])
+	var sb := []
+	for st in Tutorial.STEPS:
+		var sid: String = st.id
+		sb.append(_b(sid, func(): Dev.tutorial_goto(sid), "yellow" if Tutorial.active() and Tutorial.step_id() == sid else "gray", true))
+	_row(sb, "ไปขั้น")
+	_head("CLOUD SAVE", "เซฟคลาวด์")
+	_note("สถานะ: %s · rev %d%s" % [Cloud.status_text(), int(Cloud.meta.get("rev", 0)), "" if Cloud.user_id() == "" else " · " + Cloud.user_id().substr(0, 8)])
+	if Cloud.enabled():
+		_row([_b("ซิงก์ตอนนี้", func(): Dev.cloud_sync(), "green"), _b("บังคับอัปโหลด", func(): Dev.cloud_force_upload(), "yellow"),
+			_b("ลืมการเชื่อมต่อ", func(): Dev.cloud_forget(), "red")])
+		if Cloud.state == Cloud.State.CONFLICT:
+			_row([_b("ใช้เซฟคลาวด์", func(): Cloud.use_cloud(), "yellow", true), _b("ใช้เซฟเครื่องนี้", func(): Cloud.use_local())], "ชนกัน")
+	else:
+		_note("บิลด์นี้ไม่มี cloud_config.json จึงเซฟเฉพาะในเครื่อง")
+	_head("SETTINGS", "การตั้งค่า")
+	_note("ขนาดเซฟ %.1f KB · FPS %s · ภาษา %s" % [Settings.save_size_bytes() / 1024.0, str(Settings.get_value("fps")), str(Settings.get_value("lang"))])
+	_row([_b("คืนค่าเริ่มต้น", Dev.settings_reset)])
 
 
 func _open_nextgen() -> void:

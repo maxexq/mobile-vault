@@ -572,6 +572,7 @@ func _run() -> void:
 	await shot("god_panel_vehicle")
 	main.hud.panels.god.close()
 	Dev.set_overlay(false)
+	await _god_update_test()
 	var this_session := Trace.entries.filter(func(e): return str(e.sid) == Trace.session)
 	var errs := this_session.filter(func(e): return str(e.cat) == "error")
 	print("[autotest] trace entries this session: %d, errors: %d" % [this_session.size(), errs.size()])
@@ -618,6 +619,125 @@ func _run() -> void:
 	await _large_room_test()
 	print("[autotest] DONE")
 	get_tree().quit()
+
+
+## god mode actions for the newer systems (tutorial, construction, builders, squad, forge, event deck,
+## encounters, strangers, cloud, settings) + every tab renders
+func _god_update_test() -> void:
+	var god = main.hud.panels.god
+	# tutorial: replay, jump to a step, skip
+	Dev.tutorial_skip()
+	Dev.tutorial_goto("crew")
+	_check("god: tutorial jump to a step (reopens a finished one)", Tutorial.active() and Tutorial.step_id() == "crew")
+	Dev.tutorial_skip()
+	_check("god: tutorial skip", not Tutorial.active())
+	Dev.tutorial_restart()
+	_check("god: tutorial replay", Tutorial.active() and Tutorial.step_id() == "welcome")
+	Dev.tutorial_skip()
+	# builders + traits
+	var b := Dev.spawn_builder("engineer")
+	_check("god: spawn builder with a construction trait", Crew.is_builder(b) and Crew.has(b, "engineer") and str(b.variant).begins_with("dw_builder_"))
+	Dev.toggle_builder(b)
+	_check("god: builder role off", not Crew.is_builder(b) and not str(b.variant).begins_with("dw_builder_"))
+	Dev.reroll_traits(b)
+	_check("god: reroll traits", Crew.traits(b).size() >= 1)
+	# construction: half then finish
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if Game.is_slot_unlocked(i) and Game.s.rooms[i].type == "empty" and not Game.is_constructing(i):
+			slot = i
+			break
+	if slot < 0:
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}})
+		slot = Game.s.rooms.size() - 1
+	Game.s.res.scrap = Game.cap("scrap")
+	var started := Game.build_room(slot, "kitchen")
+	var left0 := float(Game.build_info(slot).get("left", 0.0))
+	Dev.construction_progress(0.5)
+	_check("god: construction +50%", started and Game.is_constructing(slot) and absf(float(Game.build_info(slot).left) - left0 * 0.5) < 0.01)
+	Dev.construction_progress(1.0)
+	_check("god: construction finish", not Game.is_constructing(slot) and Game.s.rooms[slot].type == "kitchen")
+	# defence squad
+	Dev.squad_clear()
+	_check("god: squad clear", (Game.s.squad as Array).all(func(x): return int(x) < 0))
+	Dev.squad_auto()
+	var filled := (Game.s.squad as Array).filter(func(x): return int(x) >= 0).size()
+	_check("god: squad auto fill", filled >= mini(Combat.slots_unlocked(), 1))
+	Dev.drop_gear(2, 6)
+	Dev.squad_gear()
+	_check("god: gear max +", Dev.gear_max_plus() >= 0)
+	# items & forge
+	var stim := int(Game.s.items.get("stimpack", 0))
+	Dev.items_all(10)
+	_check("god: every item +10", int(Game.s.items.get("stimpack", 0)) == stim + 10 and int(Game.s.items.get("dried_meat", 0)) >= 10)
+	Dev.stash_clear()
+	Dev.forge_kit()
+	_check("god: forge kit (3 of each rarity)", Loot.synth_candidates(0).size() >= 3 and Loot.synth_candidates(Loot.RARITY.size() - 2).size() >= 3)
+	_check("god: forge kit can be forged", not Loot.synthesize(0).is_empty())
+	Dev.stash_clear()
+	_check("god: stash clear", Loot.stash().is_empty())
+	# road event deck
+	Dev.event_deck_reset()
+	_check("god: event deck reset", not Game.s.has("ev_bag") and not Game.s.has("ev_recent"))
+	Dev.event_draw()
+	var drawn := Game.active_event
+	_check("god: draw next event card", drawn != "" and (Game.s.ev_recent as Array).back() == drawn)
+	Game.cancel_event()
+	await wait(0.3)
+	main.hud.event_popup.close()
+	# strangers: every kind × grade
+	Dev.stranger_clear()
+	Dev.stranger("mimic", "very_rare")
+	Dev.stranger("raider", "rare")
+	var q := Inspection.queue()
+	_check("god: stranger of a chosen kind and grade", q.size() == 2 and q[0].kind == "mimic" and q[0].grade == "very_rare" and q[1].kind == "raider")
+	Dev.stranger("thief", "rare")
+	_check("god: stranger queue cap respected", Inspection.queue().size() == Inspection.MAX_QUEUE)
+	Dev.stranger_clear()
+	_check("god: stranger queue clear", Inspection.queue().is_empty())
+	# encounters without an expedition running
+	if Expedition.active():
+		Dev.finish_expedition()
+		await wait(0.6)
+		if main.hud.panels.expedition.is_open:
+			main.hud.panels.expedition.report = {}
+			main.hud.panels.expedition.close()
+	Dev.recruit(3)
+	Dev.encounter_anywhere("vault")
+	_check("god: force an encounter with no trip running", Expedition.active() and Encounter.pending() and Encounter.current_id() == "vault")
+	await wait(0.6)
+	await shot("god_encounter_forced")
+	main.hud.encounter_popup.close()
+	Encounter.choose(Encounter.def("vault").choices.size() - 1, true)
+	Dev.encounter_recent_clear()
+	_check("god: encounter history clear", Encounter.recent().is_empty())
+	Dev.finish_expedition()
+	await wait(0.6)
+	if main.hud.panels.expedition.is_open:
+		main.hud.panels.expedition.report = {}
+		main.hud.panels.expedition.close()
+	# cloud is off in tests: actions must be harmless
+	Dev.cloud_sync()
+	Dev.cloud_force_upload()
+	_check("god: cloud actions are no-ops when the cloud is off", not Cloud.enabled())
+	var fps0 = Settings.get_value("fps")
+	Settings.set_value("fps", 30)
+	Dev.settings_reset()
+	_check("god: settings reset to defaults", Settings.get_value("fps") == Settings.DEFAULTS.fps)
+	if fps0 != Settings.DEFAULTS.fps:
+		Settings.set_value("fps", fps0)
+	# every tab renders without errors
+	main.hud.open_panel("god")
+	for t in god.TABS:
+		god.tab = t[0]
+		god.refresh()
+		await wait(0.25)
+		if t[0] in ["res", "crew", "world", "sys"]:
+			await shot("god_tab_" + str(t[0]))
+	god.tab = "sys"
+	god.refresh()
+	_check("god: system tab shows version + tutorial + cloud", _find_text(god, "บทสอนเล่น") and _find_text(god, "เซฟคลาวด์") and _find_text(god, BuildInfo.GAME_VERSION))
+	god.close()
 
 
 ## event windows: Thai text + choice buttons stay inside the frame (wide + portrait), outcome flair
@@ -1076,7 +1196,7 @@ func _encounter_test() -> void:
 	var r1 := await _enc_finish()
 	_check("encounter: report carries the encounter", r1.has("enc") and str(r1.get("enc", {}).get("id", "")) == "survivor")
 	if room:
-		# an elite refugee (rare roll) waits at the door for inspection instead of boarding at once
+		# offer_recruit(.., 1.0) can send an exceptional refugee to the door for inspection instead (~15%)
 		_check("encounter: refugee joined on return", Game.s.dwellers.size() == pop0 + 1 or Inspection.queue().size() == door0 + 1)
 	# 2) buried safe -> pry it open: rare loot or an injury, plus extra time
 	_check("encounter: second expedition starts", _enc_start(sup))

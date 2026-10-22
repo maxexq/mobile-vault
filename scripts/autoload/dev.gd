@@ -368,7 +368,9 @@ func recruit(n: int = 1) -> void:
 
 ## a stranger at the door for inspection (grade "rare"/"very_rare", kind "" = random)
 func stranger(kind: String = "", grade: String = "rare") -> void:
-	Inspection.queue_candidate("god", grade, kind)
+	if Inspection.queue_candidate("god", grade, kind).is_empty():
+		Game.toast.emit("คิวหน้าประตูเต็ม (%d คน) — ล้างคิวก่อน" % Inspection.MAX_QUEUE, "warn")
+		return
 	act("stranger %s %s" % [grade, kind])
 
 
@@ -564,3 +566,241 @@ func import_save(text: String) -> bool:
 	if ok:
 		_vehicle_changed()
 	return ok
+
+
+# ---- tutorial
+func tutorial_restart() -> void:
+	act("tutorial restart")
+	Tutorial.restart()
+
+
+func tutorial_skip() -> void:
+	act("tutorial skip")
+	Tutorial.skip()
+
+
+## jump straight to a step; reopens a finished tutorial first (Tutorial.goto only works while active)
+func tutorial_goto(id: String) -> void:
+	if Tutorial.index_of(id) < 0:
+		return
+	if not Tutorial.active():
+		Tutorial.restart()
+	act("tutorial goto " + id)
+	Tutorial.goto(id)
+
+
+# ---- construction & builders
+## a refugee with the builder role (hard hat) and, optionally, one construction trait
+func spawn_builder(build_trait: String = "") -> Dictionary:
+	var d := Game.recruit_random()
+	_make_builder(d, true)
+	if build_trait != "" and Crew.TRAITS.has(build_trait):
+		var ts: Array = Crew.traits(d)
+		if not ts.has(build_trait):
+			if ts.size() >= 2:
+				ts.pop_back()
+			ts.append(build_trait)
+	act("spawn builder %s %s" % [d.name, build_trait])
+	Game.dwellers_changed.emit()
+	return d
+
+
+func _make_builder(d: Dictionary, on_: bool) -> void:
+	d["role"] = "builder" if on_ else ""
+	var parts := str(d.variant).split("_")
+	var hair := parts[-1] if parts.size() >= 3 else Data.HAIRS[0]
+	if on_:
+		d.variant = "dw_builder_%s" % hair
+	elif str(d.variant).begins_with("dw_builder_"):
+		var best := "str"
+		for st in ["int", "agi"]:
+			if int(d[st]) > int(d[best]):
+				best = st
+		d.variant = "dw_%s_%s" % [Data.OUTFIT_FOR_STAT[best][0], hair]
+
+
+func toggle_builder(d: Dictionary) -> void:
+	_make_builder(d, not Crew.is_builder(d))
+	act("builder %s = %s" % [d.name, Crew.is_builder(d)])
+	Game.dwellers_changed.emit()
+
+
+func reroll_traits(d: Dictionary) -> void:
+	d.erase("traits")
+	Crew.roll_traits(d)
+	act("reroll traits %s %s" % [d.name, d.traits])
+	Game.dwellers_changed.emit()
+	Combat.rebuild_heroes()
+
+
+## work done on every running site, 0..1 of what is left (1.0 = finish now)
+func construction_progress(frac: float) -> void:
+	for slot in Game.s.rooms.size():
+		if Game.is_constructing(slot):
+			var b := Game.build_info(slot)
+			b.left = float(b.left) * (1.0 - clampf(frac, 0.0, 1.0))
+	act("construction progress %d%%" % int(frac * 100.0))
+	if frac >= 1.0:
+		finish_construction()
+	Game.rooms_changed.emit()
+
+
+func constructing_count() -> int:
+	var n := 0
+	for slot in Game.s.rooms.size():
+		if Game.is_constructing(slot):
+			n += 1
+	return n
+
+
+# ---- defence squad
+## fills the open squad slots with the strongest idle survivors on board
+func squad_auto() -> void:
+	var cands := []
+	for d in Game.s.dwellers:
+		if not Game.is_away(d) and Game.squad_role(d) < 0:
+			cands.append(d)
+	cands.sort_custom(func(a, b): return Combat.hero_power(a) > Combat.hero_power(b))
+	for role in mini(Combat.slots_unlocked(), (Game.s.squad as Array).size()):
+		if int(Game.s.squad[role]) < 0 and not cands.is_empty():
+			Game.set_squad(role, int(cands.pop_front().id))
+	act("squad auto fill")
+	Combat.rebuild_heroes()
+
+
+func squad_clear() -> void:
+	for role in (Game.s.squad as Array).size():
+		Game.set_squad(role, -1)
+	act("squad clear")
+	Combat.rebuild_heroes()
+
+
+func squad_gear() -> int:
+	var n := Loot.auto_equip_squad()
+	act("squad auto equip %d" % n)
+	Combat.rebuild_heroes()
+	return n
+
+
+# ---- items & forge
+func items_all(n: int) -> void:
+	for k in Data.ITEMS:
+		if str(Data.ITEMS[k].kind) in ["use", "mat"]:
+			Game.s.items[k] = maxi(0, int(Game.s.items.get(k, 0)) + n)
+	act("items +%d" % n)
+	Game.resources_changed.emit()
+
+
+## 3 items of every rarity below the top one, so every forge recipe can be tried at once
+func forge_kit() -> void:
+	# straight into the stash: roll_random's rarity is only a floor, and auto-salvage would eat the low ones
+	var slots: Array = Loot.HERO_SLOTS + Loot.VAN_SLOTS
+	for r in Loot.RARITY.size() - 1:
+		for i in 3:
+			if Loot.stash().size() < Loot.STASH_CAP:
+				Loot.stash().append(Loot.roll_item(slots[randi() % slots.size()], Combat.enemy_level(), r))
+	Game.s.res.scrap = maxf(float(Game.s.res.scrap), minf(Game.cap("scrap"), 500.0))
+	Game.s.items["components"] = maxi(int(Game.s.items.get("components", 0)), 200)
+	act("forge kit")
+	Game.resources_changed.emit()
+	Game.gear_changed.emit()
+
+
+## every equipped item (squad + vehicle) to its rarity's max +level
+func gear_max_plus() -> int:
+	var n := 0
+	var all := []
+	for d in Game.s.dwellers:
+		for slot in Loot.HERO_SLOTS:
+			all.append(Loot.equipped_on(d, slot))
+	for slot in Loot.VAN_SLOTS:
+		all.append(Loot.van_equipped(slot))
+	for it in all:
+		if not (it as Dictionary).is_empty() and Loot.can_enhance(it):
+			it.plus = int(Loot.rarity(int(it.rar)).max_plus)
+			n += 1
+	act("gear max plus %d" % n)
+	Game.gear_changed.emit()
+	Combat.rebuild_heroes()
+	return n
+
+
+func stash_clear() -> void:
+	Loot.stash().clear()
+	act("stash clear")
+	Game.gear_changed.emit()
+
+
+# ---- road event deck
+func event_deck_reset() -> void:
+	Game.s.erase("ev_bag")
+	Game.s.erase("ev_bag_biome")
+	Game.s.erase("ev_recent")
+	act("event deck reset")
+
+
+## draw the next card from the shuffle bag (the same path the road uses)
+func event_draw() -> void:
+	if Game.active_event != "":
+		Game.cancel_event()
+	var id := Game.next_event_id()
+	act("event draw " + id)
+	if id != "":
+		Game.trigger_event(id)
+
+
+# ---- expedition encounters
+func encounter_recent_clear() -> void:
+	Game.s.erase("enc_recent")
+	act("encounter history clear")
+
+
+## no trip running: send a free scavenging team first, then put the encounter on it
+func encounter_anywhere(id: String) -> void:
+	if not Expedition.active():
+		var ids := []
+		for d in Game.s.dwellers:
+			if not Game.is_away(d) and ids.size() < Expedition.min_team():
+				ids.append(int(d.id))
+		if not Expedition.start("scav", ids, {}):
+			Game.toast.emit("ส่งทีมสำรวจไม่ได้ (ลูกเรือไม่พอ)", "warn")
+			return
+		act("quick expedition for encounter")
+	encounter(id)
+
+
+# ---- strangers
+func stranger_clear() -> void:
+	Inspection.queue().clear()
+	act("stranger queue clear")
+	Inspection.queue_changed.emit()
+
+
+# ---- cloud save
+func cloud_sync() -> void:
+	act("cloud sync")
+	Cloud.sync()
+
+
+func cloud_force_upload() -> void:
+	act("cloud force upload")
+	if Game.started:
+		Game.save_game()
+	Cloud.upload(true)
+
+
+## forget the sign-in and the sync bookkeeping, as if this browser had never synced (cloud row stays)
+func cloud_forget() -> void:
+	Cloud.session = {}
+	Cloud._save_session()
+	Cloud.meta.rev = 0
+	Cloud.meta.dirty = Save.has_save()
+	Cloud.meta.wiped = false
+	Cloud._save_meta()
+	act("cloud forget link")
+	Cloud.sync()
+
+
+func settings_reset() -> void:
+	act("settings reset")
+	Settings.reset_defaults()
