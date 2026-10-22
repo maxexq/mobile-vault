@@ -55,6 +55,8 @@ var _exp_box: PanelContainer
 var _exp_lbl: Label
 var _exp_btn: Button
 var _scav_btn: Button
+var _door_box: PanelContainer
+var _door_lbl: Label
 var room_closeup: RoomCloseup
 var event_popup: EventPopup
 var title_screen: TitleScreen
@@ -119,7 +121,7 @@ func _ready() -> void:
 
 	room_closeup = RoomCloseup.new()
 	add_child(room_closeup)
-	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen", "god"]:
+	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen", "god", "door"]:
 		var p: ModalPanel
 		match k:
 			"build": p = BuildPanel.new()
@@ -134,6 +136,7 @@ func _ready() -> void:
 			"expedition": p = ExpeditionPanel.new()
 			"nextgen": p = NextGenPanel.new()
 			"god": p = GodPanel.new()
+			"door": p = InspectionPanel.new()
 		add_child(p)
 		panels[k] = p
 	(panels.build as BuildPanel).placement_requested.connect(func(t): build_placement_requested.emit(t))
@@ -342,6 +345,22 @@ func _build_bottom() -> void:
 			open_expedition(Expedition.at_site()))
 	eh.add_child(_exp_btn)
 	_exp_box.visible = false
+	# v4.4 a stranger knocking: blinking red strip above the travel bar until someone answers the door
+	_door_box = _chip_box(UIKit.C_RED)
+	_door_box.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dh := UIKit.hbox(4)
+	_door_box.add_child(dh)
+	dh.add_child(UIKit.icon_rect("people", 16))
+	_door_lbl = UIKit.label("", UIKit.FS_SMALL, UIKit.C_RED)
+	_door_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_door_lbl.clip_text = true
+	dh.add_child(_door_lbl)
+	var door_btn := UIKit.button("ตรวจ", "red", "eye")
+	door_btn.custom_minimum_size = Vector2(48, 20)
+	door_btn.pressed.connect(open_door)
+	dh.add_child(door_btn)
+	_door_box.visible = false
+	_bottom.add_child(_door_box)
 	_bottom.add_child(_exp_box)
 	_bottom.add_child(_travel)
 	_tools = BoxContainer.new()
@@ -519,6 +538,7 @@ func _process(d: float) -> void:
 		_refresh_status()
 		_refresh_hazards()
 		_refresh_expedition()
+		_refresh_door()
 
 
 func _refresh_res() -> void:
@@ -605,6 +625,26 @@ func _refresh_expedition() -> void:
 	if float(Game.s.get("wreck_t", 0.0)) > 0.0 and float(Game.s.hull) <= 0.0:
 		status_lbl.text = "WRECK %d" % int(Meta.wreck_time_left())
 		status_lbl.add_theme_color_override("font_color", UIKit.C_RED)
+
+
+func _refresh_door() -> void:
+	var show := Inspection.pending()
+	if _door_box.visible != show:
+		_door_box.visible = show
+		_apply_layout.call_deferred()
+	if show:
+		var c := Inspection.current()
+		_door_lbl.text = "มีคนเคาะประตู! %s [%s] · %s" % [c.name, Inspection.GRADES[c.grade].th, Game.fmt_time(float(c.wait))]
+		_door_box.modulate.a = 1.0 if int(Time.get_ticks_msec() / 500) % 2 == 0 else 0.75
+
+
+func open_door() -> void:
+	if not Game.started:
+		return
+	for k in panels:
+		if panels[k].is_open:
+			panels[k].close()
+	(panels.door as InspectionPanel).open_door()
 
 
 func open_expedition(site_id: String) -> void:

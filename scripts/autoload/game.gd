@@ -766,6 +766,7 @@ func _simulate(dt: float, offline: bool) -> void:
 		s.hull = minf(hull_max(), float(s.hull) + hull_regen_pm() * m)
 	Meta.tick(dt, offline)
 	Expedition.tick(offline)
+	Inspection.tick(dt, offline)
 	_tick_outages(dt, offline)
 	_tick_corrosion(m)
 	# --- solar + rain collector + vault engine part
@@ -925,8 +926,8 @@ func _simulate(dt: float, offline: bool) -> void:
 		if s.recruit_t <= 0.0:
 			s.recruit_t = 240.0
 			if s.dwellers.size() < pop_cap():
-				var d := recruit_random()
-				if not offline:
+				var d := offer_recruit("radio")
+				if not offline and not d.is_empty():
 					toast.emit("วิทยุรับสัญญาณ! %s เข้าร่วมรถบ้าน" % d.name, "good")
 
 	if dwellers_dirty:
@@ -1057,6 +1058,16 @@ func _add_dweller(p: Dictionary) -> Dictionary:
 	s.next_id = int(s.next_id) + 1
 	s.dwellers.append(d)
 	return d
+
+
+## every stranger who wants to join comes through here: usually an ordinary refugee who boards at once
+## (returns the dweller), rarely an exceptional one who waits at the door for inspection (returns {}).
+func offer_recruit(source: String, elite_bonus: float = 0.0) -> Dictionary:
+	var grade := Inspection.roll_grade(elite_bonus)
+	if grade != "" and Inspection.queue().size() < Inspection.MAX_QUEUE:
+		Inspection.queue_candidate(source, grade)
+		return {}
+	return recruit_random()
 
 
 func recruit_random() -> Dictionary:
@@ -1242,7 +1253,8 @@ func give_rewards(rew: Dictionary) -> String:
 				travel_changed.emit()
 			"_recruit":
 				if s.dwellers.size() < pop_cap():
-					var d := recruit_random(); parts.append(d.name)
+					var d := offer_recruit("sos")
+					parts.append(d.name if not d.is_empty() else "คนแปลกหน้ารอตรวจที่ประตู")
 				else:
 					parts.append("(ที่พักเต็ม)")
 			_:
@@ -1664,8 +1676,11 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 		"recruit":
 			if s.dwellers.size() >= pop_cap():
 				return {"ok": false, "text": "ที่พักเต็ม! สร้าง/อัปเกรดห้องพักก่อน"}
-			var nd := recruit_random()
-			res.text = "%s เข้าร่วมรถบ้านแล้ว! (STR %d / INT %d / AGI %d)" % [nd.name, nd.str, nd.int, nd.agi]
+			var nd := offer_recruit("event")
+			if nd.is_empty():
+				res.text = "ผู้รอดชีวิตคนนี้ดูไม่ธรรมดา... ฝีมือดีเกินกว่าจะรับขึ้นรถโดยไม่ตรวจ เขารออยู่ที่ประตู"
+			else:
+				res.text = "%s เข้าร่วมรถบ้านแล้ว! (STR %d / INT %d / AGI %d)" % [nd.name, nd.str, nd.int, nd.agi]
 		"gift":
 			if not pay(ch.cost):
 				return {"ok": false, "text": "เสบียงไม่พอ"}

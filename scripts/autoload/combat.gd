@@ -952,8 +952,9 @@ func _on_kill(e: Dictionary) -> void:
 	if drops > 0:
 		Game.gear_changed.emit()
 	if e.boss and rng.randf() < 0.35 and Game.s.dwellers.size() < Game.pop_cap():
-		var nd := Game.recruit_random()
-		Game.toast.emit("ช่วยเชลยจากบอสได้! %s เข้าร่วมรถบ้าน" % nd.name, "good")
+		var nd := Game.offer_recruit("boss", 1.0)
+		if not nd.is_empty():
+			Game.toast.emit("ช่วยเชลยจากบอสได้! %s เข้าร่วมรถบ้าน" % nd.name, "good")
 	Game.resources_changed.emit()
 
 

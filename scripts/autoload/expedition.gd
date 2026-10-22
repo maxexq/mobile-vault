@@ -314,8 +314,8 @@ func finish(offline: bool) -> Dictionary:
 				got += ", พิมพ์เขียว: " + Mods.BLUEPRINT_TH.get(b, b)
 				break   # one new blueprint per trip
 		if rng.randf() < float(loot.get("recruit", 0.0)) and Game.s.dwellers.size() < Game.pop_cap():
-			var nd := Game.recruit_random()
-			got += ", ผู้รอดชีวิต " + nd.name
+			var nd := Game.offer_recruit("expedition")
+			got += (", ผู้รอดชีวิต " + nd.name) if not nd.is_empty() else ", คนแปลกหน้าฝีมือดีรอตรวจที่ประตู"
 		if loot.has("lore") and Lore.unlock(str(loot.lore)):
 			got += ", บันทึกใหม่"
 	rep.loot = got

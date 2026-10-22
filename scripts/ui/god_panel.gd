@@ -167,6 +167,9 @@ func _tab_crew() -> void:
 	_row([_b("สุข 100", func(): Dev.happy_all(100.0)), _b("สุข 20", func(): Dev.happy_all(20.0)), _b("สุข 0", func(): Dev.happy_all(0.0), "red")], "ทุกคน")
 	_row([_b("หมา", func(): Dev.add_pet("dog")), _b("แมว", func(): Dev.add_pet("cat")), _b("ไก่", func(): Dev.add_pet("hen")), _b("ล้าง", func(): Dev.clear_pets())],
 		"สัตว์เลี้ยง %d" % (Game.s.get("pets", []) as Array).size())
+	_row([_b("สุ่ม", func(): Dev.stranger("")), _b("คน", func(): Dev.stranger("human"), "green"), _b("ติดเชื้อ", func(): Dev.stranger("infected"), "red"),
+		_b("เลียนแบบ", func(): Dev.stranger("mimic"), "red"), _b("ขโมย", func(): Dev.stranger("thief"), "red"), _b("โจร", func(): Dev.stranger("raider"), "red"),
+		_b("หายากมาก", func(): Dev.stranger("", "very_rare"), "yellow")], "คนแปลกหน้า %d" % Inspection.queue().size())
 	_head("CREW", "ทีละคน")
 	for d in Game.s.dwellers:
 		var dd: Dictionary = d
