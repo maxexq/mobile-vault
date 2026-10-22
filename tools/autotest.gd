@@ -1197,9 +1197,28 @@ func _encounter_test() -> void:
 		await wait(0.5)
 		await shot("encounter_result")
 		_check("encounter: share food spends packed supplies", int(Expedition.state().sup.food) == 0 and not Encounter.pending())
+	await wait(1.4)
+	var epop: EncounterPopup = main.hud.encounter_popup
+	var etx: Array = _find_type(epop.body, "Label").map(func(l): return str(l.text))
+	_check("encounter outcome: radio stamp", etx.has("MISSION OK") or etx.has("MAYDAY"))
+	_check("encounter outcome: haul/supply rows", _find_type(epop.body, "GridContainer").size() == 1 and (etx.has("+1") or etx.has("-10") or etx.any(func(t): return t.begins_with("-"))))
+	_check("encounter outcome: inside window %s" % [_outside(epop.body, epop.box.get_global_rect().grow(1.0))], _outside(epop.body, epop.box.get_global_rect().grow(1.0)).is_empty())
+	await shot("encounter_result_full")
 	main.hud.encounter_popup.close()
 	var r1 := await _enc_finish()
 	_check("encounter: report carries the encounter", r1.has("enc") and str(r1.get("enc", {}).get("id", "")) == "survivor")
+	var xp: ExpeditionPanel = main.hud.panels.expedition
+	xp.report = r1
+	xp.open()
+	await wait(1.6)
+	var rtx: Array = _find_type(xp.body, "Label").map(func(l): return str(l.text))
+	_check("expedition report: stamp + crew chips", (rtx.has("MISSION OK") or rtx.has("FAILED") or rtx.has("LOST")) and rtx.has(">CREW"))
+	_check("expedition report: gains + radio box", r1.has("gain") and rtx.has(">RADIO"))
+	_check("expedition report: inside window", _outside(xp.body, xp.box.get_global_rect().grow(1.0)).is_empty())
+	await shot("expedition_report")
+	xp.report = {}
+	xp.close()
+	await wait(0.3)
 	if room:
 		# offer_recruit(.., 1.0) can send an exceptional refugee to the door for inspection instead (~15%)
 		_check("encounter: refugee joined on return", Game.s.dwellers.size() == pop0 + 1 or Inspection.queue().size() == door0 + 1)
