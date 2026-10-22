@@ -2,7 +2,8 @@ class_name RoomCloseup
 extends ModalPanel
 ## Terminal panel shown while the camera is zoomed into a room (management mode).
 ## Workers (assign / move / remove), production, recipes with pixel progress bars, upgrade, demolish.
-## Empty slots show a build list; locked slots explain the vault upgrade.
+## Empty slots show a build list; locked slots explain the vault upgrade. Rooms under construction (v4.3) show
+## the site: progress, time left, the builder crew (+ who speeds it up) and a components rush.
 ## focus_rect() tells the camera where on screen the zoomed room should sit.
 
 signal build_requested(slot: int, room_type: String)
@@ -11,6 +12,9 @@ var slot := -1
 var mode := "main"           # main | assign
 var _job_bar: ProgressBar
 var _job_lbl: Label
+var _site_bar: ProgressBar
+var _site_lbl: Label
+var _rush_btn: Button
 var _content: VBoxContainer
 
 
@@ -73,6 +77,8 @@ func refresh() -> void:
 		_content.remove_child(c)
 		c.queue_free()
 	_job_bar = null
+	_site_bar = null
+	_rush_btn = null
 	var r: Dictionary = Game.s.rooms[slot]
 	if not Game.is_slot_unlocked(slot):
 		_build_locked()
@@ -85,6 +91,18 @@ func refresh() -> void:
 	if mode == "assign":
 		_build_assign(def)
 		return
+	if Game.is_site(slot):
+		set_title("BUILDING %s / กำลังสร้าง%s" % [def.en, def.th])
+		_build_site(r, def)
+		_build_workers(def)
+		var cancel := UIKit.button("ยกเลิกการก่อสร้าง (คืนเศษเหล็กครึ่งหนึ่ง)", "red", "close")
+		cancel.pressed.connect(func():
+			Game.demolish_room(slot)
+			refresh())
+		_content.add_child(cancel)
+		return
+	if Game.is_constructing(slot):
+		_build_site(r, def)
 	_build_workers(def)
 	_build_production(r, def)
 	_build_recipes(r, def)
@@ -96,10 +114,58 @@ func _section(en: String, th: String = "") -> void:
 	_content.add_child(UIKit.header(en, th))
 
 
+func _build_site(r: Dictionary, def: Dictionary) -> void:
+	var up := not Game.is_site(slot)
+	_section("CONSTRUCTION", "อัปเกรดเป็น Lv.%d" % (int(r.level) + 1) if up else "งานก่อสร้าง")
+	var p := UIKit.panel(Color("1a140c"), UIKit.C_GOLD)
+	var v := UIKit.vbox(2)
+	p.add_child(v)
+	_site_bar = UIKit.progress(UIKit.C_GOLD, 10)
+	_site_bar.custom_minimum_size.y = 10
+	_site_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_site_lbl = UIKit.label("", UIKit.FP, UIKit.C_WHITE, true)
+	_site_lbl.add_theme_constant_override("outline_size", 2)
+	_site_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	_site_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_site_bar.add_child(_site_lbl)
+	v.add_child(_site_bar)
+	var crew := Game.site_crew(slot)
+	var tip := "ห้องยังทำงานตามปกติระหว่างอัปเกรด" if up else "ห้องจะเริ่มทำงานเมื่อสร้างเสร็จ"
+	if crew.is_empty():
+		tip += " · ยังไม่มีช่าง งานเดินช้ามาก ส่งคนมาช่วยสิ!"
+	v.add_child(UIKit.wrap_label(tip, UIKit.FS_SMALL, UIKit.C_DIM if not crew.is_empty() else UIKit.C_RED))
+	for d in crew:
+		var tags := Crew.build_tags(d)
+		v.add_child(UIKit.wrap_label("%s  x%.2f%s" % [d.name, Crew.build_mult(d), ("  · " + tags) if tags != "" else ""], UIKit.FS_SMALL, UIKit.C_GOLD))
+	_rush_btn = UIKit.button("", "yellow", "cog")
+	_rush_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rush_btn.pressed.connect(func(): Game.rush_build(slot))
+	v.add_child(_rush_btn)
+	_content.add_child(p)
+	_update_site()
+
+
+func _update_site() -> void:
+	if _site_bar == null or not is_instance_valid(_site_bar) or not Game.is_constructing(slot):
+		return
+	var pr := Game.build_progress(slot)
+	_site_bar.value = pr
+	_site_lbl.text = "%d%%  %s  x%.1f" % [int(pr * 100.0), Game.fmt_time(Game.build_left_sec(slot)), Game.build_speed(slot)]
+	_site_lbl.size = _site_bar.size
+	_site_lbl.position = Vector2(0, 1)
+	var rc := Game.rush_cost(slot)
+	_rush_btn.text = "เสร็จทันที (%d ชิ้นส่วน)" % rc
+	_rush_btn.disabled = not Game.can_afford({"components": rc})
+
+
 func _build_workers(def: Dictionary) -> void:
-	var workers := Game.room_workers(slot)
-	var st: String = def.get("stat", "str")
-	_section("WORKERS %d/%d · %s" % [workers.size(), Data.ROOM_WORKERS, st.to_upper()], "ผู้ทำงาน")
+	var site := Game.is_site(slot)
+	var workers := Game.site_crew(slot) if site else Game.room_workers(slot)
+	var st: String = "str" if site else def.get("stat", "str")
+	if site:
+		_section("BUILDERS %d/%d · STR" % [workers.size(), Data.ROOM_WORKERS], "ทีมช่าง")
+	else:
+		_section("WORKERS %d/%d · %s" % [workers.size(), Data.ROOM_WORKERS, st.to_upper()], "ผู้ทำงาน")
 	for d in workers:
 		var card := UIKit.panel()
 		var h := UIKit.hbox(4)
@@ -107,7 +173,8 @@ func _build_workers(def: Dictionary) -> void:
 		h.add_child(UIKit.portrait(d.variant))
 		var v := UIKit.vbox(1)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		v.add_child(UIKit.label("%s  Lv.%d" % [d.name, d.lvl], UIKit.FS_SMALL))
+		var role_tag: String = (" · " + Crew.ROLES[Crew.role(d)].th) if Crew.ROLES.has(Crew.role(d)) else ""
+		v.add_child(UIKit.label("%s  Lv.%d%s" % [d.name, d.lvl, role_tag], UIKit.FS_SMALL))
 		v.add_child(UIKit.stat_bar(st, int(d[st])))
 		h.add_child(v)
 		var did: int = d.id
@@ -120,7 +187,7 @@ func _build_workers(def: Dictionary) -> void:
 		h.add_child(rm)
 		_content.add_child(card)
 	if workers.size() < Data.ROOM_WORKERS:
-		var add := UIKit.button("+ เพิ่มคนทำงาน", "green", "people")
+		var add := UIKit.button("+ ส่งช่างมาช่วยสร้าง" if site else "+ เพิ่มคนทำงาน", "green", "people")
 		add.pressed.connect(func():
 			mode = "assign"
 			refresh())
@@ -128,6 +195,9 @@ func _build_workers(def: Dictionary) -> void:
 
 
 func _build_assign(def: Dictionary) -> void:
+	if Game.is_constructing(slot):
+		_build_assign_builders()
+		return
 	var st: String = def.get("stat", "str")
 	var back := UIKit.button("< กลับ", "gray")
 	back.pressed.connect(func():
@@ -147,6 +217,36 @@ func _build_assign(def: Dictionary) -> void:
 		if Game.squad_role(d) >= 0:
 			where = Combat.ROLES[Game.squad_role(d)].th
 		var b := _row_button(d, "%s  %s%d  (%s)" % [d.name, st.to_upper(), d[st], where], "gray" if int(d.room) >= 0 else "green")
+		var did: int = d.id
+		b.pressed.connect(func():
+			if Game.assign(Game.dweller_by_id(did), slot):
+				mode = "main"
+				refresh())
+		_content.add_child(b)
+
+
+## picking crew for a building site: fastest builders first
+func _build_assign_builders() -> void:
+	var back := UIKit.button("< กลับ", "gray")
+	back.pressed.connect(func():
+		mode = "main"
+		refresh())
+	_content.add_child(back)
+	_section("SELECT · SORT BUILD SPEED", "เลือกช่าง (เร็วสุดก่อน)")
+	var list: Array = []
+	for d in Game.s.dwellers:
+		if not Game.is_away(d) and int(d.room) != slot:
+			list.append(d)
+	list.sort_custom(func(a, b): return Crew.build_speed(a) > Crew.build_speed(b))
+	if list.is_empty():
+		_content.add_child(UIKit.wrap_label("ไม่มีผู้ลี้ภัยว่าง (ทุกคนทำงานอยู่ที่นี่หรือออกสำรวจ)"))
+	for d in list:
+		var where: String = "ว่าง" if int(d.room) < 0 else Data.room_def(Game.s.rooms[int(d.room)].type).th
+		if Game.squad_role(d) >= 0:
+			where = Combat.ROLES[Game.squad_role(d)].th
+		var tags := Crew.build_tags(d)
+		var b := _row_button(d, "%s  ช่าง x%.1f%s  (%s)" % [d.name, Crew.build_speed(d) / 0.6, (" " + tags) if tags != "" else "", where],
+			"yellow" if Crew.is_builder(d) else ("gray" if int(d.room) >= 0 else "green"))
 		var did: int = d.id
 		b.pressed.connect(func():
 			if Game.assign(Game.dweller_by_id(did), slot):
@@ -252,9 +352,11 @@ func _build_recipes(r: Dictionary, def: Dictionary) -> void:
 func _build_upgrade(r: Dictionary, def: Dictionary) -> void:
 	_section("UPGRADE", "อัปเกรด")
 	var h := UIKit.hbox(4)
-	if int(r.level) < Data.ROOM_MAX_LEVEL:
-		var c: int = Data.ROOM_UPGRADE_COST[int(r.level) + 1]
-		var b := UIKit.button("อัปเกรด Lv.%d  (%d เศษเหล็ก)" % [int(r.level) + 1, c], "yellow", "wrench")
+	if Game.is_constructing(slot):
+		h.add_child(UIKit.label("กำลังอัปเกรดอยู่ (ดูด้านบน)", UIKit.FS_SMALL, UIKit.C_GOLD))
+	elif int(r.level) < Data.ROOM_MAX_LEVEL:
+		var c: int = Game.upgrade_cost(slot)
+		var b := UIKit.button("อัปเกรด Lv.%d  (%d เศษเหล็ก · %s)" % [int(r.level) + 1, c, Game.fmt_time(Game.upgrade_time(int(r.level) + 1))], "yellow", "wrench")
 		b.set_meta("cost", {"scrap": c})
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func(): Game.upgrade_room(slot))
@@ -291,10 +393,10 @@ func _build_empty() -> void:
 		h.add_child(UIKit.tex_rect(Atlas.sub("room_" + t, Rect2(20, 20, 40, 26)), Vector2(40, 26)))
 		var v := UIKit.vbox(0)
 		v.add_child(UIKit.label(def.th, UIKit.FS_SMALL))
-		v.add_child(UIKit.label((("ต้องการ Vault Lv.%d" % ul) if ul < 99 else "ต้องมีพิมพ์เขียว") if locked else ("%d เศษเหล็ก" % def.cost), UIKit.FS_SMALL, UIKit.C_DIM))
+		v.add_child(UIKit.label((("ต้องการ Vault Lv.%d" % ul) if ul < 99 else "ต้องมีพิมพ์เขียว") if locked else ("%d เศษเหล็ก · %s" % [Game.build_cost(t), Game.fmt_time(Game.build_time(t))]), UIKit.FS_SMALL, UIKit.C_DIM))
 		h.add_child(v)
 		b.add_child(h)
-		b.disabled = locked or float(Game.s.res.scrap) < float(def.cost)
+		b.disabled = locked or float(Game.s.res.scrap) < float(Game.build_cost(t))
 		var tt: String = t
 		b.pressed.connect(func():
 			if Game.build_room(slot, tt):
@@ -333,7 +435,10 @@ func _update_buttons() -> void:
 
 
 func _process(_d: float) -> void:
-	if not is_open or slot < 0 or _job_bar == null or not is_instance_valid(_job_bar):
+	if not is_open or slot < 0:
+		return
+	_update_site()
+	if _job_bar == null or not is_instance_valid(_job_bar):
 		return
 	var r: Dictionary = Game.s.rooms[slot]
 	if r.job.is_empty():

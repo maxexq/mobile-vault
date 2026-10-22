@@ -479,7 +479,7 @@ func _enter_placement(room_type: String) -> void:
 		Game.toast.emit("ไม่มีช่องว่าง! อัปเกรด Mobile Vault เพื่อปลดล็อกชั้นเพิ่ม", "warn")
 		_exit_placement()
 		return
-	hud.show_banner("แตะห้องว่างเพื่อสร้าง %s (%d เศษเหล็ก)" % [Data.room_def(room_type).th, Data.room_def(room_type).cost])
+	hud.show_banner("แตะห้องว่างเพื่อสร้าง %s (%d เศษเหล็ก · %s)" % [Data.room_def(room_type).th, Game.build_cost(room_type), Game.fmt_time(Game.build_time(room_type))])
 
 
 func _exit_placement() -> void:

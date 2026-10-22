@@ -16,6 +16,9 @@ signal game_started
 signal gear_changed
 signal squad_changed
 signal pets_changed
+## v4.3 construction sites. kind = "build" (new room) or "upgrade"
+signal construction_started(slot: int, kind: String)
+signal construction_finished(slot: int, kind: String)
 
 const AUTOSAVE_SEC := 15.0
 
@@ -27,6 +30,7 @@ var active_event := ""
 var _autosave_t := 0.0
 var _float_acc: Dictionary = {}    # "slot:res" -> accumulated amount for floating "+N"
 var rng := RandomNumberGenerator.new()
+var _offline_built: Array = []     # room names finished while away (for the welcome-back toast)
 
 
 func _ready() -> void:
@@ -74,7 +78,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 	if not meta.is_empty():
 		s.meta = meta
 	for i in slot_count():
-		s.rooms.append({"type": "empty", "level": 1, "job": {}})
+		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	s.rooms[Data.ENGINE_SLOT].type = "engine"
 	s.rooms[1].type = "kitchen"
 	s.rooms[2].type = "water"
@@ -91,7 +95,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 		return
 	var mark := _add_dweller({"name": "จ่ามาร์ค", "lore": "mark", "variant": "dw_army_brown", "str": 7, "int": 3, "agi": 4, "room": -1, "lvl": 3})
 	var leo := _add_dweller({"name": "ลีโอ", "lore": "leo", "variant": "dw_scav_brown", "str": 4, "int": 3, "agi": 7, "room": -1, "lvl": 2})
-	_add_dweller({"name": "ต้น", "lore": "ton", "variant": "dw_jumpsuit_black", "str": 6, "int": 4, "agi": 3, "room": Data.ENGINE_SLOT, "lvl": 1})
+	_add_dweller({"name": "ต้น", "lore": "ton", "variant": "dw_jumpsuit_black", "str": 6, "int": 4, "agi": 3, "room": Data.ENGINE_SLOT, "lvl": 1, "role": "builder"})
 	_add_dweller({"name": "เชฟบ็อบ", "lore": "bob", "variant": "dw_chef_gray", "str": 3, "int": 4, "agi": 7, "room": 1, "lvl": 2})
 	_add_dweller({"name": "พยาบาลคลารา", "lore": "clara", "variant": "dw_medic_red", "str": 3, "int": 7, "agi": 4, "room": 2, "lvl": 2})
 	# starter defence squad + gear (common)
@@ -164,15 +168,20 @@ func _migrate() -> void:
 		s.items["components"] = int(s.items.get("components", 0)) + 20
 		toast.emit("อัปเดตใหม่: ระบบต่อสู้! ลีโอและบรูโน่เข้าร่วมเป็นทีมป้องกันรถบ้าน (เมนู Squad)", "biome")
 	for r in s.rooms:
-		r.merge({"job": {}, "level": 1}, false)
+		r.merge({"job": {}, "level": 1, "build": {}}, false)
 	# v3: fuel, exterior/interior mods, expeditions, prestige; three rooms per floor
 	s.merge({"mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true}, false)
 	(s.res as Dictionary).merge({"fuel": 30.0}, false)
 	_migrate_v4()
 	while s.rooms.size() < slot_count():
-		s.rooms.append({"type": "empty", "level": 1, "job": {}})
+		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for d in s.dwellers:
 		d.merge({"skills": {}, "infection": 0.0}, false)
+		# v4.3: roles. Ton always was the one fixing things on board
+		if not d.has("role"):
+			d["role"] = "builder" if str(d.get("lore", "")) == "ton" else ""
+	for r in s.rooms:
+		r.merge({"build": {}}, false)
 
 
 ## v4: vehicle tiers + trailers. Saves made before tiers drive the 18-wheeler (rig); the old
@@ -261,6 +270,9 @@ func _offline_progress(sec: float) -> void:
 		if absf(dv) >= 1.0:
 			parts.append("%s %+d" % [Data.item_name(k), int(dv)])
 	parts.append("เดินทาง %.1f กม." % (s.km - km0))
+	if not _offline_built.is_empty():
+		parts.append("ก่อสร้างเสร็จ: " + ", ".join(_offline_built))
+		_offline_built.clear()
 	var cr := Combat.offline_rewards(sec)
 	if not cr.is_empty():
 		parts.append("ทีมป้องกันกำจัดศัตรู %d ตัว (+%d XP)" % [cr.kills, cr.xp])
@@ -289,9 +301,9 @@ func cap(res: String) -> float:
 
 func pop_cap() -> int:
 	var c := Data.BASE_POP_CAP
-	for r in s.rooms:
-		if r.type == "quarters":
-			c += 4 * int(r.level)
+	for i in s.rooms.size():
+		if s.rooms[i].type == "quarters" and not is_site(i):
+			c += 4 * int(s.rooms[i].level)
 	return c
 
 
@@ -381,7 +393,7 @@ func power_flow_pm() -> float:
 	var f := solar_output_pm()
 	for slot in s.rooms.size():
 		var r: Dictionary = s.rooms[slot]
-		if r.type == "empty" or not is_slot_unlocked(slot):
+		if r.type == "empty" or not is_slot_unlocked(slot) or is_site(slot):
 			continue
 		var def := Data.room_def(r.type)
 		f -= float(def.power) * float(r.level)
@@ -456,8 +468,20 @@ func danger_level() -> int:
 	return int(Data.biome(s.biome).danger) + int(s.lap)
 
 
-## crew that actually works the room (strikers sit it out)
+## crew that actually works the room (strikers sit it out). A room still being built has no workers yet:
+## the people assigned there are its builders (see site_crew).
 func room_workers(slot: int) -> Array:
+	var out := []
+	if is_site(slot):
+		return out
+	for d in s.dwellers:
+		if int(d.room) == slot and not is_away(d) and not d.get("strike", false):
+			out.append(d)
+	return out
+
+
+## crew putting up / upgrading the room
+func site_crew(slot: int) -> Array:
 	var out := []
 	for d in s.dwellers:
 		if int(d.room) == slot and not is_away(d) and not d.get("strike", false):
@@ -673,7 +697,7 @@ func has_pet(kind: String) -> bool:
 
 func _first_quarters() -> int:
 	for i in s.rooms.size():
-		if s.rooms[i].type == "quarters" and is_slot_unlocked(i):
+		if s.rooms[i].type == "quarters" and is_slot_unlocked(i) and not is_site(i):
 			return i
 	return -1
 
@@ -681,7 +705,7 @@ func _first_quarters() -> int:
 func _rooms_of(t: String) -> Array:
 	var out := []
 	for i in s.rooms.size():
-		if s.rooms[i].type == t and is_slot_unlocked(i):
+		if s.rooms[i].type == t and is_slot_unlocked(i) and not is_site(i):
 			out.append(i)
 	return out
 
@@ -693,7 +717,7 @@ func dweller_power(d: Dictionary) -> float:
 func armory_bonus() -> float:
 	var b := 0.0
 	for i in s.rooms.size():
-		if s.rooms[i].type == "armory":
+		if s.rooms[i].type == "armory" and not is_site(i):
 			b += 2.0 * float(s.rooms[i].level)
 	return b
 
@@ -733,6 +757,10 @@ func _simulate(dt: float, offline: bool) -> void:
 		var r: Dictionary = s.rooms[slot]
 		if r.type == "empty" or not is_slot_unlocked(slot):
 			continue
+		if is_site(slot):
+			_tick_build(slot, dt, offline)
+			continue
+		_tick_build(slot, dt, offline)
 		var def := Data.room_def(r.type)
 		if def.power > 0.0:
 			_add_res("power", -float(def.power) * float(r.level) * m)
@@ -772,8 +800,8 @@ func _simulate(dt: float, offline: bool) -> void:
 	var starving: bool = res.food <= 0.0 or res.water <= 0.0
 	var crowded: bool = s.dwellers.size() > pop_cap()
 	var has_quarters := false
-	for r in s.rooms:
-		if r.type == "quarters":
+	for i in s.rooms.size():
+		if s.rooms[i].type == "quarters" and not is_site(i):
 			has_quarters = true
 	for d in s.dwellers:
 		if is_away(d):
@@ -806,8 +834,14 @@ func _simulate(dt: float, offline: bool) -> void:
 			target += 20.0 if _best_stat(d) == Combat.ROLES[role].stat else 10.0
 		elif int(d.room) >= 0:
 			var st: String = Data.room_def(s.rooms[int(d.room)].type).get("stat", "")
-			target += 20.0 if st != "" and _best_stat(d) == st else 8.0
 			var xpm := 1.5 * (1.2 if Crew.has(d, "genius") else 1.0)
+			if is_constructing(int(d.room)):
+				# hauling beams: builds STR, real builders love it
+				st = "str"
+				if Crew.is_builder(d):
+					xpm *= 1.5
+					target += 12.0
+			target += 20.0 if st != "" and _best_stat(d) == st else 8.0
 			for o in room_workers(int(d.room)):
 				if o != d:
 					xpm *= 1.0 + 2.0 * Skills.val(o, "mentor")
@@ -995,6 +1029,7 @@ func _add_dweller(p: Dictionary) -> Dictionary:
 		"lvl": p.get("lvl", 1), "xp": 0.0, "str": p.get("str", 4), "int": p.get("int", 4), "agi": p.get("agi", 4),
 		"hp": 100.0, "max_hp": 100.0, "happy": 75.0, "room": p.get("room", -1), "gear": {},
 		"away_until": 0.0, "rads": 0.0, "lore": p.get("lore", ""), "skills": {}, "infection": 0.0,
+		"role": p.get("role", ""),
 	}
 	Crew.roll_traits(d)
 	d.max_hp = 90.0 + 5.0 * float(d.lvl)
@@ -1012,13 +1047,24 @@ func recruit_random() -> Dictionary:
 			best = st
 	var outfits: Array = Data.OUTFIT_FOR_STAT[best]
 	var outfit: String = outfits[rng.randi() % outfits.size()]
+	# some refugees were builders before the fall: hard hat + hi-vis vest, and they show up with their tools
+	var role := "builder" if rng.randf() < Crew.BUILDER_CHANCE else ""
+	if role == "builder":
+		outfit = "builder"
+		stats.str = maxi(int(stats.str), 4)
 	var variant := "dw_%s_%s" % [outfit, Data.HAIRS[rng.randi() % Data.HAIRS.size()]]
 	var nm: String = Data.TITLES.get(outfit, "") + Data.FIRST_NAMES[rng.randi() % Data.FIRST_NAMES.size()]
-	var d := _add_dweller({"name": nm, "variant": variant, "str": stats.str, "int": stats.int, "agi": stats.agi, "lvl": 1 + int(s.lap)})
-	# auto-assign into a free room that matches the dweller's best stat
+	var d := _add_dweller({"name": nm, "variant": variant, "str": stats.str, "int": stats.int, "agi": stats.agi, "lvl": 1 + int(s.lap), "role": role})
+	# builders head straight for an open building site; everybody else to a free room matching their best stat
+	for i in s.rooms.size():
+		if role == "builder" and is_constructing(i) and is_slot_unlocked(i) and site_crew(i).size() < Data.ROOM_WORKERS:
+			d.room = i
+			break
 	for i in s.rooms.size():
 		var r: Dictionary = s.rooms[i]
-		if r.type != "empty" and is_slot_unlocked(i) and room_workers(i).size() < Data.ROOM_WORKERS and Data.room_def(r.type).get("stat") == best:
+		if int(d.room) >= 0:
+			break
+		if r.type != "empty" and is_slot_unlocked(i) and not is_site(i) and room_workers(i).size() < Data.ROOM_WORKERS and Data.room_def(r.type).get("stat") == best:
 			d.room = i
 			break
 	dwellers_changed.emit()
@@ -1027,7 +1073,7 @@ func recruit_random() -> Dictionary:
 
 func assign(d: Dictionary, slot: int) -> bool:
 	if slot >= 0:
-		if room_workers(slot).size() >= Data.ROOM_WORKERS:
+		if (site_crew(slot) if is_site(slot) else room_workers(slot)).size() >= Data.ROOM_WORKERS:
 			toast.emit("ห้องนี้เต็มแล้ว (สูงสุด %d คน)" % Data.ROOM_WORKERS, "warn")
 			return false
 		if s.rooms[slot].type == "empty":
@@ -1212,27 +1258,154 @@ func build_room(slot: int, room_type: String) -> bool:
 	if room_unlock_level(room_type) > int(s.vault_level):
 		toast.emit("ต้องการ Vault Lv.%d หรือพิมพ์เขียว" % room_unlock_level(room_type), "warn")
 		return false
-	if not pay({"scrap": def.cost}):
+	if not pay({"scrap": build_cost(room_type)}):
 		return false
-	s.rooms[slot] = {"type": room_type, "level": 1, "job": {}}
-	Trace.rec("build", "build %s @%d" % [room_type, slot])
-	toast.emit("สร้าง %s สำเร็จ!" % def.th, "good")
+	var t := build_time(room_type)
+	s.rooms[slot] = {"type": room_type, "level": 1, "job": {}, "build": {"kind": "build", "total": t, "left": t}}
+	Trace.rec("build", "start build %s @%d (%ds)" % [room_type, slot, int(t)])
+	toast.emit("เริ่มก่อสร้าง %s · ส่งคนไปช่วยจะเสร็จเร็วขึ้น" % def.th, "info")
+	construction_started.emit(slot, "build")
+	if Dev.on("instant_build"):
+		_finish_build(slot, false)
 	rooms_changed.emit()
 	return true
 
 
 func upgrade_room(slot: int) -> bool:
 	var r: Dictionary = s.rooms[slot]
-	if int(r.level) >= Data.ROOM_MAX_LEVEL:
+	if int(r.level) >= Data.ROOM_MAX_LEVEL or is_constructing(slot):
 		return false
-	var c: int = Data.ROOM_UPGRADE_COST[int(r.level) + 1]
-	if not pay({"scrap": c}):
+	if not pay({"scrap": upgrade_cost(slot)}):
 		return false
-	r.level = int(r.level) + 1
-	Trace.rec("build", "upgrade %s @%d -> Lv%d" % [r.type, slot, r.level])
-	toast.emit("%s อัปเกรดเป็น Lv.%d" % [Data.room_def(r.type).th, r.level], "good")
+	var t := upgrade_time(int(r.level) + 1)
+	r["build"] = {"kind": "upgrade", "total": t, "left": t}
+	Trace.rec("build", "start upgrade %s @%d -> Lv%d (%ds)" % [r.type, slot, int(r.level) + 1, int(t)])
+	toast.emit("เริ่มอัปเกรด %s → Lv.%d (ห้องยังทำงานระหว่างนี้)" % [Data.room_def(r.type).th, int(r.level) + 1], "info")
+	construction_started.emit(slot, "upgrade")
+	if Dev.on("instant_build"):
+		_finish_build(slot, false)
 	rooms_changed.emit()
 	return true
+
+
+# ------------------------------------------------------------------ construction (v4.3)
+func build_info(slot: int) -> Dictionary:
+	if s.is_empty() or slot < 0 or slot >= s.rooms.size():
+		return {}
+	return s.rooms[slot].get("build", {})
+
+
+## a room or upgrade is being worked on
+func is_constructing(slot: int) -> bool:
+	return not build_info(slot).is_empty()
+
+
+## a brand-new room that is still scaffolding (does not work yet)
+func is_site(slot: int) -> bool:
+	return str(build_info(slot).get("kind", "")) == "build"
+
+
+func build_progress(slot: int) -> float:
+	var b := build_info(slot)
+	if b.is_empty():
+		return 1.0
+	return clampf(1.0 - float(b.left) / maxf(float(b.total), 0.01), 0.0, 1.0)
+
+
+func build_cost(room_type: String) -> int:
+	return int(round(float(Data.room_def(room_type).cost) * Crew.build_cost_mult()))
+
+
+func upgrade_cost(slot: int) -> int:
+	var lv := int(s.rooms[slot].level)
+	if lv >= Data.ROOM_MAX_LEVEL:
+		return 0
+	return int(round(float(Data.ROOM_UPGRADE_COST[lv + 1]) * Crew.build_cost_mult()))
+
+
+## work seconds to put a room up (cheap rooms are quick, the science lab takes a while)
+func build_time(room_type: String) -> float:
+	return Data.BUILD_BASE_SEC + Data.BUILD_SEC_PER_SCRAP * float(Data.room_def(room_type).cost)
+
+
+func upgrade_time(to_level: int) -> float:
+	return float(Data.UPGRADE_SEC[clampi(to_level, 0, Data.ROOM_MAX_LEVEL)])
+
+
+## work seconds per real second on this site
+func build_speed(slot: int) -> float:
+	var sp := Data.BUILD_IDLE_SPEED
+	for d in site_crew(slot):
+		sp += Crew.build_speed(d)
+	return sp * (1.0 - 0.3 * float(room_dark(slot)))
+
+
+## "1M05S" style (pixel font friendly)
+func fmt_time(sec: float) -> String:
+	var t := int(ceil(sec))
+	if t >= 3600:
+		return "%dH%02dM" % [t / 3600, (t % 3600) / 60]
+	return "%dM%02dS" % [t / 60, t % 60]
+
+
+func build_left_sec(slot: int) -> float:
+	var b := build_info(slot)
+	if b.is_empty():
+		return 0.0
+	return float(b.left) / maxf(build_speed(slot), 0.01)
+
+
+func rush_cost(slot: int) -> int:
+	var b := build_info(slot)
+	if b.is_empty():
+		return 0
+	return maxi(1, int(ceil(float(b.left) / Data.RUSH_SEC_PER_COMPONENT)))
+
+
+## spend components to finish a site right now
+func rush_build(slot: int) -> bool:
+	if not is_constructing(slot):
+		return false
+	if not pay({"components": rush_cost(slot)}):
+		return false
+	Trace.rec("build", "rush @%d" % slot)
+	_finish_build(slot, false)
+	return true
+
+
+func _tick_build(slot: int, dt: float, offline: bool) -> void:
+	var b := build_info(slot)
+	if b.is_empty():
+		return
+	b.left = maxf(0.0, float(b.left) - dt * build_speed(slot))
+	if float(b.left) <= 0.0:
+		_finish_build(slot, offline)
+
+
+func _finish_build(slot: int, offline: bool) -> void:
+	var r: Dictionary = s.rooms[slot]
+	var b: Dictionary = r.get("build", {})
+	if b.is_empty():
+		return
+	var kind := str(b.kind)
+	r["build"] = {}
+	var def := Data.room_def(r.type)
+	if kind == "upgrade":
+		r.level = mini(int(r.level) + 1, Data.ROOM_MAX_LEVEL)
+	for d in site_crew(slot):
+		give_xp(d, 4.0 * (1.5 if Crew.is_builder(d) else 1.0), "str", offline)
+	Trace.rec("build", "finished %s %s @%d Lv%d" % [kind, r.type, slot, r.level])
+	if offline:
+		_offline_built.append("%s%s" % [def.th, (" Lv.%d" % r.level) if kind == "upgrade" else ""])
+	elif kind == "upgrade":
+		toast.emit("%s อัปเกรดเป็น Lv.%d เสร็จแล้ว!" % [def.th, r.level], "good")
+		floating_text.emit(slot, "Lv.%d" % r.level, "up")
+	else:
+		toast.emit("สร้าง %s เสร็จแล้ว!" % def.th, "good")
+		floating_text.emit(slot, "DONE", "hammer")
+	construction_finished.emit(slot, kind)
+	rooms_changed.emit()
+	dwellers_changed.emit()
 
 
 func demolish_room(slot: int) -> void:
@@ -1243,7 +1416,7 @@ func demolish_room(slot: int) -> void:
 		d.room = -1
 	_add_res("scrap", float(Data.room_def(r.type).cost) * 0.5)
 	Trace.rec("build", "demolish %s @%d" % [r.type, slot])
-	s.rooms[slot] = {"type": "empty", "level": 1, "job": {}}
+	s.rooms[slot] = {"type": "empty", "level": 1, "job": {}, "build": {}}
 	rooms_changed.emit()
 	dwellers_changed.emit()
 

@@ -15,6 +15,7 @@ const FLAGS := {
 	"free": "สร้าง/อัปเกรด/ซื้อฟรี",
 	"inf_res": "ทรัพยากรเต็มตลอด",
 	"no_events": "ปิดอีเว้นต์สุ่มบนถนน",
+	"instant_build": "ก่อสร้าง/อัปเกรดเสร็จทันที",
 }
 const SPEEDS := [1.0, 2.0, 5.0, 10.0, 20.0]
 
@@ -312,6 +313,13 @@ func rooms_fill() -> void:
 			i += 1
 	act("fill rooms")
 	Game.rooms_changed.emit()
+
+
+func finish_construction() -> void:
+	for slot in Game.s.rooms.size():
+		if Game.is_constructing(slot):
+			Game._finish_build(slot, false)
+	act("finish construction")
 
 
 func rooms_max() -> void:

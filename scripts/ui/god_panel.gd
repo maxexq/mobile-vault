@@ -153,6 +153,7 @@ func _tab_vehicle() -> void:
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
 	_head("ROOMS & MODS", "ห้องและมอด")
 	_row([_b("สร้างห้องทุกช่องว่าง", func(): Dev.rooms_fill(), "green"), _b("ทุกห้อง Lv สูงสุด", func(): Dev.rooms_max())])
+	_row([_b("ก่อสร้างที่ค้างเสร็จทันที", func(): Dev.finish_construction(), "yellow")])
 	_row([_b("มอดเต็มทุกตัว", func(): Dev.mods_all(true), "green"), _b("ถอดมอดทั้งหมด", func(): Dev.mods_all(false))])
 	_note("น้ำหนักตอนนี้: " + Haul.status_text())
 	_head("HAZARDS", "ทดสอบภัย")

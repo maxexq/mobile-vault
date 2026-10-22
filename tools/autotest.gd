@@ -102,6 +102,7 @@ func _run() -> void:
 	await shot("placement_mode")
 	Game.build_room(3, "hydroponics")
 	main._exit_placement()
+	await _construction_checks()
 	# panels
 	for k in ["dwellers", "build", "map", "solar"]:
 		main.hud.open_panel(k)
@@ -207,7 +208,9 @@ func _run() -> void:
 	var new_slot: int = 4
 	_check("new slot unlocked at Lv2", Game.is_slot_unlocked(new_slot) and Game.unlocked_slots().size() == mini(Data.SLOTS_PER_LEVEL[2], Game.main_slots() - 1) + 1)
 	_check("first run is a camper van: 2 floors x 3 rooms", Game.tier() == "van" and Game.slot_count() == 6 and Game.s.rooms.size() == 6)
-	_check("build quarters", Game.build_room(new_slot, "quarters") and Game.pop_cap() == Data.BASE_POP_CAP + 4)
+	_check("build quarters", Game.build_room(new_slot, "quarters") and Game.pop_cap() == Data.BASE_POP_CAP)
+	Dev.finish_construction()
+	_check("quarters add beds once built", Game.pop_cap() == Data.BASE_POP_CAP + 4)
 	Game.s.res.scrap = 200.0
 	_check("craft starts", Game.start_craft(Data.ENGINE_SLOT, "repair_hull"))
 	Game.s.hull = 50.0
@@ -232,6 +235,8 @@ func _run() -> void:
 	_check("synthesize 3->1", Loot.synthesize(1).get("rar", -1) == 2)
 	var sv := Loot.salvage_bulk(5)
 	_check("salvage", int(sv.count) >= 1)
+	# the explorer is back with the new assault rifle: put them on the gun so ranged / flying enemies die too
+	Game.set_squad(0, int(d.id))
 	Combat.rebuild_heroes()
 	for i in 600:
 		Combat.tick(0.1)
@@ -570,6 +575,117 @@ func _run() -> void:
 	get_tree().quit()
 
 
+## v4.3 construction: build time, builder crew + traits, upgrades, rush, offline, save round-trip
+func _construction_checks() -> void:
+	var started := []
+	var finished := []
+	var on_start := func(sl: int, kind: String): started.append([sl, kind])
+	var on_finish := func(sl: int, kind: String): finished.append([sl, kind])
+	Game.construction_started.connect(on_start)
+	Game.construction_finished.connect(on_finish)
+	_check("build: placement starts a site, not a finished room", Game.is_site(3) and Game.s.rooms[3].type == "hydroponics" and Game.build_progress(3) < 0.05)
+	_check("build: a site has no workers / production yet", Game.room_workers(3).is_empty() and Game.room_rate_pm(3).is_empty())
+	_check("build: placement time shown", Game.build_time("hydroponics") > 60.0 and Game.fmt_time(65.0) == "1M05S")
+	# builders: one refugee with the builder role, one clumsy helper
+	var bob := Game._add_dweller({"name": "ช่างทดสอบ", "variant": "dw_builder_brown", "str": 6, "role": "builder"})
+	bob.traits = ["engineer"]
+	var klutz := Game._add_dweller({"name": "มือใหม่", "variant": "dw_scav_red", "str": 4})
+	klutz.traits = ["clumsy"]
+	_check("crew: builder role doubles+ construction speed", Crew.build_mult(bob) >= 2.3 and Crew.is_builder(bob))
+	_check("crew: clumsy builds slower than average", Crew.build_mult(klutz) < 1.0)
+	var idle_sp := Game.build_speed(3)
+	Game.assign(bob, 3)
+	_check("build: assigning a builder speeds the site up", Game.build_speed(3) > idle_sp + 1.0 and Game.site_crew(3).has(bob))
+	Game.assign(klutz, 3)
+	_check("build: site holds at most ROOM_WORKERS builders", not Game.assign(Game.s.dwellers[0], 3))
+	main.open_closeup(3)
+	await wait(1.6)
+	await shot("construction_site_start")
+	for i in 30:
+		Game._simulate(1.0, false)
+	await wait(1.4)
+	await shot("construction_site_mid")
+	main.hud.room_closeup.close()
+	await wait(0.8)
+	await shot("construction_site_world")
+	var guard := 0
+	while Game.is_constructing(3) and guard < 400:
+		Game._simulate(1.0, false)
+		guard += 1
+	_check("build: site finishes over time", not Game.is_constructing(3) and finished.has([3, "build"]))
+	_check("build: finished room works with its crew", Game.room_workers(3).size() == 2 and not Game.room_rate_pm(3).is_empty())
+	# upgrade: keeps working at the old level until done
+	Game.s.res.scrap = 900.0
+	_check("upgrade: starts as construction", Game.upgrade_room(3) and Game.is_constructing(3) and not Game.is_site(3) and int(Game.s.rooms[3].level) == 1)
+	_check("upgrade: room keeps producing meanwhile", not Game.room_rate_pm(3).is_empty() and not Game.upgrade_room(3))
+	main.open_closeup(3)
+	await wait(1.2)
+	await shot("construction_upgrade")
+	main.hud.room_closeup.close()
+	Game.s.items["components"] = 500
+	var comps := int(Game.s.items.components)
+	var rc := Game.rush_cost(3)
+	_check("rush: components finish it now", rc > 0 and Game.rush_build(3) and int(Game.s.rooms[3].level) == 2 and int(Game.s.items.components) == comps - rc)
+	_check("upgrade: finished signal", finished.has([3, "upgrade"]))
+	# architect discount
+	var base_cost := Game.build_cost("kitchen")
+	bob.traits = ["architect"]
+	_check("crew: architect cuts build cost 15%", Game.build_cost("kitchen") == int(round(float(Data.room_def("kitchen").cost) * 0.85)) and base_cost == int(Data.room_def("kitchen").cost))
+	bob.traits = ["engineer"]
+	# offline progress finishes sites + save round trip keeps a site
+	var free := -1
+	for i in Game.s.rooms.size():
+		if Game.is_slot_unlocked(i) and Game.s.rooms[i].type == "empty":
+			free = i
+			break
+	var raised := free < 0
+	if free < 0:
+		Game.s.vault_level = 2
+		Game.vault_level_changed.emit(2)
+		for i in Game.s.rooms.size():
+			if Game.is_slot_unlocked(i) and Game.s.rooms[i].type == "empty":
+				free = i
+				break
+	Game.s.res.scrap = 900.0
+	_check("build: second site + started signal", free >= 0 and Game.build_room(free, "quarters") and started.has([free, "build"]))
+	var cap0 := Game.pop_cap()
+	var js: Dictionary = JSON.parse_string(JSON.stringify(Game.s))
+	_check("save: site survives JSON round-trip", str((js.rooms[free] as Dictionary).build.kind) == "build")
+	_check("build: unfinished quarters add no beds", cap0 == Game.pop_cap())
+	Game._offline_progress(1800.0)
+	_check("offline: site finished while away", not Game.is_constructing(free) and Game.pop_cap() > cap0)
+	Game.demolish_room(free)
+	if raised:
+		Game.s.vault_level = 1
+		Game.vault_level_changed.emit(1)
+	# old saves: rooms without the build key, Ton becomes a builder
+	var old_room := {"type": "kitchen", "level": 1, "job": {}}
+	Game.s.rooms[1] = old_room
+	var ton: Dictionary = {}
+	for d in Game.s.dwellers:
+		if str(d.get("lore", "")) == "ton":
+			ton = d
+	if not ton.is_empty():
+		ton.erase("role")
+	Game._migrate()
+	_check("migrate: rooms get an empty build slot", (Game.s.rooms[1] as Dictionary).has("build") and not Game.is_constructing(1))
+	_check("migrate: Ton is the vault's builder", ton.is_empty() or Crew.is_builder(ton))
+	# recruits: some arrive as builders in hi-vis gear
+	var builders := 0
+	for i in 40:
+		var r := Game.recruit_random()
+		if Crew.is_builder(r):
+			builders += 1
+			if builders == 1:
+				_check("recruit: builder wears the builder outfit", str(r.variant).begins_with("dw_builder_"))
+		Game.s.dwellers.erase(r)
+	_check("recruit: builder role appears (~25%)", builders >= 3 and builders <= 22)
+	Game.construction_started.disconnect(on_start)
+	Game.construction_finished.disconnect(on_finish)
+	Game.dwellers_changed.emit()
+	Game.rooms_changed.emit()
+
+
 ## keep random road events from popping over the v4 screenshots
 func _no_events() -> void:
 	Game.s.event_t = 1.0e9
@@ -678,3 +794,4 @@ func _tutorial_test() -> void:
 	main._on_start(true)
 	Tutorial.skip()
 	await wait(1.5)
+

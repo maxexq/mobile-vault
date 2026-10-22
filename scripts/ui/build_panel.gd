@@ -51,7 +51,7 @@ func _build() -> void:
 	fh.add_child(_frame_btn)
 	v.add_child(fp)
 	v.move_child(fp, 0)
-	v.add_child(UIKit.wrap_label("แตะสร้าง แล้วเลือกห้องว่างในรถ · แตะห้องเดิมเพื่ออัปเกรด"))
+	v.add_child(UIKit.wrap_label("แตะสร้าง แล้วเลือกห้องว่างในรถ · การก่อสร้างใช้เวลา ส่งช่างไปช่วยจะเสร็จเร็วขึ้น · แตะห้องเดิมเพื่ออัปเกรด"))
 	Game.resources_changed.connect(func(): if is_open: _update_affordable())
 	get_viewport().size_changed.connect(func(): _grid.columns = 2 if get_viewport_rect().size.x >= 520 else 1)
 
@@ -99,7 +99,7 @@ func _card(t: String) -> Control:
 	v.add_child(UIKit.label(def.en, UIKit.FP, UIKit.C_DIM, true))
 	var ch := UIKit.hbox(2)
 	ch.add_child(UIKit.icon_rect("scrap", 16))
-	var cl := UIKit.label(str(def.cost), UIKit.FP, UIKit.C_GOLD, true)
+	var cl := UIKit.label("%d  %s" % [Game.build_cost(t), Game.fmt_time(Game.build_time(t))], UIKit.FP, UIKit.C_GOLD, true)
 	cl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	ch.add_child(cl)
 	v.add_child(ch)
@@ -107,7 +107,7 @@ func _card(t: String) -> Control:
 	var b := UIKit.button(("Lv.%d" % ul if ul < 99 else "พิมพ์เขียว") if locked else "สร้าง", "gray" if locked else "green", "lock" if locked else "hammer")
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b.disabled = locked
-	b.set_meta("cost", {"scrap": def.cost})
+	b.set_meta("cost", {"scrap": Game.build_cost(t)})
 	b.set_meta("locked", locked)
 	var tt := t
 	b.pressed.connect(func():

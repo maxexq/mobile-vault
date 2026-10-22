@@ -52,10 +52,10 @@ func effects(slot: int) -> Array:
 	if Game.s.is_empty() or slot >= Game.s.rooms.size():
 		return out
 	var t: String = Game.s.rooms[slot].type
-	if t == "empty":
+	if t == "empty" or Game.is_site(slot):
 		return out
 	for o in neighbours(slot):
-		if not Game.is_slot_unlocked(o):
+		if not Game.is_slot_unlocked(o) or Game.is_site(o):
 			continue
 		var ot: String = Game.s.rooms[o].type
 		var key := "%s|%s" % [t, ot]

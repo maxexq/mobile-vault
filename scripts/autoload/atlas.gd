@@ -11,8 +11,9 @@ const VARIANTS_JSON := "res://assets/atlas/dweller_variants.json"
 const DW_W := 14
 const DW_H := 20
 const DW_FRAMES := {"idle": [0, 1], "walk": [2, 3, 4, 5], "sit": [6], "work": [7, 8],
-	"guitar": [9, 10], "coffee": [11, 12], "clean": [13, 14]}
-const DW_FPS := {"idle": 2.0, "walk": 8.0, "sit": 1.0, "work": 4.0, "guitar": 5.0, "coffee": 1.2, "clean": 3.0}
+	"guitar": [9, 10], "coffee": [11, 12], "clean": [13, 14], "hammer": [15, 16, 17], "carry": [18, 19]}
+const DW_FPS := {"idle": 2.0, "walk": 8.0, "sit": 1.0, "work": 4.0, "guitar": 5.0, "coffee": 1.2, "clean": 3.0,
+	"hammer": 6.0, "carry": 6.0}
 
 var sheet: Texture2D
 var regions: Dictionary = {}
