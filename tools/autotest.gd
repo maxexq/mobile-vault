@@ -235,6 +235,8 @@ func _run() -> void:
 	_check("synthesize 3->1", Loot.synthesize(1).get("rar", -1) == 2)
 	var sv := Loot.salvage_bulk(5)
 	_check("salvage", int(sv.count) >= 1)
+	# the explorer is back with the new assault rifle: put them on the gun so ranged / flying enemies die too
+	Game.set_squad(0, int(d.id))
 	Combat.rebuild_heroes()
 	for i in 600:
 		Combat.tick(0.1)
@@ -792,3 +794,4 @@ func _tutorial_test() -> void:
 	main._on_start(true)
 	Tutorial.skip()
 	await wait(1.5)
+
