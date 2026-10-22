@@ -31,18 +31,25 @@ const RULES := {
 }
 
 
+## v4.4: a large room touches everything around all of its cells; neighbours are reported once per room
+## (by their anchor cell), so a 3-wide kitchen under a 3-wide hydroponics still counts as one pairing.
 func neighbours(slot: int) -> Array:
 	var out := []
 	if Game.s.is_empty() or slot < 0 or slot >= Game.s.rooms.size():
 		return out
+	var cells := Game.room_cells(slot)
+	var own := Game.room_anchor(slot)
 	var unit := Game.slot_unit(slot)
-	var cell := Game.slot_cell(slot)
-	for other in Game.s.rooms.size():
-		if other == slot or Game.slot_unit(other) != unit:
-			continue
-		var oc := Game.slot_cell(other)
-		if absi(oc.x - cell.x) + absi(oc.y - cell.y) == 1:
-			out.append(other)
+	for c in cells:
+		var cell := Game.slot_cell(c)
+		for other in Game.s.rooms.size():
+			if other in cells or Game.slot_unit(other) != unit:
+				continue
+			var oc := Game.slot_cell(other)
+			if absi(oc.x - cell.x) + absi(oc.y - cell.y) == 1:
+				var a := Game.room_anchor(other)
+				if a != own and not a in out:
+					out.append(a)
 	return out
 
 
@@ -52,7 +59,7 @@ func effects(slot: int) -> Array:
 	if Game.s.is_empty() or slot >= Game.s.rooms.size():
 		return out
 	var t: String = Game.s.rooms[slot].type
-	if t == "empty" or Game.is_site(slot):
+	if t == "empty" or t == "annex" or Game.is_site(slot):
 		return out
 	for o in neighbours(slot):
 		if not Game.is_slot_unlocked(o) or Game.is_site(o):

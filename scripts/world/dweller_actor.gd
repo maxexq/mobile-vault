@@ -21,6 +21,10 @@ const X_MAX := 57.0
 
 var did := -1
 var room_type := ""
+## large rooms (v4.4) are wider and have their equipment repeated: RoomView fills these in (empty = defaults)
+var x_max := X_MAX
+var spots: Array = []
+var build_spots: Array = []
 var striking := false
 ## the room this dweller is in is being built / upgraded
 var building := false
@@ -61,11 +65,13 @@ func _enter(st: State) -> void:
 			timer = randf_range(1.2, 3.5)
 			spr.play("idle")
 		State.WALK:
-			target_x = randf_range(X_MIN, X_MAX)
+			target_x = randf_range(X_MIN, x_max)
 			spr.play("carry" if building else "walk")
 		State.WORK:
-			var spots: Array = WORK_SPOTS.get("construct" if building else room_type, [28])
-			target_x = float(spots[randi() % spots.size()]) + randf_range(-2, 2)
+			var list: Array = build_spots if building else spots
+			if list.is_empty():
+				list = WORK_SPOTS.get("construct" if building else room_type, [28])
+			target_x = float(list[randi() % list.size()]) + randf_range(-2, 2)
 			timer = randf_range(4.0, 8.0) if building else randf_range(3.0, 7.0)
 			spr.play("carry" if building and randf() < 0.5 else "walk")
 		State.SIT:

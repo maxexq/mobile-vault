@@ -21,6 +21,10 @@ const ANTENNA := Vector2(113, 1)
 const ROOF_Y := 36
 const DECK := Vector2(266, 260)
 const TURRET_POS := Vector2(254, 110)
+## roof rest deck (ดาดฟ้า, Mods "roof_deck"): 76x60 sprite on stilts over the rear roof, planks 26px up
+const ROOF_DECK_X := 182
+const ROOF_DECK_H := 26
+const ROOF_DECK_COT := Vector2(201, 0)    # where the reserve sits, relative to the planks (x truck-local)
 const SPIKES_POS := Vector2(272, 236)
 const SIZE := Vector2(280, 300)
 const ROAD_Y := 300.0             # tyre contact line (local)
@@ -45,6 +49,7 @@ var _xray_hold := 0.0             # tap on the hull peeks inside for a few secon
 var _ext_alpha := 0.0
 var _wheels_root: Node2D
 var _shells: Node2D
+var _seams_root: Node2D          # large-room interior strips drawn over the hull partitions (v4.4)
 var _exteriors: Node2D
 var _rooms_root: Node2D
 var _mods_root: Node2D
@@ -103,6 +108,8 @@ func _ready() -> void:
 	body.add_child(pets_root)
 	_shells = Node2D.new()
 	body.add_child(_shells)
+	_seams_root = Node2D.new()
+	body.add_child(_seams_root)
 	_roof_root = Node2D.new()
 	body.add_child(_roof_root)
 	for x in SOLAR_X:
@@ -242,20 +249,32 @@ func slot_local_pos(slot: int) -> Vector2:
 	return Vector2(unit_x(unit) + cols[cell.x], ROW0 - FLOOR_H * cell.y)
 
 
+## size of the whole room at `slot` (a large room spans 2-3 cells, v4.4)
+func room_size(slot: int) -> Vector2:
+	if Game.s.is_empty():
+		return ROOM_SIZE
+	var cells := Game.room_cells(slot)
+	return Vector2(slot_local_pos(int(cells[-1])).x - slot_local_pos(int(cells[0])).x + ROOM_SIZE.x, ROOM_SIZE.y)
+
+
 func slot_global_rect(slot: int) -> Rect2:
-	var p := body.to_global(slot_local_pos(slot))
-	return Rect2(p, ROOM_SIZE * global_scale)
+	var a := slot if Game.s.is_empty() else Game.room_anchor(slot)
+	var p := body.to_global(slot_local_pos(a))
+	return Rect2(p, room_size(a) * global_scale)
 
 
 ## rect in the vehicle's own space (no body bob) – used by the camera so close-ups don't jitter
 func slot_rect(slot: int) -> Rect2:
-	return Rect2(to_global(slot_local_pos(slot)), ROOM_SIZE)
+	var a := slot if Game.s.is_empty() else Game.room_anchor(slot)
+	return Rect2(to_global(slot_local_pos(a)), room_size(a))
 
 
+## the room (anchor cell) under a point; any cell of a large room answers with its anchor
 func slot_at(global_pos: Vector2) -> int:
 	for rv in room_views:
-		if slot_global_rect(rv.slot).has_point(global_pos):
-			return rv.slot
+		var cell := Rect2(body.to_global(slot_local_pos(rv.slot)), ROOM_SIZE * global_scale)
+		if cell.has_point(global_pos):
+			return Game.room_anchor(rv.slot)
 	return -1
 
 
@@ -269,9 +288,14 @@ func solar_global_rect() -> Rect2:
 	return Rect2(to_global(Vector2(60, 4 + roof_dy())), Vector2(64, 32))
 
 
+## how far the roof crew stands above the roof (0 without a deck)
+static func deck_lift() -> float:
+	return float(ROOF_DECK_H) if Mods.level("roof_deck") > 0 else 0.0
+
+
 ## top of the vehicle incl. roof props (local y) – the camera keeps this on screen
 func top_y() -> float:
-	return roof_y() - 40.0
+	return roof_y() - 40.0 - deck_lift()
 
 
 func refresh_rooms() -> void:
@@ -280,8 +304,46 @@ func refresh_rooms() -> void:
 	if Game.tier() != tier or Game.trailers() != n_trailers or room_views.size() != Game.slot_count():
 		rebuild()
 		return
+	_sync_large_rooms()
 	for rv in room_views:
 		rv.refresh()
+
+
+## large rooms: the anchor view spans its cells, annex views hide, and the strips of interior hidden behind
+## the hull's partition wall / ladder shaft are re-drawn above the shell
+func _sync_large_rooms() -> void:
+	for ch in _seams_root.get_children():
+		ch.queue_free()
+	for rv in room_views:
+		rv.seams.clear()
+	for rv in room_views:
+		var annex := Game.is_annex(rv.slot)
+		rv.visible = not annex
+		if annex:
+			continue
+		var cells := Game.room_cells(rv.slot)
+		var x0 := slot_local_pos(rv.slot).x
+		var xs: Array = []
+		for c in cells:
+			xs.append(slot_local_pos(int(c)).x - x0)
+		rv.set_cells(xs)
+		if xs.size() <= 1:
+			continue
+		var key := rv.wide_key(str(Game.s.rooms[rv.slot].type))
+		if not Atlas.has(key):
+			continue
+		for i in range(1, xs.size()):
+			var gx := float(xs[i - 1]) + RoomView.W
+			var gw := float(xs[i]) - gx
+			if gw <= 0.0:
+				continue
+			var sm := Sprite2D.new()
+			sm.centered = false
+			sm.texture = Atlas.sub(key, Rect2(gx, 0, gw, RoomView.H))
+			sm.position = slot_local_pos(rv.slot) + Vector2(gx, 0)
+			_seams_root.add_child(sm)
+			rv.seams.append(sm)
+		rv.set_glow(rv._glow)
 
 
 func set_build_highlight(on: bool, room_type: String = "") -> void:
@@ -361,6 +423,9 @@ func _refresh_mods() -> void:
 	var tur := Mods.level("roof_turret")
 	if tur > 0:
 		_mod_sprite("mod_roof_turret_%d" % mini(tur, 3), Vector2(200, ROOF_Y + dy - 18))
+	var deck := Mods.level("roof_deck")
+	if deck > 0:
+		_mod_sprite("mod_roof_deck_%d" % mini(deck, 3), Vector2(ROOF_DECK_X, ROOF_Y + dy - 60))
 	for k in mini(Mods.level("fuel_tanks"), 3):
 		var fy := 140 - 24 * k
 		if fy > roof_y() + 6:

@@ -4,7 +4,8 @@ extends ModalPanel
 ## Workers (assign / move / remove), production, recipes with pixel progress bars, upgrade, demolish.
 ## Empty slots show a build list; locked slots explain the vault upgrade. Rooms under construction (v4.3) show
 ## the site: progress, time left, the builder crew (+ who speeds it up) and a components rush.
-## focus_rect() tells the camera where on screen the zoomed room should sit.
+## LARGE ROOMS (v4.4): a "ขยายห้อง" section knocks the room through into a same-type neighbour (2-3 cells) or
+## splits it back. focus_rect() tells the camera where on screen the zoomed room should sit.
 
 signal build_requested(slot: int, room_type: String)
 
@@ -60,7 +61,7 @@ func _layout() -> void:
 
 
 func open_slot(s: int) -> void:
-	slot = s
+	slot = Game.room_anchor(s)
 	mode = "main"
 	open()
 
@@ -87,7 +88,8 @@ func refresh() -> void:
 		_build_empty()
 		return
 	var def := Data.room_def(r.type)
-	set_title("%s LV%d / %s" % [def.en, r.level, def.th])
+	var span := Game.room_span(slot)
+	set_title("%s LV%d%s / %s%s" % [def.en, r.level, (" x%d" % span) if span > 1 else "", def.th, (" ใหญ่ %d ช่อง" % span) if span > 1 else ""])
 	if mode == "assign":
 		_build_assign(def)
 		return
@@ -107,6 +109,7 @@ func refresh() -> void:
 	_build_production(r, def)
 	_build_recipes(r, def)
 	_build_upgrade(r, def)
+	_build_large(r, def)
 
 
 # ------------------------------------------------------------------ sections
@@ -116,7 +119,8 @@ func _section(en: String, th: String = "") -> void:
 
 func _build_site(r: Dictionary, def: Dictionary) -> void:
 	var up := not Game.is_site(slot)
-	_section("CONSTRUCTION", "อัปเกรดเป็น Lv.%d" % (int(r.level) + 1) if up else "งานก่อสร้าง")
+	var merging := Game.is_merging(slot)
+	_section("CONSTRUCTION", ("ทุบผนังรวมเป็น %d ช่อง" % Game.room_span(slot)) if merging else ("อัปเกรดเป็น Lv.%d" % (int(r.level) + 1) if up else "งานก่อสร้าง"))
 	var p := UIKit.panel(Color("1a140c"), UIKit.C_GOLD)
 	var v := UIKit.vbox(2)
 	p.add_child(v)
@@ -130,7 +134,7 @@ func _build_site(r: Dictionary, def: Dictionary) -> void:
 	_site_bar.add_child(_site_lbl)
 	v.add_child(_site_bar)
 	var crew := Game.site_crew(slot)
-	var tip := "ห้องยังทำงานตามปกติระหว่างอัปเกรด" if up else "ห้องจะเริ่มทำงานเมื่อสร้างเสร็จ"
+	var tip := ("ห้องยังทำงานแบบแยกห้อง โบนัสห้องใหญ่เริ่มเมื่อเสร็จ" if merging else "ห้องยังทำงานตามปกติระหว่างอัปเกรด") if up else "ห้องจะเริ่มทำงานเมื่อสร้างเสร็จ"
 	if crew.is_empty():
 		tip += " · ยังไม่มีช่าง งานเดินช้ามาก ส่งคนมาช่วยสิ!"
 	v.add_child(UIKit.wrap_label(tip, UIKit.FS_SMALL, UIKit.C_DIM if not crew.is_empty() else UIKit.C_RED))
@@ -163,9 +167,9 @@ func _build_workers(def: Dictionary) -> void:
 	var workers := Game.site_crew(slot) if site else Game.room_workers(slot)
 	var st: String = "str" if site else def.get("stat", "str")
 	if site:
-		_section("BUILDERS %d/%d · STR" % [workers.size(), Data.ROOM_WORKERS], "ทีมช่าง")
+		_section("BUILDERS %d/%d · STR" % [workers.size(), Game.room_capacity(slot)], "ทีมช่าง")
 	else:
-		_section("WORKERS %d/%d · %s" % [workers.size(), Data.ROOM_WORKERS, st.to_upper()], "ผู้ทำงาน")
+		_section("WORKERS %d/%d · %s" % [workers.size(), Game.room_capacity(slot), st.to_upper()], "ผู้ทำงาน")
 	for d in workers:
 		var card := UIKit.panel()
 		var h := UIKit.hbox(4)
@@ -186,7 +190,7 @@ func _build_workers(def: Dictionary) -> void:
 		rm.pressed.connect(func(): Game.assign(Game.dweller_by_id(did), -1))
 		h.add_child(rm)
 		_content.add_child(card)
-	if workers.size() < Data.ROOM_WORKERS:
+	if workers.size() < Game.room_capacity(slot):
 		var add := UIKit.button("+ ส่งช่างมาช่วยสร้าง" if site else "+ เพิ่มคนทำงาน", "green", "people")
 		add.pressed.connect(func():
 			mode = "assign"
@@ -356,7 +360,7 @@ func _build_upgrade(r: Dictionary, def: Dictionary) -> void:
 		h.add_child(UIKit.label("กำลังอัปเกรดอยู่ (ดูด้านบน)", UIKit.FS_SMALL, UIKit.C_GOLD))
 	elif int(r.level) < Data.ROOM_MAX_LEVEL:
 		var c: int = Game.upgrade_cost(slot)
-		var b := UIKit.button("อัปเกรด Lv.%d  (%d เศษเหล็ก · %s)" % [int(r.level) + 1, c, Game.fmt_time(Game.upgrade_time(int(r.level) + 1))], "yellow", "wrench")
+		var b := UIKit.button("อัปเกรด Lv.%d  (%d เศษเหล็ก · %s)" % [int(r.level) + 1, c, Game.fmt_time(Game.upgrade_time(int(r.level) + 1, Game.room_span(slot)))], "yellow", "wrench")
 		b.set_meta("cost", {"scrap": c})
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func(): Game.upgrade_room(slot))
@@ -370,6 +374,57 @@ func _build_upgrade(r: Dictionary, def: Dictionary) -> void:
 			refresh())
 		h.add_child(d)
 	_content.add_child(h)
+	_update_buttons()
+
+
+## knock through into a same-type neighbour (or split a large room back into single rooms)
+func _build_large(r: Dictionary, def: Dictionary) -> void:
+	if not str(r.type) in Data.MERGEABLE:
+		return
+	var span := Game.room_span(slot)
+	_section("LARGE ROOM x%d" % span, "ขยายห้อง (รวมห้องติดกัน)")
+	var p := UIKit.panel()
+	var v := UIKit.vbox(2)
+	p.add_child(v)
+	if span > 1:
+		v.add_child(UIKit.wrap_label("ห้องใหญ่ %d ช่อง: คนทำงาน %d ที่ · ผลงานเท่ากับ %.2f ห้อง (โบนัส +%d%%) · ใช้ไฟ -%d%%" % [span, Game.room_capacity(slot),
+			Game.room_scale(slot), int(round((Game.span_efficiency(slot) - 1.0) * 100.0)), int(round((1.0 - Data.SPAN_POWER_MULT) * 100.0))], UIKit.FS_SMALL, UIKit.C_GREEN))
+	else:
+		v.add_child(UIKit.wrap_label("สร้างห้องชนิดเดียวกัน เลเวลเท่ากันไว้ติดกันบนชั้นเดียวกัน แล้วทุบผนังรวมเป็นห้องใหญ่ 2–3 ช่อง: 2 ช่อง +10%, 3 ช่อง +25%", UIKit.FS_SMALL, UIKit.C_DIM))
+	var cells := Game.room_cells(slot)
+	var shown := false
+	for c in [int(cells[0]) - 1, int(cells[-1]) + 1]:
+		if c < 0 or c >= Game.s.rooms.size() or Game.slot_unit(c) != Game.slot_unit(slot) or Game.slot_cell(c).y != Game.slot_cell(slot).y:
+			continue
+		var o := Game.room_anchor(c)
+		if str(Game.s.rooms[o].type) != str(r.type):
+			continue
+		shown = true
+		var side := "ซ้าย" if c < slot else "ขวา"
+		var why := Game.merge_block(slot, o)
+		if why != "":
+			v.add_child(UIKit.wrap_label("รวมกับห้อง%sไม่ได้: %s" % [side, why], UIKit.FS_SMALL, UIKit.C_RED))
+			continue
+		var cost := Game.merge_cost(slot, o)
+		var n := Game.room_span(slot) + Game.room_span(o)
+		var b := UIKit.button("รวมกับห้อง%s → %d ช่อง  (%s · %s)" % [side, n, Game.cost_text(cost), Game.fmt_time(Game.merge_time(slot, o))], "yellow", "hammer")
+		b.set_meta("cost", cost)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var oo: int = o
+		b.pressed.connect(func():
+			if Game.merge_rooms(slot, oo):
+				slot = Game.room_anchor(slot)
+				refresh())
+		v.add_child(b)
+	if not shown and span < Data.MAX_SPAN:
+		v.add_child(UIKit.wrap_label("ยังไม่มี%sอยู่ติดกัน" % def.th, UIKit.FS_SMALL, UIKit.C_DIM))
+	if span > 1 and not Game.is_constructing(slot):
+		var sp := UIKit.button("แยกกลับเป็น %d ห้อง (ฟรี · ไม่คืนวัสดุ)" % span, "gray", "close")
+		sp.pressed.connect(func():
+			Game.split_room(slot)
+			refresh())
+		v.add_child(sp)
+	_content.add_child(p)
 	_update_buttons()
 
 

@@ -140,6 +140,7 @@ func room_mult(slot: int) -> float:
 	var m := 1.0
 	var fits := 0
 	var night := Game.is_night()
+	var pair_div := float(Game.work_span(slot))
 	for d in workers:
 		var a := affinity(d, rt)
 		if a > 0.0:
@@ -154,9 +155,10 @@ func room_mult(slot: int) -> float:
 		m += Skills.val(d, "prod") / float(workers.size())
 		for o in workers:
 			if o != d:
+				# pair bonuses are per seat pair: a large room's 6 crew don't stack them 5x
 				if has(o, "cheerful"):
-					m += 0.05
-				m += Skills.val(o, "mentor")
+					m += 0.05 / pair_div
+				m += Skills.val(o, "mentor") / pair_div
 	if fits >= 2:
 		m += DUO_BONUS
 	if Game.s.has("meta"):

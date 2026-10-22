@@ -125,6 +125,22 @@ Files: `scripts/autoload/combat.gd` (simulation), `scripts/autoload/loot.gd` (it
 | Rush / cancel | The close-up shows progress, time left, the builder crew and their multipliers; **finish now** costs components (1 per 15 work-seconds left); cancelling a site refunds half the scrap. |
 | Hooks | `Game.construction_started(slot, kind)` / `construction_finished(slot, kind)` (`kind` = `build` or `upgrade`), state in `Game.s.rooms[i].build` (`{kind, total, left}`, empty when idle). God mode: *instant build* switch + *finish all construction*. |
 
+## 4j. Large rooms (knock-through, 2–3 cells)
+
+Fallout-Shelter style: two or three rooms of the **same type and level**, side by side on one floor of the same unit (main body or one trailer), can be knocked through into one large room. Open a room → **ขยายห้อง** → *รวมกับห้องซ้าย/ขวา*.
+
+| Part | How it works |
+|---|---|
+| Data | The left-most cell (anchor) keeps the room; the other cells become `type: "annex"` (`Game.room_anchor / room_cells / room_span`). No new save keys; `_fix_large_rooms()` clears an annex with no valid room on load and moves crew to anchors. Crew always work on the anchor slot. |
+| Cost / time | Scrap `room cost × 0.6 × level × (span − 1)` + `6 × (span − 1)` components; `45 + 35 × level × (span − 1)` work-seconds as a normal construction job (`kind: "merge"`, builders and rush work). The room **keeps working as its parts** meanwhile; the bonus starts when the walls are down. |
+| Bonus | 2 seats per cell (4 / 6). Output = cells × efficiency: **2 cells ×1.10, 3 cells ×1.25** (production, crafting speed, healing, science boost, armory, radio, beds: 2-wide quarters = +9 pop at Lv1). Power 90 % per cell. Pair perks (cheerful, mentor) don't stack per seat. |
+| Upgrade | One upgrade levels every cell: `span × 80 %` of the single price, `+50 %` work per extra cell. |
+| Synergy | A large room touches everything around all its cells; each neighbouring room counts once (a 3-wide kitchen under a 3-wide hydroponics = one +10 %). |
+| Split / demolish | *แยกกลับ* turns it back into single rooms (free, instant, same level, crew shared out); demolish clears every cell and refunds half the build cost per cell. |
+| Art | `tools/art/rooms.py` `gen_wide_rooms()`: the room's own wall at full width, its furniture left + mirrored right, a centre piece per type for 3 cells (couch & TV, stock pot, grow tower, settling tank, operating table, rifle wall, mainframe, transmitter, fractionating column, engine hoist), a steel post where the wall stood and the **ladder shaft running through** when it crosses cells 0|1 of the main body. Keys `room_<type>_x<gaps>` (`x2`, `x10`, `x2_2`, `x10_2`). The atlas is now 2048×2048. |
+| View | The anchor's `RoomView` spans the cells (actors wander and use equipment across it); the strips the hull's partition / shaft would hide are redrawn above the shell by `Vehicle._sync_large_rooms()`. The close-up frames the whole room (drops to 1× zoom if 3 cells don't fit). |
+| Modules (planned) | Turret bays / defence modules from the modular-chassis design are not in `Data.MERGEABLE`, so they stay single-cell. |
+
 ## 4i. v4.4 — strangers at the door (inspection)
 
 Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins (radio, road event, SOS broadcast, expedition loot, boss captive, expedition encounters) goes through `Game.offer_recruit(source)`. Usually they board at once; **rarely (~6 % rare, ~1.5 % very rare)** the stranger is exceptional (top stat 7–9 / 9–11, +2/+4 levels, 2–3 good traits) and waits at the door for inspection instead.
@@ -146,6 +162,19 @@ Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins 
 | The six encounters | **ผู้รอดชีวิตหลบซ่อน HIDDEN SURVIVOR** (invite aboard: may hide an infection / share food for a stash tip / leave), **คนแปลกหน้าบาดเจ็บ WOUNDED STRANGER** (patch up with a packed stimpack: he joins / rob his pack: he may stab back / walk away), **เสียงร้องขอความช่วยเหลือ CRY FOR HELP** (danger 2+: rush in: refugee + supplies or a raider ambush that injures and costs 30 % of the site loot / warning shots with packed ammo / ignore), **ตู้เซฟใต้ซากตึก BURIED SAFE** (pry: rare gear or crushed, +60 s / shoot the lock with ammo / leave), **ลังเสบียงบนพื้นที่กำลังถล่ม SAGGING FLOOR** (the nimblest climbs (AGI): big supplies or a fall + infection / leave), **คลังยาในห้องปนเปื้อน TOXIC PHARMACY** (danger 2+: hold your breath (INT): meds or an infection / dose up with packed antibiotics / leave). |
 | Rules | Costs come out of the **packed supplies** (so they also lower the trip's odds), injuries hit the team member best at the job (lower HP = lower team power and a higher death risk on a failed trip), refugees need a free bunk, and rewards (scaled by site danger and lap) come home with the team. If everyone dies, nothing comes back. The clock keeps running: close the pop-up and answer later from the HUD chip ("สั่งการ") or the expedition panel. If nobody answers before the team returns (or the game was closed), the team plays it safe and picks the last choice. The last 3 encounters are never rolled again, so the same one never shows up twice in a row. |
 | Hooks | `scripts/autoload/encounter.gd` (`Encounter`, autoload after `Expedition`): data in `ENCOUNTERS`, state in `Game.s.exp.enc` (`{id, at, st: wait/open/done, bonus, recruits, lose, text}`), anti-repeat list in `Game.s.enc_recent`; signals `encounter_ready(id)` / `encounter_resolved(id, result)`. UI `scripts/ui/encounter_popup.gd`, art `tools/art/encounters.py` → `assets/events/enc_*.png`. God mode → EXPEDITION: trigger any encounter on the running trip. |
+
+## 4k. Roof rest deck (ดาดฟ้าพักทีมป้องกัน)
+
+A rooftop rest spot for the defence squad, bought as an exterior mod (MODS → **ดาดฟ้าพักทีมป้องกัน / ROOF REST DECK**, 3 levels: 160 scrap + 6 comp / 380 + 18 / 800 + 40, 1.5 t). It is a plank deck on stilts over the rear roof (fuel drums fit underneath); the roof gunner and the field medic stand on it.
+
+| Part | How it works |
+|---|---|
+| Reserve seat | The deck adds one **reserve** to the defence squad (Squad panel → ROOF DECK RESERVE, or Crew → ตัวสำรองดาดฟ้า). The reserve doesn't work a room: they doze on the cot (HP +0.6 %/s per level, happiness target +19/22/25, little "z"s), and pick up 40 % of the kill XP (also offline). Squad members get +2 happiness per level (a place to sit between waves). |
+| Tag-in | When a squad member falls in a wave, the reserve jumps down after **6 / 4 / 2.5 s** (Lv1/2/3) with **60 / 80 / 100 %** HP and fights in that role (role stats + that role's skill); the fallen one is carried up to the cot. Once per wave. While a reserve can still come down, a squad that is all down is not wiped yet. When the wave ends (cleared, wiped or reset) the original line-up returns, rested. |
+| Roof cover | Gunner + medic only: Lv1 shade = regen +0.3 HP/s per level, Lv2 sandbags = DEF ×1.15 and dodge +3, Lv3 lookout mast + searchlight = range ×1.1 and crit +5. The rear bruiser gets nothing. |
+| State | `Game.s.deck` = reserve dweller id (-1 none). `Game.deck_dweller()` validates it every time, so working in a room, joining the squad, an expedition, death or desertion takes the reserve off the deck by itself (no save migration needed). Runtime swap in `Combat.sub` / `Combat.sub_out`, signal `Combat.tagged_in(slot, did, out_did)`. |
+| Modular chassis | Independent of the pending modular-chassis cells (`s.rooms`): the deck is a roof mod, so a later "turret bay / defense module" can sit below it. |
+| Art | `tools/art/truck.py` `mod_roof_deck()` → atlas `mod_roof_deck_1..3` (76×60). |
 
 ## 4i. Cloud save (Supabase)
 
@@ -250,6 +279,7 @@ tools/balance.gd              4-hour headless balance bot (`godot --headless --p
 godot --path . -- --autotest --out=/absolute/output/dir
 ```
 Visits every screen, fires events, fast-forwards 30 min, round-trips the save, rotates to portrait, and writes screenshots.
+Add `--only=large` (after `--`) to run just the large-room checks (~30 s).
 
 ## 8. Replacing the art
 

@@ -112,7 +112,7 @@ func rate_parts() -> Dictionary:
 		var r: Dictionary = Game.s.rooms[slot]
 		if r.type == "empty" or Game.is_site(slot) or not Game.is_slot_unlocked(slot):
 			continue
-		var lv := float(r.get("level", 1))
+		var lv := float(r.get("level", 1)) * Game.room_span(slot)   # a knocked-through room is as loud as its cells
 		rooms += float(NOISE.get(r.type, 0.0)) * lv
 		rooms += float(LIGHT.get(r.type, 0.0)) * lv * (2.0 if night else 0.25)
 	p.rooms = rooms

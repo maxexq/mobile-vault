@@ -48,6 +48,12 @@ func _run() -> void:
 	await wait(0.3)
 	main.hud.title_screen._go(true)
 	await wait(2.5)
+	if "--only=large" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _large_room_test()
+		print("[autotest] DONE")
+		get_tree().quit()
+		return
 	await _tutorial_test()
 	await shot("main_industrial_rain")
 	Combat.reset_wave(6)
@@ -576,6 +582,7 @@ func _run() -> void:
 	for e in errs:
 		print("[autotest] trace error: ", Trace.fmt_entry(e))
 	print("[autotest] v3/v4 checks done: %d failed total" % _fails)
+	await _roof_deck_test()
 	# portrait phone
 	get_window().size = Vector2i(780, 1688)
 	await wait(1.5)
@@ -614,6 +621,7 @@ func _run() -> void:
 	await _settings_test()
 	_event_variety_test()
 	await _cloud_test()
+	await _large_room_test()
 	print("[autotest] DONE")
 	get_tree().quit()
 
@@ -1684,3 +1692,254 @@ func _threat_test() -> void:
 	Game.s.combat.threat = 0.0
 	_check("threat: save keeps the meter", Game.s.combat.has("threat") and Game.s.combat.has("raid_kpm") and Game.s.combat.has("fight_share"))
 	print("[autotest] threat checks done: %d failed total" % _fails)
+
+
+func _rate(slot: int, k: String) -> float:
+	return float(Game.room_rate_pm(slot).get(k, 0.0))
+
+
+## v4.4 large rooms: knock 2-3 same-type neighbours through into one room
+func _large_room_test() -> void:
+	get_window().size = Vector2i(1280, 640)
+	Game.setup_default_state()
+	Game.s.tier = "rig"
+	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	while Game.s.rooms.size() < Game.slot_count():
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	for i in range(1, Game.s.rooms.size()):
+		Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	for i in [3, 4, 5]:
+		Game.s.rooms[i] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[8] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.outage = {}
+	Game.s.res.scrap = 8000.0
+	Game.s.items["components"] = 300
+	for d in Game.s.dwellers:
+		d.room = -1
+	var crew := []
+	for i in 6:
+		var d := Game._add_dweller({"name": "ทดสอบ%d" % i, "variant": "dw_chef_gray", "str": 5, "int": 5, "agi": 5})
+		d.traits = []
+		d.skills = {}
+		d.happy = 70.0
+		crew.append(d)
+	Game.assign(crew[0], 3)
+	Game.assign(crew[1], 3)
+	Game.assign(crew[2], 4)
+	Game.assign(crew[3], 4)
+	Game.rooms_changed.emit()
+	_check("large: same-type neighbour is a merge candidate", Game.merge_candidates(3) == [4])
+	_check("large: rooms must touch", Game.merge_block(3, 5) != "")
+	Game.s.rooms[5].type = "water"
+	_check("large: different types can't merge", Game.merge_block(4, 5).contains("ชนิด") and Game.merge_block(5, 8) != "")
+	Game.s.rooms[5].type = "kitchen"
+	Game.s.rooms[4].level = 2
+	_check("large: levels must match", Game.merge_block(3, 4).contains("เลเวล"))
+	Game.s.rooms[4].level = 1
+	_check("large: engine room never merges", Game.merge_block(0, 1) != "")
+	var single := _rate(3, "food") + _rate(4, "food")
+	var scrap0 := float(Game.s.res.scrap)
+	var comp0 := int(Game.s.items.components)
+	var cost := Game.merge_cost(3, 4)
+	_check("large: merge costs scrap + components", int(cost.scrap) > 0 and int(cost.components) == Data.MERGE_COMPONENTS)
+	_check("large: merge starts", Game.merge_rooms(4, 3))
+	_check("large: paid", is_equal_approx(float(Game.s.res.scrap), scrap0 - float(cost.scrap)) and int(Game.s.items.components) == comp0 - int(cost.components))
+	_check("large: right cell becomes an annex of the left", Game.is_annex(4) and Game.room_anchor(4) == 3 and Game.room_span(3) == 2)
+	_check("large: crew moved to the anchor, 4 seats", Game.room_workers(3).size() == 4 and Game.room_capacity(3) == 4)
+	print("[autotest] rates single %.3f merging %.3f" % [single, _rate(3, "food")])
+	_check("large: still works during the knock-through (no bonus yet)", Game.is_merging(3) and absf(_rate(3, "food") - single) < 0.01 * single and not Game.is_site(3))
+	var t0 := float(Game.build_info(3).left)
+	Game._simulate(1.0, false)
+	_check("large: knock-through progresses", float(Game.build_info(3).left) < t0)
+	Game._finish_build(3, false)
+	_check("large: 2-wide room +10%", absf(_rate(3, "food") - single * 1.10) < 0.01 * single and is_equal_approx(Game.room_scale(3), 2.2))
+	_check("large: power use 90% per cell", is_equal_approx(Game.room_power_pm(3), float(Data.ROOMS.kitchen.power) * 2.0 * 0.9))
+	Game.assign(crew[3], -1)
+	Game.assign(crew[3], 4)
+	_check("large: assigning to an annex cell goes to the anchor", int(crew[3].room) == 3)
+	_check("large: seats are capped at 2 per cell", not Game.assign(crew[4], 4))
+	main.vehicle.refresh_rooms()
+	var rv3: RoomView = main.vehicle.room_views[3]
+	_check("large: room view spans both cells", is_equal_approx(rv3.w, 138.0) and not main.vehicle.room_views[4].visible and rv3.seams.size() == 1)
+	_check("large: wide art exists for this layout", Atlas.has(rv3.wide_key("kitchen")))
+	# third cell
+	_check("large: 2+1 merges into 3", Game.merge_candidates(5) == [3])
+	Game.merge_rooms(5, 3)
+	Game._finish_build(3, false)
+	Game.assign(crew[4], 5)
+	Game.assign(crew[5], 5)
+	_check("large: 3-wide room, 6 seats, x3.75", Game.room_cells(5) == [3, 4, 5] and Game.room_capacity(3) == 6 and is_equal_approx(Game.room_scale(3), 3.75))
+	_check("large: max 3 cells", Game.merge_block(3, 8) != "" and Game.merge_candidates(3).is_empty())
+	_check("large: upgrade costs span x 80%", Game.upgrade_cost(4) == int(round(float(Data.ROOM_UPGRADE_COST[2]) * 3.0 * 0.8 * Crew.build_cost_mult())))
+	_check("large: upgrade takes longer", Game.upgrade_time(2, 3) > Game.upgrade_time(2))
+	Game.upgrade_room(5)
+	Game._finish_build(3, false)
+	_check("large: upgrade levels every cell", int(Game.s.rooms[3].level) == 2 and int(Game.s.rooms[5].level) == 2)
+	# synergy: a 2-wide hydroponics above counts once
+	Game.s.rooms[6] = {"type": "hydroponics", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[7] = {"type": "annex", "level": 1, "job": {}, "build": {}}
+	var hyd := Synergy.effects(3).filter(func(e): return str(e.type) == "hydroponics")
+	_check("large: neighbouring large room counts once", hyd.size() == 1 and Synergy.neighbours(3).has(6) and not Synergy.neighbours(3).has(7))
+	Game.s.rooms[6] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[7] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	# quarters pop cap scales
+	var pop0 := Game.pop_cap()
+	Game.s.rooms[9] = {"type": "quarters", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[10] = {"type": "annex", "level": 1, "job": {}, "build": {}}
+	_check("large: 2-wide quarters house 2.2x", Game.pop_cap() - pop0 == 9)
+	Game.s.rooms[9] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[10] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	# save round-trip (ids/rooms come back as floats) + broken annex cleanup
+	Game.s.rooms[6] = {"type": "annex", "level": 1, "job": {}, "build": {}}
+	Game.s = JSON.parse_string(JSON.stringify(Game.s))
+	Game._migrate()
+	_check("large: survives a JSON round-trip", Game.room_span(3) == 3 and Game.room_workers(3).size() == 6 and is_equal_approx(Game.room_scale(4), 3.75))
+	_check("large: orphan annex is cleared on load", str(Game.s.rooms[6].type) == "empty")
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	await wait(1.0)
+	main.vehicle.peek(9999.0)
+	await wait(0.8)
+	await shot("large_room_vehicle")
+	main.open_closeup(4)
+	await wait(1.6)
+	_check("large: close-up opens the whole room", main.hud.room_closeup.slot == 3)
+	await shot("large_room_closeup")
+	main.hud.room_closeup.close()
+	await wait(0.6)
+	get_window().size = Vector2i(780, 1688)
+	await wait(1.2)
+	main.open_closeup(3)
+	await wait(1.6)
+	await shot("large_room_portrait")
+	main.hud.room_closeup.close()
+	await wait(0.6)
+	get_window().size = Vector2i(1280, 640)
+	await wait(0.6)
+	# split back + demolish
+	_check("large: split gives 3 rooms back", Game.split_room(4) and Game.room_span(3) == 1 and str(Game.s.rooms[5].type) == "kitchen" and int(Game.s.rooms[5].level) == 2)
+	_check("large: split shares the crew out", Game.room_workers(3).size() <= 2 and Game.room_workers(4).size() <= 2 and Game.room_workers(5).size() <= 2)
+	Game.merge_rooms(3, 4)
+	Game._finish_build(3, false)
+	var sc := float(Game.s.res.scrap)
+	Game.demolish_room(4)
+	_check("large: demolish clears every cell", str(Game.s.rooms[3].type) == "empty" and str(Game.s.rooms[4].type) == "empty" and float(Game.s.res.scrap) > sc)
+	Game.rooms_changed.emit()
+	await wait(0.4)
+	print("[autotest] large rooms done: %d failed total" % _fails)
+
+
+## roof rest deck (ดาดฟ้า): reserve seat, rest on the cot, tag-in for a fallen defender, cover bonuses
+func _roof_deck_test() -> void:
+	_no_events()
+	Game.s.mods.erase("roof_deck")
+	Mods.mods_changed.emit()
+	var free := []
+	for d in Game.s.dwellers:
+		if Game.squad_role(d) < 0 and not Game.is_away(d):
+			free.append(d)
+	# a gunner on duty (earlier checks may have sent the squad away)
+	if int(Game.s.squad[0]) < 0 and free.size() > 1:
+		Game.set_squad(0, int(free.pop_back().id))
+	var cand: Dictionary = free[0] if not free.is_empty() else {}
+	_check("deck: a free dweller to rest up there", not cand.is_empty())
+	if cand.is_empty():
+		return
+	var rid := int(cand.id)
+	Game.set_deck(rid)
+	_check("deck: no reserve seat before the deck is built", Game.deck_dweller().is_empty() and Vehicle.deck_lift() == 0.0)
+	Game.s.res.scrap = 5000.0
+	Game.s.items.components = 500
+	_check("deck: install Lv1", Mods.install("roof_deck") and Mods.level("roof_deck") == 1)
+	_check("deck: roof crew stands on the planks", Vehicle.deck_lift() > 0.0 and CombatView.hero_view(0).y < CombatView.HERO_VIEW[0].y + CombatView.roof_shift)
+	var room_before := int(cand.room)
+	Game.set_deck(rid)
+	_check("deck: reserve set, off their room", Game.is_deck(cand) and int(cand.room) == -1 and (room_before >= -1))
+	_check("deck: reserve is not idle", not Game.idle_dwellers().has(cand))
+	# JSON round-trip turns the id into a float
+	Game.s.deck = JSON.parse_string(JSON.stringify([rid]))[0]
+	_check("deck: float id after load still matches", Game.is_deck(cand))
+	cand.hp = float(cand.max_hp) * 0.4
+	var hp0 := float(cand.hp)
+	for i in 10:
+		Game._simulate(1.0, true)
+	_check("deck: reserve heals while resting", float(cand.hp) > hp0)
+	# --- tag-in during a wave
+	Combat._end_subs()
+	Combat.reset_wave(3)
+	Combat.rebuild_heroes()
+	Combat._start_wave()
+	var orig := int(Combat.heroes[0].did) if not Combat.heroes[0].is_empty() else -1
+	_check("deck: gunner on duty", orig >= 0)
+	if orig < 0:
+		return
+	Combat.heroes[0].alive = false
+	Combat.heroes[0].hp = 0.0
+	for i in int(Combat.DECK_TAG_DELAY[1] / Combat.STEP) + 5:
+		Combat.tick(Combat.STEP)
+		if not Combat.sub.is_empty():
+			break
+	_check("deck: reserve jumps in for the fallen gunner", Combat.sub.has(0) and int(Combat.heroes[0].did) == rid and Combat.heroes[0].alive)
+	_check("deck: fallen gunner rests on the cot", int(Combat.sub_out.get(0, -1)) == orig)
+	await wait(0.6)
+	await shot("deck_tag_in")
+	Combat._on_wave_cleared()
+	_check("deck: wave over restores the line-up", Combat.sub.is_empty() and int(Combat.heroes[0].did) == orig and Combat.heroes[0].alive)
+	# --- a pending reserve keeps the fight going even when everyone is down
+	Combat._start_wave()
+	for i in 3:
+		Combat.tick(Combat.STEP)
+	for h in Combat.heroes:
+		if not h.is_empty():
+			h.alive = false
+			h.hp = 0.0
+	Combat.tick(Combat.STEP)
+	_check("deck: no wipe while the reserve can still come down", Combat.wave_active)
+	for i in int(Combat.DECK_TAG_DELAY[1] / Combat.STEP) + 5:
+		Combat.tick(Combat.STEP)
+		if not Combat.sub.is_empty():
+			break
+	_check("deck: reserve fights on alone", Combat._alive_count() == 1 and not Combat.sub.is_empty())
+	Combat._end_subs()
+	Combat.reset_wave(3)
+	# --- cover bonuses for the roof crew
+	var gd := Game.dweller_by_id(orig)
+	var def1 := float(Combat.hero_stats(gd, 0).def)
+	var rng1 := float(Combat.hero_stats(gd, 0).range)
+	_check("deck: install Lv2 + Lv3", Mods.install("roof_deck") and Mods.install("roof_deck") and Mods.level("roof_deck") == 3)
+	var st3 := Combat.hero_stats(gd, 0)
+	_check("deck: sandbags + lookout buff the gunner", float(st3.def) > def1 * 1.1 and float(st3.range) > rng1 * 1.05)
+	# same person as a rear bruiser: no roof cover
+	_check("deck: rear bruiser gets no roof cover", float(Combat.hero_stats(gd, 1).regen) < float(st3.regen))
+	# --- reserve XP from kills and offline
+	var xp0 := float(cand.xp) + float(cand.lvl) * 1000.0
+	Combat.offline_rewards(600.0)
+	_check("deck: reserve learns while watching (offline)", float(cand.xp) + float(cand.lvl) * 1000.0 > xp0)
+	# --- UI
+	main.hud.panels.squad.tab = "squad"
+	main.hud.open_panel("squad")
+	await wait(0.6)
+	_check("deck: squad panel shows the reserve card", _find_text(main.hud.panels.squad, "ROOF DECK RESERVE"))
+	await shot("deck_squad_panel")
+	main.hud.panels.squad.choosing = main.hud.panels.squad.DECK
+	main.hud.panels.squad.refresh()
+	await wait(0.4)
+	await shot("deck_chooser")
+	main.hud.panels.squad.close()
+	await wait(0.4)
+	await shot("deck_world_lv3")
+	# --- leaving the deck by itself
+	var free_slot := -1
+	for i in Game.s.rooms.size():
+		if Game.s.rooms[i].type != "empty" and Game.is_slot_unlocked(i) and not Game.is_site(i) and Game.room_workers(i).size() < Data.ROOM_WORKERS:
+			free_slot = i
+			break
+	if free_slot >= 0:
+		Game.assign(cand, free_slot)
+		_check("deck: going to work takes them off the deck", not Game.is_deck(cand))
+		Game.set_deck(rid)
+	Game.set_squad(2 if Combat.slots_unlocked() > 2 else 0, rid)
+	_check("deck: joining the squad takes them off the deck", Game.deck_dweller().is_empty())
+	if Game.squad_role(cand) == 0 and orig >= 0:
+		Game.set_squad(0, orig)
+	print("[autotest] roof deck checks done: %d failed total" % _fails)
