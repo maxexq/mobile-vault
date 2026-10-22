@@ -219,7 +219,7 @@ func start(id: String, ids: Array, sup: Dictionary) -> bool:
 		var role := Game.squad_role(d)
 		if role >= 0:
 			Game.s.squad[role] = -1
-	Game.s["exp"] = {"site": id, "team": ids.duplicate(), "sup": sup.duplicate(), "start": now, "dur": dur, "log": []}
+	Game.s["exp"] = {"site": id, "team": ids.duplicate(), "sup": sup.duplicate(), "start": now, "dur": dur, "log": [], "seed": randi()}
 	Game.toast.emit("ทีมสำรวจออกเดินทางไป %s — รถจอดรอจนกว่าทีมจะกลับ" % site_def(id).th, "info")
 	expedition_started.emit()
 	Game.squad_changed.emit()

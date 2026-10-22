@@ -10,6 +10,13 @@ var picked: Array = []
 var sup := {"food": 0, "water": 0, "stimpack": 0, "ammo": 0, "antibiotics": 0}
 var report := {}
 var _list: VBoxContainer
+# live view while a team is out (built once, then updated in place so the feed keeps animating)
+var _feed: ExpeditionFeed
+var _active_built := false
+var _pr: ProgressBar
+var _time_lbl: Label
+var _status_lbls: Array = []
+var _log_lbls: Array = []
 
 
 func _build() -> void:
@@ -41,16 +48,26 @@ func refresh() -> void:
 	for c in _list.get_children():
 		_list.remove_child(c)
 		c.queue_free()
+	_active_built = false
+	_feed = null
 	if not report.is_empty():
 		_build_report()
 	elif Expedition.active():
 		_build_active()
+		_active_built = true
 	else:
 		_build_planner()
 
 
 func _process(_d: float) -> void:
-	if is_open and Expedition.active() and report.is_empty() and Engine.get_process_frames() % 30 == 0:
+	if not is_open or not report.is_empty():
+		return
+	if Expedition.active():
+		if not _active_built:
+			refresh()
+		elif Engine.get_process_frames() % 10 == 0:
+			_update_active()
+	elif _active_built:
 		refresh()
 
 
@@ -184,19 +201,64 @@ func _build_active() -> void:
 	var e := Expedition.state()
 	var def := Expedition.site_def(str(e.site))
 	set_title("EXPEDITION / ทีมกำลังสำรวจ %s" % def.th)
-	var pr := UIKit.progress(UIKit.C_GOLD, 8)
-	pr.value = Expedition.progress()
-	_list.add_child(pr)
-	var tl := Expedition.time_left()
-	_list.add_child(UIKit.label("เหลืออีก %d:%02d · รถจอดรอทีมอยู่" % [int(tl) / 60, int(tl) % 60], UIKit.FS, UIKit.C_TEXT))
+	_feed = ExpeditionFeed.new()
+	_feed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list.add_child(_feed)
+	_pr = UIKit.progress(UIKit.C_GOLD, 6)
+	_list.add_child(_pr)
+	_time_lbl = UIKit.label("", UIKit.FS, UIKit.C_TEXT)
+	_list.add_child(_time_lbl)
 	_list.add_child(UIKit.wrap_label("ภารกิจ: " + def.goal, UIKit.FS_SMALL))
-	for d in Expedition.team():
+	_list.add_child(UIKit.header("SQUAD", "ใครไปบ้าง · กำลังทำอะไร"))
+	_status_lbls = []
+	var team := Expedition.team()
+	for i in team.size():
+		var d: Dictionary = team[i]
 		var h := UIKit.hbox(4)
+		var mark := ColorRect.new()
+		mark.color = ExpeditionFeed.MARK[i % ExpeditionFeed.MARK.size()]
+		mark.custom_minimum_size = Vector2(3, 24)
+		h.add_child(mark)
 		h.add_child(UIKit.portrait(d.variant))
-		h.add_child(UIKit.label("%s Lv%d" % [d.name, d.lvl], UIKit.FS_SMALL))
+		var v := UIKit.vbox(0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_child(UIKit.label("%s Lv%d" % [d.name, d.lvl], UIKit.FS_SMALL))
+		var st := UIKit.label("", UIKit.FS_SMALL, UIKit.C_GOLD)
+		st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		st.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_child(st)
+		_status_lbls.append(st)
+		h.add_child(v)
 		_list.add_child(h)
-	var members := Expedition.team()
-	_list.add_child(UIKit.label("โอกาสสำเร็จ ~%d%%" % int(Expedition.success_chance(str(e.site), members, e.sup) * 100), UIKit.FS_SMALL, UIKit.C_GOLD))
+	_list.add_child(UIKit.header("FIELD LOG", "บันทึกภาคสนาม"))
+	_log_lbls = []
+	for k in 3:
+		var l := UIKit.label("", UIKit.FS_SMALL, UIKit.C_DIM)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_list.add_child(l)
+		_log_lbls.append(l)
+	_list.add_child(UIKit.label("โอกาสสำเร็จ ~%d%%" % int(Expedition.success_chance(str(e.site), team, e.sup) * 100), UIKit.FS_SMALL, UIKit.C_GOLD))
+	_update_active()
+
+
+func _update_active() -> void:
+	if _feed == null or not Expedition.active():
+		return
+	_pr.value = Expedition.progress()
+	var tl := Expedition.time_left()
+	_time_lbl.text = "เหลืออีก %d:%02d · รถจอดรอทีมอยู่" % [int(tl) / 60, int(tl) % 60]
+	for i in _status_lbls.size():
+		var s := _feed.member_status(i)
+		(_status_lbls[i] as Label).text = ("> " + s) if s != "" else ""
+	var lines := _feed.log_lines(3)
+	for k in _log_lbls.size():
+		var l: Label = _log_lbls[k]
+		if k < lines.size():
+			var ln: Dictionary = lines[lines.size() - 1 - k]
+			l.text = "%02d:%02d  %s" % [int(ln.t) / 60, int(ln.t) % 60, str(ln.text)]
+			l.add_theme_color_override("font_color", ln.col if k == 0 else (ln.col as Color).darkened(0.35))
+		else:
+			l.text = ""
 
 
 func _build_report() -> void:

@@ -375,6 +375,45 @@ func _run() -> void:
 	main.hud.panels.expedition.close()
 	await wait(2.2)
 	await shot("expedition_walkout")
+	# live helmet-cam feed in the expedition panel: a search beat, then a fight beat
+	var now_t := Time.get_unix_time_from_system()
+	Game.s.exp.start = now_t - (7.0 + 2 * ExpeditionFeed.BEAT + 6.0)
+	main.hud.open_expedition("market")
+	await wait(1.2)
+	var feed: ExpeditionFeed = main.hud.panels.expedition._feed
+	_check("expedition feed built", feed != null and feed.member_status(0) != "")
+	await shot("expedition_feed_search")
+	var fb := -1
+	for tries in 40:
+		Game.s.exp.seed = 1000 + tries
+		feed.setup()
+		for b in range(1, 11):
+			if feed.plan(b).fight:
+				fb = b
+				break
+		if fb >= 0:
+			break
+	if fb >= 0:
+		Game.s.exp.start = Time.get_unix_time_from_system() - (7.0 + fb * ExpeditionFeed.BEAT + float(feed.plan(fb).spawn) + 1.6)
+		feed.setup()
+	_check("expedition feed stages a fight", fb >= 0)
+	await wait(0.2)
+	await shot("expedition_feed_fight")
+	await wait(2.2)
+	await shot("expedition_feed_kill")
+	_check("expedition log has entries", feed.log_lines(3).size() >= 2)
+	for alt in ["stilt_town", "lab", "mine"]:
+		Game.s.exp.site = alt
+		feed.setup()
+		await wait(0.5)
+		await shot("expedition_feed_" + alt)
+	Game.s.exp.site = "market"
+	Game.s.exp.start = Time.get_unix_time_from_system() - 3.0
+	feed.setup()
+	await wait(0.6)
+	await shot("expedition_feed_walkin")
+	main.hud.panels.expedition.close()
+	await wait(0.4)
 	await wait(4.0)
 	Game.s.exp.start = float(Game.s.exp.start) - 99999.0
 	Expedition.tick(false)

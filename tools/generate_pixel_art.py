@@ -13,7 +13,7 @@ Run:  python3 tools/generate_pixel_art.py      (needs Pillow)
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from art.common import pack_atlas, OUT_ATLAS
-from art import rooms, truck, chars, ui, bg, events, landmarks, extra
+from art import rooms, truck, chars, ui, bg, events, landmarks, extra, expedition
 
 
 def main():
@@ -25,6 +25,7 @@ def main():
     landmarks.gen_landmarks()
     chars.gen_pets()
     extra.gen_extra()
+    expedition.gen_expedition()
     ui.gen_icons()
     ui.gen_particles()
     ui.gen_combat_props()
