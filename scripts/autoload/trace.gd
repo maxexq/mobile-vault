@@ -13,7 +13,7 @@ const FILE_PATH := "user://trace.json"
 const MAX := 800
 const KEEP := 400
 const SAMPLE_SEC := 30.0
-const VERSION := "4.2"
+const VERSION := "4.3"
 
 var session := ""
 var entries: Array = []

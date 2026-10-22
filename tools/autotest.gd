@@ -207,7 +207,9 @@ func _run() -> void:
 	var new_slot: int = 4
 	_check("new slot unlocked at Lv2", Game.is_slot_unlocked(new_slot) and Game.unlocked_slots().size() == mini(Data.SLOTS_PER_LEVEL[2], Game.main_slots() - 1) + 1)
 	_check("first run is a camper van: 2 floors x 3 rooms", Game.tier() == "van" and Game.slot_count() == 6 and Game.s.rooms.size() == 6)
-	_check("build quarters", Game.build_room(new_slot, "quarters") and Game.pop_cap() == Data.BASE_POP_CAP + 4)
+	_check("build quarters", Game.build_room(new_slot, "quarters") and Game.pop_cap() == Data.BASE_POP_CAP)
+	Dev.finish_construction()
+	_check("quarters add beds once built", Game.pop_cap() == Data.BASE_POP_CAP + 4)
 	Game.s.res.scrap = 200.0
 	_check("craft starts", Game.start_craft(Data.ENGINE_SLOT, "repair_hull"))
 	Game.s.hull = 50.0
@@ -607,7 +609,7 @@ func _construction_checks() -> void:
 	while Game.is_constructing(3) and guard < 400:
 		Game._simulate(1.0, false)
 		guard += 1
-	_check("build: site finishes over time", not Game.is_constructing(3) and finished.has([3, "build"]) and started.has([3, "build"]))
+	_check("build: site finishes over time", not Game.is_constructing(3) and finished.has([3, "build"]))
 	_check("build: finished room works with its crew", Game.room_workers(3).size() == 2 and not Game.room_rate_pm(3).is_empty())
 	# upgrade: keeps working at the old level until done
 	Game.s.res.scrap = 900.0
@@ -633,6 +635,7 @@ func _construction_checks() -> void:
 		if Game.is_slot_unlocked(i) and Game.s.rooms[i].type == "empty":
 			free = i
 			break
+	var raised := free < 0
 	if free < 0:
 		Game.s.vault_level = 2
 		Game.vault_level_changed.emit(2)
@@ -641,13 +644,17 @@ func _construction_checks() -> void:
 				free = i
 				break
 	Game.s.res.scrap = 900.0
-	_check("build: second site", free >= 0 and Game.build_room(free, "quarters"))
+	_check("build: second site + started signal", free >= 0 and Game.build_room(free, "quarters") and started.has([free, "build"]))
 	var cap0 := Game.pop_cap()
 	var js: Dictionary = JSON.parse_string(JSON.stringify(Game.s))
 	_check("save: site survives JSON round-trip", str((js.rooms[free] as Dictionary).build.kind) == "build")
 	_check("build: unfinished quarters add no beds", cap0 == Game.pop_cap())
 	Game._offline_progress(1800.0)
 	_check("offline: site finished while away", not Game.is_constructing(free) and Game.pop_cap() > cap0)
+	Game.demolish_room(free)
+	if raised:
+		Game.s.vault_level = 1
+		Game.vault_level_changed.emit(1)
 	# old saves: rooms without the build key, Ton becomes a builder
 	var old_room := {"type": "kitchen", "level": 1, "job": {}}
 	Game.s.rooms[1] = old_room

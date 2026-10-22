@@ -5,7 +5,7 @@ extends Control
 signal start_requested(new_game: bool)
 
 const BOOT := [
-	"MAMMOTH-7 OS v4.2 ........ OK",
+	"MAMMOTH-7 OS v4.3 ........ OK",
 	"REACTOR / ENGINE ......... ONLINE",
 	"HULL INTEGRITY ........... 100%",
 	"SIGNAL 104.7 ............. DETECTED",
@@ -57,7 +57,7 @@ func _ready() -> void:
 		FX.use_gpu = not FX.use_gpu
 		_update_fx())
 	_menu.add_child(_fx_btn)
-	var note := UIKit.label("v4.2 · GODOT 4.7.2 · AUTOSAVE", UIKit.FP, UIKit.C_LINE_DIM, true)
+	var note := UIKit.label("v4.3 · GODOT 4.7.2 · AUTOSAVE", UIKit.FP, UIKit.C_LINE_DIM, true)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu.add_child(note)
 	_update_fx()

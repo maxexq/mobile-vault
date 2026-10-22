@@ -173,7 +173,7 @@ func _build_workers(def: Dictionary) -> void:
 		h.add_child(UIKit.portrait(d.variant))
 		var v := UIKit.vbox(1)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var role_tag := (" · " + Crew.ROLES[Crew.role(d)].th) if Crew.ROLES.has(Crew.role(d)) else ""
+		var role_tag: String = (" · " + Crew.ROLES[Crew.role(d)].th) if Crew.ROLES.has(Crew.role(d)) else ""
 		v.add_child(UIKit.label("%s  Lv.%d%s" % [d.name, d.lvl, role_tag], UIKit.FS_SMALL))
 		v.add_child(UIKit.stat_bar(st, int(d[st])))
 		h.add_child(v)
