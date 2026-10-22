@@ -89,8 +89,8 @@ func _where(d: Dictionary) -> Array:
 		return ["ROOF DECK", UIKit.C_RED]
 	if int(d.room) >= 0:
 		if Game.is_constructing(int(d.room)):
-			return ["BUILDING " + Data.room_def(Game.s.rooms[int(d.room)].type).en, UIKit.C_ORANGE]
-		return [Data.room_def(Game.s.rooms[int(d.room)].type).en, UIKit.C_GOLD]
+			return ["BUILDING " + Data.room_def(Game.room(int(d.room)).type).en, UIKit.C_ORANGE]
+		return [Data.room_def(Game.room(int(d.room)).type).en, UIKit.C_GOLD]
 	return ["IDLE", UIKit.C_DIM]
 
 
@@ -285,6 +285,12 @@ func _build_manage(d: Dictionary) -> void:
 	# --- room assignment
 	_list.add_child(UIKit.header("ASSIGN ROOM", "ย้ายห้อง (* = เหมาะ)"))
 	var rooms := UIKit.flow(3)
+	var nc := Game.room_workers(Data.CAB_SLOT).size()
+	var in_cab: bool = int(d.room) == Data.CAB_SLOT
+	var cb := UIKit.button("ห้องเครื่อง %d/%d%s" % [nc, Data.CAB_WORKERS, "*" if Game._best_stat(d) == "str" else ""], "yellow" if in_cab else ("green" if Game._best_stat(d) == "str" else "gray"))
+	cb.disabled = in_cab or nc >= Data.CAB_WORKERS
+	cb.pressed.connect(func(): Game.assign(d, Data.CAB_SLOT))
+	rooms.add_child(cb)
 	for i in Game.s.rooms.size():
 		var r: Dictionary = Game.s.rooms[i]
 		if r.type == "empty" or r.type == "annex" or not Game.is_slot_unlocked(i):

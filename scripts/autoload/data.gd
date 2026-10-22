@@ -4,8 +4,11 @@ extends Node
 
 const ROOMS_PER_FLOOR := 3
 ## v4 slot layout: slot = floor * 3 + column (bottom floor first) on the main body, then 6 slots per trailer.
-## The engine room is always slot 0 (bottom floor, right behind the cab).
+## Slot 0 (bottom floor, right behind the cab) is always open. Before v4.6 it held the engine room; since then
+## the engine room lives in the cab (CAB_SLOT, outside the room grid: Game.room(CAB_SLOT) is Game.s.cab).
 const ENGINE_SLOT := 0
+const CAB_SLOT := 99
+const CAB_WORKERS := 2
 const SLOT_COUNT := 12            # rig body, kept for tools / tests
 const MAX_TRAILERS := 2
 const TRAILER_FLOORS := 2
@@ -16,20 +19,21 @@ const V3_SLOT_CELL := [[0, 2], [1, 2], [0, 3], [1, 3], [0, 1], [1, 1], [1, 0], [
 	[0, 4], [1, 4], [2, 4], [0, 5], [1, 5], [2, 5]]
 ## Prestige vehicle ladder. Geometry must match tools/art/vehicles.py.
 ##  weight / engine: tons vs. engine capacity (Haul autoload); hull: bonus hull points.
+##  cab: the engine room inside the cab's bottom floor [x, y, w, h] (tools/art/engine_bay.py CAB).
 const TIER_ORDER := ["van", "bus", "rig", "train"]
 const VEHICLES := {
 	"van": {"th": "รถตู้แคมป์ปิ้ง", "en": "CAMPER VAN", "floors": 2, "weight": 18.0, "engine": 40.0, "hull": 0.0,
 		"wheels": [[26, 284], [214, 284]], "rail": false, "headlight": [0, 213], "chimney": [250, 272], "trailer": "trailer",
-		"names": ["SCRAPPY", "LITTLE ROAMER"]},
+		"names": ["SCRAPPY", "LITTLE ROAMER"], "cab": [2, 204, 31, 58]},
 	"bus": {"th": "รถบัสหุ้มเหล็ก", "en": "ARMOURED BUS", "floors": 3, "weight": 28.0, "engine": 62.0, "hull": 40.0,
-		"wheels": [[34, 284], [214, 284]], "rail": false, "headlight": [0, 249], "chimney": [250, 272], "trailer": "trailer",
-		"names": ["BIG YELLOW", "ROUTE 66"]},
+		"wheels": [[34, 284], [214, 284]], "rail": false, "headlight": [0, 224], "chimney": [250, 272], "trailer": "trailer",
+		"names": ["BIG YELLOW", "ROUTE 66"], "cab": [2, 216, 32, 46]},
 	"rig": {"th": "รถพ่วง 18 ล้อ", "en": "18-WHEELER RIG", "floors": 4, "weight": 40.0, "engine": 90.0, "hull": 80.0,
-		"wheels": [[22, 284], [182, 284], [222, 284]], "rail": false, "headlight": [0, 227], "chimney": [33, 144], "trailer": "trailer",
-		"names": ["MAMMOTH-7", "MAMMOTH-8", "BEHEMOTH-1"]},
+		"wheels": [[22, 284], [182, 284], [222, 284]], "rail": false, "headlight": [0, 230], "chimney": [33, 144], "trailer": "trailer",
+		"names": ["MAMMOTH-7", "MAMMOTH-8", "BEHEMOTH-1"], "cab": [2, 222, 33, 41]},
 	"train": {"th": "รถไฟหุ้มเกราะ", "en": "ARMOURED TRAIN", "floors": 4, "weight": 60.0, "engine": 140.0, "hull": 160.0,
 		"wheels": [], "rail": true, "headlight": [6, 164], "chimney": [29, 14], "trailer": "wagon",
-		"names": ["LEVIATHAN", "LEVIATHAN-II", "ARK"]},
+		"names": ["LEVIATHAN", "LEVIATHAN-II", "ARK"], "cab": [3, 196, 35, 66]},
 }
 const TRAILER_COST := [{"scrap": 2500, "components": 120}, {"scrap": 4500, "components": 220}]
 const SLOTS_PER_LEVEL := [0, 3, 5, 6, 8, 10, 11]
@@ -147,11 +151,9 @@ const ROOMS := {
 	},
 	"engine": {
 		"th": "ห้องเครื่องยนต์", "en": "ENGINE / GENERATOR", "cost": 0, "unlock": 99, "stat": "str",
-		"produce": {"power": 5.0}, "power": 0.0,
-		"effect_th": "ผลิตไฟ · ขับเคลื่อนรถบ้าน", "effect_en": "+POWER / DRIVES THE VAULT",
-		"recipes": [
-			{"id": "repair_hull", "th": "ซ่อมตัวถัง", "en": "REPAIR HULL", "cost": {"scrap": 20}, "time": 60.0, "out": {"_hull": 25}},
-		],
+		"produce": {}, "power": 0.0,
+		"effect_th": "ห้องเครื่องหน้ารถ · ลูกเรือระบายความร้อนและซ่อมเครื่อง", "effect_en": "ENGINE BAY / KEEPS THE ENGINE ALIVE",
+		"recipes": [],
 	},
 }
 const BUILDABLE := ["quarters", "kitchen", "water", "hydroponics", "medical", "refinery", "workshop", "armory", "science", "radio"]

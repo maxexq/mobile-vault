@@ -123,7 +123,7 @@ func _ready() -> void:
 
 	room_closeup = RoomCloseup.new()
 	add_child(room_closeup)
-	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen", "god", "door"]:
+	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen", "god", "door", "engine"]:
 		var p: ModalPanel
 		match k:
 			"build": p = BuildPanel.new()
@@ -139,6 +139,7 @@ func _ready() -> void:
 			"nextgen": p = NextGenPanel.new()
 			"god": p = GodPanel.new()
 			"door": p = InspectionPanel.new()
+			"engine": p = EnginePanel.new()
 		add_child(p)
 		panels[k] = p
 	(panels.build as BuildPanel).placement_requested.connect(func(t): build_placement_requested.emit(t))

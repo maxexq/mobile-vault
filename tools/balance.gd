@@ -44,7 +44,7 @@ func _ready() -> void:
 				print("[bal] %3dm vault -> Lv.%d" % [sec / 60, Game.s.vault_level])
 				if Game.s.vault_level >= 2 and int(Game.s.squad[2]) < 0:
 					for d in Game.s.dwellers:
-						if Game.squad_role(d) < 0 and int(d.room) != Data.ENGINE_SLOT:
+						if Game.squad_role(d) < 0 and int(d.room) != Data.CAB_SLOT:
 							Game.set_squad(2, int(d.id))
 							break
 			for it in Loot.stash():

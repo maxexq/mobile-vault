@@ -26,6 +26,7 @@ func weight() -> float:
 		w += float(MOD_W[id]) * Mods.level(id)
 	w += float(Game.s.res.get("scrap", 0.0)) / 1000.0
 	w += float(Game.s.dwellers.size()) * 0.1
+	w += EngineBay.weight()
 	return w
 
 
@@ -33,13 +34,13 @@ func weight() -> float:
 func capacity() -> float:
 	if Game.s.is_empty():
 		return 1.0
-	var c := float(Game.vehicle_def().engine)
+	var c := float(Game.vehicle_def().engine) * EngineBay.tow_mult()
 	c *= 1.0 + 0.2 * Mods.level("engine_tune")
 	c += 10.0 * Mods.level("suspension") + 7.0 * Mods.level("offroad_wheels")
-	var eng: Dictionary = Game.s.rooms[Data.ENGINE_SLOT] if Game.s.rooms.size() > 0 else {}
+	var eng := Game.room(Data.CAB_SLOT)
 	if not eng.is_empty():
 		c += 4.0 * float(int(eng.level) - 1)
-		c += 3.0 * Game.room_workers(Data.ENGINE_SLOT).size()
+		c += 3.0 * Game.room_workers(Data.CAB_SLOT).size()
 	c += float(Combat.van_stats().get("speed", 0.0)) * 0.2
 	return c
 
@@ -57,8 +58,8 @@ func speed_mult() -> float:
 	if r > 0.8:
 		m = clampf(1.0 - (r - 0.8) * 0.75, 0.35, 1.0)
 	m *= 1.0 + 0.04 * Mods.level("offroad_wheels")
-	if float(Game.s.res.get("fuel", 0.0)) <= 0.0:
-		m *= 0.5          # out of fuel: crawling on battery
+	if EngineBay.starved():
+		m *= 0.5          # nothing left to burn: crawling on battery
 	return m
 
 

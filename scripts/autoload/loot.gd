@@ -66,9 +66,15 @@ const BASES := {
 	"steel_plates": {"slot": "plating", "th": "เกราะเหล็กกล้า", "en": "Steel Plates", "icon": "plates", "hull": 50.0, "def": 8.0, "min_ilvl": 6},
 	"reactive_armor": {"slot": "plating", "th": "เกราะปฏิกิริยา", "en": "Reactive Armor", "icon": "shield", "hull": 80.0, "def": 12.0, "min_ilvl": 15},
 	# --- vault: engine
-	"rusty_v8": {"slot": "engine", "th": "เครื่อง V8 สนิมเขรอะ", "en": "Rusty V8", "icon": "engine", "speed": 5.0, "power": 1.0, "min_ilvl": 1},
-	"diesel_turbo": {"slot": "engine", "th": "ดีเซลเทอร์โบ", "en": "Diesel Turbo", "icon": "engine", "speed": 10.0, "power": 2.0, "min_ilvl": 6},
-	"fusion_cell": {"slot": "engine", "th": "เซลล์ฟิวชัน", "en": "Fusion Cell", "icon": "power", "speed": 15.0, "power": 4.0, "min_ilvl": 16},
+	# v4.6: an engine item IS the engine in the cab; "engine" = EngineBay.TYPES key (speed / power / noise /
+	# heat... come from there, affixes still add on top)
+	"rusty_v8": {"slot": "engine", "th": "เครื่อง V8 สนิมเขรอะ", "en": "Rusty V8", "icon": "engine", "engine": "v8", "min_ilvl": 1},
+	"wood_gasifier": {"slot": "engine", "th": "เตาแก๊สไม้", "en": "Wood-gas Gasifier", "icon": "engine", "engine": "woodgas", "min_ilvl": 3},
+	"ev_motor": {"slot": "engine", "th": "มอเตอร์ไฟฟ้าดัดแปลง", "en": "EV Conversion", "icon": "power", "engine": "electric", "min_ilvl": 4},
+	"diesel_turbo": {"slot": "engine", "th": "ดีเซลเทอร์โบ", "en": "Diesel Turbo", "icon": "engine", "engine": "turbo6", "min_ilvl": 6},
+	"diesel_electric": {"slot": "engine", "th": "ดีเซล-ไฟฟ้า", "en": "Diesel-Electric", "icon": "engine", "engine": "hybrid", "min_ilvl": 9},
+	"gas_turbine": {"slot": "engine", "th": "กังหันแก๊ส", "en": "Gas Turbine", "icon": "engine", "engine": "turbine", "min_ilvl": 14},
+	"fusion_cell": {"slot": "engine", "th": "เซลล์ฟิวชัน", "en": "Fusion Cell", "icon": "power", "engine": "fusion", "min_ilvl": 16},
 	# --- vault: rear spikes (damage to enemies that reach the van)
 	"spiked_bumper": {"slot": "spikes", "th": "กันชนหนาม", "en": "Spiked Bumper", "icon": "spikes", "thorns": 5.0, "min_ilvl": 1},
 	"snow_plow": {"slot": "spikes", "th": "ใบมีดไถ", "en": "Plow Blade", "icon": "plow", "thorns": 8.0, "def": 3.0, "min_ilvl": 6},
@@ -262,6 +268,8 @@ func describe(item: Dictionary) -> Array:
 			"thorns": out.append(["ดาเมจหนาม", "%.1f/วิ" % v])
 	if b.get("melee", false):
 		out.append(["พิเศษ", "นักสู้ท้ายรถ +40% / คนอื่น -40%"])
+	if b.has("engine"):
+		out.append_array(EngineBay.describe_type(str(b.engine)))
 	return out
 
 
@@ -432,6 +440,9 @@ func equip_from_stash(uid: int, d: Dictionary = {}) -> bool:
 			continue
 		var item: Dictionary = st[i]
 		var slot: String = item.slot
+		if slot == "engine" and not EngineBay.fits(item):
+			Game.toast.emit("เครื่องนี้ใหญ่เกินห้องเครื่องของ%s (ต้องการช่องขนาด %s)" % [Game.vehicle_def().th, EngineBay.SIZE_TH[EngineBay.size_of(item)]], "warn")
+			return false
 		st.remove_at(i)
 		if VAN_SLOTS.has(slot):
 			var old := van_equipped(slot)
@@ -449,6 +460,8 @@ func equip_from_stash(uid: int, d: Dictionary = {}) -> bool:
 			if not old2.is_empty():
 				st.append(old2)
 		Game.gear_changed.emit()
+		if slot == "engine":
+			EngineBay.engine_changed.emit()
 		return true
 	return false
 
@@ -500,6 +513,8 @@ func auto_equip_squad() -> int:
 			if not b.is_empty() and equip_from_stash(int(b.uid), d):
 				n += 1
 	for slot in VAN_SLOTS:
+		if slot == "engine":
+			continue     # an engine is a trade-off (noise / heat / fuel), picked in the engine menu
 		var b2 := best_for(slot, van_equipped(slot))
 		if not b2.is_empty() and equip_from_stash(int(b2.uid)):
 			n += 1

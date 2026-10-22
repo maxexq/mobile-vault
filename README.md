@@ -176,6 +176,22 @@ A rooftop rest spot for the defence squad, bought as an exterior mod (MODS → *
 | Modular chassis | Independent of the pending modular-chassis cells (`s.rooms`): the deck is a roof mod, so a later "turret bay / defense module" can sit below it. |
 | Art | `tools/art/truck.py` `mod_roof_deck()` → atlas `mod_roof_deck_1..3` (76×60). |
 
+## 4l. Engine bay (ห้องเครื่องหน้ารถ, v4.6)
+
+The engine now lives in a walk-in room inside the cab of every vehicle (van / bus / rig / train each have their own cut-out, `Data.VEHICLES[tier].cab`). It sits behind the shell (the cab art has a hole there) and never takes a body cell: the old engine room on cell 0 became a free room cell. Tap it to open the **engine menu**.
+
+| Part | How it works |
+|---|---|
+| Engine = item | The van-gear **engine** item is the installed engine (`Loot` base key `engine`). No item = the stock **diesel I4**, whose numbers equal the game before v4.6. 8 types: diesel I4, V8, turbo-diesel I6, wood-gas gasifier, EV conversion, diesel-electric, gas turbine, fusion cell. Each has a size (S/M/L; the van takes up to M), tow ×, speed %, fuel kind (fuel / scrap / power / none), noise dB, heat ×, wear ×, alternator power, weight. Engines are never auto-equipped. |
+| Drive modes | Silent (diesel-electric / EV only, battery), eco, normal, boost: speed, fuel, noise, heat and wear multipliers. |
+| Heat | Driving heats it toward `ambient + P / k` (P: engine × mode × load × weather, k: cooling + 15 % per crew, ×0.5 with no coolant; parked cools ×1.5). Biome air temperature day/night (desert 45 °C by day). **Auto-rest** (default 110 °C, or 100 °C) parks the vault until 80 °C; turned off it drives on until **120 °C**, stalls on its own and loses 5 % condition + coolant. Offline always auto-rests. Above 110 °C: speed / tow ×0.7. |
+| Wear | Condition drops while running (×1.5 hot, ×2 with oil < 20 %, overload ×4); oil burns down. Under 60 %: −10 % speed / tow, +3 dB; under 35 %: random breakdowns (45 s stall); 0 % = seized (×0.3 speed). Offline never drops it below 25 %. |
+| Crew | Up to 2 crew work in the cab (Crew → ย้ายห้อง → ห้องเครื่อง): they cool it, repair a little (STR, mechanic ×1.4, repair skill), top up coolant from the water tank, and speed up jobs. |
+| Jobs | Coolant (12 water), oil change (15 scrap + 5 fuel, parks), tune-up (+20 %, 40 scrap + 3 comp), overhaul (200 scrap + 20 comp, parks), engine room upgrade (alternator +25 % per level). |
+| Links | Noise → threat: `0.12 × km/h × (dB − 45) / 33` (the stock diesel = the old term) + gasifier smoke by day. Tow × → `Haul` capacity, weight → load. Alternator → power while moving. Fuel burn replaces `Haul.fuel_pm` while driving. |
+| State | `Game.s.cab` (the room: level, job) + `Game.s.engine` (heat, cond, oil, coolant, mode, auto_rest, rest_at, resting, job). `Data.CAB_SLOT` (99) is the cab's slot id; use `Game.room(slot)` for any slot that may be the cab. Saves before v4.6 migrate (`Game._migrate_cab`): cell 0 is freed, the level and 2 of its crew move into the cab. |
+| Art | `tools/art/engine_bay.py`: `cab_<tier>_<idle|run|hot|broken>` rooms + `eng_<type>` icons; `vehicles.py` cuts the cab hole. |
+
 ## 4i. Cloud save (Supabase)
 
 Local-first: the game still reads and writes localStorage / `user://`; `scripts/autoload/cloud.gd` mirrors that save (plus Settings) to one row per player in Supabase, using `HTTPRequest` against the REST API (no addon).
@@ -206,7 +222,7 @@ Local-first: the game still reads and writes localStorage / `user://`; `scripts/
 |---|---|
 | ทั่วไป | switches: invincible (hull / crew / squad), one-hit kills, free build/upgrade/buy, resources always full, no random road events, instant construction · game speed ×1/2/5/10/20 · fast-forward +10 min / +1 h / +4 h (offline simulation) · time of day · any weather · FPS/debug overlay |
 | ทรัพยากร | fill / empty everything, set each resource and every usable/material item, all items +10/+100 · forge: test kit (3 items of every rarity + scrap/components), max +level on everything equipped, clear the stash · all blueprints, +100 research points |
-| รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, build every empty slot, max room levels · construction: finish now / +50 % / instant-build switch · all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
+| รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, engine bay: heat 40/100/115 °C, condition 100/30/0 %, oil / coolant full or low, every engine into the stash, force a breakdown, rest on/off, finish the engine job, build every empty slot, max room levels · construction: finish now / +50 % / instant-build switch · all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
 | ลูกเรือ | recruit, heal, happiness 100/20/0 for everyone, pets · spawn a builder (hard hat) plain or with engineer / quick hands / architect / clumsy · strangers at the door: every kind (human / infected / mimic / thief / raider mole) × rare / very rare, clear the queue · per survivor: traits shown, builder on/off, reroll traits, +5 levels, force strike, desert now, kill |
 | ต่อสู้ | set wave, kill all enemies, heal squad · force a raid (warning first), set threat 0 / 90 · defence squad: auto-fill with the strongest idle crew, auto-equip best gear, clear · spawn the biome warlord or any mutant boss, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
 | โลก | jump to any biome, go to checkpoint, mark warlord beaten, lap +1 · road events: trigger any, draw the next card from the shuffle bag, reshuffle (bag size + last 3 shown) · expedition: force any special encounter (sends a free scavenging team when none is out), clear the no-repeat history, arrive at any site, finish the trip · open the next-generation screen, wreck the vehicle in 3 s |
@@ -237,13 +253,16 @@ scripts/
   main.gd                     camera fit, swipe, tap, room close-up zoom + blur, build placement, floating numbers, shake
   world/background.gd         Parallax2D layers per biome (sky, clouds, far, mid, near, road) + cross-fade
   world/vehicle.gd            van / bus / rig / train shells + trailers, exterior shell (X-ray), wheels per tier, mods, pets, dust/mud, smoke, solar tilt frames, headlight, body bob
+  world/cab_view.gd           the engine room in the cab (state art, crew, steam)
   world/room_view.gd          room interior, level pips, synergy markers, craft strip, build highlight, night glow, blackout + head-torches
   world/pet_actor.gd          roaming pets
   autoload/haul.gd            weight / engine capacity / speed / fuel burn
+  autoload/engine_bay.gd      engine in the cab: types, drive modes, heat / auto-rest, wear, jobs, noise
   autoload/synergy.gd         room adjacency rules
   autoload/dev.gd             tester switches + god actions (hidden unlock)
   autoload/trace.gd           local event trace, state sampler, error capture, export
   ui/god_panel.gd             GOD MODE console
+  ui/engine_panel.gd          engine menu (status / engines / jobs)
   ui/expedition_feed.gd       live helmet-cam view of the scavenging squad
   autoload/threat.gd          threat meter + raid director (quiet / warning / raid / salvage), classic toggle
   autoload/encounter.gd       rare special encounters during an expedition (choices, risks, refugees)

@@ -35,8 +35,11 @@ const RULES := {
 ## (by their anchor cell), so a 3-wide kitchen under a 3-wide hydroponics still counts as one pairing.
 func neighbours(slot: int) -> Array:
 	var out := []
-	if Game.s.is_empty() or slot < 0 or slot >= Game.s.rooms.size():
+	if Game.s.is_empty() or not Game.has_room(slot) or slot < 0:
 		return out
+	# v4.6: the cab's engine room touches the bottom-left cell of the body (slot 0)
+	if slot == Data.CAB_SLOT:
+		return [Game.room_anchor(Data.ENGINE_SLOT)] if Game.s.rooms.size() > Data.ENGINE_SLOT else out
 	var cells := Game.room_cells(slot)
 	var own := Game.room_anchor(slot)
 	var unit := Game.slot_unit(slot)
@@ -50,21 +53,23 @@ func neighbours(slot: int) -> Array:
 				var a := Game.room_anchor(other)
 				if a != own and not a in out:
 					out.append(a)
+	if Data.ENGINE_SLOT in cells:
+		out.append(Data.CAB_SLOT)
 	return out
 
 
 ## list of {other, type, th, mult, happy, repair} that apply to `slot` (for the UI and the maths)
 func effects(slot: int) -> Array:
 	var out := []
-	if Game.s.is_empty() or slot >= Game.s.rooms.size():
+	if not Game.has_room(slot):
 		return out
-	var t: String = Game.s.rooms[slot].type
+	var t: String = Game.room(slot).type
 	if t == "empty" or t == "annex" or Game.is_site(slot):
 		return out
 	for o in neighbours(slot):
 		if not Game.is_slot_unlocked(o) or Game.is_site(o):
 			continue
-		var ot: String = Game.s.rooms[o].type
+		var ot: String = Game.room(o).type
 		var key := "%s|%s" % [t, ot]
 		if RULES.has(key):
 			var r: Dictionary = RULES[key]
@@ -88,7 +93,7 @@ func happy_mod(slot: int) -> float:
 
 
 func repair_bonus() -> float:
-	return 1.0 + (0.0 if Game.s.is_empty() else _sum("repair", Data.ENGINE_SLOT))
+	return 1.0 + (0.0 if Game.s.is_empty() else _sum("repair", Data.CAB_SLOT))
 
 
 func _sum(k: String, slot: int) -> float:
@@ -103,7 +108,7 @@ func preview(slot: int, room_type: String) -> Dictionary:
 	var good := 0
 	var bad := 0
 	for o in neighbours(slot):
-		var ot: String = Game.s.rooms[o].type
+		var ot: String = Game.room(o).type
 		for key in ["%s|%s" % [room_type, ot], "%s|%s" % [ot, room_type]]:
 			if RULES.has(key):
 				var r: Dictionary = RULES[key]

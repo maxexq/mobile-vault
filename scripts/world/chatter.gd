@@ -51,6 +51,9 @@ func _candidates() -> Array:
 			continue
 		for did in rv.actors:
 			out.append([did, rv.actors[did]])
+	if vehicle.cab_view and (focus_slot < 0 or focus_slot == Data.CAB_SLOT):
+		for did in vehicle.cab_view.actors:
+			out.append([did, vehicle.cab_view.actors[did]])
 	if focus_slot < 0:
 		for n in combat_view.hero_nodes:
 			if n and not n.dead:
