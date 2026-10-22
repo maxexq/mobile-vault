@@ -17,6 +17,7 @@ var _pr: ProgressBar
 var _time_lbl: Label
 var _status_lbls: Array = []
 var _log_lbls: Array = []
+var _enc_btn: Button
 
 
 func _build() -> void:
@@ -219,6 +220,12 @@ func _build_active() -> void:
 	_feed = ExpeditionFeed.new()
 	_feed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_child(_feed)
+	_enc_btn = UIKit.button("วิทยุจากทีม: เจอจุดพิเศษ! แตะเพื่อสั่งการ", "yellow", "explore")
+	_enc_btn.pressed.connect(func():
+		var hud := get_parent()
+		if hud.has_method("open_encounter"):
+			hud.open_encounter())
+	_list.add_child(_enc_btn)
 	_pr = UIKit.progress(UIKit.C_GOLD, 6)
 	_list.add_child(_pr)
 	_time_lbl = UIKit.label("", UIKit.FS, UIKit.C_TEXT)
@@ -260,6 +267,7 @@ func _update_active() -> void:
 	if _feed == null or not Expedition.active():
 		return
 	_pr.value = Expedition.progress()
+	_enc_btn.visible = Encounter.pending()
 	var tl := Expedition.time_left()
 	_time_lbl.text = "เหลืออีก %d:%02d · รถจอดรอทีมอยู่" % [int(tl) / 60, int(tl) % 60]
 	for i in _status_lbls.size():

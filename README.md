@@ -124,9 +124,9 @@ Files: `scripts/autoload/combat.gd` (simulation), `scripts/autoload/loot.gd` (it
 | Rush / cancel | The close-up shows progress, time left, the builder crew and their multipliers; **finish now** costs components (1 per 15 work-seconds left); cancelling a site refunds half the scrap. |
 | Hooks | `Game.construction_started(slot, kind)` / `construction_finished(slot, kind)` (`kind` = `build` or `upgrade`), state in `Game.s.rooms[i].build` (`{kind, total, left}`, empty when idle). God mode: *instant build* switch + *finish all construction*. |
 
-## 4h. v4.4 — strangers at the door (inspection)
+## 4i. v4.4 — strangers at the door (inspection)
 
-Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins (radio, road event, SOS broadcast, expedition loot, boss captive) goes through `Game.offer_recruit(source)`. Usually they board at once; **rarely (~6 % rare, ~1.5 % very rare)** the stranger is exceptional (top stat 7–9 / 9–11, +2/+4 levels, 2–3 good traits) and waits at the door for inspection instead.
+Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins (radio, road event, SOS broadcast, expedition loot, boss captive, expedition encounters) goes through `Game.offer_recruit(source)`. Usually they board at once; **rarely (~6 % rare, ~1.5 % very rare)** the stranger is exceptional (top stat 7–9 / 9–11, +2/+4 levels, 2–3 good traits) and waits at the door for inspection instead.
 
 | Part | How it works |
 |---|---|
@@ -137,6 +137,14 @@ Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins 
 | The call | **Let in** (joins with the hidden secret), **turn away** (never know), **shoot** (right: their loot — antibiotics / components / scrap + stimpack / ammo; wrong: everyone −20 happiness and a name on the memorial wall). |
 | Later | Admitted impostors go off after a few minutes: infected fall sick and may infect a roommate, a mimic drags someone off at night (a strong rear bruiser may fight it off), a thief disappears with 20–35 % of food/water/scrap/fuel and 30 % of meds/components, a raider opens the rear door (hull −30, scrap −30 %, 2 people hurt). Logged in `s.insp_log` + Trace. |
 | Code | `scripts/autoload/inspection.gd`, `scripts/ui/inspection_panel.gd`, art `tools/art/inspect.py` → `assets/inspect/`. God mode → ลูกเรือ: spawn any kind of stranger. |
+## 4h. Expedition special encounters
+
+| System | How it works |
+|---|---|
+| Rare encounters | Each expedition has a small chance (`14 % + 1.5 % × danger`, so 15.5 % at a danger-1 site and 24.5 % at HELIOS) that somewhere between 30 % and 65 % of the trip the team radios back about something worth a decision. A pop-up shows a 160×80 illustration, who is out there with their HP, and 2–3 choices with odds and costs. |
+| The six encounters | **ผู้รอดชีวิตหลบซ่อน HIDDEN SURVIVOR** (invite aboard: may hide an infection / share food for a stash tip / leave), **คนแปลกหน้าบาดเจ็บ WOUNDED STRANGER** (patch up with a packed stimpack: he joins / rob his pack: he may stab back / walk away), **เสียงร้องขอความช่วยเหลือ CRY FOR HELP** (danger 2+: rush in: refugee + supplies or a raider ambush that injures and costs 30 % of the site loot / warning shots with packed ammo / ignore), **ตู้เซฟใต้ซากตึก BURIED SAFE** (pry: rare gear or crushed, +60 s / shoot the lock with ammo / leave), **ลังเสบียงบนพื้นที่กำลังถล่ม SAGGING FLOOR** (the nimblest climbs (AGI): big supplies or a fall + infection / leave), **คลังยาในห้องปนเปื้อน TOXIC PHARMACY** (danger 2+: hold your breath (INT): meds or an infection / dose up with packed antibiotics / leave). |
+| Rules | Costs come out of the **packed supplies** (so they also lower the trip's odds), injuries hit the team member best at the job (lower HP = lower team power and a higher death risk on a failed trip), refugees need a free bunk, and rewards (scaled by site danger and lap) come home with the team. If everyone dies, nothing comes back. The clock keeps running: close the pop-up and answer later from the HUD chip ("สั่งการ") or the expedition panel. If nobody answers before the team returns (or the game was closed), the team plays it safe and picks the last choice. The last 3 encounters are never rolled again, so the same one never shows up twice in a row. |
+| Hooks | `scripts/autoload/encounter.gd` (`Encounter`, autoload after `Expedition`): data in `ENCOUNTERS`, state in `Game.s.exp.enc` (`{id, at, st: wait/open/done, bonus, recruits, lose, text}`), anti-repeat list in `Game.s.enc_recent`; signals `encounter_ready(id)` / `encounter_resolved(id, result)`. UI `scripts/ui/encounter_popup.gd`, art `tools/art/encounters.py` → `assets/events/enc_*.png`. God mode → EXPEDITION: trigger any encounter on the running trip. |
 
 ## 4c. True pixel art pipeline
 
@@ -194,6 +202,8 @@ scripts/
   autoload/trace.gd           local event trace, state sampler, error capture, export
   ui/god_panel.gd             GOD MODE console
   ui/expedition_feed.gd       live helmet-cam view of the scavenging squad
+  autoload/encounter.gd       rare special encounters during an expedition (choices, risks, refugees)
+  ui/encounter_popup.gd       encounter decision pop-up
   ui/boss_bar.gd              boss HP bar
   world/dweller_actor.gd      idle / walk / sit / work state machine (AnimatedSprite2D)
   world/weather_fx.gd         rain, snow, sand, fog, leaves, lightning, haze, day/night CanvasModulate
@@ -228,7 +238,7 @@ Visits every screen, fires events, fast-forwards 30 min, round-trips the save, r
 
 ## 8. Replacing the art
 
-Every PNG is generated by `tools/generate_pixel_art.py` (deterministic): `tools/art/rooms.py` (64×52 room interiors, three per floor), `truck.py` (280×300/356/412 truck shells for 4/5/6 floors, wheels, snow tracks, solar frames, turrets, exterior mod overlays), `landmarks.py` (expedition sites), `chars.py` (dwellers, 20×20 portraits, enemies, bosses), `bg.py` (parallax layers), `events.py` (160×80 illustrations), `ui.py` (icons, terminal frames). Swap any file for hand-drawn art with the same size (atlas regions are listed in `assets/atlas/atlas.json`). Dweller sheets are 14×20 frames: idle(0-1) walk(2-5) sit(6) work(7-8).
+Every PNG is generated by `tools/generate_pixel_art.py` (deterministic): `tools/art/rooms.py` (64×52 room interiors, three per floor), `truck.py` (280×300/356/412 truck shells for 4/5/6 floors, wheels, snow tracks, solar frames, turrets, exterior mod overlays), `landmarks.py` (expedition sites), `chars.py` (dwellers, 20×20 portraits, enemies, bosses), `bg.py` (parallax layers), `events.py` (160×80 illustrations), `encounters.py` (160×80 expedition encounter scenes), `ui.py` (icons, terminal frames). Swap any file for hand-drawn art with the same size (atlas regions are listed in `assets/atlas/atlas.json`). Dweller sheets are 14×20 frames: idle(0-1) walk(2-5) sit(6) work(7-8).
 
 Fonts: Chakra Petch & Silkscreen — SIL Open Font License (see `assets/fonts/OFL_*.txt`).
 
