@@ -255,7 +255,7 @@ func choice_sub(ch: Dictionary) -> String:
 	if int(ch.get("time", 0)) > 0:
 		parts.append("+%d วิ" % int(ch.time))
 	if ch.get("need_room", false):
-		parts.append("ใช้ที่พัก 1")
+		parts.append("ใช้เตียง 1")
 	return " · ".join(parts)
 
 

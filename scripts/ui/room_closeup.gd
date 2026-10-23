@@ -208,14 +208,14 @@ func _build_assign(def: Dictionary) -> void:
 		mode = "main"
 		refresh())
 	_content.add_child(back)
-	_section("SELECT · SORT %s" % st.to_upper(), "เลือกผู้ลี้ภัย")
+	_section("SELECT · SORT %s" % st.to_upper(), "เลือกลูกเรือ")
 	var list: Array = []
 	for d in Game.s.dwellers:
 		if not Game.is_away(d) and int(d.room) != slot:
 			list.append(d)
 	list.sort_custom(func(a, b): return int(a[st]) > int(b[st]))
 	if list.is_empty():
-		_content.add_child(UIKit.wrap_label("ไม่มีผู้ลี้ภัยว่าง (ทุกคนทำงานอยู่ที่นี่หรือออกสำรวจ)"))
+		_content.add_child(UIKit.wrap_label("ไม่มีลูกเรือว่าง (ทุกคนทำงานอยู่ที่นี่หรือออกสำรวจ)"))
 	for d in list:
 		var where: String = "ว่าง" if int(d.room) < 0 else Data.room_def(Game.room(int(d.room)).type).th
 		if Game.squad_role(d) >= 0:
@@ -243,7 +243,7 @@ func _build_assign_builders() -> void:
 			list.append(d)
 	list.sort_custom(func(a, b): return Crew.build_speed(a) > Crew.build_speed(b))
 	if list.is_empty():
-		_content.add_child(UIKit.wrap_label("ไม่มีผู้ลี้ภัยว่าง (ทุกคนทำงานอยู่ที่นี่หรือออกสำรวจ)"))
+		_content.add_child(UIKit.wrap_label("ไม่มีลูกเรือว่าง (ทุกคนทำงานอยู่ที่นี่หรือออกสำรวจ)"))
 	for d in list:
 		var where: String = "ว่าง" if int(d.room) < 0 else Data.room_def(Game.room(int(d.room)).type).th
 		if Game.squad_role(d) >= 0:

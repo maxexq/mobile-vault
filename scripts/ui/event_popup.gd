@@ -135,13 +135,41 @@ func _build_defenders(v: VBoxContainer, _ch: Dictionary) -> void:
 	v.add_child(hb)
 
 
+## outcome stamp per action: [EN ok, TH ok, EN fail, TH fail]; a choice's own "stamp" wins (success only)
+const STAMPS := {
+	"fight": ["VICTORY", "ชนะแล้ว", "DEFEATED", "พ่ายแพ้"],
+	"flee": ["ESCAPED", "หนีพ้น"],
+	"pay": ["PAID", "จ่ายแล้ว"],
+	"repair": ["REPAIRED", "ซ่อมเสร็จ"],
+	"ram": ["RAMMED", "ชนฝ่าไปได้"],
+	"push": ["MADE IT", "ฝ่ามาได้"],
+	"loot": ["LOOTED", "ได้ของมา"],
+	"recruit": ["NEW FACE", "มีคนมาเพิ่ม"],
+	"gift": ["SHARED", "แบ่งปันแล้ว"],
+	"trade": ["DEAL", "ตกลงกันได้"],
+	"shelter": ["SHELTERED", "หลบทันแล้ว"],
+	"check": ["SUCCESS", "สำเร็จ", "FAILED", "พลาดท่า"],
+	"gamble": ["JACKPOT", "ถูกรางวัล", "BUST", "แพ้พนัน"],
+	"adopt": ["NEW PET", "สมาชิกใหม่"],
+	"detour": ["DETOUR", "อ้อมไปอีกทาง"],
+	"ignore": ["MOVED ON", "ไปต่อ"],
+}
+
+
+static func stamp_text(choice: Dictionary, ok: bool) -> Array:
+	if ok and choice.has("stamp"):
+		return choice.stamp
+	var st: Array = STAMPS.get(str(choice.get("action", "")), ["DONE", "เรียบร้อย"])
+	return [st[0], st[1]] if ok or st.size() < 4 else [st[2], st[3]]
+
+
 func _resolve(i: int) -> void:
 	var before := _snapshot()
 	var res := Game.resolve_event(event_id, i, _selected)
 	if not res.ok and Game.active_event != "":
 		Game.toast.emit(res.text, "warn")
 		return
-	_show_outcome(res, _changes(before, _snapshot()))
+	_show_outcome(res, _changes(before, _snapshot()), Data.EVENTS[event_id].choices[i])
 
 
 ## everything an event can touch, so the outcome screen can show what actually changed
@@ -200,14 +228,15 @@ func _changes(a: Dictionary, b: Dictionary) -> Dictionary:
 	return {"rows": rows, "crew": crew}
 
 
-func _show_outcome(res: Dictionary, ch: Dictionary) -> void:
+func _show_outcome(res: Dictionary, ch: Dictionary, choice: Dictionary) -> void:
 	_outcome_ok = 1 if res.ok else 0
 	clear_body()
 	set_title("OUTCOME / ผลลัพธ์")
 	var col := UIKit.C_GREEN if res.ok else UIKit.C_RED
 	var ev: Dictionary = Data.EVENTS[event_id]
 	var v := media_layout(load("res://assets/events/%s.png" % ev.image), col)
-	OutcomeKit.stamp(media, "SURVIVED" if res.ok else "FAILED", "รอดมาได้" if res.ok else "พลาดท่า", col, not res.ok)
+	var st := stamp_text(choice, res.ok)
+	OutcomeKit.stamp(media, str(st[0]), str(st[1]), col, not res.ok)
 	var l := UIKit.wrap_label(res.text, UIKit.FS_BIG, col)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(l)

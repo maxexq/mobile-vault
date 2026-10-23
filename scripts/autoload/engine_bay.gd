@@ -30,7 +30,7 @@ const TYPES := {
 	"turbine": {"th": "กังหันแก๊ส", "en": "GAS TURBINE", "size": 3, "tow": 2.0, "speed": 25.0, "fuel_kind": "fuel", "fuel": 2.6,
 		"db": 108.0, "heat": 2.0, "wear": 1.4, "alt": 8.0, "weight": 2.0, "desc": "แรงที่สุด เสียงหวีดดังที่สุด กินน้ำมันมหาศาล"},
 	"fusion": {"th": "เซลล์ฟิวชัน", "en": "FUSION CELL", "size": 1, "tow": 1.7, "speed": 12.0, "fuel_kind": "none", "fuel": 0.0,
-		"db": 60.0, "heat": 1.2, "wear": 1.0, "alt": 20.0, "weight": 4.0, "desc": "ไม่ใช้น้ำมัน จ่ายไฟมหาศาล สภาพต่ำรังสีรั่ว"},
+		"db": 60.0, "heat": 1.2, "wear": 1.0, "alt": 20.0, "weight": 4.0, "desc": "ไม่ใช้น้ำมัน จ่ายไฟมหาศาล แต่ถ้าสภาพต่ำ รังสีจะรั่ว"},
 }
 const SIZE_TH := ["", "S", "M", "L"]
 ## biggest engine each cab takes
@@ -69,7 +69,7 @@ const COOLANT_TOPUP_WATER := 12.0
 ## maintenance jobs ordered from the menu. time = work seconds (crew speed it up), park = holds the vault
 const JOBS := {
 	"oil": {"th": "เปลี่ยนน้ำมันเครื่อง", "cost": {"scrap": 15, "fuel": 5}, "time": 30.0, "park": true},
-	"tune": {"th": "ซ่อมย่อย", "cost": {"scrap": 40, "components": 3}, "time": 60.0, "park": false},
+	"tune": {"th": "เช็กระยะ", "cost": {"scrap": 40, "components": 3}, "time": 60.0, "park": false},
 	"overhaul": {"th": "ยกเครื่อง", "cost": {"scrap": 200, "components": 20}, "time": 600.0, "park": true},
 	"coolant": {"th": "เติมน้ำหล่อเย็น", "cost": {"water": 12}, "time": 10.0, "park": false},
 	"bay": {"th": "อัปเกรดห้องเครื่อง", "cost": {}, "time": 120.0, "park": false},

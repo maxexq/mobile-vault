@@ -351,6 +351,7 @@ tools/balance.gd              4-hour headless balance bot (`godot --headless --p
 - Pixel art is crisp: project-wide `default_texture_filter = Nearest`; the atlas means one texture download and batched draws.
 - **Touch on mobile web** (v4.6 fix): finger releases are booked in `Main._input`, before the GUI and the modal check, because on the web a finger's index is the browser `Touch.identifier` (never reused on iOS) and a release that hit an open panel used to leave a ghost finger that turned the next swipe into a pinch. Lists scroll by drag because every `MOUSE_FILTER_STOP` control inside a `ScrollContainer` is switched to `MOUSE_FILTER_PASS` (`UIKit.touch_pass`, hooked to `SceneTree.node_added`): [Viewport](https://docs.godotengine.org/en/stable/tutorials/inputs/inputevent.html) stops pointer events at the first STOP control, and `ScrollContainer` drags from the emulated mouse events ([`scroll_deadzone`](https://docs.godotengine.org/en/stable/classes/class_scrollcontainer.html#class-scrollcontainer-property-scroll-deadzone) = 8 via `gui/common/default_scroll_deadzone`). Autotest `--only=touch` feeds real `InputEventScreenTouch/Drag` through `Input.parse_input_event`.
 - Portrait is the primary layout (360 px wide terminal UI); landscape moves the tool buttons into a right-hand column.
+- **Thai text** (MV-93): every in-game term, the voice of each character and the spelling rules are in [`docs/glossary_th.md`](docs/glossary_th.md). The player is ผู้บัญชาการ (never "Overseer", the villain AI), crew are ลูกเรือ, biomes use the same name on the map and in the logbook. Autotest `--only=thai` checks that trait / skill / role names stay unique and event buttons stay Thai-only.
 
 ## 7. Dev smoke test
 
@@ -358,7 +359,7 @@ tools/balance.gd              4-hour headless balance bot (`godot --headless --p
 godot --path . -- --autotest --out=/absolute/output/dir
 ```
 Visits every screen, fires events, fast-forwards 30 min, round-trips the save, rotates to portrait, and writes screenshots.
-Add `--only=large` (after `--`) to run just the large-room checks (~30 s).
+Add `--only=large` (after `--`) to run just the large-room checks (~30 s), `--only=thai` for the Thai wording checks.
 
 ## 8. Replacing the art
 

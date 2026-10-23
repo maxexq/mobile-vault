@@ -11,19 +11,19 @@ const TREE := {
 const NODES := {
 	"c1": {"th": "เล็งนิ่ง", "en": "STEADY AIM", "icon": "rifle", "max": 3, "key": "dmg", "per": 0.08, "req": [], "desc": "ดาเมจ +8%/ระดับ"},
 	"c2": {"th": "หนังหนา", "en": "THICK SKIN", "icon": "armor", "max": 3, "key": "hp", "per": 0.10, "req": [], "desc": "HP +10%/ระดับ"},
-	"c3": {"th": "มือไว", "en": "QUICK HANDS", "icon": "agi", "max": 3, "key": "aspd", "per": 0.06, "req": ["c1"], "desc": "ความเร็วโจมตี +6%/ระดับ"},
+	"c3": {"th": "ว่องไว", "en": "SWIFT STRIKES", "icon": "agi", "max": 3, "key": "aspd", "per": 0.06, "req": ["c1"], "desc": "ความเร็วโจมตี +6%/ระดับ"},
 	"c4": {"th": "หลบหลีก", "en": "EVASION", "icon": "dodge", "max": 2, "key": "dodge", "per": 4.0, "req": ["c2"], "desc": "หลบหลีก +4%/ระดับ"},
-	"c5": {"th": "ท่าไม้ตาย", "en": "SIGNATURE", "icon": "crown", "max": 1, "key": "signature", "per": 1.0, "req": ["c3", "c4"], "desc": "สกิลประจำตำแหน่งแรงขึ้น 40% และคูลดาวน์ -20%"},
+	"c5": {"th": "ท่าไม้ตาย", "en": "SIGNATURE MOVE", "icon": "crown", "max": 1, "key": "signature", "per": 1.0, "req": ["c3", "c4"], "desc": "สกิลประจำตำแหน่งแรงขึ้น 40% และคูลดาวน์ -20%"},
 	"s1": {"th": "กระเพาะเหล็ก", "en": "IRON STOMACH", "icon": "food", "max": 2, "key": "stomach", "per": 0.15, "req": [], "desc": "กินอาหาร/น้ำ -15%/ระดับ"},
-	"s2": {"th": "ทนพิษ", "en": "RAD SPONGE", "icon": "rad", "max": 2, "key": "radres", "per": 0.25, "req": [], "desc": "รับรังสี -25%/ระดับ"},
+	"s2": {"th": "ภูมิต้านรังสี", "en": "RAD TOLERANCE", "icon": "rad", "max": 2, "key": "radres", "per": 0.25, "req": [], "desc": "รับรังสี -25%/ระดับ"},
 	"s3": {"th": "ตาเหยี่ยว", "en": "SCAVENGER EYE", "icon": "explore", "max": 3, "key": "scav", "per": 0.10, "req": [], "desc": "ของจากการสำรวจ +10%/ระดับ"},
-	"s4": {"th": "ปฐมพยาบาล", "en": "FIELD MEDIC", "icon": "heal", "max": 2, "key": "medic", "per": 0.15, "req": ["s2"], "desc": "ฮีล/หายติดเชื้อเร็วขึ้น +15% · ติดเชื้อยากขึ้น"},
+	"s4": {"th": "รักษาไว", "en": "FAST HEALER", "icon": "heal", "max": 2, "key": "medic", "per": 0.15, "req": ["s2"], "desc": "ฮีล/หายติดเชื้อเร็วขึ้น +15% · ติดเชื้อยากขึ้น"},
 	"s5": {"th": "ผู้รอดชีวิต", "en": "SURVIVOR", "icon": "skull", "max": 1, "key": "survivor", "per": 1.0, "req": ["s3", "s4"], "desc": "สำรวจสำเร็จ +20% · โอกาสตายลด 60%"},
 	"p1": {"th": "ขยัน", "en": "DILIGENT", "icon": "hammer", "max": 3, "key": "prod", "per": 0.08, "req": [], "desc": "ผลผลิตในห้อง +8%/ระดับ"},
 	"p2": {"th": "นักประดิษฐ์", "en": "TINKERER", "icon": "gear", "max": 3, "key": "craft", "per": 0.10, "req": [], "desc": "ความเร็วการผลิต +10%/ระดับ"},
 	"p3": {"th": "พี่เลี้ยง", "en": "MENTOR", "icon": "people", "max": 2, "key": "mentor", "per": 0.05, "req": ["p1"], "desc": "เพื่อนร่วมห้องผลิต +5%/ระดับ · XP เพื่อน +10%"},
-	"p4": {"th": "ช่างซ่อม", "en": "MECHANIC", "icon": "wrench", "max": 2, "key": "repair", "per": 1.0, "req": ["p2"], "desc": "ซ่อมตัวถัง +1/นาที/ระดับ เมื่ออยู่ห้องเครื่อง/โรงช่าง"},
-	"p5": {"th": "ปรมาจารย์", "en": "MASTER", "icon": "xp", "max": 1, "key": "master", "per": 1.0, "req": ["p3", "p4"], "desc": "โบนัสความถนัด (Trait) ของห้องเพิ่มเป็น 2 เท่า"},
+	"p4": {"th": "ช่างซ่อม", "en": "HANDYMAN", "icon": "wrench", "max": 2, "key": "repair", "per": 1.0, "req": ["p2"], "desc": "ซ่อมตัวถัง +1/นาที/ระดับ เมื่ออยู่ห้องเครื่อง/โรงช่าง"},
+	"p5": {"th": "ปรมาจารย์", "en": "MASTER", "icon": "xp", "max": 1, "key": "master", "per": 1.0, "req": ["p3", "p4"], "desc": "โบนัสนิสัยที่ตรงกับห้องเพิ่มเป็น 2 เท่า"},
 }
 
 

@@ -61,7 +61,7 @@ func _build_squad() -> void:
 	for i in Combat.ROLES.size():
 		_list.add_child(_role_card(i))
 	_list.add_child(_deck_card())
-	_list.add_child(UIKit.wrap_label("ศัตรูไล่ตามจากท้ายรถเป็นเวฟ · ทุก 10 เวฟมีบอส · ท้ายแต่ละ Biome มีบอสด่านตรวจ · ของดรอปเข้าคลังอัตโนมัติ · กระเป๋าดี = ศัตรูดรอปเสบียง", UIKit.FS_SMALL))
+	_list.add_child(UIKit.wrap_label("ศัตรูไล่ตามจากท้ายรถเป็นเวฟ · ทุก 10 เวฟมีบอส · ท้ายแต่ละพื้นที่มีบอสด่านตรวจ · ของดรอปเข้าคลังอัตโนมัติ · กระเป๋าดี = ศัตรูดรอปเสบียง", UIKit.FS_SMALL))
 
 
 func _role_card(i: int) -> Control:

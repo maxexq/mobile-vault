@@ -147,7 +147,7 @@ func _build_result() -> void:
 	_outcome_col = col
 	var ev := Encounter.def(str(_result.get("id", Encounter.current_id())))
 	var v := media_layout(load("res://assets/events/%s.png" % ev.image), col)
-	OutcomeKit.stamp(media, "MAYDAY" if not ok else ("ROGER" if quiet else "MISSION OK"),
+	OutcomeKit.stamp(media, "MAYDAY" if not ok else ("ROGER" if quiet else "MISSION SUCCESS"),
 		"ทีมเจอปัญหา" if not ok else ("รับทราบ" if quiet else "ภารกิจสำเร็จ"), col, not ok)
 	_static(media.get_child(0))
 	# the team's report comes in over the radio, typed out letter by letter

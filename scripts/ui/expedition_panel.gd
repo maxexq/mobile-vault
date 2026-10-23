@@ -172,7 +172,7 @@ func _build_planner() -> void:
 	var ch := Expedition.success_chance(site, members, sup)
 	var col := UIKit.C_GREEN if ch >= 0.7 else (UIKit.C_GOLD if ch >= 0.45 else UIKit.C_RED)
 	_list.add_child(UIKit.label("โอกาสสำเร็จ ~%d%%  (พลังทีม %d vs อันตราย %d)" % [int(ch * 100), int(Expedition.team_power(members, sup)), int(Expedition.danger_need(site))], UIKit.FS, col))
-	_list.add_child(UIKit.wrap_label("ล้มเหลว = ได้ของน้อย บาดเจ็บ ติดเชื้อ หรือมีคนไม่กลับมา · ยาสติมแพ็กลดการบาดเจ็บ ยาปฏิชีวนะลดการติดเชื้อ", UIKit.FS_SMALL))
+	_list.add_child(UIKit.wrap_label("ล้มเหลว = ได้ของน้อย บาดเจ็บ ติดเชื้อ หรือมีคนไม่กลับมา · สติมแพ็กลดการบาดเจ็บ ยาปฏิชีวนะลดการติดเชื้อ", UIKit.FS_SMALL))
 	var hb := UIKit.hbox(4)
 	if Expedition.SITES.has(site):
 		var skip := UIKit.button("ขับผ่าน", "gray", "play")
@@ -297,8 +297,8 @@ func _build_report() -> void:
 	var frame := media_frame(tex, col, 2 if inner >= tex.get_size().x * 2.0 + 2.0 else 1)
 	_list.add_child(frame)
 	var dead := (report.dead as Array).size()
-	OutcomeKit.stamp(frame, "MISSION OK" if ok else ("LOST" if dead > 0 else "FAILED"),
-		"ภารกิจสำเร็จ!" if ok else "ภารกิจล้มเหลว...", col, not ok)
+	OutcomeKit.stamp(frame, "MISSION SUCCESS" if ok else ("LOST" if dead > 0 else "FAILED"),
+		"ภารกิจสำเร็จ!" if ok else ("เสียคนไป..." if dead > 0 else "ภารกิจล้มเหลว..."), col, not ok)
 	var odds := UIKit.label("โอกาสสำเร็จตอนออกเดินทาง %d%%" % int(float(report.get("chance", 0.0)) * 100.0), UIKit.FS_SMALL, UIKit.C_DIM)
 	odds.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_list.add_child(odds)

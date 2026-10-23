@@ -39,7 +39,7 @@ func refresh() -> void:
 	_list.add_child(_weight_card())
 	if tab == "ext":
 		_list.add_child(_trailer_card())
-	_list.add_child(UIKit.wrap_label("ของที่ติดตั้งภายนอกจะเห็นบนตัวรถจริง · บางชิ้นต้องมีพิมพ์เขียวจากการสำรวจสถานที่สำคัญ" if tab == "ext" else "อัปเกรดระบบภายในเพื่อรับมือภัยของแต่ละ Biome"))
+	_list.add_child(UIKit.wrap_label("ของที่ติดตั้งภายนอกจะเห็นบนตัวรถจริง · บางชิ้นต้องมีพิมพ์เขียวจากการสำรวจสถานที่สำคัญ" if tab == "ext" else "อัปเกรดระบบภายในเพื่อรับมือภัยของแต่ละพื้นที่"))
 	for id in Mods.MODS:
 		var md: Dictionary = Mods.MODS[id]
 		if md.side != tab or not Mods.enabled(id):

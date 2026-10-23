@@ -61,6 +61,11 @@ func _run() -> void:
 		print("[autotest] DONE")
 		get_tree().quit()
 		return
+	if "--only=thai" in OS.get_cmdline_user_args():
+		_thai_terms_test()
+		print("[autotest] DONE")
+		get_tree().quit()
+		return
 	await _tutorial_test()
 	await shot("main_industrial_rain")
 	Combat.reset_wave(6)
@@ -651,6 +656,7 @@ func _run() -> void:
 	await _large_room_test()
 	await _features_test()
 	await _modes_test()
+	_thai_terms_test()
 	print("[autotest] DONE")
 	get_tree().quit()
 
@@ -796,7 +802,7 @@ func _event_layout_test() -> void:
 		pop._resolve(1)   # survivor: give supplies -> food/water rows + happier crew
 		await wait(1.4)
 		var labels := _find_type(pop.body, "Label").map(func(l): return str(l.text))
-		_check("event outcome %s: stamp shown" % tag, labels.has("SURVIVED"))
+		_check("event outcome %s: stamp fits the choice (gave supplies)" % tag, labels.has("SHARED") and not labels.has("SURVIVED"))
 		_check("event outcome %s: food loss row counts to -15" % tag, labels.has("-15"))
 		_check("event outcome %s: crew happiness chips" % tag, labels.any(func(t): return t.ends_with(":)")))
 		_check("event outcome %s: inside window" % tag, _outside(pop.body, pop.box.get_global_rect().grow(1.0)).is_empty())
@@ -1229,7 +1235,7 @@ func _encounter_test() -> void:
 	await wait(1.4)
 	var epop: EncounterPopup = main.hud.encounter_popup
 	var etx: Array = _find_type(epop.body, "Label").map(func(l): return str(l.text))
-	_check("encounter outcome: radio stamp", etx.has("MISSION OK") or etx.has("MAYDAY"))
+	_check("encounter outcome: radio stamp", etx.has("MISSION SUCCESS") or etx.has("MISSION\nSUCCESS") or etx.has("MAYDAY"))
 	_check("encounter outcome: haul/supply rows", _find_type(epop.body, "GridContainer").size() == 1 and (etx.has("+1") or etx.has("-10") or etx.any(func(t): return t.begins_with("-"))))
 	_check("encounter outcome: inside window %s" % [_outside(epop.body, epop.box.get_global_rect().grow(1.0))], _outside(epop.body, epop.box.get_global_rect().grow(1.0)).is_empty())
 	await shot("encounter_result_full")
@@ -1241,7 +1247,7 @@ func _encounter_test() -> void:
 	xp.open()
 	await wait(1.6)
 	var rtx: Array = _find_type(xp.body, "Label").map(func(l): return str(l.text))
-	_check("expedition report: stamp + crew chips", (rtx.has("MISSION OK") or rtx.has("FAILED") or rtx.has("LOST")) and rtx.has(">CREW"))
+	_check("expedition report: stamp + crew chips", (rtx.has("MISSION SUCCESS") or rtx.has("MISSION\nSUCCESS") or rtx.has("FAILED") or rtx.has("LOST")) and rtx.has(">CREW"))
 	_check("expedition report: gains + radio box", r1.has("gain") and rtx.has(">RADIO"))
 	_check("expedition report: inside window", _outside(xp.body, xp.box.get_global_rect().grow(1.0)).is_empty())
 	await shot("expedition_report")
@@ -2550,6 +2556,52 @@ func _modes_test() -> void:
 	Tutorial.skip()
 	_check("modes: switch off = NEW RUN starts standard without the picker", Modes.id() == "standard" and Modes.mutators().is_empty() and Features.on("expeditions"))
 	Dev.feature_set("modes", null)
+
+
+## Thai wording (MV-93, docs/glossary_th.md): names players pick between are unique, the player is
+## never called "Overseer" (the villain AI), and event buttons carry no English inside the Thai label
+func _thai_terms_test() -> void:
+	var names := {}
+	var clash := []
+	var sources := [Crew.TRAITS.values(), Skills.NODES.values(), Combat.ROLES]
+	for list in sources:
+		for e in list:
+			for nm in [str(e.th), "en:" + str(e.en)]:
+				if names.has(nm):
+					clash.append(nm)
+				names[nm] = true
+	for r in Combat.ROLES:
+		if names.has(str(r.skill)):
+			clash.append(str(r.skill))
+	_check("thai: trait / skill / role names are unique in Thai and English %s" % str(clash), clash.is_empty())
+	var british := []
+	for v in Data.VEHICLES.values() + Meta.PERKS.values():
+		if str(v.get("en", "")).contains("ARMOUR"):
+			british.append(v.en)
+	_check("thai: English labels use one spelling (ARMORED) %s" % str(british), british.is_empty())
+	var overseer := Tutorial.STEPS.filter(func(st): return str(st.get("text", "")).contains("Overseer"))
+	_check("thai: tutorial never calls the player Overseer", overseer.is_empty())
+	var mixed := []
+	for id in Data.EVENTS:
+		for ch in Data.EVENTS[id].choices:
+			if str(ch.th).contains(" / ") or (str(ch.en) != "" and str(ch.th).contains(str(ch.en))):
+				mixed.append(id)
+	_check("thai: road event buttons are Thai only %s" % str(mixed), mixed.is_empty())
+	var biomes := Data.BIOMES.map(func(b): return str(b.th))
+	_check("thai: biome names match the logbook", biomes.has("ทะเลทรายแก้ว") and biomes.has("ทางหลวงน้ำแข็ง") and biomes.has("ซากนิคมอุตสาหกรรม"))
+	# outcome wording follows the choice: no "survived" on a trade, no thankful survivor for a dog
+	var generic := []
+	for id in Data.EVENTS:
+		for ch in Data.EVENTS[id].choices:
+			if str(EventPopup.stamp_text(ch, true)[0]) == "DONE":
+				generic.append("%s/%s" % [id, ch.action])
+	_check("thai: every road event choice has its own outcome stamp %s" % str(generic), generic.is_empty())
+	_check("thai: trade stamp is a deal, failed check is a miss", EventPopup.stamp_text({"action": "trade"}, true)[1] == "ตกลงกันได้"
+		and EventPopup.stamp_text({"action": "check"}, false)[0] == "FAILED")
+	Game.s.res.food = maxf(float(Game.s.res.food), 50.0)
+	var dog := Game.resolve_event("stray_dog", 1, [])
+	_check("thai: feeding the dog reads like a dog, not a survivor", dog.ok and not str(dog.text).contains("ผู้รอดชีวิต")
+		and EventPopup.stamp_text(Data.EVENTS.stray_dog.choices[1], true)[0] == "GOOD BOY")
 
 
 ## title screen: the backdrop van drives (wheels turn, engine rumbles) and the menu window stays on screen
