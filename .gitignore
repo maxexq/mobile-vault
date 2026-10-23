@@ -3,3 +3,9 @@ build/
 *.tmp
 build_info.json
 cloud_config.json
+
+# ai/ (LangGraph assistant)
+ai/.env
+ai/.venv/
+__pycache__/
+.pytest_cache/
