@@ -496,7 +496,7 @@ func blocked_reason() -> String:
 	if Expedition.at_site() != "":
 		return "จอดที่ %s" % Expedition.site_def(Expedition.at_site()).th
 	if s.res.power <= 0.5:
-		return "ไฟหมด! ต้องการพลังงาน"
+		return "ไฟหมด! ชาร์จแบตก่อนออกรถ"
 	if s.hull <= 0.0:
 		return "ตัวถังพัง! ซ่อมก่อนเดินทาง"
 	if s.stall > 0.0:
@@ -794,7 +794,7 @@ func damage_solar(amount: float) -> void:
 	var was := float(sol.get("damage", 0.0))
 	sol["damage"] = minf(0.8, was + amount)
 	if was < 0.2 and float(sol.damage) >= 0.2 and started:
-		toast.emit("ซอมบี้ปีกหนังจิกแผงโซลาร์พัง! ไฟฟ้าลดลง — ติดป้อม Flak หรือให้มือปืนหลังคาจัดการ", "warn")
+		toast.emit("ซอมบี้ปีกหนังจิกแผงโซลาร์พัง! ไฟฟ้าลดลง — ติดปืนต่อสู้อากาศยาน หรือให้มือปืนหลังคาจัดการ", "warn")
 
 
 func _tick_corrosion(m: float) -> void:
@@ -1044,7 +1044,7 @@ func _simulate(dt: float, offline: bool) -> void:
 			if s.dwellers.size() < pop_cap():
 				var d := offer_recruit("radio")
 				if not offline and not d.is_empty():
-					toast.emit("วิทยุรับสัญญาณ! %s เข้าร่วมรถบ้าน" % d.name, "good")
+					toast.emit("วิทยุรับสัญญาณได้! %s ตามมาขึ้นรถ" % d.name, "good")
 
 	if dwellers_dirty:
 		dwellers_changed.emit()
@@ -1973,7 +1973,7 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 					cost[k] = int(float(cost[k]) * (1.0 - best * 0.05))
 			if not pay(cost):
 				return {"ok": false, "text": "ทรัพยากรไม่พอ (%s)" % cost_text(cost)}
-			res.text = "จ่าย %s แล้ว เส้นทางเปิดให้ผ่าน" % cost_text(cost) if ch.action == "pay" else "ซ่อมเสร็จ (ใช้ %s)" % cost_text(cost)
+			res.text = str(ch.get("result", "จ่าย %s แล้ว เส้นทางเปิดให้ผ่าน" % cost_text(cost))) if ch.action == "pay" else "ซ่อมเสร็จ (ใช้ %s)" % cost_text(cost)
 			if ch.has("reward"):
 				res.text += "\nได้รับ: %s" % give_rewards(_scale_reward(ch.reward))
 		"ram":
@@ -2001,20 +2001,20 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 			if nd.is_empty():
 				res.text = "ผู้รอดชีวิตคนนี้ดูไม่ธรรมดา... ฝีมือดีเกินกว่าจะรับขึ้นรถโดยไม่ตรวจ เขารออยู่ที่ประตู"
 			else:
-				res.text = "%s เข้าร่วมรถบ้านแล้ว! (STR %d / INT %d / AGI %d)" % [nd.name, nd.str, nd.int, nd.agi]
+				res.text = "%s ขึ้นรถมาร่วมทางแล้ว! (STR %d / INT %d / AGI %d)" % [nd.name, nd.str, nd.int, nd.agi]
 		"gift":
 			if not pay(ch.cost):
 				return {"ok": false, "text": "เสบียงไม่พอ"}
 			for d in s.dwellers:
 				d.happy = minf(100.0, float(d.happy) + 10.0)
-			res.text = "ผู้รอดชีวิตขอบคุณด้วยน้ำตา ทุกคนในรถรู้สึกดีขึ้น (+ความสุข)"
+			res.text = str(ch.get("result", "ผู้รอดชีวิตขอบคุณด้วยน้ำตา ทุกคนในรถรู้สึกดีขึ้น (+ความสุข)"))
 		"trade":
 			if not pay(ch.cost):
 				return {"ok": false, "text": "ไม่มีของพอจะแลก"}
 			res.text = "แลกเปลี่ยนสำเร็จ: %s" % give_rewards(ch.reward)
 		"shelter":
 			s.stall = float(ch.get("time", 30.0))
-			res.text = "จอดหลบอย่างปลอดภัย รอ %d วินาที" % int(s.stall)
+			res.text = str(ch.get("result", "จอดหลบอย่างปลอดภัย รอ %d วินาที" % int(s.stall)))
 			if ch.has("reward"):
 				res.text += "\nได้รับ: %s" % give_rewards(ch.reward)
 		"check":
@@ -2070,12 +2070,12 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 					d.rads = float(d.rads) + rng.randf_range(5, 15) * danger * 0.3
 			if ch.has("dirt"):
 				s.solar.dirt = minf(1.0, float(s.solar.dirt) + float(ch.dirt))
-			res.text = "ฝ่าไปได้... ตัวถัง -%d%% ทุกคนได้รับรังสี (ใช้ RadAway หรือห้องแล็บรักษา)" % int(hd4)
+			res.text = "ฝ่าไปได้... ตัวถัง -%d%% ทุกคนได้รับรังสี (ใช้ยาต้านรังสีหรือห้องพยาบาลรักษา)" % int(hd4)
 		"detour":
 			if ch.has("cost") and not pay(ch.cost):
 				return {"ok": false, "text": "ไฟไม่พอสำหรับเส้นทางอ้อม"}
 			s.stall = float(ch.get("time", 20.0))
-			res.text = "เลือกเส้นทางที่ปลอดภัยกว่า"
+			res.text = str(ch.get("result", "เลือกเส้นทางที่ปลอดภัยกว่า"))
 		"ignore":
 			if ch.has("happy"):
 				for d in s.dwellers:

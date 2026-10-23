@@ -104,7 +104,7 @@ const AFFIXES := {
 
 const LEGEND_NAMES := {
 	"weapon": ["ปืนลูกซองของยายไหม", "เหล็กพิฆาตจ่ามาร์ค", "สายฟ้าแห่งทุ่งร้าง"],
-	"armor": ["เสื้อเกราะหนังจระเข้", "โล่ห่อหุ้มแห่งรังสี"],
+	"armor": ["เสื้อเกราะหนังจระเข้", "เสื้อคลุมตะกั่วกันรังสี"],
 	"gadget": ["นาฬิกาพกไม่มีเข็ม", "เหรียญนำทางของคนขับรุ่นแรก"],
 	"turret": ["เจ้าแมวคำราม", "ป้อมปืนเทวดา"],
 	"plating": ["กระดองเต่ายักษ์"],
@@ -251,7 +251,7 @@ func describe(item: Dictionary) -> Array:
 		var v := base_stat(item, key)
 		match key:
 			"dmg": out.append(["ดาเมจ", "%.1f" % v])
-			"aspd": out.append(["ยิง/วินาที", "%.2f" % v])
+			"aspd": out.append(["โจมตี/วิ", "%.2f" % v])
 			"range": out.append(["ระยะ", "ประชิด" if b.get("melee", false) else str(int(v))])
 			"splash": out.append(["โดนพร้อมกัน", "%d เป้า" % int(v)])
 			"hp": out.append(["พลังชีวิต", "+%d" % int(v)])
@@ -265,7 +265,7 @@ func describe(item: Dictionary) -> Array:
 			"hull": out.append(["ตัวถัง", "+%d" % int(v)])
 			"speed": out.append(["ความเร็วรถ", "+%d%%" % int(v)])
 			"power": out.append(["ผลิตไฟ", "+%.1f/นาที" % v])
-			"thorns": out.append(["ดาเมจหนาม", "%.1f/วิ" % v])
+			"thorns": out.append(["ดาเมจสะท้อน", "%.1f/วิ" % v])
 	if b.get("melee", false):
 		out.append(["พิเศษ", "นักสู้ท้ายรถ +40% / คนอื่น -40%"])
 	if b.has("engine"):

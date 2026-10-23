@@ -212,7 +212,7 @@ func _build_picker() -> void:
 		b.pressed.connect(func(): pick("diff", did))
 		drow.add_child(b)
 	_picker.add_child(drow)
-	_picker.add_child(UIKit.label("ตัวแปรกฎ  MUTATORS", UIKit.FS_SMALL, UIKit.C_GOLD))
+	_picker.add_child(UIKit.label("กฎพิเศษ  MUTATORS", UIKit.FS_SMALL, UIKit.C_GOLD))
 	var peaceful := bool(Modes.MODES[_pick.id].get("peaceful", false))
 	var murow := UIKit.flow(3)
 	var descs := []

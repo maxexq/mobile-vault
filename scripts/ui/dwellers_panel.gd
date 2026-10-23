@@ -57,7 +57,7 @@ func refresh() -> void:
 		return
 	managing = -1
 	_top.visible = true
-	set_title("CREW %d/%d / รายชื่อผู้ลี้ภัย" % [Game.s.dwellers.size(), Game.pop_cap()])
+	set_title("CREW %d/%d / รายชื่อลูกเรือ" % [Game.s.dwellers.size(), Game.pop_cap()])
 	_sort_btn.text = "เรียง: %s" % sort_key.to_upper()
 	_filter_btn.text = FILTER_TH[filter]
 	var arr: Array = []
@@ -76,7 +76,7 @@ func refresh() -> void:
 	for d in arr:
 		_list.add_child(_row(d))
 	if arr.is_empty():
-		_list.add_child(UIKit.wrap_label("ไม่มีผู้ลี้ภัยในหมวดนี้"))
+		_list.add_child(UIKit.wrap_label("ไม่มีลูกเรือในหมวดนี้"))
 
 
 func _where(d: Dictionary) -> Array:
@@ -239,7 +239,7 @@ func _build_manage(d: Dictionary) -> void:
 	var hs := Combat.hero_stats(d, maxi(0, Game.squad_role(d)))
 	_list.add_child(UIKit.label("DODGE %d%%  LOOT +%d%%  SUPPLY +%d%%" % [int(hs.get("dodge", 0)), int(hs.loot), int(hs.get("supply", 0))], UIKit.FP, UIKit.C_BLUE, true))
 	# --- squad role
-	_list.add_child(UIKit.header("DEFENCE SQUAD", "ทีมป้องกัน"))
+	_list.add_child(UIKit.header("DEFENSE SQUAD", "ทีมป้องกัน"))
 	var sq := UIKit.flow(3)
 	var cur_role := Game.squad_role(d)
 	for i in Combat.ROLES.size():

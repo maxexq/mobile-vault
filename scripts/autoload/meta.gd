@@ -18,9 +18,9 @@ const PERKS := {
 	"veterans": {"th": "ทหารผ่านศึก", "en": "VETERANS", "icon": "people", "max": 2, "cost": [6, 12], "desc": "พาผู้รอดชีวิตหนีได้เพิ่ม +1 คน/ระดับ"},
 	"training": {"th": "ถ่ายทอดประสบการณ์", "en": "TRAINING", "icon": "xp", "max": 2, "cost": [6, 12], "desc": "ผู้รอดชีวิตที่พามาเก็บเลเวลได้ 50% → 70% → 90%"},
 	"skill_spark": {"th": "ประกายแห่งทักษะ", "en": "SKILL SPARK", "icon": "int", "max": 2, "cost": [7, 14], "desc": "ทุกคนได้แต้มสกิล +2 ต่อระดับ"},
-	"tier_bus": {"th": "รถบัสหุ้มเหล็ก", "en": "ARMOURED BUS", "icon": "hull", "max": 1, "cost": [8], "bp": "bp_bus", "desc": "รุ่นถัดไปออกเดินทางด้วยรถบัส 3 ชั้น (9 ห้อง) · ต้องมีพิมพ์เขียว"},
+	"tier_bus": {"th": "รถบัสหุ้มเหล็ก", "en": "ARMORED BUS", "icon": "hull", "max": 1, "cost": [8], "bp": "bp_bus", "desc": "รุ่นถัดไปออกเดินทางด้วยรถบัส 3 ชั้น (9 ห้อง) · ต้องมีพิมพ์เขียว"},
 	"tier_rig": {"th": "รถพ่วง 18 ล้อ", "en": "18-WHEELER RIG", "icon": "hull", "max": 1, "cost": [16], "bp": "bp_rig", "req": "tier_bus", "desc": "รถบรรทุก 4 ชั้น (12 ห้อง) เครื่องแรง · ต้องมีพิมพ์เขียว"},
-	"tier_train": {"th": "รถไฟหุ้มเกราะ", "en": "ARMOURED TRAIN", "icon": "hull", "max": 1, "cost": [30], "bp": "bp_train", "req": "tier_rig", "desc": "หัวรถจักรหุ้มเกราะ 4 ชั้น วิ่งบนราง ลากโบกี้ได้ · ต้องมีพิมพ์เขียว"},
+	"tier_train": {"th": "รถไฟหุ้มเกราะ", "en": "ARMORED TRAIN", "icon": "hull", "max": 1, "cost": [30], "bp": "bp_train", "req": "tier_rig", "desc": "หัวรถจักรหุ้มเกราะ 4 ชั้น วิ่งบนราง ลากโบกี้ได้ · ต้องมีพิมพ์เขียว"},
 }
 const TIER_PERK := {"bus": "tier_bus", "rig": "tier_rig", "train": "tier_train"}
 const RESEARCH_TH := "แต้มวิจัยพันธุกรรม"

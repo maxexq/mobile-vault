@@ -29,7 +29,7 @@ func refresh() -> void:
 	var w := Game.weather_def()
 	_summary.text = "รอบที่ %d · ระยะรวม %.1f กม. · ความเร็ว %d km/h · อากาศ: %s (อีก ~%ds)\n%s" % [
 		int(Game.s.lap) + 1, float(Game.s.stats.km_total), int(Game.speed_kmh()), w.th, int(Game.s.weather_t),
-		("สถานะ: " + Game.blocked_reason()) if Game.blocked_reason() != "" else "เส้นทางสะดวก - กำลังเคลื่อนที่"]
+		("สถานะ: " + Game.blocked_reason()) if Game.blocked_reason() != "" else "ทางโล่ง รถกำลังวิ่ง"]
 	_go.text = "จอด" if Game.s.traveling else "ออกรถ"
 	_go.icon = Atlas.icon("pause" if Game.s.traveling else "play")
 	# hazards now
@@ -92,8 +92,8 @@ func refresh() -> void:
 			sites.append(Expedition.SITES[sid].th + (" (สำรวจแล้ว)" if Expedition.is_done(sid) else ""))
 		v.add_child(UIKit.wrap_label(("ภัย: %s · " % ", ".join(hz_names) if not hz_names.is_empty() else "") + "จุดสำรวจ: " + ", ".join(sites), UIKit.FS_SMALL, UIKit.C_GOLD))
 		_list.add_child(p)
-	_list.add_child(UIKit.wrap_label("เมื่อผ่านมหานครแห่งสัญญาณ รถบ้านจะวนกลับเขตอุตสาหกรรมในรอบใหม่ — ศัตรูอันตรายขึ้นแต่รางวัลมากขึ้น"))
-	_list.add_child(UIKit.header("NEXT GENERATION", "รุ่นที่ %d · %s · มรดก %d" % [Meta.generation(), Meta.vehicle_name(), int(Meta.m().get("legacy", 0))]))
+	_list.add_child(UIKit.wrap_label("เมื่อผ่านมหานครแห่งสัญญาณ รถบ้านจะวนกลับซากนิคมอุตสาหกรรมในรอบใหม่ — ศัตรูอันตรายขึ้นแต่รางวัลมากขึ้น"))
+	_list.add_child(UIKit.header("NEXT GENERATION", "รุ่นที่ %d · %s · แต้มวิจัย %d" % [Meta.generation(), Meta.vehicle_name(), int(Meta.m().get("legacy", 0))]))
 	var rb := UIKit.button("ปลดระวางรถ → สร้างรุ่นถัดไป", "red", "hammer")
 	rb.disabled = not Meta.can_retire()
 	rb.pressed.connect(func():

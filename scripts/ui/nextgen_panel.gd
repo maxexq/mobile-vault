@@ -144,7 +144,7 @@ func _build_perks() -> void:
 
 func _build_crew() -> void:
 	set_title("ESCAPE %d/%d / ใครจะไปกับรถคันใหม่" % [carry.size(), Meta.carry_slots()])
-	_list.add_child(UIKit.wrap_label("คนที่เลือกจะเก็บ Trait อาวุธ และ %d%% ของเลเวลไว้ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด" % [int(Meta.carry_level_keep() * 100), int(Meta.carry_res_ratio() * 100)], UIKit.FS_SMALL))
+	_list.add_child(UIKit.wrap_label("คนที่เลือกจะเก็บนิสัย อาวุธ และ %d%% ของเลเวลไว้ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด" % [int(Meta.carry_level_keep() * 100), int(Meta.carry_res_ratio() * 100)], UIKit.FS_SMALL))
 	var arr: Array = Game.s.dwellers.duplicate()
 	arr.sort_custom(func(a, b): return int(a.lvl) > int(b.lvl))
 	for d in arr:

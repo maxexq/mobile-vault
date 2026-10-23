@@ -29,7 +29,7 @@ const ROLES := [
 		"skill": "ระดมยิง", "skill_desc": "ทุก 10 วิ ยิงรัว 5 นัด (70% ดาเมจ) ใส่ศัตรูแบบสุ่ม", "cd": 10.0},
 	{"id": "bruiser", "th": "นักสู้ท้ายรถ", "en": "REAR BRUISER", "stat": "str", "pos": Vector2(346, 136), "unlock": 1,
 		"skill": "กระแทกพื้น", "skill_desc": "ทุก 9 วิ ฟาดพื้น 150% ดาเมจใส่ศัตรูประชิด + มึน 1.5 วิ", "cd": 9.0},
-	{"id": "medic", "th": "หน่วยแพทย์", "en": "FIELD MEDIC", "stat": "int", "pos": Vector2(276, 14), "unlock": 2,
+	{"id": "medic", "th": "แพทย์สนาม", "en": "FIELD MEDIC", "stat": "int", "pos": Vector2(276, 14), "unlock": 2,
 		"skill": "ปฐมพยาบาล", "skill_desc": "ทุก 12 วิ ฟื้นเลือดทุกคน 30% + ซ่อมตัวถัง · รักษาคนเจ็บหนักสุดทุก 3.5 วิ", "cd": 12.0},
 ]
 const DECK_X := 350.0
@@ -1065,7 +1065,7 @@ func _on_kill(e: Dictionary) -> void:
 	if e.boss and rng.randf() < 0.35 and Game.s.dwellers.size() < Game.pop_cap():
 		var nd := Game.offer_recruit("boss", 1.0)
 		if not nd.is_empty():
-			Game.toast.emit("ช่วยเชลยจากบอสได้! %s เข้าร่วมรถบ้าน" % nd.name, "good")
+			Game.toast.emit("ช่วยเชลยจากบอสได้! %s ขึ้นรถมาร่วมทาง" % nd.name, "good")
 	Game.resources_changed.emit()
 
 

@@ -34,7 +34,7 @@ const CHECKS := {
 	"hands": {"th": "ดูมือ/เล็บ", "en": "HANDS", "icon": "fist", "signs": ["normal", "veins", "spotless", "tattoo"]},
 	"neck":  {"th": "ถลกแขนเสื้อ", "en": "FOREARM", "icon": "medkit", "signs": ["normal", "bite", "brand"]},
 	"bag":   {"th": "ค้นกระเป๋า", "en": "BAG", "icon": "backpack", "signs": ["normal", "picks", "radio"]},
-	"temp":  {"th": "วัดไข้", "en": "TEMP", "icon": "thermo", "signs": ["normal", "fever", "cold"]},
+	"temp":  {"th": "วัดไข้", "en": "FEVER", "icon": "thermo", "signs": ["normal", "fever", "cold"]},
 	"story": {"th": "ซักประวัติ", "en": "STORY", "icon": "chat", "signs": ["normal", "shaky"]},
 }
 ## chance that each kind shows a given sign (anything not listed: never). Humans get innocent false alarms.
@@ -51,16 +51,16 @@ const SIGN_TEXT := {
 	"red": "ตาแดงก่ำ เส้นเลือดปูด (ติดเชื้อ... หรือแค่อดนอน)",
 	"glassy": "ตาวาวเหมือนกระจก สะท้อนไฟฉายกลับมา (ไม่ใช่ตาคน?)",
 	"rot": "เหงือกดำ ฟันผุหลุด (ติดเชื้อ... หรือแค่ไม่มีหมอฟัน)",
-	"perfect": "ฟันขาวเรียงสวยเกินไป มากเกินไป ในโลกแบบนี้?",
+	"perfect": "ฟันขาวเรียงสวยเกินไป... ในโลกแบบนี้เนี่ยนะ?",
 	"veins": "เส้นเลือดดำเขียวลามจากข้อมือ (เชื้อลาม)",
-	"spotless": "มือสะอาดเนียน ไม่มีด้าน ไม่มีดินในเล็บ เลย",
+	"spotless": "มือสะอาดเนียน ไม่มีหนังด้าน ไม่มีดินติดเล็บสักนิด",
 	"tattoo": "รอยสักหัวกะโหลกกากบาทแดง (สัญลักษณ์แก๊งโจร... หรืออดีตไบเกอร์)",
 	"bite": "ผ้าพันแผลชุ่มเลือด ใต้นั้นคือรอยกัด",
 	"brand": "รอยเหล็กนาบตีตราของแก๊งโจร",
 	"picks": "เหล็กสะเดาะกุญแจ บัตรประชาชนกับนาฬิกาของคนอื่นเต็มกระเป๋า",
 	"radio": "วิทยุสื่อสารที่ยังเปิดอยู่ + แผนที่วงเส้นทางรถเรา",
 	"fever": "ตัวร้อนจี๋ (ติดเชื้อ... หรือไข้หวัดธรรมดา)",
-	"cold": "ตัวเย็นเฉียบผิดคน",
+	"cold": "ตัวเย็นเฉียบ ผิดวิสัยคนเป็น",
 	"shaky": "เรื่องเล่าไม่ปะติดปะต่อ ตอบวนไปมา หลบตา",
 	"refused": "ไม่ยอมให้ตรวจ",
 }
@@ -439,7 +439,7 @@ func _go_off(d: Dictionary, offline: bool) -> void:
 			for o in Game.s.dwellers.filter(func(o): return o != d and not Game.is_away(o)).slice(0, 2):
 				o.hp = maxf(5.0, float(o.hp) - 25.0)
 				hurt.append(o.name)
-			txt = "%s เปิดประตูท้ายให้แก๊งโจรกลางดึก! ตัวถัง -30, เศษเหล็กถูกขน %d" % [d.name, int(scrap)]
+			txt = "%s เปิดประตูท้ายให้แก๊งโจรกลางดึก! ตัวถัง -30, เศษเหล็กถูกขนไป %d" % [d.name, int(scrap)]
 			if not hurt.is_empty():
 				txt += ", %s บาดเจ็บ" % ", ".join(hurt)
 			_remove(d)

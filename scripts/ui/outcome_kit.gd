@@ -19,6 +19,10 @@ static func stamp(frame: PanelContainer, en: String, th: String, col: Color, bad
 	st.add_child(sv)
 	var t := UIKit.label(en, 18, col, true)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# a long stamp ("MISSION SUCCESS") goes on two lines when the art is shown at 1x (160 px)
+	var w := t.get_theme_font("font").get_string_size(en, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	if en.contains(" ") and w > img.custom_minimum_size.x - 16.0:
+		t.text = en.replace(" ", "\n")
 	sv.add_child(t)
 	var tl := UIKit.label(th, UIKit.FS_SMALL, UIKit.C_WHITE)
 	tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

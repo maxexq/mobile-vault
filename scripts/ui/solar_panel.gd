@@ -62,7 +62,7 @@ func refresh() -> void:
 	var pl: int = sol.panels
 	_ups.add_child(_up_row("solar", "เพิ่มแผงโซลาร์เซลล์ใหม่ (Lv.%d)" % pl, "+25% กำลังผลิตต่อแผง", "panels", {"scrap": Game.SOLAR_COSTS.panels[mini(pl + 1, 4)]}, pl >= 4))
 	var bl: int = sol.battery
-	_ups.add_child(_up_row("battery", "กล่องเก็บไฟ BATTERY (Lv.%d)" % bl, "+80 ความจุแบตเตอรี่", "battery", {"scrap": Game.SOLAR_COSTS.battery[mini(bl + 1, 4)]}, bl >= 4))
+	_ups.add_child(_up_row("battery", "แบตเตอรี่สำรอง (Lv.%d)" % bl, "+80 ความจุแบตเตอรี่", "battery", {"scrap": Game.SOLAR_COSTS.battery[mini(bl + 1, 4)]}, bl >= 4))
 	_ups.add_child(_up_row("tracking", "ระบบหมุนตามแสงแดด", "แผงหมุนตามดวงอาทิตย์ · ผลิตไฟดีขึ้นช่วงเช้า/เย็น", "tracking", {"scrap": Game.SOLAR_COSTS.tracking}, bool(sol.tracking)))
 	_update()
 

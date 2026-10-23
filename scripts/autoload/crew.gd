@@ -13,19 +13,19 @@ const TRAITS := {
 	"gunsmith":   {"th": "ช่างปืน", "en": "GUNSMITH", "icon": "rifle", "rooms": ["armory"], "aff": 0.45, "desc": "ห้องอาวุธ +45%"},
 	# combat
 	"sharpshooter": {"th": "แม่นปืน", "en": "SHARPSHOOTER", "icon": "rifle", "rooms": [], "aff": 0.0, "desc": "ดาเมจ +20% · คริติคอล +10%"},
-	"brawler":    {"th": "นักบู๊", "en": "BRAWLER", "icon": "fist", "rooms": [], "aff": 0.0, "desc": "เป็นนักสู้ท้ายรถ: HP/ดาเมจ +25%"},
+	"brawler":    {"th": "นักบู๊", "en": "BRAWLER", "icon": "fist", "rooms": [], "aff": 0.0, "desc": "ถ้าเป็นนักสู้ท้ายรถ: HP/ดาเมจ +25%"},
 	"tough":      {"th": "ทรหด", "en": "TOUGH", "icon": "hull", "rooms": [], "aff": 0.0, "desc": "HP +30% · ติดเชื้อยากขึ้น 50%"},
 	# survival quirks
 	"light_eater": {"th": "กินน้อย", "en": "LIGHT EATER", "icon": "food", "rooms": [], "aff": 0.0, "desc": "กินอาหาร/น้ำ -50%"},
-	"glutton":    {"th": "กินจุ", "en": "GLUTTON", "icon": "meat", "rooms": [], "aff": 0.0, "bad": true, "desc": "กินอาหาร +60% (แต่มีความสุขง่าย +5)"},
+	"glutton":    {"th": "กินจุ", "en": "GLUTTON", "icon": "meat", "rooms": [], "aff": 0.0, "bad": true, "desc": "กินอาหาร +60% (แต่อารมณ์ดีง่าย ความสุข +5)"},
 	"cold_blooded": {"th": "ทนหนาว", "en": "COLD-PROOF", "icon": "snow", "rooms": [], "aff": 0.0, "desc": "ไม่เป็นอะไรเมื่อหนาวจัด"},
 	"rad_proof":  {"th": "ทนรังสี", "en": "RAD-PROOF", "icon": "rad", "rooms": [], "aff": 0.0, "desc": "รับรังสี -60%"},
-	"night_owl":  {"th": "นกฮูก", "en": "NIGHT OWL", "icon": "moon", "rooms": [], "aff": 0.0, "desc": "ผลิต +30% ตอนกลางคืน"},
+	"night_owl":  {"th": "คนนอนดึก", "en": "NIGHT OWL", "icon": "moon", "rooms": [], "aff": 0.0, "desc": "ผลิต +30% ตอนกลางคืน"},
 	"scavenger":  {"th": "นักคุ้ยซาก", "en": "SCAVENGER", "icon": "explore", "rooms": [], "aff": 0.0, "desc": "ของจากการสำรวจ +30%"},
 	"lucky":      {"th": "ดวงดี", "en": "LUCKY", "icon": "xp", "rooms": [], "aff": 0.0, "desc": "สำรวจสำเร็จ +10% · ดรอปของ +10%"},
 	"cheerful":   {"th": "ร่าเริง", "en": "CHEERFUL", "icon": "happy", "rooms": [], "aff": 0.0, "desc": "เพื่อนร่วมห้องมีความสุข +10 และผลิต +5%"},
 	"grumpy":     {"th": "ขี้บ่น", "en": "GRUMPY", "icon": "sad", "rooms": [], "aff": 0.0, "bad": true, "desc": "ผลิตเอง +15% แต่เพื่อนร่วมห้องความสุข -8"},
-	"afraid_dark": {"th": "กลัวความมืด", "en": "AFRAID OF DARK", "icon": "moon", "rooms": [], "aff": 0.0, "bad": true, "desc": "ไฟดับ/กลางคืน ความสุขลดหนัก (-16)"},
+	"afraid_dark": {"th": "กลัวความมืด", "en": "FEARS THE DARK", "icon": "moon", "rooms": [], "aff": 0.0, "bad": true, "desc": "ไฟดับ/กลางคืน ความสุขลดหนัก (-16)"},
 	"coward":     {"th": "ขี้ขลาด", "en": "COWARD", "icon": "flee", "rooms": [], "aff": 0.0, "bad": true, "desc": "สำรวจเสี่ยงขึ้น 30% แต่ทำงานในรถ +10%"},
 	# construction (v4.3) — "build" = extra construction speed while working a building site
 	"engineer":   {"th": "วิศวกร", "en": "ENGINEER", "icon": "gear", "rooms": ["workshop"], "aff": 0.2, "build": 0.4, "desc": "ก่อสร้าง/อัปเกรดเร็วขึ้น 40% · โรงช่าง +20%"},
@@ -179,7 +179,7 @@ func synergy_text(slot: int) -> String:
 				parts.append("%s %s" % [d.name, TRAITS[t].th])
 				fits += 1
 	if fits >= 2:
-		parts.append("ทีมเวิร์ค +%d%%" % int(DUO_BONUS * 100))
+		parts.append("ทีมเวิร์ก +%d%%" % int(DUO_BONUS * 100))
 	return " · ".join(parts)
 
 
@@ -265,7 +265,7 @@ func morale_tick(d: Dictionary, dt: float, offline: bool) -> void:
 		d["desert_t"] = 0.0
 		d.erase("desert_warn")
 		if not offline:
-			Game.toast.emit("%s หายงอนแล้ว กลับมาทำงาน" % d.name, "good")
+			Game.toast.emit("%s ใจเย็นลงแล้ว เลิกประท้วงกลับมาทำงาน" % d.name, "good")
 		Game.dwellers_changed.emit()
 		return
 	if h < DESERT_AT and not offline:

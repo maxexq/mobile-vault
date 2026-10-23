@@ -79,4 +79,4 @@ func status_text() -> String:
 		return "น้ำหนักเกิน — ความเร็วลดลง"
 	if r > 0.8:
 		return "ใกล้เต็มพิกัด"
-	return "สมดุลดี"
+	return "น้ำหนักกำลังดี"

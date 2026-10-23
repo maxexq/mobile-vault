@@ -36,7 +36,7 @@ const LIGHT := {"hydroponics": 0.4, "science": 0.2, "medical": 0.2, "quarters": 
 ## weather that hides the vault (multiplies the whole rate)
 const MASK := {"storm": 0.6, "fog": 0.6, "sandstorm": 0.5, "snow": 0.8, "rain": 0.85, "ashfall": 0.8}
 
-const PHASE_TH := {"quiet": "เดินทางเงียบ", "warning": "มีสัญญาณ!", "raid": "ถูกบุก", "salvage": "เก็บกวาดซาก"}
+const PHASE_TH := {"quiet": "เงียบสงบ", "warning": "มีวี่แวว!", "raid": "ถูกบุก", "salvage": "เก็บกวาดซาก"}
 const SIGNS := [
 	"พบรอยเท้าสดๆ ข้างทาง… มีอะไรตามมา",
 	"เสียงหอนดังมาจากเนินเขา",

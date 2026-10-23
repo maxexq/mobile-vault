@@ -13,7 +13,7 @@ const TOLL_SHARE := 0.45      # peaceful checkpoint toll = this share of the scr
 const SALVAGE_MIN := 30.0     # peaceful: the idle squad scavenges one scrap cap (= the next Vault upgrade) per this many minutes
 
 const MODES := {
-	"standard": {"th": "เอาชีวิตรอด", "en": "SURVIVAL", "desc": "เกมเต็มรูปแบบ: ศัตรูบุก บอสด่านตรวจ สำรวจ prestige", "ranked": true},
+	"standard": {"th": "เอาชีวิตรอด", "en": "SURVIVAL", "desc": "เกมเต็มรูปแบบ: ศัตรูบุก บอสด่านตรวจ การสำรวจ และการส่งต่อรุ่น", "ranked": true},
 	"peaceful": {"th": "ขบวนสงบ", "en": "PEACEFUL", "desc": "ไม่มีศัตรูบุก ทีมป้องกันออกเก็บเศษเหล็กข้างทางแทน ด่านตรวจเก็บค่าผ่านทางแทนบอส · แต้มวิจัย ×0.5",
 		"features": {"raids": false}, "legacy": 0.5, "ranked": false, "peaceful": true},
 }
@@ -26,10 +26,10 @@ const DIFFS := {
 ## combat = only makes sense with enemies (hidden in peaceful); score = added to the research multiplier
 const MUTATORS := {
 	"fuel_scarce": {"th": "น้ำมันขาดแคลน", "desc": "ได้น้ำมันจากทุกทางครึ่งเดียว", "fuel_gain": 0.5, "score": 0.2},
-	"lean_rations": {"th": "ปันส่วนอด", "desc": "ลูกเรือกินและดื่ม ×1.4", "eat": 1.4, "score": 0.15},
+	"lean_rations": {"th": "เสบียงฝืดเคือง", "desc": "ลูกเรือกินและดื่ม ×1.4", "eat": 1.4, "score": 0.15},
 	"lone_road": {"th": "ถนนเปลี่ยว", "desc": "ไม่มีทีมสำรวจ จุดพิเศษ และคนแปลกหน้า",
 		"features": {"expeditions": false, "encounters": false, "strangers": false}, "score": 0.2},
-	"glass_cannon": {"th": "ปืนแก้ว", "desc": "ทีมป้องกันดาเมจ ×2 แต่เลือด ×0.5", "hero_dmg": 2.0, "hero_hp": 0.5, "score": 0.15, "combat": true},
+	"glass_cannon": {"th": "ตีแรงตัวบาง", "desc": "ทีมป้องกันดาเมจ ×2 แต่เลือด ×0.5", "hero_dmg": 2.0, "hero_hp": 0.5, "score": 0.15, "combat": true},
 	"horde": {"th": "ฝูงคลั่ง", "desc": "ภัยสะสมเร็ว ×1.6 ศัตรูเลือด ×1.2", "threat": 1.6, "enemy_hp": 1.2, "score": 0.25, "combat": true},
 }
 const MUL_KEYS := ["enemy_hp", "enemy_dmg", "threat", "eat", "offline", "fuel_gain", "hero_dmg", "hero_hp"]
