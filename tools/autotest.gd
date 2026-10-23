@@ -639,6 +639,7 @@ func _run() -> void:
 	await _settings_test()
 	_event_variety_test()
 	await _cloud_test()
+	await _cloud_account_test()
 	await _large_room_test()
 	await _features_test()
 	await _modes_test()
@@ -2008,6 +2009,89 @@ func _roof_deck_test() -> void:
 
 
 ## Features: layers, per-event switches / weights / date windows, remote file rules, ?ff=, and every gate
+## Guest -> link Google keeps the same account and save; second device: Google already taken -> switch
+## (conflict between this device's guest run and the account's save) -> sign out back to a fresh guest
+func _cloud_account_test() -> void:
+	var fake = load("res://tools/cloud_fake.gd").new()
+	var opened: Array = []
+	Cloud.navigate_hook = func(to: String): opened.append(to)
+	Cloud.session = {}
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}}
+	Cloud.auth_error = ""
+	Cloud._save_session()
+	Cloud._save_meta()
+	Save.write(_fake_run(20))
+	await Cloud.start_for_test(fake)
+	var guest := Cloud.user_id()
+	_check("account: starts as guest", Cloud.is_guest() and guest != "" and Cloud.account_text().begins_with("Guest"))
+	Features.set_override("features", "google_login", false)
+	_check("account: google_login switch hides Google", not Cloud.can_google())
+	Features.set_override("features", "google_login", null)
+	_check("account: Google available on a top-level page", Cloud.can_google())
+	main.hud.title_screen.modulate.a = 1.0
+	main.hud.title_screen.visible = true
+	await wait(0.2)
+	_check("account: title shows the guest login button", main.hud.title_screen._account_btn.visible and main.hud.title_screen._account_btn.text.contains("Gmail"))
+	await shot("account_title_guest")
+	await Cloud.sign_in_google()
+	_check("account: guest links Google (manual linking URL)", opened.size() == 1 and str(opened[0]).contains("link=" + guest) and str(Cloud.meta.oauth.get("mode", "")) == "link")
+	_check("account: link request is a GET without a body", fake.calls.any(func(c): return str(c).begins_with("/auth/v1/user/identities/authorize")))
+	# the page comes back from Google with the session in the fragment
+	await Cloud._take_oauth_return(fake.google_return(opened[0], "parames@gmail.com"))
+	await Cloud.sync()
+	_check("account: linked, same user id", Cloud.user_id() == guest and not Cloud.is_guest() and Cloud.session.email == "parames@gmail.com")
+	_check("account: the guest save is now the Google save", int(fake.rows[guest].data.meta.gen) == 20 and Cloud.state == Cloud.State.OK and Cloud.meta.oauth.is_empty())
+	_check("account: title shows the email", main.hud.title_screen._account_btn.text.contains("parames@gmail.com"))
+	# another browser: a new guest with its own run, then Google -> already linked to the first account
+	Cloud.session = {}
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}}
+	Cloud._save_session()     # a new browser has nothing stored either
+	Cloud._save_meta()
+	Save.write(_fake_run(30))
+	await Cloud.start_for_test(fake)
+	var guest2 := Cloud.user_id()
+	_check("account: second device is its own guest", guest2 != guest and Cloud.is_guest() and int(fake.rows[guest2].data.meta.gen) == 30)
+	opened.clear()
+	await Cloud.sign_in_google()
+	await Cloud._take_oauth_return(fake.google_return(opened[0], "parames@gmail.com"))
+	_check("account: Google already used -> told, nothing changed", Cloud.link_taken and Cloud.auth_error != "" and Cloud.user_id() == guest2)
+	main.hud.open_settings("data")
+	await wait(0.5)
+	_check("account: settings offers switching to that account", _find_text(main.hud.settings_panel, "สลับไปบัญชี Google"))
+	await shot("account_link_taken")
+	opened.clear()
+	await Cloud.switch_to_google()
+	_check("account: switch signs in (not link)", opened.size() == 1 and str(opened[0]).contains("/auth/v1/authorize?provider=google") and str(opened[0]).contains("redirect_to="))
+	await Cloud._take_oauth_return(fake.google_return(opened[0], "parames@gmail.com"))
+	await Cloud.sync()
+	_check("account: switched to the Google account", Cloud.user_id() == guest and not Cloud.is_guest())
+	_check("account: both runs exist -> player picks", Cloud.state == Cloud.State.CONFLICT and _local_gen() == 30 and int(Cloud.remote.data.meta.gen) == 20)
+	Cloud.use_cloud()
+	_check("account: picked the account's save", _local_gen() == 20 and Cloud.state == Cloud.State.OK)
+	await wait(0.3)
+	await shot("account_google")
+	# a cancelled / failed Google page
+	await Cloud._take_oauth_return("error=access_denied&error_description=The+user+denied")
+	_check("account: Google error shown", Cloud.auth_error.contains("The user denied") and Cloud.user_id() == guest)
+	Cloud.auth_error = ""
+	# sign out: upload first, then a fresh guest with an empty local save; the account keeps its save
+	Save.write(_fake_run(21))
+	var ok: bool = await Cloud.sign_out()
+	_check("account: sign out uploads, then a new guest", ok and Cloud.is_guest() and Cloud.user_id() != guest and Cloud.user_id() != "")
+	_check("account: signed-out device has no save, account keeps it", not Save.has_save() and int(fake.rows[guest].data.meta.gen) == 21)
+	fake.online = false
+	_check("account: guest cannot sign out", not await Cloud.sign_out())
+	fake.online = true
+	main.hud.settings_panel.close()
+	Cloud.navigate_hook = Callable()
+	Save.wipe()
+	Cloud.transport = null
+	Cloud.state = Cloud.State.OFF
+	Cloud.url = ""
+	Cloud.session = {}
+	Cloud.status_changed.emit()
+
+
 func _features_test() -> void:
 	if not Game.started or main.hud.title_screen.visible:
 		# the cloud checks leave the title screen up: start a fresh run so the gates act on a live game

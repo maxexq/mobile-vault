@@ -39,6 +39,7 @@ const FEATURES := {
 	"large_rooms": "ทุบผนังรวมห้องใหญ่",
 	"tutorial": "บทสอนเกมใหม่",
 	"cloud_save": "เซฟบนคลาวด์ (มีผลตอนเปิดเกมครั้งถัดไป)",
+	"google_login": "ล็อกอิน / ผูกบัญชีด้วย Google (ปิด = เล่นแบบ Guest อย่างเดียว)",
 	"modes": "เลือกโหมดตอนเริ่มเกมใหม่ (ปิด = เริ่มโหมดปกติเสมอ)",
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
