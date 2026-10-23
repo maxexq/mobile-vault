@@ -40,6 +40,7 @@ func _run() -> void:
 	Save.wipe()
 	await wait(1.2)
 	await shot("title")
+	_title_backdrop_test()
 	main.hud.title_screen._settings_btn.pressed.emit()
 	await wait(0.6)
 	_check("settings: title menu button opens it", main.hud.settings_panel.is_open and main.hud.settings_panel.visible)
@@ -2478,3 +2479,22 @@ func _modes_test() -> void:
 	Tutorial.skip()
 	_check("modes: switch off = NEW RUN starts standard without the picker", Modes.id() == "standard" and Modes.mutators().is_empty() and Features.on("expeditions"))
 	Dev.feature_set("modes", null)
+
+
+## title screen: the backdrop van drives (wheels turn, engine rumbles) and the menu window stays on screen
+func _title_backdrop_test() -> void:
+	var v: Node = main.vehicle
+	_check("title: van wheels turn", v.wheels.size() > 0 and v.wheels[0].is_playing())
+	var ys := {}
+	for i in 30:
+		await get_tree().process_frame
+		ys[v.body.position.y] = true
+	_check("title: engine rumble moves the body", ys.size() >= 2)
+	var p: Control = main.hud.title_screen._panel
+	var vp: Rect2 = main.hud.title_screen.get_viewport_rect()
+	_check("title: menu window inside the screen", vp.encloses(p.get_rect()))
+	main.hud.title_screen._account_btn.visible = true
+	main.hud.title_screen._account_btn.text = "Guest · ล็อกอินด้วย Gmail เพื่อเล่นต่อข้ามเครื่องได้ทุกที่"
+	await wait(0.2)
+	_check("title: window re-fits after it grows", vp.encloses(p.get_rect()))
+	main.hud.title_screen._refresh_account()

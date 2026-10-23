@@ -43,7 +43,7 @@ func _ready() -> void:
 	v.add_child(_log)
 	_menu = UIKit.vbox(4)
 	v.add_child(_menu)
-	var t1 := UIKit.label("รถบ้านหุ้มเกราะคันสุดท้ายกำลังรอคำสั่ง", UIKit.FS, UIKit.C_TEXT)
+	var t1 := UIKit.wrap_label("รถบ้านหุ้มเกราะคันสุดท้ายกำลังรอคำสั่ง", UIKit.FS, UIKit.C_TEXT)
 	t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu.add_child(t1)
 	_continue = UIKit.button("เดินทางต่อ  CONTINUE", "green", "play")
@@ -76,6 +76,9 @@ func _ready() -> void:
 	_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pick_scroll.add_child(_picker)
 	get_viewport().size_changed.connect(_layout)
+	# the boot log types itself out and the account line / UI scale can change after _ready: re-place the
+	# window whenever it grows so it never runs off the screen edge
+	_panel.minimum_size_changed.connect(_layout, CONNECT_DEFERRED)
 	_layout()
 
 
@@ -114,6 +117,7 @@ func _layout() -> void:
 		_panel.position = Vector2(floorf((vp.x - _panel.size.x) * 0.5), floorf(vp.y - _panel.size.y - 24))
 	else:
 		_panel.position = Vector2(floorf(vp.x - _panel.size.x - 16), floorf((vp.y - _panel.size.y) * 0.5))
+	_panel.position = _panel.position.clamp(Vector2(4, 4), (vp - _panel.size - Vector2(4, 4)).max(Vector2(4, 4)))
 
 
 # ------------------------------------------------------------------ rules picker
