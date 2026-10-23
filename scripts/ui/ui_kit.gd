@@ -200,6 +200,28 @@ static func label(text: String, size: int = FS, color: Color = C_TEXT, pixel: bo
 	return l
 
 
+## game logo: true-pixel APO[CAR]LYPSE plate with the MOBILE VAULT subtitle (assets/ui/logo.png, 192x60,
+## pixelized from the picked AI art), drawn 1:1 so it stays on the pixel grid; caption = optional pixel line under it
+const LOGO := preload("res://assets/ui/logo.png")
+
+
+static func logo(caption: String = "") -> VBoxContainer:
+	var v := vbox(2)
+	var r := TextureRect.new()
+	r.texture = LOGO
+	r.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	r.custom_minimum_size = LOGO.get_size()
+	r.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.tooltip_text = BuildInfo.GAME_NAME
+	v.add_child(r)
+	if caption != "":
+		var l := label(caption, FP, C_GOLD, true)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(l)
+	return v
+
+
 ## bold Thai heading line with a pixel EN tag, e.g. "> CRAFTING  การผลิต"
 static func header(en: String, th: String = "", color: Color = C_GOLD) -> HBoxContainer:
 	var h := hbox(4)

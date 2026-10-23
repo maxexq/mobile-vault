@@ -86,15 +86,13 @@ def main():
 
     d = ImageDraw.Draw(img)
     d.fontmode = "1"                                  # no anti-aliasing: hard pixel edges
-    title = ImageFont.truetype(os.path.join(FONTS, "Silkscreen-Regular.ttf"), 40)
     small = ImageFont.truetype(os.path.join(FONTS, "Silkscreen-Regular.ttf"), 8)
     thai = ImageFont.truetype(os.path.join(FONTS, "ChakraPetch-Bold.ttf"), 22)
     thai_s = ImageFont.truetype(os.path.join(FONTS, "ChakraPetch-SemiBold.ttf"), 13)
 
-    emblem = get("emblem").resize((48, 48), Image.NEAREST)
-    img.alpha_composite(emblem, (22, 26))
-    text(d, (80, 22), "MOBILE", title, AMBER)
-    text(d, (80, 60), "VAULT", title, AMBER)
+    # the game logo (assets/ui/logo.png, same as the title screen), 1:1 on the small canvas
+    logo = Image.open(os.path.join(ROOT, "assets", "ui", "logo.png")).convert("RGBA")
+    img.alpha_composite(logo, (20, 26))
     text(d, (24, 112), "เอาชีวิตรอดบนรถป้อมเหล็ก", thai, BONE)
     text(d, (24, 142), "idle survival · สร้างห้อง จ้างผู้รอดชีวิต", thai_s, BONE)
     text(d, (24, 160), "ยิงซอมบี้ แล้วขับฝ่าดินแดนรกร้าง", thai_s, BONE)

@@ -39,20 +39,14 @@ func _ready() -> void:
 	add_child(_panel)
 	var v := UIKit.vbox(6)
 	_panel.add_child(v)
-	var head := UIKit.hbox(6)
-	head.add_child(UIKit.icon_rect("emblem", 24))
-	var hv := UIKit.vbox(0)
-	hv.add_child(UIKit.label("MOBILE VAULT", 18, UIKit.C_LINE, true))
-	hv.add_child(UIKit.label("PROJECT: SURVIVAL", UIKit.FP, UIKit.C_GOLD, true))
-	head.add_child(hv)
-	v.add_child(head)
+	v.add_child(UIKit.logo())
 	v.add_child(UIKit.divider(UIKit.C_LINE_DIM))
 	_log = UIKit.label("", UIKit.FP, UIKit.C_DIM, true)
 	_log.custom_minimum_size.y = 52
 	v.add_child(_log)
 	_menu = UIKit.vbox(4)
 	v.add_child(_menu)
-	var t1 := UIKit.label("รถบ้านหุ้มเกราะคันสุดท้ายกำลังรอคำสั่ง", UIKit.FS, UIKit.C_TEXT)
+	var t1 := UIKit.wrap_label("รถบ้านหุ้มเกราะคันสุดท้ายกำลังรอคำสั่ง", UIKit.FS, UIKit.C_TEXT)
 	t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu.add_child(t1)
 	_continue = UIKit.button("เดินทางต่อ  CONTINUE", "green", "play")
@@ -86,6 +80,9 @@ func _ready() -> void:
 	_pick_scroll.add_child(_picker)
 	_refresh_account()
 	get_viewport().size_changed.connect(_layout)
+	# the boot log types itself out and the account line / UI scale can change after _ready: re-place the
+	# window whenever it grows so it never runs off the screen edge
+	_panel.minimum_size_changed.connect(_layout, CONNECT_DEFERRED)
 	_layout()
 
 
@@ -154,6 +151,7 @@ func _layout() -> void:
 		_panel.position = Vector2(floorf((vp.x - _panel.size.x) * 0.5), floorf(vp.y - _panel.size.y - 24))
 	else:
 		_panel.position = Vector2(floorf(vp.x - _panel.size.x - 16), floorf((vp.y - _panel.size.y) * 0.5))
+	_panel.position = _panel.position.clamp(Vector2(4, 4), (vp - _panel.size - Vector2(4, 4)).max(Vector2(4, 4)))
 
 
 # ------------------------------------------------------------------ rules picker
