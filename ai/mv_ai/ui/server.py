@@ -7,12 +7,14 @@ import json
 import threading
 import time
 import uuid
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from langgraph.types import Command
 
 from ..config import Config
+from ..llms import ClaudeLLM, GeminiLLM, LocalLLM
 from ..team import build_team
 
 STATIC = Path(__file__).parent / "static"
@@ -40,15 +42,17 @@ def cost(usage: dict) -> float:
     """Claude turns only; Gemini/Qwen single shots report no usage. Fallback models are priced as Opus."""
     if not usage or not (usage.get("input") or usage.get("output")):
         return 0.0
+    if not str(usage.get("model", "")).startswith("claude"):
+        return 0.0  # local model: runs on your own machine
     p = PRICES.get(usage.get("model", ""), PRICES["claude-opus-5-5"])
     return (usage.get("input", 0) * p[0] + usage.get("output", 0) * p[1]
             + usage.get("cache_read", 0) * p[2] + usage.get("cache_write", 0) * p[3]) / 1e6
 
 
 class Run:
-    def __init__(self, task: str, auto_approve: bool):
+    def __init__(self, task: str, auto_approve: bool, team: str = "claude"):
         self.id = uuid.uuid4().hex[:8]
-        self.task, self.auto = task, auto_approve
+        self.task, self.auto, self.team_mode = task, auto_approve, team
         self.status = "running"
         self.started = time.time()
         self.events: list[dict] = []
@@ -105,7 +109,7 @@ class Run:
                 a["state"] = "done"
         if self.pending:
             agents[self.pending["agent"]]["state"] = "waiting"
-        return {"id": self.id, "task": self.task, "status": self.status, "auto": self.auto,
+        return {"id": self.id, "task": self.task, "status": self.status, "auto": self.auto, "team": self.team_mode,
                 "elapsed": round(time.time() - self.started, 1), "pending": self.pending,
                 "report": self.report, "agents": agents,
                 "cost": round(sum(a["cost"] for a in agents.values()), 4), "events": len(self.events)}
@@ -114,11 +118,23 @@ class Run:
 class Hub:
     def __init__(self, cfg: Config, make_team=None):
         self.cfg = cfg
-        self.make_team = make_team or (lambda run: build_team(cfg, auto_approve=run.auto, emit=run.emit))
+        self.make_team = make_team or (lambda run: build_team(replace(cfg, team=run.team_mode),
+                                                              auto_approve=run.auto, emit=run.emit))
         self.runs: dict[str, Run] = {}
 
-    def start(self, task: str, auto_approve: bool) -> Run:
-        run = Run(task, auto_approve)
+    def info(self) -> dict:
+        """Which team setups can run right now, for the picker in the page."""
+        c = self.cfg
+        return {"default": c.team, "teams": {
+            "claude": {"label": "Claude + Gemini", "ready": ClaudeLLM(c).available(),
+                       "models": {"lead": c.claude_model, "coder": c.claude_model, "tester": c.claude_model,
+                                  "analyst": c.gemini_model if GeminiLLM(c).available() else c.claude_model,
+                                  "writer": c.local_model}},
+            "local": {"label": f"Local ({c.local_model})", "ready": LocalLLM(c).available(),
+                      "models": {a: c.local_model for a in AGENTS}}}}
+
+    def start(self, task: str, auto_approve: bool, team: str | None = None) -> Run:
+        run = Run(task, auto_approve, team if team in ("claude", "local") else self.cfg.team)
         self.runs[run.id] = run
         run.team = self.make_team(run)
         run.conf = {"configurable": {"thread_id": run.id}, "recursion_limit": 1000}
@@ -196,6 +212,8 @@ def make_handler(hub: Hub):
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
+            elif path == "/api/info":
+                self._json(hub.info())
             elif path == "/api/runs":
                 self._json([r.summary() | {"events": len(r.events)} for r in reversed(hub.runs.values())])
             elif path.startswith("/api/runs/"):
@@ -220,7 +238,7 @@ def make_handler(hub: Hub):
                 task = str(body.get("task", "")).strip()
                 if not task:
                     return self._json({"error": "task is empty"}, 400)
-                return self._json(hub.start(task, bool(body.get("auto_approve"))).summary())
+                return self._json(hub.start(task, bool(body.get("auto_approve")), body.get("team")).summary())
             if len(parts) == 4 and parts[:2] == ["api", "runs"] and parts[2] in hub.runs:
                 run = hub.runs[parts[2]]
                 if parts[3] == "approve":

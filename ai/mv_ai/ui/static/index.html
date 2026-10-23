@@ -164,6 +164,8 @@ details > summary::-webkit-details-marker { display: none; }
 .crow .grow { flex: 1; }
 .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; }
 .toggle input { accent-color: var(--accent); }
+.teamsel { font: inherit; font-size: 12.5px; color: var(--muted); background: var(--surface2); border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; max-width: 190px; }
+.teamsel:disabled { opacity: .7; }
 .send { width: 34px; height: 34px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); font-size: 17px; font-weight: 700; display: grid; place-items: center; }
 .send:disabled { opacity: .35; cursor: default; }
 .send.stop { background: var(--text); color: var(--bg); font-size: 12px; }
@@ -240,6 +242,7 @@ body.side-open .scrim, body.drawer-open .scrim { display: block; position: fixed
     <div class="cbox">
       <textarea id="input" rows="1" placeholder="สั่งงานทีม เช่น เพิ่ม event ใหม่ในไบโอมทะเลทราย..."></textarea>
       <div class="crow">
+        <select class="teamsel" id="teamsel" title="เลือกโมเดลที่ทีมใช้ในงานนี้"></select>
         <label class="toggle" title="ให้แก้ไฟล์ได้เลยโดยไม่ต้องถาม"><input type="checkbox" id="auto"> อนุมัติอัตโนมัติ</label>
         <span class="grow"></span>
         <button class="send" id="send" title="ส่ง (Enter)" disabled>↑</button>
@@ -259,13 +262,18 @@ body.side-open .scrim, body.drawer-open .scrim { display: block; position: fixed
 const AGENTS = ["lead", "coder", "tester", "analyst", "writer"];
 const NAME = { lead: "หัวหน้า", coder: "Coder", tester: "Tester", analyst: "Analyst", writer: "Writer" };
 const INIT = { lead: "L", coder: "C", tester: "T", analyst: "A", writer: "W" };
-const ROLE = {
-  lead: "ผู้พัฒนาหลัก วางแผนและสั่งงาน · Opus 5.5",
-  coder: "เขียน/แก้โค้ด GDScript · Opus 5.5",
-  tester: "รัน autotest และ balance · Opus 5.5",
-  analyst: "วิเคราะห์ทั้ง repo และภาพหน้าจอ · Gemini 4 Argon",
-  writer: "lore, เนื้อเรื่อง, ตรวจคำแปล · gemma4:12b",
+const ROLE_DESC = {
+  lead: "ผู้พัฒนาหลัก วางแผนและสั่งงาน",
+  coder: "เขียน/แก้โค้ด GDScript",
+  tester: "รัน autotest และ balance",
+  analyst: "วิเคราะห์ทั้ง repo และภาพหน้าจอ",
+  writer: "lore, เนื้อเรื่อง, ตรวจคำแปล",
 };
+let INFO = { default: "claude", teams: {
+  claude: { label: "Claude + Gemini", ready: true, models: { lead: "claude-opus-5-5", coder: "claude-opus-5-5", tester: "claude-opus-5-5", analyst: "gemini-4-argon", writer: "gemma4:12b" } },
+  local: { label: "Local", ready: true, models: {} } } };
+const teamOf = () => (S.sum && S.sum.team) || $("teamsel").value || INFO.default;
+const ROLE = new Proxy({}, { get: (_, a) => ROLE_DESC[a] + " · " + modelName((INFO.teams[teamOf()] || INFO.teams.claude).models[a]) });
 const TOOL_ICON = { list_files: "📁", read_file: "📄", search_code: "🔎", write_file: "📝", edit_file: "✏️",
   git_diff: "±", run_autotest: "🧪", run_balance: "⚖️" };
 const STATUS = { running: "กำลังทำงาน", waiting: "รออนุมัติ", done: "เสร็จแล้ว", error: "ผิดพลาด", cancelled: "ยกเลิกแล้ว" };
@@ -326,7 +334,8 @@ function target(input) {
     || (input.minutes ? input.minutes + " นาที" + (input.mode ? " " + input.mode : "") : "");
 }
 function modelName(m) {
-  return { opus: "Opus 5.5", gemini: "Gemini 4 Argon", local: "gemma4:12b" }[m] || (m || "").replace("claude-opus-5-5", "Opus 5.5");
+  if (m === "local") return (INFO.teams.local.models.lead) || "local";
+  return { opus: "Opus 5.5", gemini: "Gemini 4 Argon", "gemini-4-argon": "Gemini 4 Argon" }[m] || (m || "").replace("claude-opus-5-5", "Opus 5.5");
 }
 const raw = (v) => typeof v === "string" ? v : JSON.stringify(v, null, 2);
 
@@ -468,7 +477,7 @@ function stepHTML(s, forceOpen) {
 function heroHTML() {
   const team = AGENTS.map((a) => `<span class="mini"><span class="av ${a}" style="width:20px;height:20px;font-size:10px">${INIT[a]}</span>${esc(NAME[a])}</span>`).join("");
   return `<div class="hero"><h1><span class="spark">✻</span> วันนี้ให้ทีมช่วยอะไรดี?</h1>
-    <p>หัวหน้า (Opus 5.5) จะวางแผน แบ่งงานให้ทีม และขออนุมัติก่อนแก้ไฟล์ทุกครั้ง</p>
+    <p>หัวหน้า (${esc(modelName((INFO.teams[teamOf()] || INFO.teams.claude).models.lead))}) จะวางแผน แบ่งงานให้ทีม และขออนุมัติก่อนแก้ไฟล์ทุกครั้ง</p>
     <div class="ideas">${IDEAS.map((t) => `<button class="idea">${esc(t)}</button>`).join("")}</div>
     <div class="team-row">${team}</div></div>`;
 }
@@ -554,6 +563,10 @@ function renderTop() {
   send.textContent = active ? "■" : "↑";
   send.title = active ? "หยุดงานนี้" : "ส่ง (Enter)";
   send.disabled = !active && !$("input").value.trim();
+  const sel = $("teamsel");
+  if (s && s.team && sel.value !== s.team) sel.value = s.team;
+  sel.disabled = !!s;
+  sel.title = s ? "งานนี้ใช้ทีมนี้ (งานใหม่ค่อยเลือกใหม่)" : "เลือกโมเดลที่ทีมใช้ในงานนี้";
   $("input").placeholder = s && !active ? "ถามต่อหรือสั่งงานเพิ่มในงานนี้..." : "สั่งงานทีม เช่น เพิ่ม event ใหม่ในไบโอมทะเลทราย...";
 }
 
@@ -592,7 +605,19 @@ async function poll() {
 async function pollRuns() {
   try { S.runs = await api("/api/runs"); renderRuns(); } catch (e) { console.warn(e); }
 }
+function fillTeams() {
+  const sel = $("teamsel"), keep = store.get("mv-team");
+  sel.innerHTML = Object.entries(INFO.teams).map(([k, t]) =>
+    `<option value="${k}"${t.ready ? "" : " disabled"}>👥 ${esc(t.label)}${t.ready ? "" : " (ยังไม่พร้อม)"}</option>`).join("");
+  const ready = (k) => INFO.teams[k] && INFO.teams[k].ready;
+  sel.value = ready(keep) ? keep : ready(INFO.default) ? INFO.default : (Object.keys(INFO.teams).find(ready) || INFO.default);
+}
+async function loadInfo() {
+  try { INFO = await api("/api/info"); } catch (e) { console.warn(e); }
+  fillTeams();
+}
 function select(id) {
+  if (!id && S.sum) { const k = store.get("mv-team"); if (k && INFO.teams[k] && INFO.teams[k].ready) $("teamsel").value = k; }
   S.cur = id; S.events = []; S.sum = null; S.detail = null; S.open.clear(); S.closed.clear();
   if (id) location.hash = id; else history.replaceState(null, "", location.pathname);
   document.body.classList.remove("side-open");
@@ -609,7 +634,7 @@ async function submit() {
       const r = await api(`/api/runs/${s.id}/message`, { text });
       if (r.ok) { S.sum.status = "running"; render(); return poll(); }
     }
-    const run = await api("/api/runs", { task: text, auto_approve: $("auto").checked });
+    const run = await api("/api/runs", { task: text, auto_approve: $("auto").checked, team: $("teamsel").value });
     await pollRuns(); select(run.id);
   } catch (e) { alertBox(e.message); }
 }
@@ -655,6 +680,7 @@ $("theme").addEventListener("click", () => {
   const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   document.documentElement.dataset.theme = dark ? "light" : "dark"; store.set("mv-theme", document.documentElement.dataset.theme);
 });
+$("teamsel").addEventListener("change", () => { store.set("mv-team", $("teamsel").value); render(); });
 $("auto").addEventListener("change", () => store.set("mv-auto", $("auto").checked ? "1" : "0"));
 
 /* ---------- boot ---------- */
@@ -664,7 +690,7 @@ $("auto").addEventListener("change", () => store.set("mv-auto", $("auto").checke
   if (store.get("mv-drawer") === "1" && innerWidth > 1100) setDrawer(true);
   const p = new URLSearchParams(location.search);
   if (p.get("theme")) document.documentElement.dataset.theme = p.get("theme");
-  pollRuns().then(() => select(location.hash.slice(1) || null));
+  Promise.all([loadInfo(), pollRuns()]).then(() => select(location.hash.slice(1) || null));
   setInterval(poll, 800); setInterval(pollRuns, 3000); setInterval(tick, 1000);
 })();
 </script>
