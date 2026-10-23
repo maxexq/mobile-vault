@@ -147,6 +147,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
 
     def call_claude(agent, system, messages, tool_defs, effort, one=False):
         t = time.time()
+        emit(agent, "llm_start", {"model": cfg.claude_model, "effort": effort})
         blocks, stop, usage = claude(system, messages, tool_defs, effort, one)
         emit(agent, "llm", {"model": usage.get("model", cfg.claude_model), "effort": effort, "stop": stop,
                             "blocks": blocks, "usage": usage, "ms": int((time.time() - t) * 1000)})
@@ -229,6 +230,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
         agent = state["pending"]["agent"]
         for c in calls:
             res = {"type": "tool_result", "tool_use_id": c["id"]}
+            emit(agent, "tool_start", {"name": c["name"], "input": c.get("input")})
             t = time.time()
             try:
                 if c["name"] in NEEDS_APPROVAL and not approved:
@@ -248,6 +250,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
         order = {"gemini": ("gemini", "opus"), "local": ("local", "opus")}[model]
         for name in order:
             if llms[name].available():
+                emit(agent, "llm_start", {"model": name, "images": len(images or [])})
                 t = time.time()
                 ans = llms[name].complete(system, prompt, images) if images and name == "gemini" \
                     else llms[name].complete(system, prompt)

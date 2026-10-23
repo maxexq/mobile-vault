@@ -3,227 +3,670 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Agent Team · Mobile Vault</title>
+<title>Vault Agents</title>
 <style>
 :root {
-  --bg: #121110; --panel: #1b1a18; --panel2: #23211e; --line: #34312c;
-  --text: #e8e2d6; --muted: #9a9385; --accent: #d9822b; --ok: #6fbf73; --bad: #e0605a; --warn: #e3b341;
-  --lead: #d9822b; --coder: #5aa9e6; --tester: #6fbf73; --analyst: #b48ce6; --writer: #e3b341;
+  --bg: #faf9f5; --side: #f3f1ea; --surface: #ffffff; --surface2: #f5f3ec; --line: #e5e1d6; --line2: #d6d1c4;
+  --text: #2b2a27; --muted: #7b776c; --faint: #a39e91; --accent: #c4673f; --accent-ink: #ffffff;
+  --ok: #3f8f4f; --bad: #c2483f; --warn: #b7862a; --code: #f0ede4;
+  --lead: #c4673f; --coder: #3d7cc9; --tester: #3f8f4f; --analyst: #8a5cc7; --writer: #b7862a;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  --serif: "Iowan Old Style", Georgia, "Noto Serif Thai", serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", "Leelawadee UI", sans-serif;
   --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #262624; --side: #1f1e1d; --surface: #30302e; --surface2: #2b2a28; --line: #3d3c39; --line2: #4a4844;
+  --text: #ecebe6; --muted: #a8a59c; --faint: #7b786f; --accent: #d97757; --accent-ink: #1f1e1d;
+  --ok: #7cc489; --bad: #e57d74; --warn: #e0b45a; --code: #1f1e1d;
+  --lead: #d97757; --coder: #6ea8ec; --tester: #7cc489; --analyst: #b48ce6; --writer: #e0b45a;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #262624; --side: #1f1e1d; --surface: #30302e; --surface2: #2b2a28; --line: #3d3c39; --line2: #4a4844;
+  --text: #ecebe6; --muted: #a8a59c; --faint: #7b786f; --accent: #d97757; --accent-ink: #1f1e1d;
+  --ok: #7cc489; --bad: #e57d74; --warn: #e0b45a; --code: #1f1e1d;
+  --lead: #d97757; --coder: #6ea8ec; --tester: #7cc489; --analyst: #b48ce6; --writer: #e0b45a;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, "Segoe UI", "Noto Sans Thai", sans-serif; }
-header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
-header h1 { font-size: 16px; margin: 0; letter-spacing: .5px; }
-header .sp { flex: 1; }
-.pill { padding: 2px 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
-.pill.running { color: var(--accent); border-color: var(--accent); }
-.pill.waiting { color: var(--warn); border-color: var(--warn); }
-.pill.done { color: var(--ok); border-color: var(--ok); }
-.pill.error, .pill.cancelled { color: var(--bad); border-color: var(--bad); }
-main { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 49px); }
-aside { border-right: 1px solid var(--line); padding: 14px; overflow: auto; background: var(--panel); }
-section { padding: 14px 16px; overflow: auto; }
-textarea { width: 100%; min-height: 120px; resize: vertical; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
-button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
-button:hover { border-color: var(--accent); }
-button.primary { background: var(--accent); border-color: var(--accent); color: #1a1208; font-weight: 600; }
-button.ok { border-color: var(--ok); color: var(--ok); }
-button.bad { border-color: var(--bad); color: var(--bad); }
-label { color: var(--muted); font-size: 13px; }
-.row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
-.runs { margin-top: 18px; }
-.runs h2, h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .6px; }
-.run { padding: 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; cursor: pointer; }
-.run.sel { border-color: var(--accent); }
-.run .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.run .m { color: var(--muted); font-size: 12px; }
-.agents { display: grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap: 8px; margin-bottom: 14px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: 6px; padding: 8px 10px; cursor: pointer; }
-.card.on { outline: 1px solid var(--c); }
-.card .n { font-weight: 600; display: flex; justify-content: space-between; }
-.card .s { font-size: 11px; color: var(--muted); }
-.card .s.working { color: var(--accent); } .card .s.waiting { color: var(--warn); } .card .s.done { color: var(--ok); }
-.card .k { font-size: 12px; color: var(--muted); font-family: var(--mono); }
-.approval { border: 1px solid var(--warn); border-radius: 6px; padding: 10px; margin-bottom: 14px; background: #2a2415; }
-pre { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 8px; overflow: auto; max-height: 420px; white-space: pre-wrap; word-break: break-word; font: 12px/1.45 var(--mono); margin: 6px 0; }
-.report { border: 1px solid var(--ok); border-radius: 6px; padding: 10px; margin-bottom: 14px; white-space: pre-wrap; }
-.report.err { border-color: var(--bad); }
-.ev { border-left: 3px solid var(--c); background: var(--panel); margin-bottom: 4px; border-radius: 0 6px 6px 0; }
-.ev > .h { display: grid; grid-template-columns: 52px 64px 96px 1fr; gap: 8px; padding: 5px 8px; cursor: pointer; align-items: baseline; }
-.ev > .h .tm { color: var(--muted); font: 12px var(--mono); }
-.ev > .h .ag { color: var(--c); font-weight: 600; }
-.ev > .h .kd { color: var(--muted); font-size: 12px; }
-.ev > .h .sm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ev .b { display: none; padding: 0 10px 8px; }
-.ev.open .b { display: block; }
-.ev .b h3 { font-size: 12px; color: var(--muted); margin: 8px 0 0; font-weight: 600; }
-.err { color: var(--bad); }
-.empty { color: var(--muted); padding: 40px; text-align: center; }
-@media (max-width: 900px) {
-  main { grid-template-columns: 1fr; height: auto; }
-  aside { border-right: 0; border-bottom: 1px solid var(--line); }
-  .agents { grid-template-columns: repeat(2, 1fr); }
-  .ev > .h { grid-template-columns: 52px 64px 1fr; } .ev > .h .kd { display: none; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--sans); display: flex; overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+pre, code { font-family: var(--mono); }
+.iconbtn { background: none; border: 0; border-radius: 8px; padding: 6px 9px; color: var(--muted); font-size: 16px; line-height: 1; }
+.iconbtn:hover { background: var(--surface2); color: var(--text); }
+
+/* sidebar */
+#side { width: 268px; flex: none; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 10px; font: 600 18px var(--serif); }
+.brand .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 15px; }
+.newbtn { margin: 4px 12px 12px; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line2); background: var(--surface); box-shadow: var(--shadow); font-weight: 500; }
+.newbtn:hover { border-color: var(--accent); }
+.side-h { padding: 6px 18px; font-size: 12px; color: var(--faint); letter-spacing: .02em; }
+#runs { flex: 1; overflow-y: auto; padding: 0 8px; }
+.runitem { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
+.runitem:hover { background: var(--surface2); }
+.runitem.on { background: var(--surface); box-shadow: var(--shadow); }
+.runitem .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--faint); }
+.dot.running { background: var(--accent); animation: pulse 1.2s infinite; }
+.dot.waiting { background: var(--warn); animation: pulse 1.2s infinite; }
+.dot.done { background: var(--ok); } .dot.error { background: var(--bad); } .dot.cancelled { background: var(--faint); }
+@keyframes pulse { 50% { opacity: .35; } }
+.side-foot { padding: 10px 12px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.side-foot .grow { flex: 1; }
+
+/* main */
+#main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#top { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid transparent; }
+#top.scrolled { border-color: var(--line); }
+#title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.running { color: var(--accent); border-color: var(--accent); }
+.chip.waiting { color: var(--warn); border-color: var(--warn); }
+.chip.done { color: var(--ok); border-color: var(--ok); }
+.chip.error { color: var(--bad); border-color: var(--bad); }
+#scroll { flex: 1; overflow-y: auto; }
+#conv { max-width: 780px; margin: 0 auto; padding: 18px 20px 40px; }
+
+/* hero */
+.hero { text-align: center; padding: 12vh 0 24px; }
+.hero h1 { font: 400 34px/1.25 var(--serif); margin: 0 0 8px; }
+.hero h1 .spark { color: var(--accent); }
+.hero p { color: var(--muted); margin: 0 0 26px; }
+.ideas { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.idea { border: 1px solid var(--line2); background: var(--surface); border-radius: 999px; padding: 7px 14px; font-size: 13.5px; color: var(--muted); }
+.idea:hover { color: var(--text); border-color: var(--accent); }
+.team-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 30px; }
+.mini { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); border: 1px dashed var(--line2); border-radius: 10px; padding: 6px 10px; }
+
+/* messages */
+.msg-user { display: flex; justify-content: flex-end; margin: 22px 0 14px; }
+.msg-user .b { background: var(--surface2); border: 1px solid var(--line); border-radius: 18px 18px 4px 18px; padding: 10px 16px; max-width: 85%; white-space: pre-wrap; word-wrap: break-word; }
+.lead-line { display: flex; gap: 12px; margin: 10px 0; }
+.av { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 600; color: #fff; }
+.av.lead { background: var(--lead); } .av.coder { background: var(--coder); } .av.tester { background: var(--tester); }
+.av.analyst { background: var(--analyst); } .av.writer { background: var(--writer); }
+.lead-body { flex: 1; min-width: 0; }
+.prose { word-wrap: break-word; }
+.prose p { margin: 0 0 10px; } .prose p:last-child { margin-bottom: 0; }
+.prose h1, .prose h2, .prose h3 { font: 600 17px/1.4 var(--serif); margin: 14px 0 6px; }
+.prose ul, .prose ol { margin: 4px 0 10px; padding-left: 22px; }
+.prose code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+.prose pre { background: var(--code); border: 1px solid var(--line); padding: 10px 12px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; }
+.prose pre code { background: none; padding: 0; }
+details > summary { cursor: pointer; list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+.think { margin: 4px 0 8px; }
+.think > summary { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); padding: 3px 8px 3px 4px; border-radius: 6px; }
+.think > summary:hover { background: var(--surface2); }
+.think > summary::after { content: "›"; transition: transform .15s; }
+.think[open] > summary::after { transform: rotate(90deg); }
+.think .tx { border-left: 2px solid var(--line2); margin: 6px 0 6px 8px; padding: 2px 0 2px 14px; color: var(--muted); font-size: 13.5px; white-space: pre-wrap; }
+
+/* step cards */
+.step { margin: 10px 0 12px 40px; border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line2)); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.step.coder { --c: var(--coder); } .step.tester { --c: var(--tester); } .step.analyst { --c: var(--analyst); } .step.writer { --c: var(--writer); } .step.lead { --c: var(--lead); }
+.step > summary { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.step > summary:hover { background: var(--surface2); }
+.step .who { font-weight: 600; color: var(--c); white-space: nowrap; }
+.step .sub { flex: 1; min-width: 0; color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step .st { font-size: 13px; white-space: nowrap; color: var(--muted); }
+.step .st.ok { color: var(--ok); } .step .st.err { color: var(--bad); } .step .st.wait { color: var(--warn); }
+.step .chev { color: var(--faint); transition: transform .15s; }
+.step[open] .chev { transform: rotate(90deg); }
+.step .inner { border-top: 1px solid var(--line); padding: 10px 14px 12px; }
+.step .task { font-size: 13.5px; background: var(--surface2); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; white-space: pre-wrap; }
+.step .task b { color: var(--muted); font-weight: 500; font-size: 12px; display: block; }
+.spin { width: 13px; height: 13px; border: 2px solid var(--line2); border-top-color: var(--c, var(--accent)); border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; vertical-align: -2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.live { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--c, var(--accent)); padding: 6px 0 2px; }
+.live .el { color: var(--faint); font-variant-numeric: tabular-nums; }
+.it { margin: 6px 0; font-size: 13.5px; }
+.it.meta { font-size: 12px; color: var(--faint); }
+.it.text { white-space: pre-wrap; }
+.tool { border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; background: var(--bg); }
+.tool > summary { display: flex; align-items: center; gap: 8px; padding: 5px 10px; font-size: 13px; }
+.tool .nm { font-family: var(--mono); font-size: 12.5px; }
+.tool .tg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.tool .ms { color: var(--faint); font-size: 12px; }
+.tool.err .nm { color: var(--bad); }
+.tool pre { margin: 0; border-top: 1px solid var(--line); padding: 8px 10px; font-size: 12px; max-height: 340px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+.tool .lbl { font-size: 11px; color: var(--faint); padding: 6px 10px 0; border-top: 1px solid var(--line); }
+.tool .lbl + pre { border-top: 0; }
+.result { margin-top: 8px; border-top: 1px dashed var(--line2); padding-top: 8px; }
+.result .h { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+/* approval */
+.approve { margin: 10px 0; border: 1px solid var(--warn); border-radius: 12px; background: color-mix(in srgb, var(--warn) 8%, var(--surface)); padding: 12px 14px; }
+.approve .h { font-weight: 600; margin-bottom: 6px; }
+.approve pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; max-height: 320px; overflow: auto; white-space: pre-wrap; margin: 6px 0; }
+.approve .acts { display: flex; gap: 8px; margin-top: 8px; }
+.btn { border: 1px solid var(--line2); background: var(--surface); padding: 7px 16px; border-radius: 9px; font-weight: 500; }
+.btn.pri { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:hover { filter: brightness(1.05); }
+.decided { font-size: 13px; color: var(--muted); margin: 6px 0; }
+.final { margin: 16px 0 4px; }
+.errbox { margin: 12px 0 12px 40px; border: 1px solid var(--bad); color: var(--bad); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; white-space: pre-wrap; }
+.typing { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13.5px; margin: 10px 0; }
+.typing .dots span { display: inline-block; width: 6px; height: 6px; margin: 0 1.5px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s infinite; }
+.typing .dots span:nth-child(2) { animation-delay: .15s; } .typing .dots span:nth-child(3) { animation-delay: .3s; }
+@keyframes bounce { 0%, 60%, 100% { transform: none; opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+/* composer */
+#composer { flex: none; padding: 0 20px 16px; }
+.cbox { max-width: 780px; margin: 0 auto; border: 1px solid var(--line2); background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 12px 12px 8px 16px; }
+.cbox:focus-within { border-color: var(--accent); }
+#input { width: 100%; border: 0; outline: 0; background: none; resize: none; font: inherit; color: var(--text); max-height: 220px; min-height: 26px; }
+.crow { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.crow .grow { flex: 1; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; }
+.toggle input { accent-color: var(--accent); }
+.send { width: 34px; height: 34px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); font-size: 17px; font-weight: 700; display: grid; place-items: center; }
+.send:disabled { opacity: .35; cursor: default; }
+.send.stop { background: var(--text); color: var(--bg); font-size: 12px; }
+.hint { max-width: 780px; margin: 6px auto 0; text-align: center; font-size: 11.5px; color: var(--faint); }
+
+/* agents drawer */
+#drawer { width: 340px; flex: none; border-left: 1px solid var(--line); background: var(--side); display: flex; flex-direction: column; }
+#drawer.wide { width: 520px; }
+#drawer.hide { display: none; }
+.dh { display: flex; align-items: center; gap: 8px; padding: 14px 14px 8px; font-weight: 600; }
+.dh .grow { flex: 1; }
+#dbody { flex: 1; overflow-y: auto; padding: 4px 12px 16px; }
+.agent { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; box-shadow: var(--shadow); }
+.agent:hover { border-color: var(--c); }
+.agent.lead { --c: var(--lead); } .agent.coder { --c: var(--coder); } .agent.tester { --c: var(--tester); } .agent.analyst { --c: var(--analyst); } .agent.writer { --c: var(--writer); }
+.agent .r1 { display: flex; align-items: center; gap: 9px; }
+.agent .av { width: 26px; height: 26px; font-size: 12px; }
+.agent .nm { font-weight: 600; } .agent .role { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.agent .grow { flex: 1; min-width: 0; }
+.state { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface2); color: var(--muted); white-space: nowrap; }
+.state.working { background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--c); }
+.state.waiting { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.state.done { color: var(--ok); }
+.agent .doing { margin-top: 8px; font-size: 13px; display: flex; gap: 6px; align-items: center; color: var(--text); }
+.agent .doing .el { margin-left: auto; color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.agent .curtask { margin-top: 6px; font-size: 12.5px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.agent .stats { margin-top: 8px; display: flex; gap: 12px; font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.back { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; color: var(--muted); padding: 4px 6px; border-radius: 6px; font-size: 13px; }
+.back:hover { background: var(--surface2); color: var(--text); }
+.dhead { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px; margin: 6px 0 12px; }
+.dhead .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+.dhead .k { font-size: 11px; color: var(--faint); } .dhead .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+#dbody .step { margin-left: 0; }
+.empty { color: var(--faint); font-size: 13px; text-align: center; padding: 20px 0; }
+.scrim { display: none; }
+
+@media (max-width: 1100px) { #drawer { position: fixed; right: 0; top: 0; bottom: 0; z-index: 30; box-shadow: -8px 0 30px rgba(0,0,0,.15); } #drawer.wide { width: min(560px, 100vw); } }
+@media (max-width: 760px) {
+  #side { position: fixed; left: 0; top: 0; bottom: 0; z-index: 30; transform: translateX(-100%); transition: transform .2s; box-shadow: 8px 0 30px rgba(0,0,0,.15); }
+  body.side-open #side { transform: none; }
+  #drawer, #drawer.wide { width: 100vw; }
+  .step { margin-left: 0; } .errbox { margin-left: 0; }
+  #conv { padding: 12px 16px 30px; } #composer { padding: 0 12px 12px; }
+  .hero { padding-top: 6vh; } .hero h1 { font-size: 27px; }
+  .lead-line .av { display: none; }
 }
+@media (min-width: 761px) { body.side-closed #side { display: none; } }
+body.side-open .scrim, body.drawer-open .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 20; }
+@media (min-width: 1101px) { body.drawer-open:not(.side-open) .scrim { display: none; } }
+@media (min-width: 761px) { body.side-open:not(.drawer-open) .scrim { display: none; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>☢ Mobile Vault · Agent Team</h1>
-  <span id="status" class="pill">idle</span>
-  <span class="sp"></span>
-  <span id="cost" class="pill">$0.00</span>
-  <button id="stop" class="bad" hidden>หยุดงาน</button>
-</header>
-<main>
-  <aside>
-    <h2>สั่งงาน</h2>
-    <textarea id="task" placeholder="เช่น เพิ่ม feature switch ให้ engine_bay แล้วรัน autotest แบบ large"></textarea>
-    <div class="row"><input type="checkbox" id="auto"><label for="auto">อนุมัติการแก้ไฟล์อัตโนมัติ</label></div>
-    <div class="row"><button id="go" class="primary">เริ่มงาน</button><span id="msg" class="err"></span></div>
-    <div class="runs"><h2>งานทั้งหมด</h2><div id="runs"></div></div>
-  </aside>
-  <section>
-    <div id="agents" class="agents"></div>
-    <div id="approval"></div>
-    <div id="report"></div>
-    <h2 id="tlh">Timeline</h2>
-    <div id="timeline"><div class="empty">พิมพ์งานทางซ้ายแล้วกด "เริ่มงาน"</div></div>
-  </section>
-</main>
-<script>
-const AG = ["lead", "coder", "tester", "analyst", "writer"];
-const ROLE = { lead: "ผู้พัฒนาหลัก · Opus 5.5", coder: "แก้โค้ด · Opus 5.5", tester: "ทดสอบ · Opus 5.5", analyst: "วิเคราะห์ทั้ง repo/ภาพ · Gemini 4 Argon", writer: "lore/เนื้อเรื่อง/คำแปล · gemma4:12b" };
-const KIND = { task: "รับงาน", llm: "คิด/ตอบ", tool: "เครื่องมือ", done: "ส่งงาน", approval_wait: "รออนุมัติ", approval: "ผลอนุมัติ", report: "รายงาน", error: "ผิดพลาด" };
-const STATE = { idle: "ว่าง", working: "กำลังทำ", waiting: "รออนุมัติ", done: "เสร็จ" };
-let cur = null, since = 0, filter = null, timer = null, last = null, lastStatus = null;
-const $ = id => document.getElementById(id);
-const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const api = (path, body) => fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json", "X-MV-UI": "1" }, body: JSON.stringify(body) }).then(r => r.json());
-const fmt = n => n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
-const pre = v => el("pre", null, typeof v === "string" ? v : JSON.stringify(v, null, 2));
+<div class="scrim" id="scrim"></div>
+<aside id="side">
+  <div class="brand"><div class="logo">☢</div>Vault Agents</div>
+  <button class="newbtn" id="newbtn">＋ งานใหม่</button>
+  <div class="side-h">งานล่าสุด</div>
+  <div id="runs"></div>
+  <div class="side-foot"><span class="grow">Apocarlypse: Mobile Vault</span>
+    <button class="iconbtn" id="theme" title="สลับธีม">◐</button></div>
+</aside>
 
-function summary(e) {
-  const d = e.data;
-  switch (e.kind) {
-    case "task": return d.task;
+<main id="main">
+  <div id="top">
+    <button class="iconbtn" id="sidebtn" title="แถบงาน">☰</button>
+    <div id="title">Agent Team</div>
+    <span class="chip" id="status" hidden></span>
+    <span class="chip" id="cost" hidden></span>
+    <button class="iconbtn" id="teambtn" title="ดูการทำงานของแต่ละ agent">👥</button>
+  </div>
+  <div id="scroll"><div id="conv"></div></div>
+  <div id="composer">
+    <div class="cbox">
+      <textarea id="input" rows="1" placeholder="สั่งงานทีม เช่น เพิ่ม event ใหม่ในไบโอมทะเลทราย..."></textarea>
+      <div class="crow">
+        <label class="toggle" title="ให้แก้ไฟล์ได้เลยโดยไม่ต้องถาม"><input type="checkbox" id="auto"> อนุมัติอัตโนมัติ</label>
+        <span class="grow"></span>
+        <button class="send" id="send" title="ส่ง (Enter)" disabled>↑</button>
+      </div>
+    </div>
+    <div class="hint">Enter ส่ง · Shift+Enter ขึ้นบรรทัดใหม่ · ทีมแก้ไฟล์ใน repo จริง และจะขออนุมัติก่อนทุกครั้ง</div>
+  </div>
+</main>
+
+<aside id="drawer" class="hide">
+  <div class="dh"><span class="grow" id="dtitle">ทีม</span><button class="iconbtn" id="dclose" title="ปิด">✕</button></div>
+  <div id="dbody"></div>
+</aside>
+
+<script>
+"use strict";
+const AGENTS = ["lead", "coder", "tester", "analyst", "writer"];
+const NAME = { lead: "หัวหน้า", coder: "Coder", tester: "Tester", analyst: "Analyst", writer: "Writer" };
+const INIT = { lead: "L", coder: "C", tester: "T", analyst: "A", writer: "W" };
+const ROLE = {
+  lead: "ผู้พัฒนาหลัก วางแผนและสั่งงาน · Opus 5.5",
+  coder: "เขียน/แก้โค้ด GDScript · Opus 5.5",
+  tester: "รัน autotest และ balance · Opus 5.5",
+  analyst: "วิเคราะห์ทั้ง repo และภาพหน้าจอ · Gemini 4 Argon",
+  writer: "lore, เนื้อเรื่อง, ตรวจคำแปล · gemma4:12b",
+};
+const TOOL_ICON = { list_files: "📁", read_file: "📄", search_code: "🔎", write_file: "📝", edit_file: "✏️",
+  git_diff: "±", run_autotest: "🧪", run_balance: "⚖️" };
+const STATUS = { running: "กำลังทำงาน", waiting: "รออนุมัติ", done: "เสร็จแล้ว", error: "ผิดพลาด", cancelled: "ยกเลิกแล้ว" };
+const STATE = { idle: "ว่าง", working: "กำลังทำ", waiting: "รออนุมัติ", done: "เสร็จ" };
+const IDEAS = [
+  "อธิบายระบบ threat director ให้หน่อย",
+  "เขียน event ใหม่ในไบโอมทะเลทราย พร้อมคำแปลไทย",
+  "ตรวจคำแปลไทยใน event ทั้งหมดว่าเพี้ยนไหม",
+  "รัน autotest แล้วสรุปผล",
+];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } },
+};
+
+const S = { runs: [], cur: null, events: [], sum: null, polledAt: 0, detail: null, open: new Set(), closed: new Set(), busy: false };
+
+/* ---------- tiny safe markdown (escape first, then format) ---------- */
+function inline(s) {
+  return s.replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>");
+}
+function md(src) {
+  const out = []; const lines = esc(src || "").split("\n"); let list = null, para = [];
+  const flush = () => { if (para.length) { out.push("<p>" + inline(para.join("<br>")) + "</p>"); para = []; }
+    if (list) { out.push(`</${list}>`); list = null; } };
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.startsWith("```")) { flush(); const code = []; i++;
+      while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]);
+      out.push("<pre><code>" + code.join("\n") + "</code></pre>"); continue; }
+    const h = l.match(/^(#{1,3})\s+(.*)/);
+    if (h) { flush(); out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); continue; }
+    const li = l.match(/^\s*([-*]|\d+\.)\s+(.*)/);
+    if (li) { if (para.length) { out.push("<p>" + inline(para.join("<br>")) + "</p>"); para = []; }
+      const kind = /\d/.test(li[1]) ? "ol" : "ul";
+      if (list !== kind) { if (list) out.push(`</${list}>`); out.push(`<${kind}>`); list = kind; }
+      out.push("<li>" + inline(li[2]) + "</li>"); continue; }
+    if (!l.trim()) { flush(); continue; }
+    if (list) { out.push(`</${list}>`); list = null; }
+    para.push(l);
+  }
+  flush();
+  return out.join("");
+}
+
+/* ---------- helpers ---------- */
+const fmtTok = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n || 0);
+const fmtSec = (s) => s < 60 ? Math.max(0, Math.floor(s)) + " วิ" : Math.floor(s / 60) + " นาที " + Math.floor(s % 60) + " วิ";
+const nowT = () => S.sum ? S.sum.elapsed + (S.sum.status === "running" || S.sum.status === "waiting" ? (Date.now() - S.polledAt) / 1000 : 0) : 0;
+function target(input) {
+  if (!input) return "";
+  return input.path || input.glob || input.pattern || (input.only ? "--only=" + input.only : "")
+    || (input.minutes ? input.minutes + " นาที" + (input.mode ? " " + input.mode : "") : "");
+}
+function modelName(m) {
+  return { opus: "Opus 5.5", gemini: "Gemini 4 Argon", local: "gemma4:12b" }[m] || (m || "").replace("claude-opus-5-5", "Opus 5.5");
+}
+const raw = (v) => typeof v === "string" ? v : JSON.stringify(v, null, 2);
+
+/* what each agent is doing right now, from its latest event */
+function activity(agent) {
+  let last = null;
+  for (let i = S.events.length - 1; i >= 0; i--) {
+    const e = S.events[i];
+    if (e.agent === agent && e.kind !== "report") { last = e; break; }
+  }
+  const live = S.sum && (S.sum.status === "running" || S.sum.status === "waiting");
+  if (!last) return null;
+  const d = last.data || {};
+  const a = { t: last.t, live: false, icon: "•", text: "" };
+  switch (last.kind) {
+    case "task": Object.assign(a, { icon: "📥", text: "ได้รับงาน กำลังเริ่ม", live }); break;
+    case "llm_start": Object.assign(a, { icon: "💭", text: "กำลังคิด · " + modelName(d.model) + (d.effort ? " (" + d.effort + ")" : ""), live }); break;
     case "llm": {
-      const calls = (d.blocks || []).filter(b => b.type === "tool_use").map(b => b.name === "delegate" ? `→ ${b.input.agent}: ${b.input.task}` : `${b.name}(${Object.values(b.input || {}).filter(v => typeof v === "string").map(v => v.slice(0, 40)).join(", ")})`);
-      const txt = (d.blocks || []).filter(b => b.type === "text").map(b => b.text).join(" ");
-      return `[${d.model}${d.usage && d.usage.output ? " · " + fmt(d.usage.output) + " out" : ""} · ${(d.ms / 1000).toFixed(1)}s] ` + (calls.join(" · ") || txt);
-    }
-    case "tool": return `${d.is_error ? "✗" : "✓"} ${d.name} ${JSON.stringify(d.input || {}).slice(0, 120)}`;
-    case "done": return (d.is_error ? "✗ " : "") + d.result;
-    case "approval_wait": return `ขอแก้ ${d.changes.length} รายการ`;
-    case "approval": return d.approved ? "อนุมัติแล้ว" : "ปฏิเสธ";
-    case "report": return d.text;
-    case "error": return d.error;
+      const uses = (d.blocks || []).filter((b) => b.type === "tool_use");
+      if (agent === "lead" && uses.length && uses[0].name === "delegate")
+        Object.assign(a, { icon: "➜", text: "มอบงานให้ " + NAME[uses[0].input?.agent] + " แล้ว รอผล", live });
+      else if (uses.length) Object.assign(a, { icon: "🛠", text: "เตรียมใช้ " + uses.map((u) => u.name).join(", "), live });
+      else Object.assign(a, { icon: "✍️", text: "ตอบกลับแล้ว (" + fmtSec(d.ms / 1000) + ")" });
+      break; }
+    case "tool_start": Object.assign(a, { icon: TOOL_ICON[d.name] || "🛠", text: d.name + " " + target(d.input), live }); break;
+    case "tool": Object.assign(a, { icon: d.is_error ? "⚠️" : "✓", text: d.name + " " + target(d.input) + (d.is_error ? " ผิดพลาด" : " เสร็จ"), live }); break;
+    case "approval_wait": Object.assign(a, { icon: "✋", text: "รอคุณอนุมัติการแก้ไฟล์", live }); break;
+    case "approval": Object.assign(a, { icon: d.approved ? "👍" : "🚫", text: d.approved ? "อนุมัติแล้ว ทำต่อ" : "ถูกปฏิเสธ", live }); break;
+    case "done": Object.assign(a, { icon: d.is_error ? "⚠️" : "✅", text: d.is_error ? "จบงานแบบมีปัญหา" : "ส่งงานให้หัวหน้าแล้ว" }); break;
+    case "error": Object.assign(a, { icon: "⚠️", text: "ผิดพลาด" }); break;
+    default: Object.assign(a, { text: last.kind });
+  }
+  return a;
+}
+function currentTask(agent) {
+  for (let i = S.events.length - 1; i >= 0; i--) {
+    const e = S.events[i];
+    if (agent === "lead" && e.kind === "message") return e.data.text;
+    if (e.agent === agent && e.kind === "task") return e.data.task;
   }
   return "";
 }
 
-function body(e) {
-  const d = e.data, b = el("div", "b");
-  const add = (h, v) => { b.append(el("h3", null, h), pre(v)); };
-  if (e.kind === "llm") {
-    for (const blk of d.blocks || []) {
-      if (blk.type === "thinking" && blk.thinking) add("ความคิด (สรุป)", blk.thinking);
-      else if (blk.type === "text") add("ข้อความ", blk.text);
-      else if (blk.type === "tool_use") add(`เรียก ${blk.name}`, blk.input);
+/* ---------- turn the event list into conversation items ---------- */
+function build(events) {
+  const items = []; let step = null; const steps = [];
+  const closeStep = () => { step = null; };
+  for (const e of events) {
+    const d = e.data || {};
+    if (e.agent === "user" && e.kind === "message") { closeStep(); items.push({ type: "user", text: d.text, i: e.i }); continue; }
+    if (e.kind === "error") { items.push({ type: "error", text: d.error }); continue; }
+    if (e.agent === "lead") {
+      if (e.kind === "llm") {
+        for (const b of d.blocks || []) {
+          if (b.type === "thinking" && b.thinking) items.push({ type: "think", text: b.thinking, ms: d.ms, i: e.i });
+          else if (b.type === "text" && b.text && d.stop === "tool_use") items.push({ type: "lead", text: b.text });
+        }
+      } else if (e.kind === "llm_start") items.push({ type: "pulse", agent: "lead", t: e.t });
+      else if (e.kind === "report") items.push({ type: "final", text: d.text });
+      continue;
     }
-    add("ข้อมูลการเรียก", { model: d.model, effort: d.effort, stop: d.stop, usage: d.usage, ms: d.ms, prompt_chars: d.prompt_chars });
-  } else if (e.kind === "tool") { add("input", d.input); add(d.is_error ? "error" : "ผลลัพธ์", d.result); }
-  else if (e.kind === "approval_wait") d.changes.forEach(c => add("การแก้ไข", c));
-  else add("รายละเอียด", d.task || d.result || d.text || d.error || d);
-  return b;
-}
-
-function renderEvent(e) {
-  const box = el("div", "ev"); box.style.setProperty("--c", `var(--${e.agent})`); box.dataset.agent = e.agent;
-  const h = el("div", "h");
-  h.append(el("span", "tm", e.t.toFixed(1) + "s"), el("span", "ag", e.agent), el("span", "kd", KIND[e.kind] || e.kind), el("span", "sm", summary(e)));
-  h.onclick = () => { if (!box.querySelector(".b")) box.append(body(e)); box.classList.toggle("open"); };
-  box.append(h);
-  if (filter && filter !== e.agent) box.hidden = true;
-  return box;
-}
-
-function renderAgents(s) {
-  const wrap = $("agents"); wrap.textContent = "";
-  for (const a of AG) {
-    const x = s.agents[a], c = el("div", "card" + (filter === a ? " on" : "")); c.style.setProperty("--c", `var(--${a})`);
-    const n = el("div", "n"); n.append(el("span", null, a), el("span", "s " + x.state, STATE[x.state]));
-    c.append(n, el("div", "s", ROLE[a]), el("div", "k", `${x.turns} ตา · ${x.tools} tool`), el("div", "k", `${fmt(x.input + x.cache_read)} in · ${fmt(x.output)} out · $${x.cost.toFixed(3)}`));
-    c.onclick = () => { filter = filter === a ? null : a; applyFilter(); renderAgents(s); };
-    wrap.append(c);
+    if (e.kind === "task") {
+      step = { type: "step", agent: e.agent, task: d.task, i: e.i, t: e.t, list: [], status: "run" };
+      items.push(step); steps.push(step); continue;
+    }
+    if (!step || step.agent !== e.agent) {   // event from an agent with no open card (should not happen)
+      step = { type: "step", agent: e.agent, task: "", i: e.i, t: e.t, list: [], status: "run" };
+      items.push(step); steps.push(step);
+    }
+    if (e.kind === "llm") {
+      for (const b of d.blocks || []) {
+        if (b.type === "thinking" && b.thinking) step.list.push({ k: "think", text: b.thinking, i: e.i });
+        else if (b.type === "text" && b.text && d.stop === "tool_use") step.list.push({ k: "text", text: b.text });
+      }
+      const u = d.usage || {};
+      step.list.push({ k: "meta", text: [modelName(d.model), d.effort, fmtSec((d.ms || 0) / 1000),
+        u.input ? "in " + fmtTok(u.input) + " · out " + fmtTok(u.output) + (u.cache_read ? " · cache " + fmtTok(u.cache_read) : "") : "",
+        d.images ? d.images + " ภาพ" : ""].filter(Boolean).join(" · ") });
+    } else if (e.kind === "tool_start") step.list.push({ k: "tool", name: d.name, input: d.input, running: true, i: e.i });
+    else if (e.kind === "tool") {
+      const t = [...step.list].reverse().find((x) => x.k === "tool" && x.running && x.name === d.name);
+      const v = { k: "tool", name: d.name, input: d.input, result: d.result, err: d.is_error, ms: d.ms, i: t ? t.i : e.i };
+      if (t) Object.assign(t, v, { running: false }); else step.list.push(v);
+    } else if (e.kind === "approval_wait") { step.status = "wait"; step.list.push({ k: "approve", data: d, i: e.i }); }
+    else if (e.kind === "approval") {
+      step.status = "run";
+      const a = [...step.list].reverse().find((x) => x.k === "approve" && x.decided === undefined);
+      if (a) a.decided = d.approved;
+    } else if (e.kind === "done") { step.status = d.is_error ? "err" : "ok"; step.result = d.result; step.end = e.t; closeStep(); }
   }
+  return { items, steps };
 }
 
-function applyFilter() {
-  for (const ev of $("timeline").children) if (ev.dataset.agent) ev.hidden = !!filter && ev.dataset.agent !== filter;
-  $("tlh").textContent = filter ? `Timeline · ${filter} (กดการ์ดอีกครั้งเพื่อดูทั้งหมด)` : "Timeline";
+/* ---------- render pieces ---------- */
+function openAttr(key, dflt) { return (S.open.has(key) || (dflt && !S.closed.has(key))) ? " open" : ""; }
+function liveLine(agent, cls) {
+  const a = activity(agent);
+  if (!a || !a.live) return "";
+  return `<div class="${cls || "live"}"><span class="spin"></span><span>${esc(a.icon + " " + a.text)}</span><span class="el" data-since="${a.t}">${fmtSec(nowT() - a.t)}</span></div>`;
+}
+function toolHTML(x, key) {
+  const icon = TOOL_ICON[x.name] || "🛠";
+  const st = x.running ? '<span class="spin"></span>' : x.err ? "⚠️" : "";
+  return `<details class="tool${x.err ? " err" : ""}" data-k="${key}"${openAttr(key)}>
+    <summary><span>${icon}</span><span class="nm">${esc(x.name)}</span><span class="tg">${esc(target(x.input))}</span>${st}<span class="ms">${x.ms != null ? fmtSec(x.ms / 1000) : ""}</span></summary>
+    <div class="lbl">input</div><pre>${esc(raw(x.input))}</pre>
+    ${x.running ? "" : `<div class="lbl">ผลลัพธ์</div><pre>${esc(raw(x.result))}</pre>`}</details>`;
+}
+function approveHTML(x, active) {
+  const ch = (x.data.changes || []).map((c) => `<pre>${esc(raw(c))}</pre>`).join("");
+  if (x.decided !== undefined)
+    return `<div class="decided">${x.decided ? "👍 คุณอนุมัติการแก้ไขนี้" : "🚫 คุณปฏิเสธการแก้ไขนี้"} (${(x.data.changes || []).length} ไฟล์)</div>`;
+  return `<div class="approve"><div class="h">✋ ${esc(NAME[x.data.agent])} ขอแก้ไฟล์ ${(x.data.changes || []).length} รายการ</div>${ch}
+    ${active ? `<div class="acts"><button class="btn pri" data-act="approve">อนุมัติ</button><button class="btn" data-act="decline">ปฏิเสธ</button></div>` : ""}</div>`;
+}
+function stepHTML(s, forceOpen) {
+  const key = "s" + s.i;
+  const tools = s.list.filter((x) => x.k === "tool").length;
+  const st = s.status === "ok" ? `<span class="st ok">✓ เสร็จ${s.end != null ? " · " + fmtSec(s.end - s.t) : ""}</span>`
+    : s.status === "err" ? '<span class="st err">✗ มีปัญหา</span>'
+    : s.status === "wait" ? '<span class="st wait">✋ รออนุมัติ</span>'
+    : S.sum && (S.sum.status === "running") ? '<span class="st"><span class="spin"></span></span>' : '<span class="st">หยุด</span>';
+  const body = s.list.map((x, n) => {
+    if (x.k === "think") return `<details class="think" data-k="${key}t${n}"${openAttr(key + "t" + n)}><summary>💭 คิด</summary><div class="tx">${esc(x.text)}</div></details>`;
+    if (x.k === "text") return `<div class="it text">${esc(x.text)}</div>`;
+    if (x.k === "meta") return `<div class="it meta">${esc(x.text)}</div>`;
+    if (x.k === "tool") return toolHTML(x, key + "x" + x.i);
+    if (x.k === "approve") return approveHTML(x, S.sum && S.sum.status === "waiting");
+    return "";
+  }).join("");
+  const live = s.status === "run" || s.status === "wait" ? liveLine(s.agent) : "";
+  const res = s.result != null ? `<div class="result"><div class="h">ส่งกลับให้หัวหน้า</div><div class="prose">${md(s.result)}</div></div>` : "";
+  return `<details class="step ${s.agent}" data-k="${key}"${forceOpen ? " open" : openAttr(key, s.status === "run" || s.status === "wait")}>
+    <summary><span class="av ${s.agent}" style="width:22px;height:22px;font-size:11px">${INIT[s.agent]}</span>
+      <span class="who">${esc(NAME[s.agent])}</span><span class="sub">${esc(s.task)}</span>
+      <span class="st">${tools ? tools + " tools" : ""}</span>${st}<span class="chev">›</span></summary>
+    <div class="inner">${s.task ? `<div class="task"><b>งานที่ได้รับ</b>${esc(s.task)}</div>` : ""}${body}${live}${res}</div></details>`;
+}
+function heroHTML() {
+  const team = AGENTS.map((a) => `<span class="mini"><span class="av ${a}" style="width:20px;height:20px;font-size:10px">${INIT[a]}</span>${esc(NAME[a])}</span>`).join("");
+  return `<div class="hero"><h1><span class="spark">✻</span> วันนี้ให้ทีมช่วยอะไรดี?</h1>
+    <p>หัวหน้า (Opus 5.5) จะวางแผน แบ่งงานให้ทีม และขออนุมัติก่อนแก้ไฟล์ทุกครั้ง</p>
+    <div class="ideas">${IDEAS.map((t) => `<button class="idea">${esc(t)}</button>`).join("")}</div>
+    <div class="team-row">${team}</div></div>`;
 }
 
-function renderApproval(s) {
-  const box = $("approval"); box.textContent = "";
-  if (!s.pending) return;
-  const a = el("div", "approval");
-  a.append(el("b", null, `${s.pending.agent} ขอแก้ไฟล์ ${s.pending.changes.length} รายการ`));
-  s.pending.changes.forEach(c => a.append(pre(c)));
-  const r = el("div", "row"), y = el("button", "ok", "อนุมัติ"), n = el("button", "bad", "ปฏิเสธ");
-  y.onclick = () => api(`/api/runs/${cur}/approve`, { approve: true }).then(poll);
-  n.onclick = () => api(`/api/runs/${cur}/approve`, { approve: false }).then(poll);
-  r.append(y, n); a.append(r); box.append(a);
+function renderConv() {
+  const conv = $("conv");
+  if (!S.cur) { conv.innerHTML = heroHTML(); return; }
+  const { items } = build(S.events);
+  const running = S.sum && S.sum.status === "running";
+  const html = []; let leadOpen = false;
+  const leadWrap = (inner) => `<div class="lead-line"><span class="av lead">L</span><div class="lead-body">${inner}</div></div>`;
+  items.forEach((it, n) => {
+    if (it.type === "user") html.push(`<div class="msg-user"><div class="b">${esc(it.text)}</div></div>`);
+    else if (it.type === "think") html.push(leadWrap(`<details class="think" data-k="t${it.i}"${openAttr("t" + it.i)}><summary>💭 หัวหน้าคิด (${fmtSec((it.ms || 0) / 1000)})</summary><div class="tx">${esc(it.text)}</div></details>`));
+    else if (it.type === "lead") html.push(leadWrap(`<div class="prose">${md(it.text)}</div>`));
+    else if (it.type === "final") html.push(leadWrap(`<div class="prose final">${md(it.text)}</div>`));
+    else if (it.type === "step") html.push(stepHTML(it));
+    else if (it.type === "error") html.push(`<div class="errbox">⚠️ ${esc(it.text)}</div>`);
+    else if (it.type === "pulse" && running && n === items.length - 1)
+      html.push(`<div class="typing"><span class="av lead">L</span><span class="dots"><span></span><span></span><span></span></span><span>หัวหน้ากำลังคิด… <span class="el" data-since="${it.t}">${fmtSec(nowT() - it.t)}</span></span></div>`);
+  });
+  if (running && !items.length) html.push(`<div class="typing"><span class="av lead">L</span><span class="dots"><span></span><span></span><span></span></span><span>กำลังเริ่ม…</span></div>`);
+  conv.innerHTML = html.join("");
 }
 
-function renderStatus(s) {
-  $("status").className = "pill " + s.status;
-  $("status").textContent = { running: "กำลังทำงาน", waiting: "รออนุมัติ", done: "เสร็จแล้ว", error: "ผิดพลาด", cancelled: "หยุดแล้ว" }[s.status] + ` · ${s.elapsed}s`;
-  $("cost").textContent = "$" + s.cost.toFixed(3);
-  $("stop").hidden = !(s.status === "running" || s.status === "waiting");
-  const rep = $("report"); rep.textContent = "";
-  if (s.report) rep.append(el("div", "report" + (s.status === "error" ? " err" : ""), s.report));
+function agentStats(a) {
+  const x = S.sum && S.sum.agents[a];
+  return x || { turns: 0, tools: 0, input: 0, output: 0, cache_read: 0, cost: 0, state: "idle" };
+}
+function renderDrawer() {
+  const body = $("dbody");
+  if (S.detail) {
+    const a = S.detail, x = agentStats(a);
+    $("dtitle").innerHTML = `<button class="back" id="dback">‹ ทีม</button>`;
+    const act = activity(a);
+    const head = `<div class="dhead agent ${a}" style="cursor:default"><div class="r1"><span class="av ${a}">${INIT[a]}</span>
+      <div class="grow"><div class="nm">${esc(NAME[a])}</div><div class="role">${esc(ROLE[a])}</div></div>
+      <span class="state ${x.state}">${STATE[x.state] || x.state}</span></div>
+      ${act ? `<div class="doing">${act.live ? '<span class="spin"></span>' : ""}<span>${esc(act.icon + " " + act.text)}</span>${act.live ? `<span class="el" data-since="${act.t}">${fmtSec(nowT() - act.t)}</span>` : ""}</div>` : ""}
+      <div class="grid"><div><div class="k">รอบคิด</div><div class="v">${x.turns}</div></div><div><div class="k">tools</div><div class="v">${x.tools}</div></div>
+      <div><div class="k">tokens</div><div class="v">${fmtTok(x.input + x.output)}</div></div><div><div class="k">ค่าใช้จ่าย</div><div class="v">$${x.cost.toFixed(3)}</div></div></div></div>`;
+    let timeline;
+    if (a === "lead") {
+      const { items } = build(S.events);
+      timeline = items.map((it) => it.type === "user" ? `<div class="step lead" style="padding:10px 14px"><div class="task"><b>คุณสั่ง</b>${esc(it.text)}</div></div>`
+        : it.type === "think" ? `<details class="think" data-k="dt${it.i}"${openAttr("dt" + it.i)}><summary>💭 คิด (${fmtSec((it.ms || 0) / 1000)})</summary><div class="tx">${esc(it.text)}</div></details>`
+        : it.type === "lead" || it.type === "final" ? `<div class="prose it">${md(it.text)}</div>`
+        : it.type === "step" ? `<div class="it meta">➜ มอบงานให้ <b>${esc(NAME[it.agent])}</b>: ${esc(it.task)}</div>` : "").join("");
+    } else {
+      const { steps } = build(S.events);
+      const mine = steps.filter((s) => s.agent === a);
+      timeline = mine.map((s) => stepHTML(s, true)).join("");
+    }
+    body.innerHTML = head + (timeline || `<div class="empty">${esc(NAME[a])} ยังไม่ได้รับงานในรอบนี้</div>`);
+    return;
+  }
+  $("dtitle").textContent = "ทีม · กดเพื่อดูรายละเอียด";
+  body.innerHTML = AGENTS.map((a) => {
+    const x = agentStats(a), act = activity(a), task = currentTask(a);
+    return `<div class="agent ${a}" data-agent="${a}"><div class="r1"><span class="av ${a}">${INIT[a]}</span>
+      <div class="grow"><div class="nm">${esc(NAME[a])}</div><div class="role">${esc(ROLE[a])}</div></div>
+      <span class="state ${x.state}">${STATE[x.state] || x.state}</span></div>
+      ${act ? `<div class="doing">${act.live ? '<span class="spin"></span>' : ""}<span>${esc(act.icon + " " + act.text)}</span>${act.live ? `<span class="el" data-since="${act.t}">${fmtSec(nowT() - act.t)}</span>` : ""}</div>` : ""}
+      ${task ? `<div class="curtask">📌 ${esc(task)}</div>` : ""}
+      <div class="stats"><span>${x.turns} รอบคิด</span><span>${x.tools} tools</span><span>${fmtTok(x.input + x.output)} tok</span><span>$${x.cost.toFixed(3)}</span></div></div>`;
+  }).join("");
+}
+function renderRuns() {
+  $("runs").innerHTML = S.runs.length ? S.runs.map((r) => `<button class="runitem${r.id === S.cur ? " on" : ""}" data-run="${r.id}"><span class="dot ${r.status}"></span><span class="t">${esc(r.task)}</span></button>`).join("")
+    : `<div class="empty">ยังไม่มีงาน</div>`;
+}
+function renderTop() {
+  const s = S.sum;
+  $("title").textContent = s ? s.task : "Agent Team";
+  $("status").hidden = $("cost").hidden = !s;
+  if (s) {
+    $("status").className = "chip " + s.status; $("status").textContent = STATUS[s.status] || s.status;
+    $("cost").textContent = "$" + s.cost.toFixed(3);
+  }
+  const active = s && (s.status === "running" || s.status === "waiting");
+  const send = $("send");
+  send.classList.toggle("stop", !!active);
+  send.textContent = active ? "■" : "↑";
+  send.title = active ? "หยุดงานนี้" : "ส่ง (Enter)";
+  send.disabled = !active && !$("input").value.trim();
+  $("input").placeholder = s && !active ? "ถามต่อหรือสั่งงานเพิ่มในงานนี้..." : "สั่งงานทีม เช่น เพิ่ม event ใหม่ในไบโอมทะเลทราย...";
 }
 
+function render() {
+  const sc = $("scroll"); const stick = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80;
+  const dscroll = $("dbody").scrollTop;
+  renderTop(); renderConv(); renderRuns();
+  if (!$("drawer").classList.contains("hide")) { renderDrawer(); $("dbody").scrollTop = dscroll; }
+  if (stick) sc.scrollTop = sc.scrollHeight;
+}
+function tick() {   // update elapsed timers between polls without re-rendering
+  const t = nowT();
+  document.querySelectorAll(".el[data-since]").forEach((el) => { el.textContent = fmtSec(t - Number(el.dataset.since)); });
+}
+
+/* ---------- api ---------- */
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json", "X-MV-UI": "1" }, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
 async function poll() {
-  if (!cur) return;
-  const id = cur, s = await api(`/api/runs/${id}?since=${since}`);
-  if (id !== cur || s.error) return;
-  const tl = $("timeline");
-  if (since === 0) tl.textContent = "";
-  for (const e of s.new_events) tl.append(renderEvent(e));
-  since += s.new_events.length;
-  renderStatus(s); renderAgents(s);
-  if (s.status !== lastStatus) { lastStatus = s.status; loadRuns(); }
-  const key = JSON.stringify(s.pending); if (key !== last) { last = key; renderApproval(s); }
-  if (s.new_events.length && tl.lastChild) tl.lastChild.scrollIntoView({ block: "nearest" });
-  if (s.status !== "running" && s.status !== "waiting") { clearInterval(timer); timer = null; }
+  if (S.busy) return; S.busy = true;
+  try {
+    if (S.cur) {
+      const id = S.cur;
+      const j = await api(`/api/runs/${id}?since=${S.events.length}`);
+      if (id !== S.cur) return;
+      const changed = j.new_events.length || !S.sum || j.status !== S.sum.status;
+      S.events.push(...j.new_events); S.sum = j; S.polledAt = Date.now();
+      if (changed) render(); else tick();
+    }
+  } catch (e) { console.warn(e); } finally { S.busy = false; }
 }
-
+async function pollRuns() {
+  try { S.runs = await api("/api/runs"); renderRuns(); } catch (e) { console.warn(e); }
+}
 function select(id) {
-  cur = id; since = 0; last = null; lastStatus = null; filter = null;
-  $("timeline").textContent = ""; $("approval").textContent = "";
-  clearInterval(timer); timer = setInterval(poll, 1000); poll(); loadRuns();
+  S.cur = id; S.events = []; S.sum = null; S.detail = null; S.open.clear(); S.closed.clear();
+  if (id) location.hash = id; else history.replaceState(null, "", location.pathname);
+  document.body.classList.remove("side-open");
+  render(); poll();
 }
-
-async function loadRuns() {
-  const runs = await api("/api/runs"), box = $("runs"); box.textContent = "";
-  for (const r of runs) {
-    const d = el("div", "run" + (r.id === cur ? " sel" : ""));
-    d.append(el("div", "t", r.task), el("div", "m", `${r.status} · ${r.elapsed}s · $${r.cost.toFixed(3)}`));
-    d.onclick = () => select(r.id); box.append(d);
-  }
+async function submit() {
+  const text = $("input").value.trim();
+  const s = S.sum;
+  if (s && (s.status === "running" || s.status === "waiting")) { await api(`/api/runs/${s.id}/cancel`, {}); return poll(); }
+  if (!text) return;
+  $("input").value = ""; grow();
+  try {
+    if (s) {
+      const r = await api(`/api/runs/${s.id}/message`, { text });
+      if (r.ok) { S.sum.status = "running"; render(); return poll(); }
+    }
+    const run = await api("/api/runs", { task: text, auto_approve: $("auto").checked });
+    await pollRuns(); select(run.id);
+  } catch (e) { alertBox(e.message); }
 }
+function alertBox(msg) { $("conv").insertAdjacentHTML("beforeend", `<div class="errbox">⚠️ ${esc(msg)}</div>`); }
 
-$("go").onclick = async () => {
-  $("msg").textContent = "";
-  const r = await api("/api/runs", { task: $("task").value, auto_approve: $("auto").checked });
-  if (r.error) { $("msg").textContent = r.error; return; }
-  $("task").value = ""; select(r.id);
-};
-$("stop").onclick = () => api(`/api/runs/${cur}/cancel`, {}).then(poll);
-loadRuns();
+/* ---------- events ---------- */
+function grow() { const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 220) + "px"; renderTop(); }
+$("input").addEventListener("input", grow);
+$("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
+$("send").addEventListener("click", submit);
+$("newbtn").addEventListener("click", () => { select(null); $("input").focus(); });
+$("runs").addEventListener("click", (e) => { const b = e.target.closest("[data-run]"); if (b) select(b.dataset.run); });
+$("conv").addEventListener("click", async (e) => {
+  const idea = e.target.closest(".idea");
+  if (idea) { $("input").value = idea.textContent; grow(); $("input").focus(); return; }
+  const act = e.target.closest("[data-act]");
+  if (act && S.sum) { act.disabled = true; await api(`/api/runs/${S.sum.id}/approve`, { approve: act.dataset.act === "approve" }); poll(); }
+});
+$("dbody").addEventListener("click", async (e) => {
+  const ag = e.target.closest("[data-agent]");
+  if (ag) { S.detail = ag.dataset.agent; $("drawer").classList.add("wide"); renderDrawer(); $("dbody").scrollTop = 0; return; }
+  const act = e.target.closest("[data-act]");
+  if (act && S.sum) { act.disabled = true; await api(`/api/runs/${S.sum.id}/approve`, { approve: act.dataset.act === "approve" }); poll(); }
+});
+$("dtitle").addEventListener("click", (e) => { if (e.target.closest("#dback")) { S.detail = null; $("drawer").classList.remove("wide"); renderDrawer(); } });
+document.addEventListener("toggle", (e) => {   // remember which cards the user opened or closed across re-renders
+  const k = e.target.dataset && e.target.dataset.k; if (!k) return;
+  if (e.target.open) { S.open.add(k); S.closed.delete(k); } else { S.open.delete(k); S.closed.add(k); }
+}, true);
+function setDrawer(open) {
+  $("drawer").classList.toggle("hide", !open); document.body.classList.toggle("drawer-open", open);
+  store.set("mv-drawer", open ? "1" : "0"); if (open) renderDrawer();
+}
+$("teambtn").addEventListener("click", () => setDrawer($("drawer").classList.contains("hide")));
+$("dclose").addEventListener("click", () => setDrawer(false));
+$("sidebtn").addEventListener("click", () => {
+  if (innerWidth <= 760) document.body.classList.toggle("side-open");
+  else document.body.classList.toggle("side-closed");
+});
+$("scrim").addEventListener("click", () => { document.body.classList.remove("side-open"); if (innerWidth <= 1100) setDrawer(false); });
+$("scroll").addEventListener("scroll", () => $("top").classList.toggle("scrolled", $("scroll").scrollTop > 4));
+$("theme").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "light" : "dark"; store.set("mv-theme", document.documentElement.dataset.theme);
+});
+$("auto").addEventListener("change", () => store.set("mv-auto", $("auto").checked ? "1" : "0"));
+
+/* ---------- boot ---------- */
+(function boot() {
+  const th = store.get("mv-theme"); if (th) document.documentElement.dataset.theme = th;
+  $("auto").checked = store.get("mv-auto") === "1";
+  if (store.get("mv-drawer") === "1" && innerWidth > 1100) setDrawer(true);
+  const p = new URLSearchParams(location.search);
+  if (p.get("theme")) document.documentElement.dataset.theme = p.get("theme");
+  pollRuns().then(() => select(location.hash.slice(1) || null));
+  setInterval(poll, 800); setInterval(pollRuns, 3000); setInterval(tick, 1000);
+})();
 </script>
 </body>
 </html>
