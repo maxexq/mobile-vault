@@ -1,0 +1,88 @@
+# Apocarlypse: Mobile Vault — rules for Claude
+
+Idle survival game on an armoured vehicle after the apocalypse, for mobile web.
+Two Claudes work on this repo: the claude.ai project (cloud threads) and Claude Code CLI on
+Parames's PC. Both follow this file. The game itself is described in `README.md` and
+`docs/PROJECT_CONTEXT.md`; read the relevant README section before touching a system.
+
+## Hard rules
+
+- **Godot 4.7.2-stable only.** Never beta/rc/dev editors, templates or addons. Addons must
+  support 4.7.2. Confirm every engine API on https://docs.godotengine.org/en/stable/ before
+  using it; do not guess signatures.
+- **Ask Parames before downloading or installing any software** (addons, npm/pip packages,
+  tools, MCP servers). Standing exception: the official Godot 4.7.2-stable editor and export
+  templates from the godotengine GitHub release `4.7.2-stable` (check SHA-512).
+- **Art:** true 16-bit pixel art, dark post-apocalyptic, 3 rooms per vehicle floor, Nearest
+  filter, everything in `assets/atlas/`. AI images are drafts: enforce grid and palette.
+  (A 32-bit upgrade is proposed but not approved; keep 16-bit until told otherwise.)
+- **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served by Vercel
+  from `web/`.
+- Never commit secrets: `cloud_config.json`, `.plane-api-key`, `ai/.env` are git-ignored.
+
+## Definition of done for every feature
+
+1. Gated by a Features switch: key in `Features.FEATURES` + `config/features.json`, entry point
+   guarded with `Features.on(key)`, tunable numbers in `Features.TUNE` (README "Feature switches, event windows & remote config").
+2. GOD MODE: a `Dev.*` action in `scripts/autoload/dev.gd`, a button in the matching tab of
+   `scripts/ui/god_panel.gd`, and the README "Tester tools: GOD MODE" table updated.
+3. Autotest check in `tools/autotest.gd`, and the whole autotest passes:
+   `godot --path . --rendering-driver opengl3 -- --autotest --out=<abs dir>`
+   (on Linux CI/cloud run it under `xvfb-run -a`; `--headless` hangs on frame_post_draw).
+   `--only=<name>` runs one group, e.g. `--only=touch`, `--only=large`.
+4. Web export: `sh tools/stamp_build.sh` then
+   `godot --headless --path . --export-release "Web" web/index.html`, commit `web/`.
+   `cloud_config.json` must exist first or the build ships with cloud save OFF
+   (copy `cloud_config.example.json`, or recover it from the committed `web/index.pck`).
+5. Branch + PR into `main`, README updated, Plane ticket moved (below).
+6. The claude.ai playable artifact is updated by the project side after the PR; CLI sessions
+   just say in the PR/ticket that the artifact still needs updating.
+
+## Git workflow
+
+- `git pull origin main` before starting. Never push to `main` directly.
+- Branch name starts with the ticket: `mv-<n>-short-name` (e.g. `mv-91-local-squad`).
+- PR title/body mention `MV-<n>`; one feature per PR. Bump the version only in
+  `BuildInfo.GAME_VERSION` (`scripts/build_info.gd`).
+
+## Plane tickets (workspace `mobile-vault`, project `MV`)
+
+Every task has a ticket that matches reality, from start to done. Use `tools/plane.py`
+(stdlib Python, works on Windows):
+
+```
+python tools/plane.py list --state "In Progress"     # check nobody else is on it
+python tools/plane.py create "Title" --label feature --desc "..."   # starts In Progress
+python tools/plane.py move MV-12 "In Review"
+python tools/plane.py link MV-12 https://github.com/maxexq/mobile-vault/pull/40 "PR #40"
+python tools/plane.py comment MV-12 "waiting for Parames to pick option B"
+```
+
+- Start: create the ticket or move an existing one to **In Progress** before writing code.
+  If a ticket is already In Progress, someone else (cloud or CLI) owns it: don't take it.
+- Waiting on a decision: **Needs Decision**. PR open: **In Review** + PR link.
+  Merged but needs a real-device/web check: **Awaiting Verify**. Delivered: **Done** + links.
+- States: Backlog, Needs Decision, Todo, In Progress, In Review, Awaiting Verify, Done, Cancelled.
+  Labels: feature, bug, design, art, infra, balance, ui, marketing, tooling, v4.3–v4.7.
+- API key: env `PLANE_API_KEY` or one line in `.plane-api-key` at the repo root (git-ignored).
+  In claude.ai cloud sessions the proxy adds the key, so none is needed there.
+
+## Gotchas that already cost bugs
+
+- The save (`Game.s`) is JSON, so int ids come back as floats. `Array.find/has` with an int
+  never matches on 4.7.2: compare `int(x) == id` in a loop.
+- `Game.resources_changed` fires every frame: never rebuild buttons on it (taps die); update
+  labels in place.
+- Choice buttons with wrapping Thai text: `ChoiceButton`; popups with art:
+  `ModalPanel.media_layout`. `include_text_server_data=true` must stay on (Thai wrap on web).
+- Touch: finger releases are booked in `Main._input`; controls inside `ScrollContainer` are
+  switched STOP→PASS by `UIKit.touch_pass`. Extend `_touch_test` for new gestures/lists.
+- `Time.get_unix_time_from_datetime_string` ignores timezone suffixes on 4.7.2.
+- New progress data goes in `Game.s` (cloud-synced); no new localStorage keys for progress.
+  Test runners never touch the real Supabase (autotest uses `tools/cloud_fake.gd`).
+- Game name lives in `BuildInfo.GAME_NAME`; repo, save keys and domain keep `mobile-vault`.
+
+## Skills
+
+Project agent skills are in `.claude/skills/`; `.claude/skills/README.md` lists them and the
+project rules that override them.
