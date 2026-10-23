@@ -9,3 +9,6 @@ ai/.env
 ai/.venv/
 __pycache__/
 .pytest_cache/
+
+# Plane API key for tools/plane.py (local CLI)
+.plane-api-key
