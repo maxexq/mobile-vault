@@ -45,6 +45,32 @@ class ClaudeLLM:
         return "".join(b.text for b in msg.content if b.type == "text")
 
 
+def claude_turn(cfg: Config, system: str, messages: list, tools: list, effort: str, one_tool_at_a_time=False):
+    """One Claude Opus turn with client tools. Returns (content blocks as dicts, stop_reason).
+
+    Blocks are returned unchanged (as dicts) so the caller can append them to the history
+    as-is: thinking blocks must be passed back untouched on the next request.
+    """
+    import anthropic
+
+    client = anthropic.Anthropic()
+    choice = {"type": "auto", "disable_parallel_tool_use": True} if one_tool_at_a_time else {"type": "auto"}
+    with client.beta.messages.stream(
+        model=cfg.claude_model,
+        max_tokens=64000,
+        system=system,
+        messages=messages,
+        tools=[{**t, "eager_input_streaming": True} for t in tools],
+        tool_choice=choice,
+        thinking={"type": "adaptive"},
+        output_config={"effort": effort},
+        betas=["server-side-fallback-2026-07-01"],
+        fallbacks="default",
+    ) as stream:
+        msg = stream.get_final_message()
+    return [b.model_dump(exclude_none=True) for b in msg.content], msg.stop_reason
+
+
 class GeminiLLM:
     """Gemini 4 Argon through google-genai's Interactions API (1M-token context)."""
 
