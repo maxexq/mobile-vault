@@ -212,9 +212,10 @@ Autoload `Features` (`scripts/autoload/features.gd`, right after `Save`) is the 
 | 1 | default | `config/features.json` (exported into the pck) | every build |
 | 2 | build | `config/features.<tag>.json` for the custom feature tags `demo` / `staging` ([feature tags](https://docs.godotengine.org/en/stable/tutorials/export/feature_tags.html), `OS.has_feature`) | only when the export preset sets that tag |
 | 3 | remote | `web/features.json`, fetched from the same folder as the game page (`HTTPRequest`, 10 s timeout) and cached in localStorage `mobile_vault_features_v1` | web builds; a failed fetch keeps the cache, no cache keeps 1–2; refused if `min_game`/`max_game` don't match `BuildInfo.GAME_VERSION` |
-| 4 | tester | GOD MODE tab **ฟีเจอร์** (kept in `user://dev.cfg`, cleared by "ซ่อนปุ่ม GOD") or the URL `?ff=raids:off,event.raiders:off,tune.threat.rate_scale:1.5` (this session only) | testers |
+| 4 | mode | the run's game mode / mutators (`Game.s.mode`, set by `Modes`, see §4m) | per save |
+| 5 | tester | GOD MODE tab **ฟีเจอร์** (kept in `user://dev.cfg`, cleared by "ซ่อนปุ่ม GOD") or the URL `?ff=raids:off,event.raiders:off,tune.threat.rate_scale:1.5` (this session only) | testers |
 
-**Switches** (`Features.on(key)`): `road_events`, `raids` (no raids; the checkpoint warlord still blocks the road), `encounters`, `strangers` (recruits join directly), `expeditions`, `roof_deck`, `large_rooms`, `tutorial` (new games only), `cloud_save` (read at boot, so a remote kill switch bites on the next launch). Switching one off hides it from play; save data is never deleted.
+**Switches** (`Features.on(key)`): `road_events`, `raids` (no raids; the checkpoint warlord still blocks the road), `encounters`, `strangers` (recruits join directly), `expeditions`, `roof_deck`, `large_rooms`, `tutorial` (new games only), `cloud_save` (read at boot, so a remote kill switch bites on the next launch), `modes` (off = NEW RUN skips the rules picker and starts a standard run). Switching one off hides it from play; save data is never deleted.
 
 **Road events** (`events.<id>`): `on`, `weight` (2 = two cards per shuffle-bag round, 0.5 = a card in about half the rounds, 0 = never), `biomes` (`["*"]` or biome ids, adds the event to roads it is not normally on), `from` / `to` (`"2026-11-14"` or `"2026-11-14 18:00"`, local time at `tz_hours`, default 7 = Thailand; a date-only `to` covers the whole day). Clock = `Cloud.now()` (server time when the cloud is on). This is the hook for festival events: put the event in `Data.EVENTS` without a biome and open it with a window.
 
@@ -232,6 +233,23 @@ The remote file can only switch off / re-time / re-weight / re-tune what the bui
 ```
 
 Edit `web/features.json`, push, and Vercel serves it; players pick it up the next time the page loads (no re-export). The active switches go into every trace export (`features`) and a `features` trace entry at boot and after each remote load. Autotest `_features_test()` covers every gate.
+
+## 4m. Game modes (โหมดเกม)
+
+NEW RUN opens a rules picker on the title screen: **mode**, **difficulty** and any number of **mutators**. The choice is locked into the save as `Game.s.mode = {id, diff, mut, started_at}`, carried over to the next generation, and shown in Settings → ตั้งค่า → RUN. Saves from before modes migrate to `standard / normal`. Design page: https://claude.ai/artifact/E6psTiH3QsaiejYK8foN2C (phase 1 of it).
+
+| Choice | Effect |
+|---|---|
+| เอาชีวิตรอด `standard` | the full game, unchanged |
+| ขบวนสงบ `peaceful` | `raids` off (Features layer "mode"); with no kill scrap, the defence squad scavenges the roadside instead: one scrap cap per 30 min (×1.5 per lap); no checkpoint warlord: the vault waits at the checkpoint and pays a toll of 45 % of the scrap cap on its own once the Vault level is high enough and the scrap is there; research points ×0.5; not ranked |
+| ง่าย / ปกติ / ยาก / ฝันร้าย | enemy HP 0.7 / 1 / 1.35 / 1.8, enemy damage 0.7 / 1 / 1.25 / 1.5, threat build-up 0.75 / 1 / 1.25 / 1.5, food + water 0.8 / 1 / 1.15 / 1.3, offline cap ×0.5 on nightmare, research 0.75 / 1 / 1.4 / 2.0 |
+| น้ำมันขาดแคลน `fuel_scarce` | every fuel gain ×0.5 (spending unchanged), research +20 % |
+| ปันส่วนอด `lean_rations` | food + water ×1.4, +15 % |
+| ถนนเปลี่ยว `lone_road` | `expeditions`, `encounters`, `strangers` off, +20 % |
+| ปืนแก้ว `glass_cannon` | squad damage ×2, squad HP ×0.5, +15 % (not in peaceful) |
+| ฝูงคลั่ง `horde` | threat build-up ×1.6, enemy HP ×1.2, +25 % (not in peaceful) |
+
+Research multiplier = mode × difficulty × (1 + mutator bonuses). Multipliers stack by product (`Modes.mul(key)`), switches go into the Features "mode" layer (after remote, before tester overrides, so GOD can still flip them). `Modes.ranked()` = a ranked mode and `stats.cheated` never set; it is the flag the online leaderboards will read. Balance bot: `-- --balance --mode=peaceful,hard,fuel_scarce`. Autotest `_modes_test()`.
 
 ## 4c. True pixel art pipeline
 
@@ -257,7 +275,7 @@ Edit `web/features.json`, push, and Vercel serves it; players pick it up the nex
 | ต่อสู้ | set wave, kill all enemies, heal squad · force a raid (warning first), set threat 0 / 90 · defence squad: auto-fill with the strongest idle crew, auto-equip best gear, clear · spawn the biome warlord or any mutant boss, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
 | ฟีเจอร์ | every Features switch with where its value comes from (ค่าเริ่มต้น / บิลด์ / รีโมต / ผู้ทดสอบ), tap to flip · every road event on/off (biome's own marked *, weight and date window shown) · tune numbers ÷2 / ×2 / back to code · reload remote, clear tester overrides |
 | โลก | jump to any biome, go to checkpoint, mark warlord beaten, lap +1 · road events: trigger any, draw the next card from the shuffle bag, reshuffle (bag size + last 3 shown) · expedition: force any special encounter (sends a free scavenging team when none is out), clear the no-repeat history, arrive at any site, finish the trip · open the next-generation screen, wreck the vehicle in 3 s |
-| ระบบ | version rows (game / build / engine) + copy · tutorial: replay from the start, skip, jump to any step · cloud save: status/rev, sync now, force upload, forget the link, resolve a conflict · settings: save size, reset to defaults |
+| ระบบ | game mode: switch mode / difficulty / mutators of the running save (marks it cheated = unranked), peaceful "go to checkpoint + toll money" · version rows (game / build / engine) + copy · tutorial: replay from the start, skip, jump to any step · cloud save: status/rev, sync now, force upload, forget the link, resolve a conflict · settings: save size, reset to defaults |
 | LOG/เซฟ | trace viewer with category filter, download JSON / copy / clear; export the save as JSON (copied to the clipboard) and load a pasted save — testers can hand each other exact situations |
 
 Cheat switches are never saved; any god action marks the save `stats.cheated = true` and is written to the trace.
@@ -288,6 +306,7 @@ scripts/
   world/room_view.gd          room interior, level pips, synergy markers, craft strip, build highlight, night glow, blackout + head-torches
   world/pet_actor.gd          roaming pets
   autoload/haul.gd            weight / engine capacity / speed / fuel burn
+  autoload/modes.gd           game modes: mode / difficulty / mutators of a run (Game.s.mode)
   autoload/engine_bay.gd      engine in the cab: types, drive modes, heat / auto-rest, wear, jobs, noise
   autoload/synergy.gd         room adjacency rules
   autoload/dev.gd             tester switches + god actions (hidden unlock)

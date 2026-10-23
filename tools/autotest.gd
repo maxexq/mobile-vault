@@ -641,6 +641,7 @@ func _run() -> void:
 	await _cloud_test()
 	await _large_room_test()
 	await _features_test()
+	await _modes_test()
 	print("[autotest] DONE")
 	get_tree().quit()
 
@@ -2268,3 +2269,125 @@ func _engine_bay_test() -> void:
 	EngineBay.uninstall()
 	e.merge(EngineBay.default_state(), true)
 	e.job = {}
+
+
+## game modes: migration, the New Game picker, peaceful toll, multipliers, mutators, GOD switch, next generation
+func _modes_test() -> void:
+	Features.clear_overrides()
+	Features.layers.remote = {}
+	# a save from before game modes is a standard run
+	Game.s.erase("mode")
+	Game._migrate()
+	Modes.apply()
+	_check("modes: old save migrates to standard / normal", Modes.id() == "standard" and Modes.diff() == "normal" and Modes.mutators().is_empty())
+	var all_one := true
+	for k in Modes.MUL_KEYS:
+		all_one = all_one and Modes.mul(k) == 1.0
+	_check("modes: standard / normal changes no number", all_one and Modes.legacy_mult() == 1.0 and Features.layers.mode.get("features", {}).is_empty())
+	_check("modes: make() drops unknown ids and combat mutators in peaceful",
+		Modes.make("nope", "nope", ["horde", "fuel_scarce", "made_up"]) == {"id": "standard", "diff": "normal", "mut": ["fuel_scarce", "horde"]}
+		and Modes.make("peaceful", "hard", ["horde", "glass_cannon", "lean_rations"]).mut == ["lean_rations"])
+	# the picker on the title screen
+	var ts = main.hud.title_screen
+	ts.visible = true
+	ts.modulate.a = 1.0
+	ts._new_run()
+	await wait(0.4)
+	ts.pick("id", "peaceful")
+	ts.pick("diff", "hard")
+	ts.pick("mut", "fuel_scarce")
+	ts.pick("mut", "horde")       # combat-only: not offered in peaceful
+	await wait(0.3)
+	_check("modes: picker opens from NEW RUN", ts._pick_scroll.visible and not ts._menu.visible)
+	_check("modes: picker keeps a clean choice", ts._pick == {"id": "peaceful", "diff": "hard", "mut": ["fuel_scarce"]})
+	await shot("mode_picker")
+	ts.close_picker()
+	_check("modes: back returns to the menu", ts._menu.visible and not ts._pick_scroll.visible)
+	ts.open_picker()
+	Modes.pending = ts._pick.duplicate(true)
+	ts._go(true)
+	await wait(2.5)
+	Tutorial.skip()
+	_check("modes: START begins a run with the picked rules", Modes.id() == "peaceful" and Modes.diff() == "hard" and Modes.mutators() == ["fuel_scarce"]
+		and Modes.pending.is_empty() and float(Game.s.mode.get("started_at", 0.0)) > 0.0)
+	_check("modes: peaceful switches raids off through the mode layer", not Features.on("raids") and Features.source("features", "raids") == "mode")
+	_check("modes: peaceful x hard x fuel = research x0.84", is_equal_approx(Modes.legacy_mult(), 0.5 * 1.4 * 1.2) and not Modes.ranked())
+	# fuel mutator halves every gain, not spending
+	Game.s.res.fuel = 10.0
+	Game._add_res("fuel", 10.0)
+	Game._add_res("fuel", -4.0)
+	_check("modes: fuel_scarce halves fuel gains only", is_equal_approx(float(Game.s.res.fuel), 11.0))
+	# peaceful checkpoint: no warlord, a scrap toll instead
+	var need: int = int(Data.biome(int(Game.s.biome) + 1).req)
+	Game.s.vault_level = maxi(int(Game.s.vault_level), need)
+	Game.s.km = Game.biome_end_km()
+	Game.s.res.scrap = float(Modes.toll()) - 1.0
+	Modes.tick(0.0, false)
+	_check("modes: peaceful checkpoint waits for the toll", Game.at_checkpoint() and Game.blocked_reason().contains("ค่าผ่านทาง") and not Combat.warlord_due())
+	await shot("mode_peaceful_toll")
+	Game.s.res.scrap = float(Modes.toll()) + 10.0
+	var toll := Modes.toll()
+	Modes.tick(0.0, false)
+	var sc0 := float(Game.s.res.scrap)
+	Modes.tick(60.0, false)
+	_check("modes: peaceful squad scavenges cap / 30 per minute", Modes.salvage_pm() > 0.0 and is_equal_approx(float(Game.s.res.scrap) - sc0, Game.cap("scrap") / Modes.SALVAGE_MIN))
+	Game.s.res.scrap = sc0
+	_check("modes: toll paid opens the checkpoint", Combat.boss_beaten(int(Game.s.biome)) and not Game.at_checkpoint() and is_equal_approx(float(Game.s.res.scrap), 10.0) and toll > 0)
+	# difficulty + mutators through GOD (marks the save)
+	Dev.mode_set("standard", "hard", "fuel_scarce")
+	_check("modes: GOD switch to standard / hard brings raids back", Modes.id() == "standard" and Features.on("raids") and Modes.mutators().is_empty() and not Modes.ranked())
+	var q := {"mob": Combat.BIOME_MOBS.industrial[0], "lvl": 5, "no_mutate": true}
+	Combat._spawn(q)
+	var hard_hp := float(Combat.enemies[-1].max)
+	var hard_dmg := float(Combat.enemies[-1].dmg)
+	Dev.mode_set("", "normal")
+	Combat._spawn(q)
+	var norm_hp := float(Combat.enemies[-1].max)
+	var norm_dmg := float(Combat.enemies[-1].dmg)
+	Combat._clear_enemies()
+	_check("modes: hard = enemy HP x1.35, damage x1.25", is_equal_approx(hard_hp, norm_hp * 1.35) and is_equal_approx(hard_dmg, norm_dmg * 1.25))
+	var d: Dictionary = Game.s.dwellers[0]
+	var st0 := Combat.hero_stats(d, 1)
+	Dev.mode_set("", "", "glass_cannon")
+	var st1 := Combat.hero_stats(d, 1)
+	_check("modes: glass cannon = squad damage x2, HP x0.5", is_equal_approx(float(st1.dmg), float(st0.dmg) * 2.0) and is_equal_approx(float(st1.hp), float(st0.hp) * 0.5))
+	Dev.mode_set("", "nightmare", "lean_rations")
+	_check("modes: multipliers stack (nightmare x lean rations)", is_equal_approx(Modes.mul("eat"), 1.3 * 1.4) and Modes.mul("offline") == 0.5
+		and is_equal_approx(Modes.legacy_mult(), 2.0 * (1.0 + 0.15 + 0.15)))
+	Threat._set_threat(0.0)
+	var r_night := Threat.rate_pm()
+	Dev.mode_set("", "normal", "glass_cannon")
+	Dev.mode_set("", "", "lean_rations")
+	var r_norm := Threat.rate_pm()
+	_check("modes: nightmare threat builds x1.5", r_norm > 0.0 and is_equal_approx(r_night, r_norm * 1.5))
+	Dev.mode_set("", "", "lone_road")
+	_check("modes: lone road switches expeditions / encounters / strangers off", not Features.on("expeditions") and not Features.on("encounters") and not Features.on("strangers"))
+	Dev.feature_set("expeditions", true)
+	_check("modes: a tester override still beats the mode", Features.on("expeditions") and Features.source("features", "expeditions") == "dev")
+	Dev.feature_set("expeditions", null)
+	# UI: GOD system tab and the settings row
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "sys"
+	main.hud.panels.god.refresh()
+	await wait(0.4)
+	await shot("god_sys_modes")
+	main.hud.panels.god.close()
+	main.hud.open_settings("game")
+	await wait(0.4)
+	_check("modes: settings shows the run's mode", main.hud.settings_panel.is_open)
+	await shot("settings_mode_row")
+	main.hud.settings_panel.close()
+	# the next generation keeps the rules
+	Meta.next_generation([int(Game.s.dwellers[0].id)])
+	await wait(0.5)
+	_check("modes: next generation keeps the mode", Modes.mutators() == ["lone_road"] and not Features.on("expeditions"))
+	# switch "modes" off: NEW RUN skips the picker and starts a standard run
+	Dev.feature_set("modes", false)
+	ts.visible = true
+	ts.modulate.a = 1.0
+	Modes.pending = {"id": "peaceful"}
+	ts._new_run()
+	await wait(2.5)
+	Tutorial.skip()
+	_check("modes: switch off = NEW RUN starts standard without the picker", Modes.id() == "standard" and Modes.mutators().is_empty() and Features.on("expeditions"))
+	Dev.feature_set("modes", null)

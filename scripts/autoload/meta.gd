@@ -120,6 +120,7 @@ func legacy_earned() -> int:
 	var bosses := (s.combat.get("boss_beaten", {}) as Dictionary).size()
 	var p := float(s.stats.km_total) * 0.6 + bosses * 4.0 + int(s.get("lap", 0)) * 15.0 + int(s.vault_level) * 2.0
 	p += int(s.stats.get("expeditions", 0)) * 1.0
+	p *= Modes.legacy_mult()     # difficulty / mutators pay more, peaceful less
 	return maxi(1, int(p))
 
 
@@ -199,6 +200,7 @@ func next_generation(carry_ids: Array, tier_id: String = "") -> void:
 	Game.setup_default_state(true)
 	Game.s.meta = meta
 	Game.s.memorial = memorial
+	Game.s.mode = (old.get("mode", Modes.DEFAULT) as Dictionary).duplicate(true)    # the run's rules carry on
 	var hs := perk("head_start")
 	Game.s.res.scrap = minf(Game.cap("scrap"), float(Game.s.res.scrap) + res_scrap + 250.0 * hs)
 	Game.s.items["components"] = int(Game.s.items.get("components", 0)) + comps + 20 * hs

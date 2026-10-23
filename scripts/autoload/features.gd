@@ -6,7 +6,8 @@ extends Node
 ##  3. remote features.json                 web only: <page folder>/features.json on the same host (Vercel
 ##                                          serves web/features.json), cached in localStorage; a failed fetch
 ##                                          keeps the cache, no cache keeps layer 1-2
-##  4. tester overrides                     GOD MODE tab "ฟีเจอร์" (user://dev.cfg) or the page URL
+##  4. game mode                          Modes.apply(): the run's mode / mutators (Game.s.mode) switch systems off
+##  5. tester overrides                     GOD MODE tab "ฟีเจอร์" (user://dev.cfg) or the page URL
 ##                                          ?ff=raids:off,event.raiders:off,tune.threat.rate_scale:1.5 (session only)
 ## The remote file can only switch off / re-time / re-weight / re-tune what the build already contains:
 ## unknown keys are ignored, numbers are clamped to TUNE, a broken file changes nothing. Switching a feature
@@ -38,6 +39,7 @@ const FEATURES := {
 	"large_rooms": "ทุบผนังรวมห้องใหญ่",
 	"tutorial": "บทสอนเกมใหม่",
 	"cloud_save": "เซฟบนคลาวด์ (มีผลตอนเปิดเกมครั้งถัดไป)",
+	"modes": "เลือกโหมดตอนเริ่มเกมใหม่ (ปิด = เริ่มโหมดปกติเสมอ)",
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
@@ -51,10 +53,10 @@ const TUNE := {
 	"inspection.rare_chance": [0.0, 1.0, "โอกาสคนแปลกหน้า (หายาก)"],
 	"inspection.very_rare_chance": [0.0, 1.0, "โอกาสคนแปลกหน้า (หายากมาก)"],
 }
-const LAYERS := ["default", "build", "remote", "dev"]
+const LAYERS := ["default", "build", "remote", "mode", "dev"]
 
 ## per layer: {"features": {k: bool}, "events": {id: {...}}, "tune": {k: float}, ...}
-var layers := {"default": {}, "build": {}, "remote": {}, "dev": {}}
+var layers := {"default": {}, "build": {}, "remote": {}, "mode": {}, "dev": {}}
 var remote_status := "off"      # off | cached | loading | ok | failed | rejected
 var remote_at := 0.0            # unix time of the remote copy in use
 var remote_url := ""
@@ -161,7 +163,13 @@ func now() -> float:
 	return now_override if now_override > 0.0 else Cloud.now()
 
 
-## where a value comes from: default | build | remote | dev (the last layer that sets it)
+## layer 4, owned by Modes (a run's mode is part of the save, not a tester override)
+func set_mode_layer(d: Dictionary) -> void:
+	layers.mode = _clean(d)
+	changed.emit()
+
+
+## where a value comes from: default | build | remote | mode | dev (the last layer that sets it)
 func source(block: String, key: String) -> String:
 	var src := "code"
 	for l in LAYERS:
@@ -353,7 +361,7 @@ func fetch_remote() -> void:
 	apply_remote(JSON.parse_string(raw.get_string_from_utf8()))
 
 
-# =================================================================== tester overrides (layer 4)
+# =================================================================== tester overrides (layer 5)
 func _load_dev() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(DEV_CFG) == OK:

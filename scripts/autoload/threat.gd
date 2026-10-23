@@ -121,7 +121,7 @@ func rate_parts() -> Dictionary:
 	p.blood = _blood
 	p.mask = float(MASK.get(str(Game.s.get("weather", "clear")), 1.0))
 	for k in ["biome", "engine", "parked", "night", "rooms", "cargo", "blood"]:
-		p[k] = float(p[k]) * Features.num("threat.rate_scale", RATE_SCALE)
+		p[k] = float(p[k]) * Features.num("threat.rate_scale", RATE_SCALE) * Modes.mul("threat")
 	return p
 
 
