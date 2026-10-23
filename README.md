@@ -31,6 +31,8 @@ Controls (touch or mouse) — designed for **portrait 9:16** phones, landscape a
 - **Tap a room** → camera zooms in (Tween to a whole-number zoom) + background blur → management terminal.
 - **Tap the blurred area / "ปิด"** → zoom back out.
 - **Swipe left/right** → look along the highway (springs back after 3 s).
+- **Pinch** (two fingers) → closing = wide view, spreading = normal view, one step per gesture.
+- **Drag a finger over any list** (map, build, squad…) → it scrolls, also when the finger lands on a button; a button only fires on a tap.
 - **Tap the weather chip / solar panel on the roof** → solar system window.
 - Bottom bar: **Build / Squad / Map / Crew / Loot / Log**, above it the travel strip (**park / drive**, speed, hull).
 
@@ -347,6 +349,7 @@ tools/balance.gd              4-hour headless balance bot (`godot --headless --p
 - Particles default to **GPUParticles2D** (docs recommendation). Title screen has a **CPU (ประหยัด)** toggle that switches the same configs to CPUParticles2D for weak phones.
 - **Close-up mode** = management mode: the road, travel and random events pause; production and crafting keep running so progress bars stay live.
 - Pixel art is crisp: project-wide `default_texture_filter = Nearest`; the atlas means one texture download and batched draws.
+- **Touch on mobile web** (v4.6 fix): finger releases are booked in `Main._input`, before the GUI and the modal check, because on the web a finger's index is the browser `Touch.identifier` (never reused on iOS) and a release that hit an open panel used to leave a ghost finger that turned the next swipe into a pinch. Lists scroll by drag because every `MOUSE_FILTER_STOP` control inside a `ScrollContainer` is switched to `MOUSE_FILTER_PASS` (`UIKit.touch_pass`, hooked to `SceneTree.node_added`): [Viewport](https://docs.godotengine.org/en/stable/tutorials/inputs/inputevent.html) stops pointer events at the first STOP control, and `ScrollContainer` drags from the emulated mouse events ([`scroll_deadzone`](https://docs.godotengine.org/en/stable/classes/class_scrollcontainer.html#class-scrollcontainer-property-scroll-deadzone) = 8 via `gui/common/default_scroll_deadzone`). Autotest `--only=touch` feeds real `InputEventScreenTouch/Drag` through `Input.parse_input_event`.
 - Portrait is the primary layout (360 px wide terminal UI); landscape moves the tool buttons into a right-hand column.
 
 ## 7. Dev smoke test

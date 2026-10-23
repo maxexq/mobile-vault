@@ -382,6 +382,38 @@ static func scroll() -> ScrollContainer:
 	return sc
 
 
+## Finger drag-scroll. ScrollContainer scrolls by touch from the emulated mouse events, and Viewport
+## stops those at the first MOUSE_FILTER_STOP control under the finger (Button, PanelContainer, ...), so
+## a list of cards only scrolled from its scrollbar. Every STOP control inside a ScrollContainer becomes
+## PASS: a button still gets its tap and drops it on NOTIFICATION_SCROLL_BEGIN once the finger moves past
+## gui/common/default_scroll_deadzone. Controls that drag on their own keep STOP.
+## https://docs.godotengine.org/en/stable/classes/class_control.html#class-control-property-mouse-filter
+## Wired to SceneTree.node_added by the HUD, so panels rebuilt later are covered too.
+static func touch_pass(n: Node) -> void:
+	var c := n as Control
+	if c == null or c.mouse_filter != Control.MOUSE_FILTER_STOP:
+		return
+	if c is ScrollBar or c is Slider or c is ScrollContainer or c is LineEdit or c is TextEdit or c is ItemList or c is Tree:
+		return
+	if c is RichTextLabel and (c as RichTextLabel).scroll_active:
+		return
+	var p := c.get_parent()
+	while p is Control:
+		if p is ScrollContainer:
+			c.mouse_filter = Control.MOUSE_FILTER_PASS
+			return
+		if (p as Control).top_level:
+			return
+		p = p.get_parent()
+
+
+## touch_pass() for a whole subtree (nodes that were already in the tree when the hook was wired)
+static func touch_pass_all(n: Node) -> void:
+	touch_pass(n)
+	for ch in n.get_children(true):
+		touch_pass_all(ch)
+
+
 static func stat_bar(stat: String, value: int) -> HBoxContainer:
 	var h := hbox(3)
 	var l := label(stat.to_upper() + " " + str(value), FP, C_DIM, true)

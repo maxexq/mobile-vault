@@ -77,6 +77,8 @@ signal xray_toggled(on: bool)
 
 func _ready() -> void:
 	theme = UIKit.theme()
+	get_tree().node_added.connect(_on_node_added)
+	UIKit.touch_pass_all.call_deferred(get_tree().root)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build_top()
@@ -844,6 +846,19 @@ func open_settings(tab: String = "game") -> void:
 		if k != "settings" and panels[k].is_open:
 			panels[k].close()
 	settings_panel.open_tab(tab)
+
+
+## finger drag-scroll inside every ScrollContainer (UIKit.touch_pass); checked again next frame for
+## controls that set their own mouse_filter in _ready
+func _on_node_added(n: Node) -> void:
+	if n is Control:
+		UIKit.touch_pass(n)
+		_touch_pass_later.call_deferred(n)
+
+
+func _touch_pass_later(n) -> void:
+	if is_instance_valid(n) and n.is_inside_tree():
+		UIKit.touch_pass(n)
 
 
 func any_modal_open() -> bool:

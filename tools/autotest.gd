@@ -49,6 +49,12 @@ func _run() -> void:
 	await wait(0.3)
 	main.hud.title_screen._go(true)
 	await wait(2.5)
+	if "--only=touch" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _touch_test()
+		print("[autotest] DONE")
+		get_tree().quit()
+		return
 	if "--only=large" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _large_room_test()
@@ -634,6 +640,7 @@ func _run() -> void:
 	main.hud.panels.map.close()
 	await wait(0.4)
 	await _engine_bay_test()
+	await _touch_test()
 	await _event_layout_test()
 	await _inspection_test()
 	await _threat_test()
@@ -2562,3 +2569,134 @@ func _title_backdrop_test() -> void:
 	await wait(0.2)
 	_check("title: window re-fits after it grows", vp.encloses(p.get_rect()))
 	main.hud.title_screen._refresh_account()
+
+
+# ------------------------------------------------------------------ mobile touch
+## design coords -> window coords, so Input.parse_input_event takes the same path as a real finger
+## (Input emulates the mouse from the first finger, then the window's stretch transform applies)
+func _win(p: Vector2) -> Vector2:
+	return get_viewport().get_screen_transform() * p
+
+
+func _finger(idx: int, p: Vector2, down: bool) -> void:
+	var ev := InputEventScreenTouch.new()
+	ev.index = idx
+	ev.position = _win(p)
+	ev.pressed = down
+	Input.parse_input_event(ev)
+	await get_tree().process_frame
+
+
+## moves fingers idx[i] from a[i] to b[i] together over `steps` frames
+func _fingers_drag(idx: Array, a: Array, b: Array, steps: int = 10) -> void:
+	for s in steps:
+		for i in idx.size():
+			var p0: Vector2 = (a[i] as Vector2).lerp(b[i], float(s) / steps)
+			var p1: Vector2 = (a[i] as Vector2).lerp(b[i], float(s + 1) / steps)
+			var ev := InputEventScreenDrag.new()
+			ev.index = idx[i]
+			ev.position = _win(p1)
+			ev.relative = _win(p1) - _win(p0)
+			Input.parse_input_event(ev)
+		await get_tree().process_frame
+
+
+## v4.6 mobile web touch fixes: a tap that opened a panel left a ghost finger behind (its release hit
+## the modal check), so every later one-finger swipe was read as a pinch: no pan + the camera flipping
+## normal/wide; pinch steps once per gesture; lists scroll by dragging a finger over their buttons.
+func _touch_test() -> void:
+	_no_events()
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	if main.hud.room_closeup.is_open:
+		main.hud.room_closeup.close()
+	await wait(0.6)
+	var zoom_was: String = main.zoom_mode
+	var toasts := []
+	var on_toast := func(msg: String, _kind: String): if msg.begins_with("มุมกล้อง"): toasts.append(msg)
+	Game.toast.connect(on_toast)
+	main.set_zoom_mode("normal")
+	var wr: Rect2 = main.hud.world_rect()
+	var sky := wr.position + Vector2(wr.size.x * 0.5, 24.0)
+	# 1) finger 7 lands on the world, a panel opens before it lifts (as when its tap opened one)
+	await _finger(7, sky, true)
+	main.hud.open_panel("map")
+	await wait(0.2)
+	await _finger(7, sky, false)
+	main.hud.panels.map.close()
+	await wait(0.5)
+	_check("touch: a release under a panel leaves no ghost finger", main._touches.is_empty())
+	# 2) the next finger gets a new id (iOS never reuses Touch.identifier) and swipes left
+	toasts.clear()
+	main.pan_x = 0.0
+	await _finger(8, sky, true)
+	await _fingers_drag([8], [sky], [sky + Vector2(-90, 0)])
+	await _finger(8, sky + Vector2(-90, 0), false)
+	_check("touch: one-finger swipe after a panel pans the camera (pan %.0f)" % main.pan_x, main.pan_x > 40.0)
+	_check("touch: that swipe leaves the zoom alone", main.zoom_mode == "normal" and toasts.is_empty())
+	# 3) pinch: closing two fingers -> wide once, however far they keep going; spreading -> normal
+	var c := wr.get_center()
+	toasts.clear()
+	await _finger(10, c - Vector2(60, 0), true)
+	await _finger(11, c + Vector2(60, 0), true)
+	await _fingers_drag([10, 11], [c - Vector2(60, 0), c + Vector2(60, 0)], [c - Vector2(8, 0), c + Vector2(8, 0)], 16)
+	await _finger(10, c - Vector2(8, 0), false)
+	await _finger(11, c + Vector2(8, 0), false)
+	_check("touch: pinch in -> wide view, one toast (%d)" % toasts.size(), main.zoom_mode == "wide" and toasts.size() == 1)
+	await _finger(12, c - Vector2(10, 0), true)
+	await _finger(13, c + Vector2(10, 0), true)
+	await _fingers_drag([12, 13], [c - Vector2(10, 0), c + Vector2(10, 0)], [c - Vector2(80, 0), c + Vector2(80, 0)], 16)
+	await _finger(12, c - Vector2(80, 0), false)
+	await _finger(13, c + Vector2(80, 0), false)
+	_check("touch: pinch out -> normal view", main.zoom_mode == "normal" and toasts.size() == 2)
+	_check("touch: no fingers left after the pinches", main._touches.is_empty())
+	Game.toast.disconnect(on_toast)
+	main.set_zoom_mode(zoom_was)
+	await wait(0.3)
+	# 4) lists: drag a finger that lands on a button -> the list scrolls, the button does not fire;
+	# a plain tap still does. ScrollContainer only drags when DisplayServer reports a touchscreen,
+	# which a desktop test run fakes with emulate_touch_from_mouse.
+	var touch_was := Input.emulate_touch_from_mouse
+	Input.emulate_touch_from_mouse = true
+	Game.s.res.scrap = 900.0
+	main.hud.open_panel("build")
+	var bp: BuildPanel = main.hud.panels.build
+	bp.move_to_front()
+	await wait(0.6)
+	var sc: ScrollContainer = _find_type(bp, "ScrollContainer")[0]
+	var stops := []
+	for n in _find_type(sc, "Button") + _find_type(sc, "PanelContainer"):
+		if n.mouse_filter == Control.MOUSE_FILTER_STOP:
+			stops.append(n.get_class())
+	_check("touch: no button/card inside a list stops the finger %s" % str(stops), stops.is_empty())
+	var builds: Array = bp._grid.get_children().map(func(card): return _find_type(card, "Button")).reduce(func(acc, a): return acc + a, [])
+	builds = builds.filter(func(b): return not b.disabled and b.text == "สร้าง")
+	var fired := [0]
+	for b in builds:
+		b.pressed.connect(func(): fired[0] += 1, CONNECT_ONE_SHOT)
+	sc.scroll_vertical = 0
+	await wait(0.2)
+	var sr := sc.get_global_rect()
+	var btn: Button = builds.filter(func(b): return sr.has_point(b.get_global_rect().get_center()))[0]
+	var p0 := btn.get_global_rect().get_center()
+	await _finger(20, p0, true)
+	await _fingers_drag([20], [p0], [p0 - Vector2(0, 110)], 12)
+	await _finger(20, p0 - Vector2(0, 110), false)
+	await wait(0.5)
+	_check("touch: finger drag over a list scrolls it (%d px)" % sc.scroll_vertical, sc.scroll_vertical > 40)
+	_check("touch: the button under a scrolling finger does not fire", fired[0] == 0)
+	await wait(0.4)
+	btn = builds.filter(func(b): return sr.grow(-4).has_point(b.get_global_rect().get_center()))[0]
+	var p1 := btn.get_global_rect().get_center()
+	await _finger(21, p1, true)
+	await wait(0.08)
+	await _finger(21, p1, false)
+	await wait(0.3)
+	_check("touch: a tap on a button inside a list still fires it", fired[0] == 1)
+	if main._placing != "":
+		main._exit_placement()
+	if bp.is_open:
+		bp.close()
+	Input.emulate_touch_from_mouse = touch_was
+	await wait(0.3)
