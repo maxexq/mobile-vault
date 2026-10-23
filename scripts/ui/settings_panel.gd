@@ -349,10 +349,7 @@ func _extra_rows() -> Array:
 func _tab_about() -> void:
 	var head := UIKit.hbox(6)
 	head.add_child(UIKit.icon_rect("emblem", 24))
-	var hv := UIKit.vbox(0)
-	hv.add_child(UIKit.label("MOBILE VAULT", 18, UIKit.C_LINE, true))
-	hv.add_child(UIKit.label("PROJECT: SURVIVAL · v" + BuildInfo.GAME_VERSION, UIKit.FP, UIKit.C_GOLD, true))
-	head.add_child(hv)
+	head.add_child(UIKit.logo("MOBILE VAULT · v" + BuildInfo.GAME_VERSION))
 	_list.add_child(head)
 	_head("VERSION", "ข้อมูลเวอร์ชัน")
 	for r in BuildInfo.rows() + _extra_rows():

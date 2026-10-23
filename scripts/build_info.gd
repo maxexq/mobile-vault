@@ -5,6 +5,7 @@ extends RefCounted
 ## to res://build_info.json by tools/stamp_build.sh right before a web export; a plain checkout has
 ## no stamp and reports itself as a "dev" build.
 
+const GAME_NAME := "Apocarlypse: Mobile Vault"   # player-facing title; the repo, domain and save keys keep "mobile-vault"
 const GAME_VERSION := "4.6"
 const CODENAME := "MAMMOTH-7"
 const STAMP_PATH := "res://build_info.json"
@@ -60,7 +61,7 @@ static func user_agent() -> String:
 static func rows() -> Array:
 	var st := stamp()
 	var out := [
-		["GAME", "Mobile Vault v%s" % GAME_VERSION],
+		["GAME", "%s v%s" % [GAME_NAME, GAME_VERSION]],
 		["BUILD", "%s · %s" % [commit_short(), channel()]],
 	]
 	if str(st.branch) != "":

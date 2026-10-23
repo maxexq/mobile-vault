@@ -51,7 +51,7 @@ func new_game() -> void:
 	save_game()
 	game_started.emit()
 	_emit_all(true)
-	toast.emit("ยินดีต้อนรับสู่ Mobile Vault! แตะที่ห้องเพื่อจัดการ ปัดซ้าย-ขวาเพื่อดูถนน", "info")
+	toast.emit("ยินดีต้อนรับสู่ Apocarlypse! แตะที่ห้องเพื่อจัดการ ปัดซ้าย-ขวาเพื่อดูถนน", "info")
 	if Modes.id() != "standard" or Modes.diff() != "normal" or not Modes.mutators().is_empty():
 		toast.emit("โหมด: " + Modes.label(), "biome")
 

@@ -200,6 +200,25 @@ static func label(text: String, size: int = FS, color: Color = C_TEXT, pixel: bo
 	return l
 
 
+## game logo: "APO CAR LYPSE" in the pixel font with the CAR pun lit up, plus a subtitle line
+static func logo(subtitle: String = "MOBILE VAULT") -> VBoxContainer:
+	var v := vbox(0)
+	var word := hbox(0)
+	word.add_child(label("APO", 18, C_TEXT, true))
+	var car := vbox(0)
+	car.add_child(label("CAR", 18, C_RED, true))
+	var bar := ColorRect.new()
+	bar.color = C_RED
+	bar.custom_minimum_size.y = 2
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	car.add_child(bar)
+	word.add_child(car)
+	word.add_child(label("LYPSE", 18, C_TEXT, true))
+	v.add_child(word)
+	v.add_child(label(subtitle, FP, C_GOLD, true))
+	return v
+
+
 ## bold Thai heading line with a pixel EN tag, e.g. "> CRAFTING  การผลิต"
 static func header(en: String, th: String = "", color: Color = C_GOLD) -> HBoxContainer:
 	var h := hbox(4)

@@ -1093,7 +1093,7 @@ func _settings_test() -> void:
 	_check("settings: defaults restored", main.crt.visible and FX.use_gpu and Engine.max_fps == 60 and main.pixel_scale == s0)
 	# version details
 	_check("about: Godot 4.7.2-stable", BuildInfo.godot_version() == "4.7.2-stable")
-	_check("about: version rows", BuildInfo.rows().size() >= 8 and BuildInfo.as_text().contains("Mobile Vault v" + BuildInfo.GAME_VERSION))
+	_check("about: version rows", BuildInfo.rows().size() >= 8 and BuildInfo.as_text().contains("Apocarlypse: Mobile Vault v" + BuildInfo.GAME_VERSION))
 	_check("about: trace uses the game version", Trace.VERSION == BuildInfo.GAME_VERSION)
 	# the window, each tab
 	main.hud.open_settings()
@@ -1889,6 +1889,8 @@ func _share_preview_test() -> void:
 	_check("share: twitter:image matches og:image", url != "" and head.contains("name=\"twitter:image\" content=\"%s\"" % url))
 	var img := Image.load_from_file(ProjectSettings.globalize_path("res://web/og-image.png"))
 	_check("share: og-image.png is 1200x630", img != null and img.get_size() == Vector2i(1200, 630))
+	_check("share: og:title uses the game name", head.contains("property=\"og:title\" content=\"" + BuildInfo.GAME_NAME))
+	_check("share: project name is the game name", ProjectSettings.get_setting("application/config/name") == BuildInfo.GAME_NAME)
 	_check("share: favicon exported", cfg.get_value("preset.0.options", "html/export_icon", false))
 
 

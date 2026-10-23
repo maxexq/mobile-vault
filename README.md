@@ -1,4 +1,6 @@
-# MOBILE VAULT — Project: Survival
+# APOCARLYPSE: Mobile Vault
+
+> **Apo-CAR-lypse** = car + apocalypse. The game was called "Mobile Vault" up to v4.6; the vehicle is still the Mobile Vault, and the repo, Vercel domain, save keys and Supabase project keep the `mobile-vault` name. The player-facing title lives in `BuildInfo.GAME_NAME`, `project.godot` `config/name`, the Web preset `html/head_include` (og/twitter tags) and `UIKit.logo()` (title screen + Settings › About).
 
 Idle survival / management game in a giant roaming RV ("Mobile Vault") — 2D pixel art, built for **Mobile Web (HTML5)** with **Godot 4.7.2-stable** + GDScript.
 
