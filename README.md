@@ -197,11 +197,16 @@ The engine now lives in a walk-in room inside the cab of every vehicle (van / bu
 Local-first: the game still reads and writes localStorage / `user://`; `scripts/autoload/cloud.gd` mirrors that save (plus Settings) to one row per player in Supabase, using `HTTPRequest` against the REST API (no addon).
 
 - **Setup (once):** run `supabase/migrations/0001_cloud_save.sql` in the Supabase SQL Editor, enable *Authentication → Allow anonymous sign-ins*, then copy `cloud_config.example.json` to `cloud_config.json` (git-ignored) with the Project URL and the **anon / publishable** key. Never put the `service_role` / secret key in the game. Without the file the cloud is off and the game is offline-only, as before.
-- **Accounts:** first launch signs in anonymously; the session (refresh token) is kept in localStorage `mobile_vault_auth_v1`. Linking an email/Google login is the next step.
+- **Accounts:** first launch signs in as a **Guest** (Supabase anonymous user); the session (refresh token) is kept in localStorage `mobile_vault_auth_v1`. The title menu shows the account and opens Settings → เซฟ, where:
+  - a guest taps **ล็อกอินด้วย Gmail** → Supabase *manual linking* (`GET /auth/v1/user/identities/authorize?provider=google&skip_http_redirect=true`) adds Google to the same user id, so the save stays put;
+  - if that Google account already has its own user (`identity_already_exists`), **สลับไปบัญชี Google นั้น** signs in to it (`/auth/v1/authorize?provider=google`); when both this device and the account have progress the usual conflict choice appears;
+  - a Google user can **ออกจากระบบ**: the save is uploaded first (refused when offline), the local copy is removed and a fresh guest starts.
+  - Google uses the redirect (implicit) flow: the page goes to Google and comes back with the session in the URL fragment, read and cleared on boot. Google refuses to sign in inside a frame (the artifact view), so there the game offers to open `site_url` in a new tab.
+  - Setup: Google Cloud OAuth client (Web) with redirect URI `https://<ref>.supabase.co/auth/v1/callback`; Supabase → Google provider on + **Allow manual linking**; URL Configuration → Site URL + Redirect URLs for the Vercel production and preview domains. Step-by-step (Thai): `supabase/google-login-setup.md`.
 - **Migration:** a browser that already has a save uploads it as revision 1 on the first online start.
 - **Sync:** upload at most once a minute while playing and on tab hide; offline keeps saving locally and retries every 30 s. Writes go through `rpc_save`, which rejects a stale revision, so when two devices both moved on the Settings → เซฟ tab asks which save to keep. Sync state lives in localStorage `mobile_vault_cloud_v1`.
 - **Clock:** every reply carries `server_time`; `Cloud.now()` stamps `saved_at` and measures offline time, so moving the phone clock no longer grants offline progress once the cloud has answered.
-- **Tests:** the autotest runs the cloud against `tools/cloud_fake.gd` (same revision rules as the SQL). Test runners never use `cloud_config.json`.
+- **Tests:** the autotest runs the cloud against `tools/cloud_fake.gd` (same revision rules as the SQL, plus fake Google sign-in / linking / logout). Test runners never use `cloud_config.json`.
 
 ## 4l. Feature switches, event windows & remote config
 

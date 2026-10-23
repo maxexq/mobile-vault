@@ -6,13 +6,19 @@ extends Node
 ##  * every write goes through rpc_save, which only accepts it if the client saw the latest rev, so two
 ##    devices never overwrite each other silently: the player picks one (state CONFLICT)
 ##  * every reply carries server_time; now() uses it so offline progress follows the server clock
-## Config: res://cloud_config.json {"url": "https://<ref>.supabase.co", "anon_key": "<anon/publishable key>"}.
+##  * accounts: a guest (anonymous) can link Google so the same user id, and so the same save, follows
+##    the player to other devices; "sign in with Google" on another device switches to that account.
+##    Google uses Supabase's redirect (implicit) flow: the page leaves for Google and comes back with the
+##    session in the URL fragment, which _start() reads.
+## Config: res://cloud_config.json {"url": "https://<ref>.supabase.co", "anon_key": "<anon/publishable key>",
+##   "site_url": "<public game URL, used when the game runs inside a frame where Google refuses to sign in>"}.
 ## The file is git-ignored; without it the cloud is OFF and the game behaves exactly as before.
 ## Schema: supabase/migrations/0001_cloud_save.sql
 
 signal status_changed
 signal pulled      # a newer cloud save was written locally (title screen re-checks CONTINUE)
 signal conflict    # the cloud holds progress from another device that this one has not seen
+signal account_changed   # signed in / linked / signed out, or the account info was refreshed
 
 enum State { OFF, CONNECTING, OK, OFFLINE, CONFLICT }
 
@@ -30,11 +36,19 @@ var state := State.OFF
 var last_error := ""
 var url := ""
 var anon_key := ""
-## access_token, refresh_token, expires_at (unix), user_id
+## access_token, refresh_token, expires_at (unix), user_id, email, anonymous (bool), provider
 var session := {}
+var site_url := ""
+## last account problem to show the player (Thai), e.g. this Google account already has its own save
+var auth_error := ""
+## identity_already_exists after "link Google": the player can switch to that account instead
+var link_taken := false
+## tests replace this to see where the page would go instead of leaving it
+var navigate_hook := Callable()
 ## rev = cloud revision this device last saw; dirty = local save changed since; wiped = progress reset
 ## (an empty save is uploaded on purpose); device_id = random per browser
-var meta := {"rev": 0, "dirty": false, "wiped": false, "device_id": ""}
+## oauth = {mode: "link"|"signin", from: user id} while the page is away at Google
+var meta := {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}}
 ## CONFLICT: what the cloud holds {rev, device_id, updated_at, data, settings}
 var remote := {}
 var last_sync_at := 0.0
@@ -97,6 +111,7 @@ func _load_config() -> bool:
 	if not d is Dictionary:
 		push_warning("cloud_config.json is not a JSON object")
 		return false
+	site_url = str(d.get("site_url", "")).strip_edges()
 	return configure(str(d.get("url", "")), str(d.get("anon_key", "")))
 
 
@@ -112,6 +127,8 @@ func configure(project_url: String, key: String) -> bool:
 
 func _start() -> void:
 	_load_session()
+	if OS.has_feature("web") and transport == null:
+		await _take_oauth_return(str(JavaScriptBridge.eval("location.hash.substring(1) + '&' + location.search.substring(1)", true)))
 	if meta.device_id == "":
 		meta.device_id = "%08x%08x" % [randi(), randi()]
 		# first run with the cloud on: the save already in this browser is the one to upload
@@ -129,6 +146,7 @@ func _load_meta() -> void:
 		meta.dirty = bool(d.get("dirty", false))
 		meta.wiped = bool(d.get("wiped", false))
 		meta.device_id = str(d.get("device_id", ""))
+		meta.oauth = d.get("oauth", {}) if d.get("oauth") is Dictionary else {}
 
 
 func _save_meta() -> void:
@@ -165,6 +183,8 @@ func _on_local_written() -> void:
 
 
 func _on_local_wiped() -> void:
+	if _applying:
+		return
 	_write_seq += 1
 	meta.dirty = true
 	meta.wiped = true
@@ -359,13 +379,30 @@ func _take_session(b: Dictionary) -> void:
 	var exp := float(b.get("expires_at", 0))
 	if exp <= 0.0:
 		exp = now() + float(b.get("expires_in", 3600))
+	var keep := session.duplicate()
 	session = {
 		"access_token": str(b.get("access_token", "")),
 		"refresh_token": str(b.get("refresh_token", "")),
 		"expires_at": exp,
-		"user_id": str(b.get("user", {}).get("id", session.get("user_id", ""))),
+		"user_id": str(keep.get("user_id", "")),
+		"email": str(keep.get("email", "")),
+		"anonymous": bool(keep.get("anonymous", true)),
+		"provider": str(keep.get("provider", "")),
 	}
+	if b.get("user") is Dictionary:
+		_take_user(b.user)
 	_save_session()
+
+
+## GoTrue user object -> id / email / anonymous / provider in the session
+func _take_user(u: Dictionary) -> void:
+	session.user_id = str(u.get("id", session.get("user_id", "")))
+	session.email = str(u.get("email", "")) if u.get("email") != null else ""
+	session.anonymous = bool(u.get("is_anonymous", session.email == ""))
+	var am = u.get("app_metadata", {})
+	var provs: Array = am.get("providers", []) if am is Dictionary and am.get("providers") is Array else []
+	session.provider = "google" if provs.has("google") else str(am.get("provider", "") if am is Dictionary else "")
+	account_changed.emit()
 
 
 func r_error(r: Dictionary) -> String:
@@ -376,6 +413,188 @@ func r_error(r: Dictionary) -> String:
 			if r.body.has(k):
 				return "%d %s" % [r.code, str(r.body[k])]
 	return "HTTP %d" % r.code
+
+
+# ------------------------------------------------------------------ accounts
+func is_guest() -> bool:
+	return bool(session.get("anonymous", true))
+
+
+func account_text() -> String:
+	if user_id() == "":
+		return "-"
+	if is_guest():
+		return "Guest · " + user_id().left(8)
+	return "Google · " + str(session.get("email", ""))
+
+
+## Google sign-in needs a top-level page (Google refuses to run inside a frame such as the artifact view)
+func can_google() -> bool:
+	if url == "" or not Features.on("google_login"):
+		return false
+	if transport != null:
+		return true
+	return OS.has_feature("web") and not _in_frame()
+
+
+func _in_frame() -> bool:
+	return bool(JavaScriptBridge.eval("window.top !== window.self", true))
+
+
+## where Google sends the player back: this page without query/fragment
+func _return_url() -> String:
+	if OS.has_feature("web") and transport == null:
+		return str(JavaScriptBridge.eval("location.origin + location.pathname", true))
+	return site_url if site_url != "" else "https://test.invalid/"
+
+
+## guest -> link Google to this account (same user id, the save stays); otherwise sign in with Google.
+## switch = true: sign in to the Google account even while a guest (the one that already has a save).
+## The page leaves for Google; the result is read by _start() when it comes back.
+func sign_in_google(switch: bool = false) -> void:
+	auth_error = ""
+	link_taken = false
+	if url == "":
+		return
+	if not can_google():
+		if site_url != "":
+			OS.shell_open(site_url)
+		auth_error = "เปิดเกมในแท็บใหม่ก่อนแล้วค่อยล็อกอิน Google"
+		account_changed.emit()
+		return
+	if Game.started:
+		Game.save_game()
+	var back := _return_url().uri_encode()
+	var go := ""
+	var link := is_guest() and user_id() != "" and not switch
+	if link and not await _ensure_session():
+		auth_error = "ต่อคลาวด์ไม่ได้ ลองใหม่ตอนออนไลน์"
+		account_changed.emit()
+		return
+	if link:
+		# Supabase "manual linking": returns the Google URL for adding an identity to this user
+		var r := await _call(HTTPClient.METHOD_GET, "/auth/v1/user/identities/authorize?provider=google&skip_http_redirect=true&redirect_to=" + back, {}, true)
+		if r.code != 200 or not r.body is Dictionary or str(r.body.get("url", "")) == "":
+			auth_error = "ผูก Google ไม่สำเร็จ (%s)" % r_error(r)
+			Trace.rec("cloud", "link failed", {"err": r_error(r)})
+			account_changed.emit()
+			return
+		go = str(r.body.url)
+		meta.oauth = {"mode": "link", "from": user_id()}
+	else:
+		go = url + "/auth/v1/authorize?provider=google&redirect_to=" + back
+		meta.oauth = {"mode": "signin", "from": user_id()}
+	# one last upload so nothing is lost while the page is away
+	if meta.dirty and state == State.OK:
+		await upload()
+	_save_meta()
+	Trace.rec("cloud", "google " + str(meta.oauth.mode))
+	_navigate(go)
+
+
+func _navigate(to: String) -> void:
+	if navigate_hook.is_valid():
+		navigate_hook.call(to)
+	elif OS.has_feature("web"):
+		JavaScriptBridge.eval("location.assign(%s)" % JSON.stringify(to), true)
+	else:
+		OS.shell_open(to)
+
+
+## reads "#access_token=...&refresh_token=..." or "error=...&error_code=..." after Google sent the player back
+func _take_oauth_return(params: String) -> void:
+	var p := {}
+	for kv in params.split("&", false):
+		var i := kv.find("=")
+		if i > 0:
+			p[kv.left(i)] = kv.substr(i + 1).uri_decode().replace("+", " ")
+	var pending: Dictionary = meta.get("oauth", {})
+	if not p.has("access_token") and not p.has("error") and not p.has("error_code"):
+		return
+	if OS.has_feature("web") and transport == null:
+		JavaScriptBridge.eval("history.replaceState(null, '', location.origin + location.pathname)", true)
+	meta.oauth = {}
+	_save_meta()
+	if not p.has("access_token"):
+		var code := str(p.get("error_code", p.get("error", "")))
+		link_taken = code == "identity_already_exists"
+		auth_error = ("บัญชี Google นี้มีเซฟของตัวเองอยู่แล้ว กด \"สลับไปบัญชี Google\" เพื่อใช้บัญชีนั้นแทน" if link_taken
+			else "ล็อกอิน Google ไม่สำเร็จ (%s)" % str(p.get("error_description", code)))
+		Trace.rec("cloud", "google failed", {"code": code})
+		account_changed.emit()
+		return
+	var before := user_id()
+	_take_session({"access_token": p.access_token, "refresh_token": p.get("refresh_token", ""),
+		"expires_at": float(p.get("expires_at", 0)), "expires_in": float(p.get("expires_in", 3600))})
+	var claims := _jwt_claims(str(p.access_token))
+	session.user_id = str(claims.get("sub", session.user_id))
+	session.anonymous = bool(claims.get("is_anonymous", false))
+	var u := await _call(HTTPClient.METHOD_GET, "/auth/v1/user", {}, true)
+	if u.code == 200 and u.body is Dictionary:
+		_take_user(u.body)
+	_save_session()
+	Trace.rec("cloud", "google ok", {"mode": str(pending.get("mode", "")), "same_user": user_id() == before})
+	if user_id() != before:
+		# another account (Google sign-in on this device): its save is the cloud row; what is local here
+		# belongs to the old account, so the sync compares them (CONFLICT when both have progress)
+		meta.rev = 0
+		meta.dirty = Save.has_save()
+		meta.wiped = false
+		_save_meta()
+	account_changed.emit()
+
+
+## payload of a JWT (no signature check: only used to know which account this device is now on)
+func _jwt_claims(token: String) -> Dictionary:
+	var parts := token.split(".")
+	if parts.size() < 2:
+		return {}
+	var b64 := parts[1].replace("-", "+").replace("_", "/")
+	while b64.length() % 4 != 0:
+		b64 += "="
+	var d = JSON.parse_string(Marshalls.base64_to_utf8(b64))
+	return d if d is Dictionary else {}
+
+
+## after identity_already_exists: sign in to that Google account instead (its save wins unless the player picks)
+func switch_to_google() -> void:
+	await sign_in_google(true)
+
+
+## Google account -> back to a fresh guest. The save is uploaded first; if that fails nothing changes.
+## The local copy is removed (it lives in the Google account) so the new guest starts clean.
+func sign_out() -> bool:
+	auth_error = ""
+	if is_guest():
+		return false
+	if Game.started:
+		Game.save_game()
+	if meta.dirty:
+		await upload()
+		if meta.dirty:
+			auth_error = "ยังส่งเซฟขึ้นคลาวด์ไม่ได้ ลองใหม่ตอนออนไลน์"
+			account_changed.emit()
+			return false
+	await _call(HTTPClient.METHOD_POST, "/auth/v1/logout?scope=local", {}, true)
+	Trace.rec("cloud", "signed out")
+	var was_running := Game.started
+	Game.started = false
+	_applying = true
+	Save.wipe()
+	_applying = false
+	session = {}
+	_save_session()
+	meta.rev = 0
+	meta.dirty = false
+	meta.wiped = false
+	_save_meta()
+	account_changed.emit()
+	if was_running:
+		Settings._restart()
+	else:
+		pulled.emit()
+		await sync()
+	return true
 
 
 # ------------------------------------------------------------------ http
@@ -401,11 +620,13 @@ func _call(method: int, path: String, body: Dictionary, auth: bool) -> Dictionar
 	var headers := PackedStringArray(["apikey: " + anon_key, "Content-Type: application/json"])
 	if auth:
 		headers.append("Authorization: Bearer " + str(session.get("access_token", "")))
-	var text := JSON.stringify(body)
+	var text := "" if method == HTTPClient.METHOD_GET else JSON.stringify(body)
 	if transport != null:
 		return await transport.handle(method, path, headers, text)
 	var req := HTTPRequest.new()
 	req.timeout = TIMEOUT_SEC
+	# on web the browser's fetch() already decodes gzip; skip Godot's own gzip step
+	req.accept_gzip = false
 	add_child(req)
 	var err := req.request(url + path, headers, method, text)
 	if err != OK:

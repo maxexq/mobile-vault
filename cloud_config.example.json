@@ -1,4 +1,5 @@
 {
   "url": "https://YOUR-PROJECT-REF.supabase.co",
-  "anon_key": "YOUR-ANON-OR-PUBLISHABLE-KEY"
+  "anon_key": "YOUR-ANON-OR-PUBLISHABLE-KEY",
+  "site_url": "https://YOUR-GAME.vercel.app/"
 }
