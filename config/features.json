@@ -10,6 +10,7 @@
     "large_rooms": true,
     "tutorial": true,
     "cloud_save": true,
+    "google_login": true,
     "modes": true
   },
   "events": {},

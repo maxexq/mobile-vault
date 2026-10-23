@@ -21,6 +21,7 @@ var _picker: VBoxContainer
 var _pick_scroll: ScrollContainer
 var _pick := {"id": "standard", "diff": "normal", "mut": []}
 var _continue: Button
+var _account_btn: Button
 var _settings_btn: Button
 var _chars := 0.0
 var _boot_text := ""
@@ -51,6 +52,12 @@ func _ready() -> void:
 	var nb := UIKit.button("เริ่มการเดินทางใหม่  NEW RUN", "yellow", "up")
 	nb.pressed.connect(_new_run)
 	_menu.add_child(nb)
+	_account_btn = UIKit.button("", "blue", "book")
+	_account_btn.pressed.connect(func(): settings_requested.emit("data"))
+	_menu.add_child(_account_btn)
+	Cloud.account_changed.connect(_refresh_account)
+	Cloud.status_changed.connect(_refresh_account)
+	_refresh_account()
 	_settings_btn = UIKit.button("ตั้งค่า  SETTINGS", "gray", "gear")
 	_settings_btn.pressed.connect(func(): settings_requested.emit("game"))
 	_menu.add_child(_settings_btn)
@@ -76,6 +83,17 @@ func _process(delta: float) -> void:
 	if _chars < _boot_text.length():
 		_chars += delta * 70.0
 		_log.text = _boot_text.substr(0, int(_chars)) + ("_" if int(_chars * 0.2) % 2 == 0 else "")
+
+
+## cloud on: who is playing (Guest / Google) and the way to the account section
+func _refresh_account() -> void:
+	_account_btn.visible = Cloud.enabled()
+	if Cloud.is_guest():
+		_account_btn.text = "Guest · ล็อกอินด้วย Gmail"
+	else:
+		_account_btn.text = "บัญชี: " + str(Cloud.session.get("email", "Google"))
+	_panel.custom_minimum_size.y = 0
+	_layout.call_deferred()
 
 
 func refresh_buttons() -> void:

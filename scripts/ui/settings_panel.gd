@@ -29,6 +29,9 @@ func _build() -> void:
 	body.add_child(_note)
 	Settings.changed.connect(func(_k): _sync())
 	Settings.import_failed.connect(func(why): _say(why, UIKit.C_RED))
+	Cloud.account_changed.connect(func():
+		if is_open and tab == "data":
+			refresh())
 	Cloud.status_changed.connect(func():
 		# the conflict choice adds/removes buttons, so that change rebuilds the tab; the rest updates labels
 		if is_open and tab == "data":
@@ -281,8 +284,9 @@ func _cloud_rows() -> void:
 	var last := _info("SYNC", "")
 	_syncs.append(func():
 		(st.get_child(1) as Label).text = Cloud.status_text()
-		(acc.get_child(1) as Label).text = ("ผู้เล่นนิรนาม · " + Cloud.user_id().left(8)) if Cloud.user_id() != "" else "-"
+		(acc.get_child(1) as Label).text = Cloud.account_text()
 		(last.get_child(1) as Label).text = "rev %d · %s" % [int(Cloud.meta.rev), _when(Cloud.last_sync_at) if Cloud.last_sync_at > 0 else "ยังไม่ได้ซิงก์"])
+	_account_rows()
 	if Cloud.state == Cloud.State.CONFLICT:
 		var r := Cloud.remote
 		var rd: Dictionary = r.get("data", {}) if r.get("data") is Dictionary else {}
@@ -304,6 +308,33 @@ func _cloud_rows() -> void:
 		_say("กำลังซิงก์...")
 		await Cloud.sync()
 		_say(Cloud.status_text(), UIKit.C_GOLD if Cloud.state == Cloud.State.OK else UIKit.C_RED))
+
+
+## guest: link Google (keeps this save) · Google: sign out · account errors from the last attempt
+func _account_rows() -> void:
+	if Cloud.auth_error != "":
+		_list.add_child(UIKit.wrap_label(Cloud.auth_error, UIKit.FS_SMALL, UIKit.C_RED))
+	if Cloud.is_guest():
+		_list.add_child(UIKit.wrap_label("ตอนนี้เล่นแบบ Guest เซฟผูกกับเบราว์เซอร์นี้ ล็อกอินด้วย Gmail เพื่อเก็บเซฟนี้ไว้ในบัญชี Google แล้วเล่นต่อจากเครื่องไหนก็ได้", UIKit.FS_SMALL, UIKit.C_DIM))
+		if Cloud.can_google():
+			_action("ล็อกอินด้วย Gmail (เก็บเซฟนี้ไว้)", "blue", "up", func():
+				_say("กำลังไปหน้า Google...")
+				await Cloud.sign_in_google())
+			if Cloud.link_taken:
+				_action("สลับไปบัญชี Google นั้น", "yellow", "play", func():
+					_say("กำลังไปหน้า Google...")
+					await Cloud.switch_to_google())
+		else:
+			_list.add_child(UIKit.wrap_label("Google ไม่ให้ล็อกอินในหน้าที่ฝังอยู่ เปิดเกมบนเว็บโดยตรงก่อน", UIKit.FS_SMALL, UIKit.C_GOLD))
+			if Cloud.site_url != "":
+				_action("เปิดเกมในแท็บใหม่", "blue", "up", func(): OS.shell_open(Cloud.site_url))
+	else:
+		_action("ออกจากระบบ (กลับไปเป็น Guest)", "gray", "skull", func():
+			_say("กำลังส่งเซฟขึ้นคลาวด์ก่อนออกจากระบบ...")
+			if await Cloud.sign_out():
+				_say("ออกจากระบบแล้ว เซฟยังอยู่ในบัญชี Google")
+			else:
+				refresh())
 
 
 func _when(unix: float) -> String:
