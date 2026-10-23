@@ -192,7 +192,11 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
             emit(c["input"]["agent"], "task", {"task": c["input"]["task"]})
             out["log"] = state.get("log", []) + [f"lead -> {c['input']['agent']}: {c['input']['task'][:200]}"]
             return out
-        out["report"] = _text(blocks) or f"(lead stopped: {stop})"
+        if stop == "max_tokens" and not _text(blocks):
+            out["report"] = ("(the lead ran out of output tokens before answering. With a local model, raise "
+                             "OLLAMA_CONTEXT_LENGTH, try a shorter task, or use a model that thinks less.)")
+        else:
+            out["report"] = _text(blocks) or f"(lead stopped: {stop})"
         return out
 
     def after_lead(state: TeamState) -> str:

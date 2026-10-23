@@ -85,3 +85,13 @@ def test_local_team_runs_every_agent_on_the_local_model(repo, monkeypatch):
     assert out["report"] == "all local" and seen == ["gemma4:12b", "gemma4:12b"]
     llm = [d["model"] for a, k, d in events if k == "llm"]
     assert llm == ["gemma4:12b", "local", "gemma4:12b"]  # analyst answered by the local model, not Gemini
+
+
+def test_retries_with_more_room_when_thinking_eats_the_budget(monkeypatch):
+    srv = Server(reply({"content": "", "reasoning": "hmm " * 50}, finish="length"),
+                 reply({"content": "<think>plan</think>ไม่มีเครื่องมือ Plane ครับ", "reasoning": "checked tools"}))
+    monkeypatch.setattr(llms.httpx, "post", srv)
+    blocks, stop, _ = llms.local_turn(CFG, "sys", [{"role": "user", "content": "plane?"}], [], "high")
+    assert [b["max_tokens"] for b in srv.bodies] == list(llms.LOCAL_BUDGETS)
+    assert stop == "end_turn" and blocks[-1] == {"type": "text", "text": "ไม่มีเครื่องมือ Plane ครับ"}
+    assert blocks[0]["type"] == "thinking" and "checked tools" in blocks[0]["thinking"] and "plan" in blocks[0]["thinking"]

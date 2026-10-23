@@ -162,6 +162,7 @@ class LocalLLM:
         return text.strip()
 
 
+LOCAL_BUDGETS = (8192, 24576)  # output tokens per local turn: normal, then one retry for long thinking
 _PROMPT_TOOLS: set = set()  # (base_url, model) pairs whose server rejected native tool calling
 _JSON_CALL = re.compile(r"\{.*\}", re.S)
 
@@ -225,7 +226,8 @@ def local_turn(cfg: Config, system: str, messages: list, tools: list, effort: st
     """
     key = (cfg.local_base_url, cfg.local_model)
     schemas = {t["name"]: t["input_schema"] for t in tools}
-    for attempt in range(2):
+    budget, retried_tools = LOCAL_BUDGETS[0], False
+    while True:
         prompt_tools = key in _PROMPT_TOOLS
         sys_text = system
         if prompt_tools and tools:
@@ -233,23 +235,34 @@ def local_turn(cfg: Config, system: str, messages: list, tools: list, effort: st
                              for t in tools)
             sys_text += ("\n\nTools you can call:\n" + spec + "\n\nTo call a tool, reply with ONLY one JSON object "
                          '{"tool": "<name>", "input": {...}} and nothing else. When you are finished, reply in plain text.')
-        body = {"model": cfg.local_model, "max_tokens": 8192,
+        body = {"model": cfg.local_model, "max_tokens": budget,
                 "messages": [{"role": "system", "content": sys_text}] + _to_openai(messages, prompt_tools)}
         if tools and not prompt_tools:
             body["tools"] = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
                                                                "parameters": t["input_schema"]}} for t in tools]
         r = httpx.post(f"{cfg.local_base_url}/chat/completions", json=body, timeout=600)
-        if r.status_code == 400 and tools and not prompt_tools and "tool" in r.text.lower() and attempt == 0:
+        if r.status_code == 400 and tools and not prompt_tools and "tool" in r.text.lower() and not retried_tools:
             _PROMPT_TOOLS.add(key)
+            retried_tools = True
             continue
         if r.status_code != 200:
             raise LLMError(f"local LLM {r.status_code}: {r.text[:300]}")
+        data = r.json()
+        choice = data["choices"][0]
+        msg = choice["message"]
+        # Thinking models can spend the whole budget before answering: retry once with more room.
+        if choice.get("finish_reason") == "length" and not msg.get("tool_calls") \
+                and not _THINK.sub("", msg.get("content") or "").split("</think>")[-1].strip() \
+                and budget < LOCAL_BUDGETS[-1]:
+            budget = LOCAL_BUDGETS[-1]
+            continue
         break
-    data = r.json()
-    choice = data["choices"][0]
-    msg = choice["message"]
-    text = _THINK.sub("", msg.get("content") or "")
+    raw = msg.get("content") or ""
+    thinking = (msg.get("reasoning") or msg.get("reasoning_content") or "").strip()
+    thinking += "".join(m.group(0)[7:-8] for m in re.finditer(r"<think>.*?</think>", raw, re.S))
+    text = _THINK.sub("", raw)
     if "</think>" in text:
+        thinking += text.rsplit("</think>", 1)[0]
         text = text.rsplit("</think>", 1)[1]
     text = text.strip()
     uses = []
@@ -276,7 +289,8 @@ def local_turn(cfg: Config, system: str, messages: list, tools: list, effort: st
                 text = (text[:m.start()] + text[m.end():]).strip()
     if one_tool_at_a_time:
         uses = uses[:1]
-    blocks = ([{"type": "text", "text": text}] if text else []) + uses
+    blocks = ([{"type": "thinking", "thinking": thinking.strip()}] if thinking.strip() else []) \
+        + ([{"type": "text", "text": text}] if text else []) + uses
     stop = "tool_use" if uses else ("max_tokens" if choice.get("finish_reason") == "length" else "end_turn")
     u = data.get("usage") or {}
     return blocks, stop, {"model": cfg.local_model, "input": u.get("prompt_tokens", 0),
