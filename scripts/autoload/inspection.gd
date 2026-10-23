@@ -107,9 +107,10 @@ func current() -> Dictionary:
 ## every way a stranger can join funnels through here (via Game.offer_recruit)
 func roll_grade(bonus: float = 0.0) -> String:
 	var r := rng.randf()
-	if r < VERY_RARE_CHANCE * (1.0 + bonus):
+	var very := Features.num("inspection.very_rare_chance", VERY_RARE_CHANCE)
+	if r < very * (1.0 + bonus):
 		return "very_rare"
-	if r < (VERY_RARE_CHANCE + RARE_CHANCE) * (1.0 + bonus):
+	if r < (very + Features.num("inspection.rare_chance", RARE_CHANCE)) * (1.0 + bonus):
 		return "rare"
 	return ""
 

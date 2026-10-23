@@ -640,6 +640,7 @@ func _run() -> void:
 	_event_variety_test()
 	await _cloud_test()
 	await _large_room_test()
+	await _features_test()
 	print("[autotest] DONE")
 	get_tree().quit()
 
@@ -2003,6 +2004,136 @@ func _roof_deck_test() -> void:
 	if Game.squad_role(cand) == 0 and orig >= 0:
 		Game.set_squad(0, orig)
 	print("[autotest] roof deck checks done: %d failed total" % _fails)
+
+
+## Features: layers, per-event switches / weights / date windows, remote file rules, ?ff=, and every gate
+func _features_test() -> void:
+	if not Game.started or main.hud.title_screen.visible:
+		# the cloud checks leave the title screen up: start a fresh run so the gates act on a live game
+		main.hud.title_screen._go(true)
+		await wait(2.5)
+		Tutorial.skip()
+	Features.clear_overrides()
+	Features.layers.remote = {}
+	var all_on := true
+	for k in Features.FEATURES:
+		all_on = all_on and Features.on(k)
+	_check("features: every switch on by default", all_on)
+	_check("features: tune falls back to the code constant", Features.num("threat.rate_scale", Threat.RATE_SCALE) == Threat.RATE_SCALE)
+	var base: Array = Data.biome(0).events
+	_check("features: default event pool = the biome list", Features.event_pool(0, base) == base)
+	# dates: Thai local time, a date-only "to" covers the whole day
+	_check("features: parse_time reads UTC+7", Features.parse_time("2026-11-14", 7.0, false) == 1794614400.0 - 7 * 3600)
+	_check("features: date-only end is 23:59:59", Features.parse_time("2026-11-16", 7.0, true) == Features.parse_time("2026-11-16 23:59:59", 7.0, false))
+	_check("features: malformed date is refused", Features.parse_time("16/11/2026", 7.0, false) < 0.0)
+	# per-event switch
+	var keep := {}
+	for k in ["biome", "ev_bag", "ev_bag_biome", "ev_recent"]:
+		if Game.s.has(k):
+			keep[k] = Game.s[k]
+	Game.s.biome = 0
+	for k in ["ev_bag", "ev_bag_biome", "ev_recent"]:
+		Game.s.erase(k)
+	Dev.event_set("raiders", false)
+	var seen_raiders := false
+	for i in 200:
+		if Game.next_event_id() == "raiders":
+			seen_raiders = true
+	_check("features: an event switched off never comes up (200 draws)", not seen_raiders and Dev.any_active())
+	Dev.event_set("raiders", null)
+	# weight
+	Features.set_override("events", "trader", {"weight": 3.0})
+	_check("features: weight 3 = three cards per round", Game._weighted(base).count("trader") == 3 and Game._weighted(base).count("cache") == 1)
+	Features.set_override("events", "trader", {"weight": 0.0})
+	_check("features: weight 0 drops the event", not Features.event_pool(0, base).has("trader"))
+	Features.set_override("events", "trader", null)
+	# date window: the bunker (a mountain event) shows on every road during 14-16 Nov only
+	Features.set_override("events", "bunker", {"biomes": ["*"], "from": "2026-11-14", "to": "2026-11-16"})
+	Features.now_override = Features.parse_time("2026-11-16 23:30", 7.0, false)
+	_check("features: windowed event joins every biome inside the window", Features.event_pool(0, base).has("bunker") and Features.event_pool(1, Data.biome(1).events).has("bunker"))
+	Features.now_override = Features.parse_time("2026-11-17 00:01", 7.0, false)
+	_check("features: windowed event leaves after the window", not Features.event_pool(0, base).has("bunker"))
+	Features.now_override = Features.parse_time("2026-11-13 12:00", 7.0, false)
+	_check("features: windowed event not there before the window", not Features.event_pool(0, base).has("bunker"))
+	Features.now_override = 0.0
+	Features.set_override("events", "bunker", null)
+	Dev.feature_set("road_events", false)
+	_check("features: road_events off empties the deck", Game.next_event_id() == "")
+	Dev.feature_set("road_events", null)
+	for k in ["ev_bag", "ev_bag_biome", "ev_recent"]:
+		Game.s.erase(k)
+	Game.s.merge(keep, true)
+	# remote file rules
+	_check("features: garbage remote is refused", not Features.apply_remote("nope") and Features.on("raids"))
+	_check("features: remote for a newer game is refused", not Features.apply_remote({"min_game": "99.0", "features": {"raids": false}}) and Features.on("raids"))
+	var ok := Features.apply_remote({"min_game": "1.0", "features": {"raids": false, "made_up": false}, "tune": {"threat.rate_scale": 999, "made.up": 1}, "events": {"no_such_event": {"on": false}, "cache": {"on": false}}})
+	_check("features: remote applies known keys only", ok and not Features.on("raids") and not Features.event_cfg("cache").get("on", true)
+		and not Features.layers.remote.get("features", {}).has("made_up") and not Features.layers.remote.get("events", {}).has("no_such_event"))
+	_check("features: remote numbers are clamped", Features.num("threat.rate_scale", 1.0) == 10.0)
+	_check("features: source() names the remote layer", Features.source("features", "raids") == "remote" and Features.source("features", "strangers") == "default")
+	Dev.feature_set("raids", true)
+	_check("features: tester override beats remote", Features.on("raids") and Features.source("features", "raids") == "dev")
+	Dev.feature_set("raids", null)
+	# raids off: a quiet road even at threat 90 (the checkpoint warlord is exempt, so step off the checkpoint)
+	var km := float(Game.s.km)
+	Game.s.km = maxf(0.0, km - 5.0) if Game.at_checkpoint() else km
+	Threat._set_threat(90.0)
+	var raided := false
+	for i in 1200:
+		if Threat.tick(0.1) or Threat.phase != "quiet":
+			raided = true
+	_check("features: raids off = no raid for 120 s at threat 90", not raided and Threat.threat() == 0.0)
+	Game.s.km = km
+	Features.layers.remote = {}
+	Features.remote_status = "off"
+	# ?ff= overrides
+	Features.parse_overrides("raids:off,event.trader:off,tune.threat.roll_k:0.5,bogus:on")
+	_check("features: ?ff= switches, events and tune", not Features.on("raids") and not Features.event_cfg("trader").get("on", true) and Features.num("threat.roll_k", 0.3) == 0.5)
+	Features.clear_overrides()
+	_check("features: clear_overrides restores defaults", Features.on("raids") and not Features.has_dev_overrides())
+	# dev overrides persist in dev.cfg
+	Dev.feature_set("large_rooms", false)
+	Features.layers.dev = {}
+	Features._load_dev()
+	_check("features: tester override survives a reload", not Features.on("large_rooms"))
+	_check("features: large_rooms off blocks knock-through", Game.merge_block(0, 1) == "ระบบรวมห้องปิดใช้งานชั่วคราว")
+	Dev.feature_set("roof_deck", false)
+	_check("features: roof_deck off hides the mod", not Mods.enabled("roof_deck") and not Mods.can_install("roof_deck") and Mods.enabled("armor_plates"))
+	# strangers off: even a sure elite joins straight away
+	Dev.feature_set("strangers", false)
+	var q0 := Inspection.queue().size()
+	var d := Game.offer_recruit("radio", 1000.0)
+	_check("features: strangers off = no inspection queue", not d.is_empty() and Inspection.queue().size() == q0)
+	if not d.is_empty():
+		Game.s.dwellers.erase(d)
+		Game.dwellers_changed.emit()
+	# encounters off: a sure encounter chance still rolls nothing
+	Dev.feature_set("encounters", false)
+	Dev.tune_set("encounter.base_chance", 1.0)
+	_check("features: tune feeds the encounter chance", is_equal_approx(Encounter.chance_for("scav"), 1.0 + Encounter.DANGER_CHANCE * float(Expedition.site_def("scav").danger)))
+	if not Expedition.active():
+		var ids := []
+		for dw in Game.s.dwellers:
+			if not Game.is_away(dw) and ids.size() < Expedition.min_team():
+				ids.append(int(dw.id))
+		Dev.feature_set("expeditions", false)
+		_check("features: expeditions off refuses to start", not Expedition.start("scav", ids, {}) and not Expedition.active())
+		Dev.feature_set("expeditions", null)
+		if Expedition.start("scav", ids, {}):
+			_check("features: encounters off = none scheduled", (Expedition.state().get("enc", {}) as Dictionary).is_empty())
+			Dev.finish_expedition()
+	# the tab renders
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "feat"
+	main.hud.panels.god.refresh()
+	await wait(0.5)
+	_check("features: GOD tab lists switches, events and tune", main.hud.panels.god._list.get_child_count() > 12)
+	await shot("god_panel_features")
+	main.hud.panels.god.close()
+	_check("features: snapshot lists what is off", Features.snapshot().off.has("strangers"))
+	Features.clear_overrides()
+	_check("features: GOD hidden again clears nothing left on", Features.on("strangers") and Features.on("encounters"))
+
 
 
 ## v4.6 engine bay: migration from the slot-0 engine room, heat / auto-rest / stall, jobs, engine fit + swap,

@@ -17,6 +17,7 @@ run/max_fps=60
 Data="*res://scripts/autoload/data.gd"
 Atlas="*res://scripts/autoload/atlas.gd"
 Save="*res://scripts/autoload/save_system.gd"
+Features="*res://scripts/autoload/features.gd"
 Loot="*res://scripts/autoload/loot.gd"
 Game="*res://scripts/autoload/game.gd"
 Combat="*res://scripts/autoload/combat.gd"

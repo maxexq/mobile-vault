@@ -59,6 +59,9 @@ func _ready() -> void:
 	for a in ["--autotest", "--migrate-test", "--balance"]:
 		if a in args:
 			return
+	# remote kill switch: Features reads its cached remote file before this runs, so it bites on the next boot
+	if not Features.on("cloud_save"):
+		return
 	if _load_config():
 		_start.call_deferred()
 

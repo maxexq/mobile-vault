@@ -87,6 +87,7 @@ func unlock() -> void:
 func lock() -> void:
 	for k in flags.keys():
 		flags[k] = false
+	Features.clear_overrides()
 	set_speed(1.0)
 	unlocked = false
 	_save_cfg()
@@ -98,7 +99,7 @@ func on(flag: String) -> bool:
 
 
 func any_active() -> bool:
-	if speed != 1.0:
+	if speed != 1.0 or Features.has_dev_overrides():
 		return true
 	for k in flags:
 		if flags[k]:
@@ -852,3 +853,32 @@ func cloud_forget() -> void:
 func settings_reset() -> void:
 	act("settings reset")
 	Settings.reset_defaults()
+
+
+# ---- feature switches (Features layer "dev": kept in user://dev.cfg until reset or GOD is hidden)
+func feature_set(key: String, v: Variant) -> void:
+	act("feature %s = %s" % [key, v])
+	Features.set_override("features", key, v)
+
+
+func event_set(id: String, v: Variant) -> void:
+	act("event %s on = %s" % [id, v])
+	if v == null:
+		Features.set_override("events", id, null)
+	else:
+		Features.set_event_on(id, bool(v))
+
+
+func tune_set(key: String, v: Variant) -> void:
+	act("tune %s = %s" % [key, v])
+	Features.set_override("tune", key, v)
+
+
+func features_reset() -> void:
+	act("features reset overrides")
+	Features.clear_overrides()
+
+
+func features_refetch() -> void:
+	act("features refetch remote")
+	Features.fetch_remote()

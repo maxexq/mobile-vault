@@ -648,7 +648,7 @@ func set_squad(role: int, did: int) -> void:
 ## first squad member who falls in a wave (Combat). Stored as a dweller id in s.deck; working in a room,
 ## joining the squad, leaving on an expedition or leaving the vehicle takes them off the deck by itself.
 func deck_dweller() -> Dictionary:
-	if s.is_empty() or Mods.level("roof_deck") <= 0:
+	if s.is_empty() or Mods.level("roof_deck") <= 0 or not Features.on("roof_deck"):
 		return {}
 	var did := int(s.get("deck", -1))
 	if did < 0:
@@ -667,7 +667,7 @@ func is_deck(d: Dictionary) -> bool:
 func set_deck(did: int) -> void:
 	if did >= 0:
 		var d := dweller_by_id(did)
-		if d.is_empty() or is_away(d) or Mods.level("roof_deck") <= 0:
+		if d.is_empty() or is_away(d) or Mods.level("roof_deck") <= 0 or not Features.on("roof_deck"):
 			return
 		var r := squad_role(d)
 		if r >= 0:
@@ -1016,7 +1016,8 @@ func _simulate(dt: float, offline: bool) -> void:
 		if not offline:
 			s.event_t = float(s.event_t) - dt
 			if s.event_t <= 0.0:
-				s.event_t = rng.randf_range(70.0, 140.0)
+				var gap_min := Features.num("events.gap_min", EVENT_GAP.x)
+				s.event_t = rng.randf_range(gap_min, maxf(gap_min, Features.num("events.gap_max", EVENT_GAP.y)))
 				_trigger_random_event()
 
 	# --- radio recruitment (passive)
@@ -1166,7 +1167,7 @@ func _add_dweller(p: Dictionary) -> Dictionary:
 ## every stranger who wants to join comes through here: usually an ordinary refugee who boards at once
 ## (returns the dweller), rarely an exceptional one who waits at the door for inspection (returns {}).
 func offer_recruit(source: String, elite_bonus: float = 0.0) -> Dictionary:
-	var grade := Inspection.roll_grade(elite_bonus)
+	var grade := Inspection.roll_grade(elite_bonus) if Features.on("strangers") else ""
 	if grade != "" and Inspection.queue().size() < Inspection.MAX_QUEUE:
 		Inspection.queue_candidate(source, grade)
 		return {}
@@ -1637,6 +1638,8 @@ func room_power_pm(slot: int) -> float:
 
 ## why the room at `slot` can't be knocked through into the room at `other` ("" = it can)
 func merge_block(slot: int, other: int) -> String:
+	if not Features.on("large_rooms"):
+		return "ระบบรวมห้องปิดใช้งานชั่วคราว"
 	if s.is_empty() or other < 0 or other >= s.rooms.size():
 		return "ไม่มีห้องข้างๆ"
 	var a := room_anchor(slot)
@@ -1821,13 +1824,13 @@ func _trigger_random_event() -> void:
 ## order each round, and none of the last EVENT_NO_REPEAT events can come straight back (also across
 ## a bag refill or a biome change). The bag lives in the save, so reloading doesn't reset it.
 ## Ids are strings, so the JSON round-trip keeps them intact.
+## Features decides the pool (events switched off, or added for a date window) and each event's weight:
+## weight 2 = two cards in every round, 0.5 = a card in about half the rounds.
 const EVENT_NO_REPEAT := 3
+const EVENT_GAP := Vector2(70.0, 140.0)     # seconds between road events while driving
 
 func next_event_id() -> String:
-	var pool: Array = []
-	for e in Data.biome(s.biome).events:
-		if Data.EVENTS.has(e) and not pool.has(e):
-			pool.append(e)
+	var pool: Array = Features.event_pool(int(s.biome), Data.biome(s.biome).events)
 	if pool.is_empty():
 		return ""
 	var bag: Array = []
@@ -1836,7 +1839,7 @@ func next_event_id() -> String:
 			if pool.has(str(e)):
 				bag.append(str(e))
 	if bag.is_empty():
-		bag = _shuffled(pool)
+		bag = _shuffled(_weighted(pool))
 	var recent: Array = s.get("ev_recent", [])
 	var keep := mini(EVENT_NO_REPEAT, pool.size() - 1)
 	var blocked: Array = recent.slice(maxi(0, recent.size() - keep)) if keep > 0 else []
@@ -1848,7 +1851,7 @@ func next_event_id() -> String:
 			break
 	if id == "":
 		# what's left of the bag was all seen just now: take an unblocked one from the next round
-		var fresh := _shuffled(pool)
+		var fresh := _shuffled(_weighted(pool))
 		for e in fresh:
 			if not blocked.has(e):
 				id = e
@@ -1862,6 +1865,16 @@ func next_event_id() -> String:
 	s["ev_bag_biome"] = int(s.biome)
 	s["ev_recent"] = recent
 	return id
+
+
+## one bag round: every event as many times as its Features weight (fractions are a coin flip)
+func _weighted(pool: Array) -> Array:
+	var out := []
+	for e in pool:
+		var w := Features.event_weight(e)
+		for i in int(w) + (1 if rng.randf() < w - floorf(w) else 0):
+			out.append(e)
+	return out if not out.is_empty() else pool.duplicate()
 
 
 ## Fisher-Yates with Game.rng (Array.shuffle() uses the global seed, see @GlobalScope docs)
