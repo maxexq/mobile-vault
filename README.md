@@ -313,3 +313,11 @@ Fonts: Chakra Petch & Silkscreen — SIL Open Font License (see `assets/fonts/OF
 1. Push this folder to a GitHub repository.
 2. On vercel.com → **Add New → Project → Import** the repository → keep the defaults (Framework: Other) → **Deploy**. Every push to the main branch redeploys automatically.
 3. After changing the game, re-export into `web/`: `godot --headless --path . --export-release "Web" web/index.html`, commit, push.
+
+### Link preview (Open Graph / Twitter card)
+
+Shared links show a title, a Thai/English description and a 1200×630 pixel-art card. The tags are in the Web preset's **`html/head_include`** (Project → Export → Web → HTML → Head Include; [docs](https://docs.godotengine.org/en/stable/classes/class_editorexportplatformweb.html#class-editorexportplatformweb-property-html-head-include)), so every export writes them into `index.html`. The favicon comes from `html/export_icon` (the project icon).
+
+- Image: `web/og-image.png`, made from the game art by `python3 tools/og_image.py` (rerun after regenerating art). Godot does not export it, so it stays committed in `web/`.
+- Crawlers need an **absolute** URL: `og:url`, `og:image`, `twitter:image` and `canonical` point at `https://mobile-vault-three.vercel.app/`. If the production domain changes, update those four in `html/head_include` and re-export (the autotest checks the image URL is absolute https).
+- Check with the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) (press **Scrape Again** after a deploy, since Facebook/LINE cache previews), [opengraph.xyz](https://www.opengraph.xyz/) or by pasting the link into a LINE / Discord / X draft.
