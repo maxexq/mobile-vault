@@ -129,14 +129,19 @@ func next_cost(id: String) -> Dictionary:
 	return arr[lv] if lv < arr.size() else {}
 
 
+## a mod whose feature is switched off (Features) can't be installed or upgraded
+func enabled(id: String) -> bool:
+	return Features.on(id) if Features.FEATURES.has(id) else true
+
+
 func can_install(id: String) -> bool:
 	var d: Dictionary = MODS[id]
-	return level(id) < int(d.max) and has_bp(d.bp) and Game.can_afford(next_cost(id))
+	return enabled(id) and level(id) < int(d.max) and has_bp(d.bp) and Game.can_afford(next_cost(id))
 
 
 func install(id: String) -> bool:
 	var d: Dictionary = MODS[id]
-	if level(id) >= int(d.max):
+	if level(id) >= int(d.max) or not enabled(id):
 		return false
 	if not has_bp(d.bp):
 		Game.toast.emit("ต้องมี %s (หาได้จากการสำรวจสถานที่สำคัญ)" % BLUEPRINT_TH.get(d.bp, d.bp), "warn")

@@ -195,7 +195,7 @@ func filtered(cat: String = "", errors_only: bool = false) -> Array:
 
 func export_text() -> String:
 	return JSON.stringify({"game": "mobile_vault", "v": VERSION, "session": session, "exported": Time.get_datetime_string_from_system(true),
-		"summary": _summary(), "dev": {"flags": Dev.flags, "speed": Dev.speed}, "entries": entries}, " ")
+		"summary": _summary(), "dev": {"flags": Dev.flags, "speed": Dev.speed}, "features": Features.snapshot(), "entries": entries}, " ")
 
 
 ## web: browser download (must be called from a button press); desktop: user://trace_<time>.json

@@ -3,7 +3,7 @@ extends ModalPanel
 ## Tester console ("GOD MODE"). Only reachable when Dev.unlocked. Every button calls a Dev.* action, so the
 ## same actions are scriptable from tools/autotest.gd and every use lands in the Trace log.
 ##  tabs: ทั่วไป (switches, speed, time, weather) · ทรัพยากร (+ไอเท็ม/เตาหลอม) · รถ (+ก่อสร้าง) · ลูกเรือ (+ช่าง/คนแปลกหน้า)
-##        · ต่อสู้ (+ทีมป้องกัน) · โลก (+สำรับอีเว้นต์/จุดพิเศษ) · ระบบ (บทสอน, เวอร์ชัน, คลาวด์, ตั้งค่า) · LOG/เซฟ
+##        · ต่อสู้ (+ทีมป้องกัน) · โลก (+สำรับอีเว้นต์/จุดพิเศษ) · ฟีเจอร์ (เปิด/ปิดระบบ, อีเว้นต์, ตัวเลข) · ระบบ (บทสอน, เวอร์ชัน, คลาวด์, ตั้งค่า) · LOG/เซฟ
 
 var tab := "main"
 var _tabs: HFlowContainer
@@ -11,7 +11,8 @@ var _list: VBoxContainer
 var _log_cat := ""
 var _save_box: TextEdit
 
-const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["sys", "ระบบ"], ["log", "LOG/เซฟ"]]
+const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["log", "LOG/เซฟ"]]
+const SRC_TH := {"code": "ค่าในโค้ด", "default": "ค่าเริ่มต้น", "build": "บิลด์", "remote": "รีโมต", "dev": "ผู้ทดสอบ"}
 
 
 func _build() -> void:
@@ -20,6 +21,7 @@ func _build() -> void:
 	_list = make_list(4)
 	Dev.changed.connect(func(): if is_open and tab == "main": refresh())
 	Cloud.status_changed.connect(func(): if is_open and tab == "sys": refresh())
+	Features.changed.connect(func(): if is_open and tab == "feat": refresh())
 
 
 func refresh() -> void:
@@ -47,6 +49,7 @@ func refresh() -> void:
 		"crew": _tab_crew()
 		"fight": _tab_fight()
 		"world": _tab_world()
+		"feat": _tab_features()
 		"sys": _tab_sys()
 		"log": _tab_log()
 
@@ -321,6 +324,61 @@ func _tab_sys() -> void:
 	_head("SETTINGS", "การตั้งค่า")
 	_note("ขนาดเซฟ %.1f KB · FPS %s · ภาษา %s" % [Settings.save_size_bytes() / 1024.0, str(Settings.get_value("fps")), str(Settings.get_value("lang"))])
 	_row([_b("คืนค่าเริ่มต้น", Dev.settings_reset)])
+
+
+func _tab_features() -> void:
+	var st := {"off": "ปิด (เว็บเท่านั้น)", "cached": "ใช้แคช", "loading": "กำลังโหลด", "ok": "โหลดแล้ว", "failed": "โหลดไม่ได้", "rejected": "ไม่ใช่ของเวอร์ชันนี้"}
+	var at := "" if Features.remote_at <= 0.0 or not Features.remote_status in ["ok", "cached"] else " · " + Time.get_datetime_string_from_unix_time(int(Features.remote_at + 7 * 3600), true) + " (เวลาไทย)"
+	_note("ลำดับ: ค่าเริ่มต้น (config/features.json) → บิลด์ → รีโมต (features.json บนเว็บ) → ผู้ทดสอบ (ตรงนี้ / ?ff=) · รีโมต: %s%s" % [st.get(Features.remote_status, Features.remote_status), at])
+	_row([_b("ล้างค่าผู้ทดสอบทั้งหมด", Dev.features_reset, "red"), _b("โหลดรีโมตใหม่", Dev.features_refetch, "yellow")])
+	_head("FEATURES", "เปิด/ปิดระบบ (กดเพื่อสลับ · ค้างไว้ในเครื่องนี้จนกว่าจะล้าง)")
+	for k in Features.FEATURES:
+		var key: String = k
+		var on := Features.on(key)
+		var src := Features.source("features", key)
+		var b := _b(("[ON] " if on else "[OFF] ") + str(Features.FEATURES[k]) + " · " + str(SRC_TH.get(src, src)),
+			func(): Dev.feature_set(key, not Features.on(key)), "green" if on else "red")
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_list.add_child(b)
+	_head("ROAD EVENTS", "อีเว้นต์บนถนนรายตัว (* = อยู่ในไบโอมนี้ · เขียว = เปิด)")
+	var here: Array = Data.biome(int(Game.s.biome)).events
+	var ok_now := Features.event_pool(int(Game.s.biome), here)
+	_note("ไบโอมนี้สุ่มได้ %d อีเว้นต์: %s" % [ok_now.size(), ", ".join(ok_now)])
+	var eb := []
+	for id in Data.EVENTS:
+		var eid: String = id
+		var cfg := Features.event_cfg(eid)
+		var on := bool(cfg.get("on", true))
+		var w := Features.event_weight(eid)
+		var txt := ("* " if here.has(eid) else "") + eid + ("" if w == 1.0 else " x%s" % str(w)) + ("" if not (cfg.has("from") or cfg.has("to")) else " [วันที่]")
+		eb.append(_b(txt, func(): Dev.event_set(eid, not bool(Features.event_cfg(eid).get("on", true))), "green" if on else "red"))
+	_row(eb)
+	_head("TUNE", "ตัวเลขบาลานซ์ (ค่าที่ใช้อยู่ · ที่มา)")
+	for k in Features.TUNE:
+		var key: String = k
+		var spec: Array = Features.TUNE[k]
+		var src := Features.source("tune", key)
+		var cur = Features.num(key, -1.0) if src != "code" else null
+		var lbl := "%s: %s · %s" % [spec[2], "ค่าในโค้ด" if cur == null else str(snappedf(cur, 0.001)), SRC_TH.get(src, src)]
+		_list.add_child(UIKit.wrap_label(lbl, UIKit.FS_SMALL, UIKit.C_TEXT))
+		var base: float = cur if cur != null else _tune_code_default(key)
+		_row([_b("÷2", func(): Dev.tune_set(key, base * 0.5)), _b("×2", func(): Dev.tune_set(key, base * 2.0)),
+			_b("ค่าเดิม", func(): Dev.tune_set(key, null))])
+
+
+## the constant a tune key replaces, so the ÷2 / ×2 buttons start from the real number
+func _tune_code_default(key: String) -> float:
+	match key:
+		"events.gap_min": return Game.EVENT_GAP.x
+		"events.gap_max": return Game.EVENT_GAP.y
+		"threat.rate_scale": return Threat.RATE_SCALE
+		"threat.roll_k": return Threat.ROLL_K
+		"threat.min_quiet": return Threat.MIN_QUIET
+		"encounter.base_chance": return Encounter.BASE_CHANCE
+		"encounter.danger_chance": return Encounter.DANGER_CHANCE
+		"inspection.rare_chance": return Inspection.RARE_CHANCE
+		"inspection.very_rare_chance": return Inspection.VERY_RARE_CHANCE
+	return 1.0
 
 
 func _open_nextgen() -> void:

@@ -626,7 +626,7 @@ func tick(dt: float) -> void:
 	if not wave_active:
 		if Threat.classic():
 			gap_t -= dt
-			if gap_t <= 0.0:
+			if gap_t <= 0.0 and (Features.on("raids") or warlord_due()):
 				_start_wave()
 		elif raid_wave:
 			_start_wave()

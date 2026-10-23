@@ -199,6 +199,9 @@ func min_team() -> int:
 
 
 func start(id: String, ids: Array, sup: Dictionary) -> bool:
+	if not Features.on("expeditions"):
+		Game.toast.emit("การส่งทีมสำรวจปิดอยู่ชั่วคราว", "warn")
+		return false
 	if active() or ids.size() < min_team():
 		return false
 	var cost := {}

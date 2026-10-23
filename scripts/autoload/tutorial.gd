@@ -57,7 +57,7 @@ func _on_game_started() -> void:
 	if not Game.s.has("tutorial"):
 		# saves from before the tutorial existed (or later generations) skip it
 		var fresh: bool = float(Game.s.get("stats", {}).get("km_total", 0.0)) < 0.05 and not Game.s.has("meta")
-		Game.s["tutorial"] = {"step": 0, "done": not fresh}
+		Game.s["tutorial"] = {"step": 0, "done": not fresh or not Features.on("tutorial")}
 	_built0 = -1
 	step_changed.emit(step())
 

@@ -120,7 +120,7 @@ func rate_parts() -> Dictionary:
 	p.blood = _blood
 	p.mask = float(MASK.get(str(Game.s.get("weather", "clear")), 1.0))
 	for k in ["biome", "engine", "parked", "night", "rooms", "cargo", "blood"]:
-		p[k] = float(p[k]) * RATE_SCALE
+		p[k] = float(p[k]) * Features.num("threat.rate_scale", RATE_SCALE)
 	return p
 
 
@@ -134,7 +134,7 @@ func rate_pm() -> float:
 
 func raid_chance() -> float:
 	var x := clampf((threat() - ROLL_FLOOR) / (100.0 - ROLL_FLOOR), 0.0, 1.0)
-	return 1.0 if threat() >= 99.9 else ROLL_K * x * x
+	return 1.0 if threat() >= 99.9 else Features.num("threat.roll_k", ROLL_K) * x * x
 
 
 ## called every combat step; returns true when Combat should start a wave now
@@ -153,6 +153,13 @@ func tick(dt: float) -> bool:
 		# the checkpoint warlord does not wait for noise: the blockade is right in front of us
 		_start_raid(1, false)
 		return true
+	if not Features.on("raids"):
+		# raids switched off: a quiet road (the warlord above still blocks the checkpoint)
+		if phase != "quiet":
+			_set_phase("quiet")
+		raid_left = 0
+		_set_threat(0.0)
+		return false
 	match phase:
 		"quiet":
 			phase_t += dt
@@ -165,7 +172,7 @@ func tick(dt: float) -> bool:
 			_roll_t += dt
 			if _roll_t >= ROLL_EVERY:
 				_roll_t = 0.0
-				if phase_t >= MIN_QUIET and rng.randf() < raid_chance():
+				if phase_t >= Features.num("threat.min_quiet", MIN_QUIET) and rng.randf() < raid_chance():
 					_warn()
 		"warning":
 			phase_t += dt

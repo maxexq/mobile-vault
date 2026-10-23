@@ -42,7 +42,7 @@ func refresh() -> void:
 	_list.add_child(UIKit.wrap_label("ของที่ติดตั้งภายนอกจะเห็นบนตัวรถจริง · บางชิ้นต้องมีพิมพ์เขียวจากการสำรวจสถานที่สำคัญ" if tab == "ext" else "อัปเกรดระบบภายในเพื่อรับมือภัยของแต่ละ Biome"))
 	for id in Mods.MODS:
 		var md: Dictionary = Mods.MODS[id]
-		if md.side != tab:
+		if md.side != tab or not Mods.enabled(id):
 			continue
 		_list.add_child(_card(id, md))
 	_update_buttons()

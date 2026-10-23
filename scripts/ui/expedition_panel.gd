@@ -76,6 +76,8 @@ func _process(_d: float) -> void:
 func _build_planner() -> void:
 	var def := Expedition.site_def(site)
 	set_title("%s / %s" % [def.en, def.th])
+	if not Features.on("expeditions"):
+		_list.add_child(UIKit.wrap_label("การส่งทีมสำรวจปิดใช้งานชั่วคราว", UIKit.FS, UIKit.C_RED))
 	var card := UIKit.panel(UIKit.C_BG2, UIKit.C_GOLD)
 	var h := UIKit.hbox(6)
 	card.add_child(h)

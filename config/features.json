@@ -1,0 +1,16 @@
+{
+  "tz_hours": 7,
+  "features": {
+    "road_events": true,
+    "raids": true,
+    "encounters": true,
+    "strangers": true,
+    "expeditions": true,
+    "roof_deck": true,
+    "large_rooms": true,
+    "tutorial": true,
+    "cloud_save": true
+  },
+  "events": {},
+  "tune": {}
+}

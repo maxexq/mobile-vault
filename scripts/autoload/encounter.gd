@@ -114,7 +114,7 @@ func def(id: String) -> Dictionary:
 
 
 func chance_for(site_id: String) -> float:
-	return BASE_CHANCE + DANGER_CHANCE * float(Expedition.site_def(site_id).danger)
+	return Features.num("encounter.base_chance", BASE_CHANCE) + Features.num("encounter.danger_chance", DANGER_CHANCE) * float(Expedition.site_def(site_id).danger)
 
 
 func recent() -> Array:
@@ -148,7 +148,7 @@ func roll(force_id: String = "") -> void:
 	var e := Expedition.state()
 	var id := force_id
 	if id == "":
-		if rng.randf() >= chance_for(str(e.site)):
+		if not Features.on("encounters") or rng.randf() >= chance_for(str(e.site)):
 			return
 		id = pick(int(Expedition.site_def(str(e.site)).danger))
 		if id == "":

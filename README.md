@@ -187,6 +187,36 @@ Local-first: the game still reads and writes localStorage / `user://`; `scripts/
 - **Clock:** every reply carries `server_time`; `Cloud.now()` stamps `saved_at` and measures offline time, so moving the phone clock no longer grants offline progress once the cloud has answered.
 - **Tests:** the autotest runs the cloud against `tools/cloud_fake.gd` (same revision rules as the SQL). Test runners never use `cloud_config.json`.
 
+## 4l. Feature switches, event windows & remote config
+
+Autoload `Features` (`scripts/autoload/features.gd`, right after `Save`) is the one place that decides which systems run, which road events can show, and a few balance numbers. Values come in layers, the later one wins:
+
+| # | Layer | Where | When |
+|---|---|---|---|
+| 1 | default | `config/features.json` (exported into the pck) | every build |
+| 2 | build | `config/features.<tag>.json` for the custom feature tags `demo` / `staging` ([feature tags](https://docs.godotengine.org/en/stable/tutorials/export/feature_tags.html), `OS.has_feature`) | only when the export preset sets that tag |
+| 3 | remote | `web/features.json`, fetched from the same folder as the game page (`HTTPRequest`, 10 s timeout) and cached in localStorage `mobile_vault_features_v1` | web builds; a failed fetch keeps the cache, no cache keeps 1–2; refused if `min_game`/`max_game` don't match `BuildInfo.GAME_VERSION` |
+| 4 | tester | GOD MODE tab **ฟีเจอร์** (kept in `user://dev.cfg`, cleared by "ซ่อนปุ่ม GOD") or the URL `?ff=raids:off,event.raiders:off,tune.threat.rate_scale:1.5` (this session only) | testers |
+
+**Switches** (`Features.on(key)`): `road_events`, `raids` (no raids; the checkpoint warlord still blocks the road), `encounters`, `strangers` (recruits join directly), `expeditions`, `roof_deck`, `large_rooms`, `tutorial` (new games only), `cloud_save` (read at boot, so a remote kill switch bites on the next launch). Switching one off hides it from play; save data is never deleted.
+
+**Road events** (`events.<id>`): `on`, `weight` (2 = two cards per shuffle-bag round, 0.5 = a card in about half the rounds, 0 = never), `biomes` (`["*"]` or biome ids, adds the event to roads it is not normally on), `from` / `to` (`"2026-11-14"` or `"2026-11-14 18:00"`, local time at `tz_hours`, default 7 = Thailand; a date-only `to` covers the whole day). Clock = `Cloud.now()` (server time when the cloud is on). This is the hook for festival events: put the event in `Data.EVENTS` without a biome and open it with a window.
+
+**Tune** (`Features.num(key, CONST)`, clamped): `events.gap_min/gap_max`, `threat.rate_scale/roll_k/min_quiet`, `encounter.base_chance/danger_chance`, `inspection.rare_chance/very_rare_chance`.
+
+The remote file can only switch off / re-time / re-weight / re-tune what the build already contains: unknown keys are dropped, numbers are clamped, a broken file changes nothing. Example `web/features.json` for a festival weekend with no raids:
+
+```json
+{
+  "min_game": "4.3",
+  "features": {"raids": false},
+  "events": {"trader": {"weight": 3}, "bunker": {"biomes": ["*"], "from": "2026-11-14", "to": "2026-11-16"}},
+  "tune": {"events.gap_min": 40, "events.gap_max": 80}
+}
+```
+
+Edit `web/features.json`, push, and Vercel serves it; players pick it up the next time the page loads (no re-export). The active switches go into every trace export (`features`) and a `features` trace entry at boot and after each remote load. Autotest `_features_test()` covers every gate.
+
 ## 4c. True pixel art pipeline
 
 - Window: `canvas_items` stretch + **integer** scale mode. `main.gd` picks the design size so it is exactly window ÷ S (S = whole number, base 360×640 portrait / 560×320 landscape) → full-bleed, no letterbox, 1 art pixel = S screen pixels.
@@ -209,6 +239,7 @@ Local-first: the game still reads and writes localStorage / `user://`; `scripts/
 | รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, build every empty slot, max room levels · construction: finish now / +50 % / instant-build switch · all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
 | ลูกเรือ | recruit, heal, happiness 100/20/0 for everyone, pets · spawn a builder (hard hat) plain or with engineer / quick hands / architect / clumsy · strangers at the door: every kind (human / infected / mimic / thief / raider mole) × rare / very rare, clear the queue · per survivor: traits shown, builder on/off, reroll traits, +5 levels, force strike, desert now, kill |
 | ต่อสู้ | set wave, kill all enemies, heal squad · force a raid (warning first), set threat 0 / 90 · defence squad: auto-fill with the strongest idle crew, auto-equip best gear, clear · spawn the biome warlord or any mutant boss, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
+| ฟีเจอร์ | every Features switch with where its value comes from (ค่าเริ่มต้น / บิลด์ / รีโมต / ผู้ทดสอบ), tap to flip · every road event on/off (biome's own marked *, weight and date window shown) · tune numbers ÷2 / ×2 / back to code · reload remote, clear tester overrides |
 | โลก | jump to any biome, go to checkpoint, mark warlord beaten, lap +1 · road events: trigger any, draw the next card from the shuffle bag, reshuffle (bag size + last 3 shown) · expedition: force any special encounter (sends a free scavenging team when none is out), clear the no-repeat history, arrive at any site, finish the trip · open the next-generation screen, wreck the vehicle in 3 s |
 | ระบบ | version rows (game / build / engine) + copy · tutorial: replay from the start, skip, jump to any step · cloud save: status/rev, sync now, force upload, forget the link, resolve a conflict · settings: save size, reset to defaults |
 | LOG/เซฟ | trace viewer with category filter, download JSON / copy / clear; export the save as JSON (copied to the clipboard) and load a pasted save — testers can hand each other exact situations |
