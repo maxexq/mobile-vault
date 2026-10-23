@@ -38,7 +38,7 @@ class Script:
         role = "lead" if system.startswith("You lead") else "coder" if "the coder" in system else "tester"
         self.seen.append((role, messages))
         blocks = self.turns[role].pop(0)
-        return blocks, "tool_use" if any(b["type"] == "tool_use" for b in blocks) else "end_turn"
+        return blocks, "tool_use" if any(b["type"] == "tool_use" for b in blocks) else "end_turn", {}
 
 
 class Fake:

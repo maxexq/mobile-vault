@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Team · Mobile Vault</title>
+<style>
+:root {
+  --bg: #121110; --panel: #1b1a18; --panel2: #23211e; --line: #34312c;
+  --text: #e8e2d6; --muted: #9a9385; --accent: #d9822b; --ok: #6fbf73; --bad: #e0605a; --warn: #e3b341;
+  --lead: #d9822b; --coder: #5aa9e6; --tester: #6fbf73; --scout: #b48ce6; --scribe: #e3b341;
+  --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, "Segoe UI", "Noto Sans Thai", sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+header h1 { font-size: 16px; margin: 0; letter-spacing: .5px; }
+header .sp { flex: 1; }
+.pill { padding: 2px 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
+.pill.running { color: var(--accent); border-color: var(--accent); }
+.pill.waiting { color: var(--warn); border-color: var(--warn); }
+.pill.done { color: var(--ok); border-color: var(--ok); }
+.pill.error, .pill.cancelled { color: var(--bad); border-color: var(--bad); }
+main { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 49px); }
+aside { border-right: 1px solid var(--line); padding: 14px; overflow: auto; background: var(--panel); }
+section { padding: 14px 16px; overflow: auto; }
+textarea { width: 100%; min-height: 120px; resize: vertical; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
+button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #1a1208; font-weight: 600; }
+button.ok { border-color: var(--ok); color: var(--ok); }
+button.bad { border-color: var(--bad); color: var(--bad); }
+label { color: var(--muted); font-size: 13px; }
+.row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.runs { margin-top: 18px; }
+.runs h2, h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .6px; }
+.run { padding: 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; cursor: pointer; }
+.run.sel { border-color: var(--accent); }
+.run .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.run .m { color: var(--muted); font-size: 12px; }
+.agents { display: grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: 6px; padding: 8px 10px; cursor: pointer; }
+.card.on { outline: 1px solid var(--c); }
+.card .n { font-weight: 600; display: flex; justify-content: space-between; }
+.card .s { font-size: 11px; color: var(--muted); }
+.card .s.working { color: var(--accent); } .card .s.waiting { color: var(--warn); } .card .s.done { color: var(--ok); }
+.card .k { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.approval { border: 1px solid var(--warn); border-radius: 6px; padding: 10px; margin-bottom: 14px; background: #2a2415; }
+pre { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 8px; overflow: auto; max-height: 420px; white-space: pre-wrap; word-break: break-word; font: 12px/1.45 var(--mono); margin: 6px 0; }
+.report { border: 1px solid var(--ok); border-radius: 6px; padding: 10px; margin-bottom: 14px; white-space: pre-wrap; }
+.report.err { border-color: var(--bad); }
+.ev { border-left: 3px solid var(--c); background: var(--panel); margin-bottom: 4px; border-radius: 0 6px 6px 0; }
+.ev > .h { display: grid; grid-template-columns: 52px 64px 96px 1fr; gap: 8px; padding: 5px 8px; cursor: pointer; align-items: baseline; }
+.ev > .h .tm { color: var(--muted); font: 12px var(--mono); }
+.ev > .h .ag { color: var(--c); font-weight: 600; }
+.ev > .h .kd { color: var(--muted); font-size: 12px; }
+.ev > .h .sm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev .b { display: none; padding: 0 10px 8px; }
+.ev.open .b { display: block; }
+.ev .b h3 { font-size: 12px; color: var(--muted); margin: 8px 0 0; font-weight: 600; }
+.err { color: var(--bad); }
+.empty { color: var(--muted); padding: 40px; text-align: center; }
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; height: auto; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); }
+  .agents { grid-template-columns: repeat(2, 1fr); }
+  .ev > .h { grid-template-columns: 52px 64px 1fr; } .ev > .h .kd { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>☢ Mobile Vault · Agent Team</h1>
+  <span id="status" class="pill">idle</span>
+  <span class="sp"></span>
+  <span id="cost" class="pill">$0.00</span>
+  <button id="stop" class="bad" hidden>หยุดงาน</button>
+</header>
+<main>
+  <aside>
+    <h2>สั่งงาน</h2>
+    <textarea id="task" placeholder="เช่น เพิ่ม feature switch ให้ engine_bay แล้วรัน autotest แบบ large"></textarea>
+    <div class="row"><input type="checkbox" id="auto"><label for="auto">อนุมัติการแก้ไฟล์อัตโนมัติ</label></div>
+    <div class="row"><button id="go" class="primary">เริ่มงาน</button><span id="msg" class="err"></span></div>
+    <div class="runs"><h2>งานทั้งหมด</h2><div id="runs"></div></div>
+  </aside>
+  <section>
+    <div id="agents" class="agents"></div>
+    <div id="approval"></div>
+    <div id="report"></div>
+    <h2 id="tlh">Timeline</h2>
+    <div id="timeline"><div class="empty">พิมพ์งานทางซ้ายแล้วกด "เริ่มงาน"</div></div>
+  </section>
+</main>
+<script>
+const AG = ["lead", "coder", "tester", "scout", "scribe"];
+const ROLE = { lead: "หัวหน้า · Opus", coder: "แก้โค้ด · Opus", tester: "ทดสอบ · Opus", scout: "อ่าน repo · Gemini", scribe: "เขียนข้อความ · Qwen" };
+const KIND = { task: "รับงาน", llm: "คิด/ตอบ", tool: "เครื่องมือ", done: "ส่งงาน", approval_wait: "รออนุมัติ", approval: "ผลอนุมัติ", report: "รายงาน", error: "ผิดพลาด" };
+const STATE = { idle: "ว่าง", working: "กำลังทำ", waiting: "รออนุมัติ", done: "เสร็จ" };
+let cur = null, since = 0, filter = null, timer = null, last = null, lastStatus = null;
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const api = (path, body) => fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json", "X-MV-UI": "1" }, body: JSON.stringify(body) }).then(r => r.json());
+const fmt = n => n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
+const pre = v => el("pre", null, typeof v === "string" ? v : JSON.stringify(v, null, 2));
+
+function summary(e) {
+  const d = e.data;
+  switch (e.kind) {
+    case "task": return d.task;
+    case "llm": {
+      const calls = (d.blocks || []).filter(b => b.type === "tool_use").map(b => b.name === "delegate" ? `→ ${b.input.agent}: ${b.input.task}` : `${b.name}(${Object.values(b.input || {}).filter(v => typeof v === "string").map(v => v.slice(0, 40)).join(", ")})`);
+      const txt = (d.blocks || []).filter(b => b.type === "text").map(b => b.text).join(" ");
+      return `[${d.model}${d.usage && d.usage.output ? " · " + fmt(d.usage.output) + " out" : ""} · ${(d.ms / 1000).toFixed(1)}s] ` + (calls.join(" · ") || txt);
+    }
+    case "tool": return `${d.is_error ? "✗" : "✓"} ${d.name} ${JSON.stringify(d.input || {}).slice(0, 120)}`;
+    case "done": return (d.is_error ? "✗ " : "") + d.result;
+    case "approval_wait": return `ขอแก้ ${d.changes.length} รายการ`;
+    case "approval": return d.approved ? "อนุมัติแล้ว" : "ปฏิเสธ";
+    case "report": return d.text;
+    case "error": return d.error;
+  }
+  return "";
+}
+
+function body(e) {
+  const d = e.data, b = el("div", "b");
+  const add = (h, v) => { b.append(el("h3", null, h), pre(v)); };
+  if (e.kind === "llm") {
+    for (const blk of d.blocks || []) {
+      if (blk.type === "thinking" && blk.thinking) add("ความคิด (สรุป)", blk.thinking);
+      else if (blk.type === "text") add("ข้อความ", blk.text);
+      else if (blk.type === "tool_use") add(`เรียก ${blk.name}`, blk.input);
+    }
+    add("ข้อมูลการเรียก", { model: d.model, effort: d.effort, stop: d.stop, usage: d.usage, ms: d.ms, prompt_chars: d.prompt_chars });
+  } else if (e.kind === "tool") { add("input", d.input); add(d.is_error ? "error" : "ผลลัพธ์", d.result); }
+  else if (e.kind === "approval_wait") d.changes.forEach(c => add("การแก้ไข", c));
+  else add("รายละเอียด", d.task || d.result || d.text || d.error || d);
+  return b;
+}
+
+function renderEvent(e) {
+  const box = el("div", "ev"); box.style.setProperty("--c", `var(--${e.agent})`); box.dataset.agent = e.agent;
+  const h = el("div", "h");
+  h.append(el("span", "tm", e.t.toFixed(1) + "s"), el("span", "ag", e.agent), el("span", "kd", KIND[e.kind] || e.kind), el("span", "sm", summary(e)));
+  h.onclick = () => { if (!box.querySelector(".b")) box.append(body(e)); box.classList.toggle("open"); };
+  box.append(h);
+  if (filter && filter !== e.agent) box.hidden = true;
+  return box;
+}
+
+function renderAgents(s) {
+  const wrap = $("agents"); wrap.textContent = "";
+  for (const a of AG) {
+    const x = s.agents[a], c = el("div", "card" + (filter === a ? " on" : "")); c.style.setProperty("--c", `var(--${a})`);
+    const n = el("div", "n"); n.append(el("span", null, a), el("span", "s " + x.state, STATE[x.state]));
+    c.append(n, el("div", "s", ROLE[a]), el("div", "k", `${x.turns} ตา · ${x.tools} tool`), el("div", "k", `${fmt(x.input + x.cache_read)} in · ${fmt(x.output)} out · $${x.cost.toFixed(3)}`));
+    c.onclick = () => { filter = filter === a ? null : a; applyFilter(); renderAgents(s); };
+    wrap.append(c);
+  }
+}
+
+function applyFilter() {
+  for (const ev of $("timeline").children) if (ev.dataset.agent) ev.hidden = !!filter && ev.dataset.agent !== filter;
+  $("tlh").textContent = filter ? `Timeline · ${filter} (กดการ์ดอีกครั้งเพื่อดูทั้งหมด)` : "Timeline";
+}
+
+function renderApproval(s) {
+  const box = $("approval"); box.textContent = "";
+  if (!s.pending) return;
+  const a = el("div", "approval");
+  a.append(el("b", null, `${s.pending.agent} ขอแก้ไฟล์ ${s.pending.changes.length} รายการ`));
+  s.pending.changes.forEach(c => a.append(pre(c)));
+  const r = el("div", "row"), y = el("button", "ok", "อนุมัติ"), n = el("button", "bad", "ปฏิเสธ");
+  y.onclick = () => api(`/api/runs/${cur}/approve`, { approve: true }).then(poll);
+  n.onclick = () => api(`/api/runs/${cur}/approve`, { approve: false }).then(poll);
+  r.append(y, n); a.append(r); box.append(a);
+}
+
+function renderStatus(s) {
+  $("status").className = "pill " + s.status;
+  $("status").textContent = { running: "กำลังทำงาน", waiting: "รออนุมัติ", done: "เสร็จแล้ว", error: "ผิดพลาด", cancelled: "หยุดแล้ว" }[s.status] + ` · ${s.elapsed}s`;
+  $("cost").textContent = "$" + s.cost.toFixed(3);
+  $("stop").hidden = !(s.status === "running" || s.status === "waiting");
+  const rep = $("report"); rep.textContent = "";
+  if (s.report) rep.append(el("div", "report" + (s.status === "error" ? " err" : ""), s.report));
+}
+
+async function poll() {
+  if (!cur) return;
+  const id = cur, s = await api(`/api/runs/${id}?since=${since}`);
+  if (id !== cur || s.error) return;
+  const tl = $("timeline");
+  if (since === 0) tl.textContent = "";
+  for (const e of s.new_events) tl.append(renderEvent(e));
+  since += s.new_events.length;
+  renderStatus(s); renderAgents(s);
+  if (s.status !== lastStatus) { lastStatus = s.status; loadRuns(); }
+  const key = JSON.stringify(s.pending); if (key !== last) { last = key; renderApproval(s); }
+  if (s.new_events.length && tl.lastChild) tl.lastChild.scrollIntoView({ block: "nearest" });
+  if (s.status !== "running" && s.status !== "waiting") { clearInterval(timer); timer = null; }
+}
+
+function select(id) {
+  cur = id; since = 0; last = null; lastStatus = null; filter = null;
+  $("timeline").textContent = ""; $("approval").textContent = "";
+  clearInterval(timer); timer = setInterval(poll, 1000); poll(); loadRuns();
+}
+
+async function loadRuns() {
+  const runs = await api("/api/runs"), box = $("runs"); box.textContent = "";
+  for (const r of runs) {
+    const d = el("div", "run" + (r.id === cur ? " sel" : ""));
+    d.append(el("div", "t", r.task), el("div", "m", `${r.status} · ${r.elapsed}s · $${r.cost.toFixed(3)}`));
+    d.onclick = () => select(r.id); box.append(d);
+  }
+}
+
+$("go").onclick = async () => {
+  $("msg").textContent = "";
+  const r = await api("/api/runs", { task: $("task").value, auto_approve: $("auto").checked });
+  if (r.error) { $("msg").textContent = r.error; return; }
+  $("task").value = ""; select(r.id);
+};
+$("stop").onclick = () => api(`/api/runs/${cur}/cancel`, {}).then(poll);
+loadRuns();
+</script>
+</body>
+</html>
