@@ -12,6 +12,7 @@ extends Node2D
 
 const PAN_LIMIT := 220.0
 const TAP_SLOP := 8.0
+const PINCH_STEP := 1.25      # finger distance ratio for one pinch zoom step
 const PORTRAIT_BASE := Vector2i(360, 640)
 const LANDSCAPE_BASE := Vector2i(560, 320)
 
@@ -331,6 +332,18 @@ func world_to_screen(p: Vector2) -> Vector2:
 
 
 # ------------------------------------------------------------------ input (tap / swipe)
+## Finger releases are booked here, before the GUI and the modal check in _unhandled_input. A tap that
+## opens a panel used to lose its release (emulated mouse-up fires first and opens the panel, then the
+## touch-up hit any_modal_open()), so a ghost finger stayed in _touches and every later one-finger swipe
+## counted as a pinch: the camera flipped normal/wide instead of panning. On the web a finger's index is
+## the browser Touch.identifier, which never repeats on iOS, so the ghost never got overwritten either.
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and not event.pressed:
+		_touches.erase(event.index)
+		if _touches.size() < 2:
+			_pinch_d = 0.0
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not Game.started or hud.any_modal_open():
 		return
@@ -342,22 +355,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMagnifyGesture and _closeup_slot < 0:
 		set_zoom_mode("normal" if event.factor > 1.0 else "wide")
 		return
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			_touches[event.index] = event.position
-		else:
-			_touches.erase(event.index)
-			_pinch_d = 0.0
-	if event is InputEventScreenDrag:
+	if event is InputEventScreenTouch and event.pressed:
 		_touches[event.index] = event.position
-		if _touches.size() == 2:
-			var pts := _touches.values()
-			var d := (pts[0] as Vector2).distance_to(pts[1])
-			if _pinch_d > 0.0 and absf(d - _pinch_d) > 40.0 and _closeup_slot < 0:
-				set_zoom_mode("normal" if d > _pinch_d else "wide")
-				_pinch_d = d
-			elif _pinch_d <= 0.0:
-				_pinch_d = d
+	if event is InputEventScreenDrag and _touches.has(event.index):
+		_touches[event.index] = event.position
+		if _touches.size() >= 2:
+			_pinch(_touches.values())
 			_pressing = false
 			return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -371,12 +374,36 @@ func _unhandled_input(event: InputEvent) -> void:
 				_on_tap(event.position)
 		_last_input_t = 0.0
 	elif event is InputEventMouseMotion and _pressing:
+		if not (event.button_mask & MOUSE_BUTTON_MASK_LEFT):
+			_pressing = false      # the release went to a panel: don't pan on hover
+			return
 		if event.position.distance_to(_press_pos) > TAP_SLOP:
 			_dragged = true
 		if _dragged and _closeup_slot < 0:
 			pan_x = clampf(pan_x - event.relative.x, -PAN_LIMIT, PAN_LIMIT)
 			camera.position.x = cam_home.x + round(pan_x)
 		_last_input_t = 0.0
+
+
+## two fingers spreading by PINCH_STEP switch to the normal view, closing by it to the wide one;
+## once per step, and only when the mode really changes (no toast storm while the fingers keep moving)
+func _pinch(pts: Array) -> void:
+	var d := (pts[0] as Vector2).distance_to(pts[1])
+	if _pinch_d <= 0.0:
+		_pinch_d = d
+		return
+	if _closeup_slot >= 0:
+		return
+	var want := ""
+	if d > _pinch_d * PINCH_STEP:
+		want = "normal"
+	elif d * PINCH_STEP < _pinch_d:
+		want = "wide"
+	if want == "":
+		return
+	_pinch_d = d
+	if zoom_mode != want:
+		set_zoom_mode(want)
 
 
 func _on_tap(screen_pos: Vector2) -> void:
