@@ -121,3 +121,15 @@ def test_follow_up_continues_the_run(ui):
     assert users == ["x", "and the tests?"]
     kinds = [(e["agent"], e["kind"]) for e in s["new_events"]]
     assert ("coder", "tool_start") in kinds and ("lead", "llm_start") in kinds
+
+
+def test_info_and_team_choice(ui):
+    base, _ = ui
+    _, info = call(base + "/api/info")
+    assert set(info["teams"]) == {"claude", "local"}
+    assert info["teams"]["local"]["models"]["lead"] == info["teams"]["local"]["models"]["writer"]
+    _, run = call(base + "/api/runs", {"task": "x", "auto_approve": True, "team": "local"})
+    assert run["team"] == "local"
+    _, run = call(base + "/api/runs", {"task": "x", "auto_approve": True, "team": "bogus"})
+    assert run["team"] == "claude"
+    assert cost({"model": "gemma4:12b", "input": 5000, "output": 900}) == 0

@@ -23,6 +23,7 @@ class Config:
     local_base_url: str = "http://127.0.0.1:11434/v1"
     local_model: str = "gemma4:12b"
     long_context_chars: int = 60000
+    team: str = "claude"  # "local": the local model runs every agent (no API keys needed)
     repo_root: Path = REPO_ROOT
 
     @classmethod
@@ -36,5 +37,6 @@ class Config:
             local_base_url=e("MV_LOCAL_BASE_URL", cls.local_base_url).rstrip("/"),
             local_model=e("MV_LOCAL_MODEL", cls.local_model),
             long_context_chars=int(e("MV_LONG_CONTEXT_CHARS", cls.long_context_chars)),
+            team=e("MV_TEAM", cls.team).strip().lower() or cls.team,
             repo_root=Path(e("MV_REPO_ROOT", str(REPO_ROOT))),
         )

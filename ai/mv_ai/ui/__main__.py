@@ -4,7 +4,7 @@ import sys
 import webbrowser
 
 from ..config import Config
-from ..llms import ClaudeLLM
+from ..llms import ClaudeLLM, LocalLLM
 from .server import serve
 
 
@@ -17,7 +17,9 @@ def main() -> int:
     a = ap.parse_args()
     cfg = Config.from_env()
     if not ClaudeLLM(cfg).available():
-        print("warning: ANTHROPIC_API_KEY is not set in ai/.env, so runs will fail", file=sys.stderr)
+        print("note: no ANTHROPIC_API_KEY in ai/.env, so only the Local team can run", file=sys.stderr)
+    if not LocalLLM(cfg).available():
+        print(f"note: local model server not reachable at {cfg.local_base_url}", file=sys.stderr)
     httpd = serve(cfg, a.port)
     url = f"http://127.0.0.1:{a.port}/"
     print(f"Agent team UI: {url}  (Ctrl+C to stop)")

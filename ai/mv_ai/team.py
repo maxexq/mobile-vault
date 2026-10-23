@@ -27,7 +27,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
 from .config import Config
-from .llms import ClaudeLLM, GeminiLLM, LocalLLM, claude_turn
+from .llms import ClaudeLLM, GeminiLLM, LocalLLM, claude_turn, local_turn
 from .retrieve import Index, render
 from .tools import NEEDS_APPROVAL, RepoTools, ToolError, preview, schemas, validate
 
@@ -138,18 +138,22 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
     """
     cfg = cfg or Config.from_env()
     emit = emit or (lambda agent, kind, data: None)
+    solo = cfg.team == "local"  # one local model plays every role
+    main_model = cfg.local_model if solo else cfg.claude_model
     if claude is None:
+        turn = local_turn if solo else claude_turn
+
         def claude(system, messages, tool_defs, effort, one=False):
-            return claude_turn(cfg, system, messages, tool_defs, effort, one)
+            return turn(cfg, system, messages, tool_defs, effort, one)
     llms = llms or {"opus": ClaudeLLM(cfg), "gemini": GeminiLLM(cfg), "local": LocalLLM(cfg)}
     tools = tools or RepoTools(cfg)
     index = index or Index.build(cfg.repo_root)
 
     def call_claude(agent, system, messages, tool_defs, effort, one=False):
         t = time.time()
-        emit(agent, "llm_start", {"model": cfg.claude_model, "effort": effort})
+        emit(agent, "llm_start", {"model": main_model, "effort": effort})
         blocks, stop, usage = claude(system, messages, tool_defs, effort, one)
-        emit(agent, "llm", {"model": usage.get("model", cfg.claude_model), "effort": effort, "stop": stop,
+        emit(agent, "llm", {"model": usage.get("model", main_model), "effort": effort, "stop": stop,
                             "blocks": blocks, "usage": usage, "ms": int((time.time() - t) * 1000)})
         return blocks, stop
 
@@ -247,7 +251,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
                 "log": state.get("log", []) + log}
 
     def _single_shot(agent: str, model: str, system: str, prompt: str, images=None) -> str:
-        order = {"gemini": ("gemini", "opus"), "local": ("local", "opus")}[model]
+        order = ("local",) if solo else {"gemini": ("gemini", "opus"), "local": ("local", "opus")}[model]
         for name in order:
             if llms[name].available():
                 emit(agent, "llm_start", {"model": name, "images": len(images or [])})
@@ -264,7 +268,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
     def analyst(state: TeamState) -> TeamState:
         task = state["pending"]["task"]
         try:
-            ctx = render(index.search(task, k=120))
+            ctx = render(index.search(task, k=20 if solo else 120))
             images = screenshots(task, cfg.repo_root)
             note = f"\n\n{len(images)} screenshot(s) attached in the order they appear in the task." if images else ""
             ans = _single_shot("analyst", "gemini", ANALYST_SYSTEM,
@@ -331,8 +335,12 @@ def main() -> int:
     ap.add_argument("--yes", action="store_true", help="approve every file change without asking")
     a = ap.parse_args()
     cfg = Config.from_env()
-    if not ClaudeLLM(cfg).available():
-        print("The lead needs ANTHROPIC_API_KEY in ai/.env", file=sys.stderr)
+    if cfg.team == "local":
+        if not LocalLLM(cfg).available():
+            print(f"MV_TEAM=local needs the local server at {cfg.local_base_url}", file=sys.stderr)
+            return 1
+    elif not ClaudeLLM(cfg).available():
+        print("The lead needs ANTHROPIC_API_KEY in ai/.env (or set MV_TEAM=local)", file=sys.stderr)
         return 1
     branch = subprocess.run(["git", "branch", "--show-current"], cwd=cfg.repo_root, capture_output=True,
                             text=True).stdout.strip()

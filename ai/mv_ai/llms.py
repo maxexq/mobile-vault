@@ -1,6 +1,8 @@
 """The three model backends. Each has the same tiny surface: available() and complete()."""
+import json
 import os
 import re
+import uuid
 
 import httpx
 
@@ -158,6 +160,127 @@ class LocalLLM:
         if not text.strip() and choice.get("finish_reason") == "length":
             raise LLMError("local LLM used its whole token budget on thinking")
         return text.strip()
+
+
+_PROMPT_TOOLS: set = set()  # (base_url, model) pairs whose server rejected native tool calling
+_JSON_CALL = re.compile(r"\{.*\}", re.S)
+
+
+def _to_openai(messages: list, prompt_tools: bool) -> list:
+    """Anthropic-style history (text / tool_use / tool_result blocks) -> OpenAI chat messages."""
+    out = []
+    for m in messages:
+        c = m["content"]
+        if isinstance(c, str):
+            out.append({"role": m["role"], "content": c})
+            continue
+        texts = [b["text"] for b in c if b.get("type") == "text" and b.get("text")]
+        uses = [b for b in c if b.get("type") == "tool_use"]
+        results = [b for b in c if b.get("type") == "tool_result"]
+        if m["role"] == "assistant":
+            if prompt_tools:
+                calls = [json.dumps({"tool": u["name"], "input": u.get("input") or {}}, ensure_ascii=False) for u in uses]
+                out.append({"role": "assistant", "content": "\n".join(texts + calls)})
+            else:
+                msg = {"role": "assistant", "content": "\n".join(texts)}
+                if uses:
+                    msg["tool_calls"] = [{"id": u["id"], "type": "function", "function": {
+                        "name": u["name"], "arguments": json.dumps(u.get("input") or {}, ensure_ascii=False)}}
+                        for u in uses]
+                out.append(msg)
+            continue
+        for r in results:
+            body = r.get("content") if isinstance(r.get("content"), str) else json.dumps(r.get("content"))
+            body = ("ERROR: " if r.get("is_error") else "") + (body or "")
+            if prompt_tools:
+                out.append({"role": "user", "content": f"Tool result:\n{body}"})
+            else:
+                out.append({"role": "tool", "tool_call_id": r["tool_use_id"], "content": body})
+        if texts:
+            out.append({"role": "user", "content": "\n".join(texts)})
+    return out
+
+
+def _coerce(args, schema: dict):
+    """Small local models send numbers as strings or skip optional-looking ints; fix what is obvious."""
+    if not isinstance(args, dict):
+        return args
+    for k, p in (schema.get("properties") or {}).items():
+        if p.get("type") == "integer":
+            v = args.get(k)
+            if isinstance(v, str) and v.strip().lstrip("-").isdigit():
+                args[k] = int(v)
+            elif v is None and k in schema.get("required", []):
+                args[k] = 0
+        elif p.get("type") == "string" and args.get(k) is None and k in schema.get("required", []):
+            args[k] = ""
+    return args
+
+
+def local_turn(cfg: Config, system: str, messages: list, tools: list, effort: str, one_tool_at_a_time=False):
+    """Same contract as claude_turn, served by the local OpenAI-compatible model (Ollama).
+
+    Uses native tool calling; if the server or model rejects tools, falls back to asking for a
+    JSON object {"tool": ..., "input": {...}} in the reply.
+    """
+    key = (cfg.local_base_url, cfg.local_model)
+    schemas = {t["name"]: t["input_schema"] for t in tools}
+    for attempt in range(2):
+        prompt_tools = key in _PROMPT_TOOLS
+        sys_text = system
+        if prompt_tools and tools:
+            spec = "\n".join(f"- {t['name']}: {t['description']}\n  input schema: {json.dumps(t['input_schema'])}"
+                             for t in tools)
+            sys_text += ("\n\nTools you can call:\n" + spec + "\n\nTo call a tool, reply with ONLY one JSON object "
+                         '{"tool": "<name>", "input": {...}} and nothing else. When you are finished, reply in plain text.')
+        body = {"model": cfg.local_model, "max_tokens": 8192,
+                "messages": [{"role": "system", "content": sys_text}] + _to_openai(messages, prompt_tools)}
+        if tools and not prompt_tools:
+            body["tools"] = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                                               "parameters": t["input_schema"]}} for t in tools]
+        r = httpx.post(f"{cfg.local_base_url}/chat/completions", json=body, timeout=600)
+        if r.status_code == 400 and tools and not prompt_tools and "tool" in r.text.lower() and attempt == 0:
+            _PROMPT_TOOLS.add(key)
+            continue
+        if r.status_code != 200:
+            raise LLMError(f"local LLM {r.status_code}: {r.text[:300]}")
+        break
+    data = r.json()
+    choice = data["choices"][0]
+    msg = choice["message"]
+    text = _THINK.sub("", msg.get("content") or "")
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[1]
+    text = text.strip()
+    uses = []
+    for tc in msg.get("tool_calls") or []:
+        fn = tc.get("function") or {}
+        args = fn.get("arguments")
+        if isinstance(args, str):
+            try:
+                args = json.loads(args or "{}")
+            except ValueError:
+                args = None
+        uses.append({"type": "tool_use", "id": tc.get("id") or f"call_{uuid.uuid4().hex[:12]}",
+                     "name": fn.get("name"), "input": _coerce(args, schemas.get(fn.get("name"), {}))})
+    if not uses and tools and text:
+        m = _JSON_CALL.search(text)
+        if m:
+            try:
+                obj = json.loads(m.group(0))
+            except ValueError:
+                obj = None
+            if isinstance(obj, dict) and obj.get("tool") in schemas:
+                uses.append({"type": "tool_use", "id": f"call_{uuid.uuid4().hex[:12]}", "name": obj["tool"],
+                             "input": _coerce(obj.get("input") or {}, schemas[obj["tool"]])})
+                text = (text[:m.start()] + text[m.end():]).strip()
+    if one_tool_at_a_time:
+        uses = uses[:1]
+    blocks = ([{"type": "text", "text": text}] if text else []) + uses
+    stop = "tool_use" if uses else ("max_tokens" if choice.get("finish_reason") == "length" else "end_turn")
+    u = data.get("usage") or {}
+    return blocks, stop, {"model": cfg.local_model, "input": u.get("prompt_tokens", 0),
+                          "output": u.get("completion_tokens", 0), "cache_read": 0, "cache_write": 0}
 
 
 def default_llms(cfg: Config) -> dict:
