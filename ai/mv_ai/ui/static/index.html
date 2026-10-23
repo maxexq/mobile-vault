@@ -8,7 +8,7 @@
 :root {
   --bg: #121110; --panel: #1b1a18; --panel2: #23211e; --line: #34312c;
   --text: #e8e2d6; --muted: #9a9385; --accent: #d9822b; --ok: #6fbf73; --bad: #e0605a; --warn: #e3b341;
-  --lead: #d9822b; --coder: #5aa9e6; --tester: #6fbf73; --scout: #b48ce6; --scribe: #e3b341;
+  --lead: #d9822b; --coder: #5aa9e6; --tester: #6fbf73; --analyst: #b48ce6; --writer: #e3b341;
   --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
 }
 * { box-sizing: border-box; }
@@ -93,8 +93,8 @@ pre { background: var(--panel2); border: 1px solid var(--line); border-radius: 6
   </section>
 </main>
 <script>
-const AG = ["lead", "coder", "tester", "scout", "scribe"];
-const ROLE = { lead: "หัวหน้า · Opus", coder: "แก้โค้ด · Opus", tester: "ทดสอบ · Opus", scout: "อ่าน repo · Gemini", scribe: "เขียนข้อความ · Qwen" };
+const AG = ["lead", "coder", "tester", "analyst", "writer"];
+const ROLE = { lead: "ผู้พัฒนาหลัก · Opus 5.5", coder: "แก้โค้ด · Opus 5.5", tester: "ทดสอบ · Opus 5.5", analyst: "วิเคราะห์ทั้ง repo/ภาพ · Gemini 4 Argon", writer: "lore/เนื้อเรื่อง/คำแปล · gemma4:12b" };
 const KIND = { task: "รับงาน", llm: "คิด/ตอบ", tool: "เครื่องมือ", done: "ส่งงาน", approval_wait: "รออนุมัติ", approval: "ผลอนุมัติ", report: "รายงาน", error: "ผิดพลาด" };
 const STATE = { idle: "ว่าง", working: "กำลังทำ", waiting: "รออนุมัติ", done: "เสร็จ" };
 let cur = null, since = 0, filter = null, timer = null, last = null, lastStatus = null;

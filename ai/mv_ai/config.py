@@ -21,7 +21,7 @@ class Config:
     gemini_model: str = "gemini-4-argon"
     gemini_thinking: str = "high"
     local_base_url: str = "http://127.0.0.1:11434/v1"
-    local_model: str = "qwen3:4b"
+    local_model: str = "gemma4:12b"
     long_context_chars: int = 60000
     repo_root: Path = REPO_ROOT
 

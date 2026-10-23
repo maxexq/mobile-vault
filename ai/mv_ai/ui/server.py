@@ -16,7 +16,7 @@ from ..config import Config
 from ..team import build_team
 
 STATIC = Path(__file__).parent / "static"
-AGENTS = ["lead", "coder", "tester", "scout", "scribe"]
+AGENTS = ["lead", "coder", "tester", "analyst", "writer"]
 MAX_FIELD = 20_000
 # USD per 1M tokens: input, output, cache read, cache write (5 min). Opus 5.5 list price, Oct 2026.
 PRICES = {"claude-opus-5-5": (4.0, 20.0, 0.20, 5.0)}

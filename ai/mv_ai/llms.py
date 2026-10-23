@@ -92,15 +92,22 @@ class GeminiLLM:
     def available(self) -> bool:
         return bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
 
-    def complete(self, system: str, prompt: str) -> str:
+    def complete(self, system: str, prompt: str, images: list | None = None) -> str:
+        """images: [(png/jpeg bytes, mime_type)] sent alongside the prompt (e.g. autotest screenshots)."""
+        import base64
+
         from google import genai
 
         client = genai.Client()
+        inp = prompt
+        if images:
+            inp = [{"type": "text", "text": prompt}] + [
+                {"type": "image", "data": base64.b64encode(b).decode(), "mime_type": m} for b, m in images]
         # Sampling params are ignored on this model; Google recommends >= 32k output
         # tokens and >= 15 min timeouts because thinking spends from the same budget.
         it = client.interactions.create(
             model=self.cfg.gemini_model,
-            input=prompt,
+            input=inp,
             system_instruction=system,
             generation_config={"thinking_level": self.cfg.gemini_thinking, "max_output_tokens": 65536},
             timeout=900,
@@ -112,7 +119,7 @@ _THINK = re.compile(r"<think>.*?</think>\s*", re.S)
 
 
 class LocalLLM:
-    """Any OpenAI-compatible local server (Ollama by default) running Qwen3-4B."""
+    """Any OpenAI-compatible local server (Ollama by default), gemma4:12b by default."""
 
     name = "local"
 
@@ -131,8 +138,8 @@ class LocalLLM:
             json={
                 "model": self.cfg.local_model,
                 "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
-                # qwen3:4b on Ollama always thinks first (think:false / reasoning_effort only
-                # move the thinking into content), so callers must leave room for it.
+                # Thinking models (e.g. qwen3:4b on Ollama) always think first and think:false only
+                # moves the thinking into content, so leave room for it and strip <think> below.
                 "max_tokens": max_tokens,
             },
             timeout=300,
