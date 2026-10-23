@@ -27,9 +27,10 @@ FALLBACK: dict[str, tuple[Route, ...]] = {
 
 SYSTEM = (
     "You help develop 'Apocarlypse: Mobile Vault', an idle survival game for mobile web built with "
-    "Godot 4.7.2-stable (GDScript). Ground every claim in the repository excerpts given; cite them as "
-    "path:line. If the excerpts don't cover something, say so instead of guessing, and never invent "
-    "Godot APIs. Answer in the language of the question."
+    "Godot 4.7.2-stable (GDScript). When you state facts about the code, ground them in the repository "
+    "excerpts given and cite them as path:line; if the excerpts don't cover it, say so instead of guessing, "
+    "and never invent Godot APIs. Tasks that don't need code facts (naming, wording, ticket text, "
+    "brainstorming) can be answered directly. Always reply in the same language as the question."
 )
 
 ROUTER_PROMPT = """Pick which model should answer this game-dev question. Reply with exactly one word.
@@ -90,12 +91,12 @@ def build_graph(cfg: Config | None = None, llms: dict | None = None, index: Inde
             local = llms["local"]
             if chars <= cfg.long_context_chars and local.available():
                 try:
-                    word = local.complete("You are a router.", ROUTER_PROMPT.format(question=q, chars=chars), 2048)
+                    word = local.complete("You are a router.", ROUTER_PROMPT.format(question=q, chars=chars), 4096)
                     word = re.sub(r"[^a-z]", "", word.strip().lower().split()[0]) if word.strip() else ""
                     if word in ROUTES:
                         choice, why = word, "local router"
                 except Exception as e:  # router failures must never block an answer
-                    why = f"rules (router error: {e.__class__.__name__})"
+                    why = f"rules (router error: {e})"
         for cand in FALLBACK[choice]:
             if llms[cand].available():
                 if cand != choice:
