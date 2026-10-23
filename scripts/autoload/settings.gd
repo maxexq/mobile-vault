@@ -175,7 +175,7 @@ func export_save() -> String:
 func validate_save(text: String) -> String:
 	var j := JSON.new()      # JSON.parse() reports errors quietly, unlike JSON.parse_string()
 	if j.parse(text) != OK or not j.data is Dictionary:
-		return "ไฟล์ไม่ใช่เซฟของ Mobile Vault (อ่าน JSON ไม่ได้)"
+		return "ไฟล์ไม่ใช่เซฟของ Apocarlypse (อ่าน JSON ไม่ได้)"
 	var d: Dictionary = j.data
 	if not d.has("rooms") or not d.has("res") or not d.has("dwellers"):
 		return "ไฟล์นี้ไม่มีข้อมูลรถหรือลูกเรือ"

@@ -1,4 +1,4 @@
-# Mobile Vault — Project Context (handoff)
+# Apocarlypse: Mobile Vault — Project Context (handoff)
 
 > เอกสารนี้สรุปทุกอย่างที่ต้องรู้เพื่อทำงานต่อกับเกม Mobile Vault ในโปรเจกต์ใหม่
 > สถานะ ณ 22 ต.ค. 2026 · เวอร์ชันเกม **v4.2** · commit ล่าสุด `dd19fc1` บน `main`
@@ -7,7 +7,7 @@
 
 ## 1. ภาพรวม
 
-**Mobile Vault — Project: Survival** คือเกม idle survival / management บน **Mobile Web (HTML5)**
+**Apocarlypse: Mobile Vault** (เดิมชื่อ Mobile Vault — Project: Survival) คือเกม idle survival / management บน **Mobile Web (HTML5)**
 ผู้เล่นคุมรถบ้านหุ้มเกราะที่วิ่งข้ามโลกล่มสลาย ภายในรถแบ่งเป็นห้องแบบผ่าซีก (ฟีลเกม Fallout Shelter)
 
 ระบบหลักในเกม:

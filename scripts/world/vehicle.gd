@@ -16,6 +16,7 @@ const MAIN_W := 280.0
 const TRAILER_W := 248.0
 const TRACKS_X := {"van": 200, "bus": 200, "rig": 202}
 const SOLAR_X := [79, 105]
+const TITLE_CRUISE := 0.35         # title-screen backdrop speed (matches the road scroll in background.gd)
 const SOLAR_Y := 14               # relative to a 4-floor roof (roof_dy() shifts it)
 const ANTENNA := Vector2(113, 1)
 const ROOF_Y := 36
@@ -58,6 +59,8 @@ var _roof_root: Node2D
 var pets_root: Node2D
 var _bump_t := 0.0
 var _bump := 0.0
+var _rumble_t := 0.0
+var _rumble := 0.0
 var _sparks: Node2D
 var _speed := 0.0
 var _t := 0.0
@@ -516,7 +519,7 @@ func _process(delta: float) -> void:
 		_ext_alpha = move_toward(_ext_alpha, want, delta * 4.0)
 		# stepped fade (4 levels) so the hull "slides" open in a pixel-art way
 		_exteriors.modulate.a = floorf(_ext_alpha * 4.0) / 4.0
-	var f := Game.speed_factor()
+	var f := Game.speed_factor() if Game.started else TITLE_CRUISE
 	_speed = move_toward(_speed, f, delta * 0.7)
 	var moving := _speed > 0.02
 	for w in wheels:
@@ -547,7 +550,13 @@ func _process(delta: float) -> void:
 		if Game.vehicle_def().get("rail", false):
 			_bump = -1.0 if randf() < 0.3 else 0.0     # rails are smoother
 	_bump = move_toward(_bump, 0.0, delta * 14.0)
-	body.position.y = round(_bump)
+	# engine rumble: the body buzzes 1 px while the engine runs (driving, title backdrop), slower when idling
+	_rumble_t -= delta
+	if _rumble_t <= 0.0:
+		var engine_on := moving or not Game.started or bool(Game.s.get("traveling", false))
+		_rumble = -1.0 if engine_on and _rumble == 0.0 else 0.0
+		_rumble_t = randf_range(0.06, 0.1) if moving else randf_range(0.1, 0.16)
+	body.position.y = round(minf(_bump, _rumble))
 	var sun := Game.sun_level()
 	var az := clampf((float(Game.s.tod) - 0.25) / 0.5, 0.0, 1.0)
 	var frame := 2
