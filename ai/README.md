@@ -41,6 +41,31 @@ uv run pytest               # เทสออฟไลน์ ไม่เรี�
 
 ราคาโดยประมาณต่อ 1M token (ต.ค. 2026): Opus 5.5 $4 in / $20 out · Gemini 4 Argon $2 / $10 ถึง 30 พ.ย. แล้วเป็น $4 / $20 · Qwen local ฟรี
 
+## ทีม Agent (Opus 5.5 เป็นหัวหน้า)
+
+```
+START → lead (Claude Opus 5.5) ─delegate→ coder  (Opus: อ่าน/ค้น/แก้ไฟล์ใน repo)        ─┐
+          ↑                               tester (Opus: รัน autotest / balance sim)       │
+          │                               scout  (Gemini 4 Argon: อ่าน repo กว้างทีละมากๆ) │
+          │                               scribe (Qwen local: สรุป, ข้อความ ticket, คำแปล) │
+          └──────────────────────────────────────────────────────────────────────────────┘
+lead จบงาน → END พร้อมรายงานว่าแก้ไฟล์อะไร ทดสอบอะไรแล้ว เหลืออะไร
+```
+
+```powershell
+git checkout -b feature/ชื่องาน         # ให้ทีมทำงานบน branch แยก
+uv run python -m mv_ai.team "เพิ่ม feature switch ให้ engine_bay แล้วรัน autotest แบบ large"
+uv run python -m mv_ai.team --yes "..." # อนุมัติการแก้ไฟล์ทั้งหมดอัตโนมัติ (ระวัง)
+```
+
+- lead ส่งงานให้ทีละคน แล้วเอาผลมาตัดสินใจต่อ agent ลูกไม่เห็นบทสนทนาของ lead lead จึงต้องใส่ context ให้ครบในงานที่สั่ง
+- **ทุกครั้งที่จะเขียนหรือแก้ไฟล์ graph จะหยุดรอให้กด y/N** (LangGraph interrupt) ถ้าตอบ N ก็ไม่แก้ และ coder จะรู้ว่าถูกปฏิเสธ
+- ทีมไม่ commit และไม่ push ให้ ดูผลด้วย `git diff` แล้ว commit เองตามปกติ
+- agent อ่าน `.env`, `.git`, `cloud_config.json` ไม่ได้ และแก้ไฟล์นอก repo ไม่ได้
+- tester ต้องมี Godot 4.7.2: ใส่ path ไว้ใน `MV_GODOT_BIN` ใน `.env` ถ้าไม่มี tester จะรีวิวจากโค้ดแทน
+- ถ้าไม่มี Gemini key หรือ Ollama ไม่ได้เปิด งานของ scout/scribe จะส่งให้ Opus ทำแทน
+- ค่าใช้จ่าย: ทุกตาของ lead/coder/tester คือการเรียก Opus 5.5 หนึ่งครั้ง ($4/$20 ต่อ 1M token) งานแก้โค้ดหนึ่งงานมักใช้ 10–40 ตา จำกัดไว้ที่ lead 25 ตา และ agent ลูก 40 ตาต่องาน
+
 ## ต่อยอด
 - MV-78 ผู้ช่วยบาลานซ์: เพิ่ม node ที่รัน `godot --headless -- --balance` แล้วส่งผลให้ Opus วิเคราะห์
 - เปลี่ยน retrieve เป็น embedding (เช่น `qwen3-embedding` บน Ollama) เมื่อ repo ใหญ่ขึ้น
