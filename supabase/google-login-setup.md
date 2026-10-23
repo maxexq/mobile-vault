@@ -24,13 +24,12 @@
 
 ## 3) Supabase: URL Configuration
 **Authentication → URL Configuration**
-- **Site URL:** ลิงก์เว็บหลักของเกมบน Vercel (เช่น `https://mobile-vault-xxxx.vercel.app`)
+- **Site URL:** `https://apocarlypse-mobile-vault.vercel.app`
 - **Redirect URLs:** เพิ่มสองบรรทัดนี้
-  - `https://<ลิงก์เว็บหลัก>/**`
+  - `https://apocarlypse-mobile-vault.vercel.app/**`
   - `https://*-maxexqs-projects.vercel.app/**` (สำหรับลิงก์ preview ของแต่ละ PR)
 
 ## ส่งกลับมาให้ผม
-- ลิงก์เว็บหลักของเกมบน Vercel (production URL)
 - บอกว่าทำครบทั้ง 3 ข้อแล้ว
 - **ไม่ต้องส่ง Client secret**
 
