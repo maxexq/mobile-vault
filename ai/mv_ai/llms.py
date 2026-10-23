@@ -89,22 +89,27 @@ class LocalLLM:
         except httpx.HTTPError:
             return False
 
-    def complete(self, system: str, prompt: str, max_tokens: int = 4096) -> str:
+    def complete(self, system: str, prompt: str, max_tokens: int = 8192) -> str:
         r = httpx.post(
             f"{self.cfg.local_base_url}/chat/completions",
             json={
                 "model": self.cfg.local_model,
                 "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
+                # qwen3:4b on Ollama always thinks first (think:false / reasoning_effort only
+                # move the thinking into content), so callers must leave room for it.
                 "max_tokens": max_tokens,
-                # Qwen3 thinks by default; routing and small jobs don't need it.
-                "reasoning_effort": "none",
             },
             timeout=300,
         )
         if r.status_code != 200:
             raise LLMError(f"local LLM {r.status_code}: {r.text[:300]}")
-        text = r.json()["choices"][0]["message"].get("content") or ""
-        return _THINK.sub("", text).strip()
+        choice = r.json()["choices"][0]
+        text = _THINK.sub("", choice["message"].get("content") or "")
+        if "</think>" in text:  # opening tag dropped by the server
+            text = text.rsplit("</think>", 1)[1]
+        if not text.strip() and choice.get("finish_reason") == "length":
+            raise LLMError("local LLM used its whole token budget on thinking")
+        return text.strip()
 
 
 def default_llms(cfg: Config) -> dict:

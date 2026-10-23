@@ -69,3 +69,33 @@ def test_gemini_gets_wide_context():
     narrow = build_graph(CFG, llms, INDEX).invoke({"question": "fuel", "force_route": "opus"})
     wide = build_graph(CFG, llms, INDEX).invoke({"question": "fuel", "force_route": "gemini"})
     assert len(wide["context"]) > len(narrow["context"])
+
+
+def test_router_reply_punctuation_is_ignored():
+    llms = fakes(local=Fake("local", reply="Gemini."))
+    out = build_graph(CFG, llms, INDEX).invoke({"question": "how does fuel work?"})
+    assert out["route"] == "gemini"
+
+
+def test_local_llm_strips_thinking(monkeypatch):
+    import httpx
+
+    from mv_ai.llms import LLMError, LocalLLM
+
+    def reply(content, finish="stop"):
+        def post(*a, **k):
+            return httpx.Response(200, json={"choices": [{"message": {"content": content}, "finish_reason": finish}]})
+
+        return post
+
+    llm = LocalLLM(CFG)
+    monkeypatch.setattr(httpx, "post", reply("<think>hmm</think>\nopus"))
+    assert llm.complete("s", "p") == "opus"
+    monkeypatch.setattr(httpx, "post", reply("hmm, route?\n</think>\n\nlocal"))
+    assert llm.complete("s", "p") == "local"
+    monkeypatch.setattr(httpx, "post", reply("", "length"))
+    try:
+        llm.complete("s", "p")
+        raise AssertionError("expected LLMError")
+    except LLMError:
+        pass

@@ -90,8 +90,8 @@ def build_graph(cfg: Config | None = None, llms: dict | None = None, index: Inde
             local = llms["local"]
             if chars <= cfg.long_context_chars and local.available():
                 try:
-                    word = local.complete("You are a router.", ROUTER_PROMPT.format(question=q, chars=chars), 16)
-                    word = word.strip().lower().split()[0] if word.strip() else ""
+                    word = local.complete("You are a router.", ROUTER_PROMPT.format(question=q, chars=chars), 2048)
+                    word = re.sub(r"[^a-z]", "", word.strip().lower().split()[0]) if word.strip() else ""
                     if word in ROUTES:
                         choice, why = word, "local router"
                 except Exception as e:  # router failures must never block an answer
