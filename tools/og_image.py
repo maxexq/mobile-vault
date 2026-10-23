@@ -22,7 +22,6 @@ AMBER = (216, 174, 68)           # yellow3: hazard paint / lamp amber
 BONE = (178, 168, 138)           # cream3
 SOOT = (12, 10, 10)              # ol0
 TOXIC = (168, 216, 56)           # toxic3
-BLOOD = (212, 82, 60)            # UIKit.C_RED: the CAR in the logo
 
 
 def layer(name):
@@ -87,23 +86,13 @@ def main():
 
     d = ImageDraw.Draw(img)
     d.fontmode = "1"                                  # no anti-aliasing: hard pixel edges
-    title = ImageFont.truetype(os.path.join(FONTS, "Silkscreen-Regular.ttf"), 32)
-    sub = ImageFont.truetype(os.path.join(FONTS, "Silkscreen-Regular.ttf"), 16)
     small = ImageFont.truetype(os.path.join(FONTS, "Silkscreen-Regular.ttf"), 8)
     thai = ImageFont.truetype(os.path.join(FONTS, "ChakraPetch-Bold.ttf"), 22)
     thai_s = ImageFont.truetype(os.path.join(FONTS, "ChakraPetch-SemiBold.ttf"), 13)
 
-    # logo: APO|CAR|LYPSE, the CAR pun lit up in blood red with a bar under it (same as UIKit.logo)
-    x = 24
-    for part, col in (("APO", BONE), ("CAR", BLOOD), ("LYPSE", BONE)):
-        text(d, (x, 18), part, title, col)
-        w = int(d.textlength(part, font=title))
-        if part == "CAR":
-            d.rectangle([x, 56, x + w - 4, 58], fill=BLOOD)
-        x += w
-    emblem = get("emblem").resize((32, 32), Image.NEAREST)
-    img.alpha_composite(emblem, (22, 64))
-    text(d, (60, 70), "MOBILE VAULT", sub, AMBER)
+    # the game logo (assets/ui/logo.png, same as the title screen), 1:1 on the small canvas
+    logo = Image.open(os.path.join(ROOT, "assets", "ui", "logo.png")).convert("RGBA")
+    img.alpha_composite(logo, (20, 26))
     text(d, (24, 112), "เอาชีวิตรอดบนรถป้อมเหล็ก", thai, BONE)
     text(d, (24, 142), "idle survival · สร้างห้อง จ้างผู้รอดชีวิต", thai_s, BONE)
     text(d, (24, 160), "ยิงซอมบี้ แล้วขับฝ่าดินแดนรกร้าง", thai_s, BONE)

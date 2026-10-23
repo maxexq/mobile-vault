@@ -35,10 +35,7 @@ func _ready() -> void:
 	add_child(_panel)
 	var v := UIKit.vbox(6)
 	_panel.add_child(v)
-	var head := UIKit.hbox(6)
-	head.add_child(UIKit.icon_rect("emblem", 24))
-	head.add_child(UIKit.logo())
-	v.add_child(head)
+	v.add_child(UIKit.logo())
 	v.add_child(UIKit.divider(UIKit.C_LINE_DIM))
 	_log = UIKit.label("", UIKit.FP, UIKit.C_DIM, true)
 	_log.custom_minimum_size.y = 52

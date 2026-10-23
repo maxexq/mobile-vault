@@ -1890,6 +1890,7 @@ func _share_preview_test() -> void:
 	var img := Image.load_from_file(ProjectSettings.globalize_path("res://web/og-image.png"))
 	_check("share: og-image.png is 1200x630", img != null and img.get_size() == Vector2i(1200, 630))
 	_check("share: og:title uses the game name", head.contains("property=\"og:title\" content=\"" + BuildInfo.GAME_NAME))
+	_check("logo: pixel logo is 192x60", UIKit.LOGO.get_size() == Vector2(192, 60))
 	_check("share: project name is the game name", ProjectSettings.get_setting("application/config/name") == BuildInfo.GAME_NAME)
 	_check("share: favicon exported", cfg.get_value("preset.0.options", "html/export_icon", false))
 
