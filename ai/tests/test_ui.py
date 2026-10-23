@@ -26,7 +26,8 @@ class Billed(Script):
 def ui(repo):
     def make_team(run):
         script = Billed(
-            lead=[[use("L1", "delegate", agent="coder", task="double fuel_rate")], [text("All done")]],
+            lead=[[use("L1", "delegate", agent="coder", task="double fuel_rate")], [text("All done")],
+                  [text("Follow-up answer")]],
             coder=[[use("C1", "edit_file", path="scripts/fuel.gd", old_text="1.0", new_text="2.0")],
                    [text("changed fuel.gd")]],
         )
@@ -104,3 +105,19 @@ def test_post_needs_header_and_task(ui):
     base, _ = ui
     assert call(base + "/api/runs", {"task": "x"}, header=False)[0] == 403
     assert call(base + "/api/runs", {"task": "  "})[0] == 400
+
+
+def test_follow_up_continues_the_run(ui):
+    base, _ = ui
+    _, run = call(base + "/api/runs", {"task": "x", "auto_approve": True})
+    url = f"{base}/api/runs/{run['id']}"
+    s = wait_for(url, "done")
+    assert s["agents"]["coder"]["state"] == "done"
+    assert call(url + "/message", {"text": " "})[0] == 400
+    assert call(url + "/message", {"text": "and the tests?"})[1]["ok"]
+    s = wait_for(url, "done")
+    assert s["report"] == "Follow-up answer"
+    users = [e["data"]["text"] for e in s["new_events"] if e["agent"] == "user"]
+    assert users == ["x", "and the tests?"]
+    kinds = [(e["agent"], e["kind"]) for e in s["new_events"]]
+    assert ("coder", "tool_start") in kinds and ("lead", "llm_start") in kinds

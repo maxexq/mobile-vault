@@ -16,7 +16,7 @@ from ..config import Config
 from ..team import build_team
 
 STATIC = Path(__file__).parent / "static"
-AGENTS = ["lead", "coder", "tester", "scout", "scribe"]
+AGENTS = ["lead", "coder", "tester", "analyst", "writer"]
 MAX_FIELD = 20_000
 # USD per 1M tokens: input, output, cache read, cache write (5 min). Opus 5.5 list price, Oct 2026.
 PRICES = {"claude-opus-5-5": (4.0, 20.0, 0.20, 5.0)}
@@ -57,6 +57,8 @@ class Run:
         self.cancelled = False
         self._decision = None
         self._decided = threading.Event()
+        self.team = None
+        self.conf = None
         self._lock = threading.Lock()
 
     def emit(self, agent: str, kind: str, data: dict):
@@ -97,7 +99,7 @@ class Run:
                 a["state"] = "working"
             elif e["kind"] == "tool":
                 a["tools"] += 1
-            elif e["kind"] == "task":
+            elif e["kind"] in ("task", "llm_start", "tool_start"):
                 a["state"] = "working"
             elif e["kind"] in ("done", "report"):
                 a["state"] = "done"
@@ -118,15 +120,28 @@ class Hub:
     def start(self, task: str, auto_approve: bool) -> Run:
         run = Run(task, auto_approve)
         self.runs[run.id] = run
-        threading.Thread(target=self._work, args=(run,), daemon=True).start()
+        run.team = self.make_team(run)
+        run.conf = {"configurable": {"thread_id": run.id}, "recursion_limit": 1000}
+        threading.Thread(target=self._work, args=(run, task, {"task": task}), daemon=True).start()
         return run
 
-    def _work(self, run: Run):
+    def follow_up(self, run: Run, text: str) -> bool:
+        """Continue a finished run: the lead sees its whole history plus the new message."""
+        if run.status not in ("done", "error", "cancelled") or not getattr(run, "team", None):
+            return False
+        lead = run.team.get_state(run.conf).values.get("lead") or []
+        if not lead or lead[-1]["role"] != "assistant":
+            return False
+        run.status, run.report, run.cancelled = "running", "", False
+        inp = {"lead": lead + [{"role": "user", "content": text}], "report": "", "pending": None,
+               "lead_turns": 0, "worker": [], "worker_turns": 0}
+        threading.Thread(target=self._work, args=(run, text, inp), daemon=True).start()
+        return True
+
+    def _work(self, run: Run, text: str, inp):
+        team, conf = run.team, run.conf
         try:
-            team = self.make_team(run)
-            conf = {"configurable": {"thread_id": run.id}, "recursion_limit": 1000}
-            run.emit("lead", "task", {"task": run.task})
-            inp = {"task": run.task}
+            run.emit("user", "message", {"text": text})
             while True:
                 paused = None
                 for step in team.stream(inp, conf, stream_mode="updates"):
@@ -213,6 +228,11 @@ def make_handler(hub: Hub):
                 if parts[3] == "cancel":
                     run.cancel()
                     return self._json({"ok": True})
+                if parts[3] == "message":
+                    text = str(body.get("text", "")).strip()
+                    if not text:
+                        return self._json({"error": "message is empty"}, 400)
+                    return self._json({"ok": hub.follow_up(run, text)})
             self._json({"error": "not found"}, 404)
 
     return Handler

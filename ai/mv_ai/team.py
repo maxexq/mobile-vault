@@ -1,10 +1,10 @@
-"""Agent team: Claude Opus 5.5 leads and delegates to four specialists.
+"""Agent team: Claude Opus 5.5 is the main developer; specialists cover what they do best.
 
-    START -> lead --delegate--> coder  (Opus: reads, searches and edits the repo)  --+
-              ^                 tester (Opus: runs autotest / balance sim, reads)  --+
-              |                 scout  (Gemini 4 Argon: reads wide repo context)   --+
-              |                 scribe (Qwen3 local: summaries, ticket text, copy) --+
-              +----------------------------------------------------------------------+
+    START -> lead --delegate--> coder   (Opus: reads, searches and edits the repo)              --+
+              ^                 tester  (Opus: runs autotest / balance sim, reads)              --+
+              |                 analyst (Gemini 4 Argon: whole-repo analysis, long logs, screenshots)+
+              |                 writer  (gemma4:12b local: lore, story, event text, localization) --+
+              +-------------------------------------------------------------------------------------+
     lead (no more delegations) -> END with a report
 
 File writes pause the graph (LangGraph interrupt) until a human approves them. Nothing is
@@ -13,10 +13,13 @@ committed or pushed: review the result with `git diff` and commit yourself.
     uv run python -m mv_ai.team "เพิ่ม feature flag ให้ engine bay แล้วรัน autotest" [--yes]
 """
 import argparse
+import re
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
+from pathlib import Path
 from typing import TypedDict
 
 from langgraph.checkpoint.memory import InMemorySaver
@@ -40,15 +43,37 @@ Saves are JSON: ids load as floats, so never Array.find/has an int id."""
 LEAD_SYSTEM = f"""You lead a small dev team working on a Godot game repo. {PROJECT}
 
 You cannot touch files yourself. Use the delegate tool, one task at a time:
-- coder: Claude Opus with read/search/edit tools. Give it precise, self-contained tasks.
+- coder: Claude Opus with read/search/edit tools. All code changes go through it. Give it precise,
+  self-contained tasks.
 - tester: Claude Opus that can run the Godot autotest and the headless balance sim, and read code.
-- scout: Gemini 4 Argon with a 1M-token window, fed a wide slice of the repo. Use it for questions
-  that need many files at once (how systems connect, where something is used everywhere).
-- scribe: a small local model for cheap text work (summaries, changelog, Plane ticket text, Thai copy).
+- analyst: Gemini 4 Argon with a 1M-token window, fed a wide slice of the repo. Use it for what needs a
+  lot read at once: how systems connect, impact of a change across files, long logs and docs. It can
+  also look at images: put screenshot paths (e.g. from the autotest output folder) in the task and it
+  reviews them for visual/layout problems.
+- writer: gemma4:12b running locally (free, private). Use it for lore, story, event and NPC text, item
+  flavour, and localization QA: checking Thai/English text for odd, wrong or inconsistent wording
+  against the game's existing terms. It returns text; the coder puts it into files.
+You are the main developer: you decide the design and code direction yourself and use analyst and writer
+for their strengths, not to make engineering decisions.
 Plan first, delegate, check results (after code changes, have tester verify), and stop when the task is
 done or blocked. Delegated agents don't see this conversation, so include the context they need.
 Your final message (no tool call) is the report to the human: what changed (files), what was verified,
 what is left. Write it in the language of the task."""
+
+ANALYST_SYSTEM = f"""You are the analyst on a Godot game team. {PROJECT}
+Answer from the repository excerpts and cite path:line. Trace how systems connect across files and
+call out every place a change would touch. When screenshots are attached, check them for layout,
+overlap, clipped or unreadable text (Thai included), and pixel-art problems, naming the image each
+finding is in. Say plainly when the excerpts don't cover something."""
+
+WRITER_SYSTEM = """You are the writer for "Apocarlypse: Mobile Vault", a dark post-apocalyptic idle survival game
+where survivors live in an armoured vehicle crossing ruined biomes. You write lore, story beats, event
+and NPC text and item flavour, and you check localization.
+- Match the established names, terms and tone in the reference text; reuse existing Thai terms exactly.
+- Thai must read naturally for Thai players: no word-for-word translation, no odd or made-up words, no
+  mixed registers. Keep UI strings short enough for a 360 px wide portrait screen.
+- For localization checks, list each problem as: original -> suggested fix -> why.
+Reply in the language of the task."""
 
 WORKERS = {
     "coder": {
@@ -76,7 +101,7 @@ DELEGATE = {
     "input_schema": {
         "type": "object",
         "properties": {
-            "agent": {"type": "string", "enum": ["coder", "tester", "scout", "scribe"]},
+            "agent": {"type": "string", "enum": ["coder", "tester", "analyst", "writer"]},
             "task": {"type": "string", "description": "Self-contained instructions with all needed context"},
         },
         "required": ["agent", "task"],
@@ -122,6 +147,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
 
     def call_claude(agent, system, messages, tool_defs, effort, one=False):
         t = time.time()
+        emit(agent, "llm_start", {"model": cfg.claude_model, "effort": effort})
         blocks, stop, usage = claude(system, messages, tool_defs, effort, one)
         emit(agent, "llm", {"model": usage.get("model", cfg.claude_model), "effort": effort, "stop": stop,
                             "blocks": blocks, "usage": usage, "ms": int((time.time() - t) * 1000)})
@@ -204,6 +230,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
         agent = state["pending"]["agent"]
         for c in calls:
             res = {"type": "tool_result", "tool_use_id": c["id"]}
+            emit(agent, "tool_start", {"name": c["name"], "input": c.get("input")})
             t = time.time()
             try:
                 if c["name"] in NEEDS_APPROVAL and not approved:
@@ -219,55 +246,81 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
         return {"worker": state["worker"] + [{"role": "user", "content": results}],
                 "log": state.get("log", []) + log}
 
-    def _single_shot(agent: str, model: str, system: str, prompt: str) -> str:
+    def _single_shot(agent: str, model: str, system: str, prompt: str, images=None) -> str:
         order = {"gemini": ("gemini", "opus"), "local": ("local", "opus")}[model]
         for name in order:
             if llms[name].available():
+                emit(agent, "llm_start", {"model": name, "images": len(images or [])})
                 t = time.time()
-                ans = llms[name].complete(system, prompt)
-                emit(agent, "llm", {"model": name, "prompt_chars": len(prompt), "stop": "end_turn",
+                ans = llms[name].complete(system, prompt, images) if images and name == "gemini" \
+                    else llms[name].complete(system, prompt)
+                emit(agent, "llm", {"model": name, "prompt_chars": len(prompt), "images": len(images or []),
+                                    "stop": "end_turn",
                                     "blocks": [{"type": "text", "text": ans}], "usage": {},
                                     "ms": int((time.time() - t) * 1000)})
                 return ans
         raise ToolError("no model available for this agent")
 
-    def scout(state: TeamState) -> TeamState:
+    def analyst(state: TeamState) -> TeamState:
         task = state["pending"]["task"]
         try:
             ctx = render(index.search(task, k=120))
-            ans = _single_shot("scout", "gemini", f"You are the scout on a Godot game team. {PROJECT}\nAnswer from the "
-                               "repository excerpts and cite path:line.", f"Repository excerpts:\n\n{ctx}\n\nTask: {task}")
+            images = screenshots(task, cfg.repo_root)
+            note = f"\n\n{len(images)} screenshot(s) attached in the order they appear in the task." if images else ""
+            ans = _single_shot("analyst", "gemini", ANALYST_SYSTEM,
+                               f"Repository excerpts:\n\n{ctx}\n\nTask: {task}{note}", images)
             return back_to_lead(state, ans)
         except Exception as e:
-            return back_to_lead(state, f"scout failed: {e}", True)
+            return back_to_lead(state, f"analyst failed: {e}", True)
 
-    def scribe(state: TeamState) -> TeamState:
+    def writer(state: TeamState) -> TeamState:
+        task = state["pending"]["task"]
         try:
-            ans = _single_shot("scribe", "local", "You write short, clear text for a game dev team. Reply in the task's "
-                               "language.", state["pending"]["task"])
+            # existing in-game text is the reference for names, terms and tone
+            ctx = render(index.search(task + " lore event text label name", k=12))
+            ans = _single_shot("writer", "local", WRITER_SYSTEM, f"Existing game text and code for reference:\n\n"
+                               f"{ctx}\n\nTask: {task}")
             return back_to_lead(state, ans)
         except Exception as e:
-            return back_to_lead(state, f"scribe failed: {e}", True)
+            return back_to_lead(state, f"writer failed: {e}", True)
 
     g = StateGraph(TeamState)
     g.add_node("lead", lead)
     g.add_node("worker", worker)
     g.add_node("worker_tools", worker_tools)
-    g.add_node("scout", scout)
-    g.add_node("scribe", scribe)
+    g.add_node("analyst", analyst)
+    g.add_node("writer", writer)
     g.add_edge(START, "lead")
-    g.add_conditional_edges("lead", after_lead, ["lead", "worker", "scout", "scribe", END])
+    g.add_conditional_edges("lead", after_lead, ["lead", "worker", "analyst", "writer", END])
     g.add_conditional_edges("worker", after_worker, ["worker_tools", "lead"])
     g.add_edge("worker_tools", "worker")
-    g.add_edge("scout", "lead")
-    g.add_edge("scribe", "lead")
+    g.add_edge("analyst", "lead")
+    g.add_edge("writer", "lead")
     return g.compile(checkpointer=checkpointer or InMemorySaver())
 
 
+SHOT = re.compile(r"[^\s'\"`<>|]+\.(?:png|jpe?g|webp)", re.I)
+MAX_IMAGES = 12
+
+
+def screenshots(task: str, root: Path) -> list:
+    """Images named in the task: repo files, or autotest output written to the temp folder."""
+    tmp = Path(tempfile.gettempdir()).resolve()
+    out = []
+    for m in SHOT.findall(task)[:MAX_IMAGES]:
+        p = Path(m) if Path(m).is_absolute() else root / m
+        p = p.resolve()
+        inside = p.is_relative_to(root.resolve()) or (p.is_relative_to(tmp) and "mv-autotest-" in str(p))
+        if inside and p.is_file() and p.stat().st_size < 8_000_000:
+            mime = "image/png" if p.suffix.lower() == ".png" else "image/webp" if p.suffix.lower() == ".webp" else "image/jpeg"
+            out.append((p.read_bytes(), mime))
+    return out
+
+
 def validate_delegate(args) -> None:
-    if not isinstance(args, dict) or args.get("agent") not in ("coder", "tester", "scout", "scribe") \
+    if not isinstance(args, dict) or args.get("agent") not in ("coder", "tester", "analyst", "writer") \
             or not isinstance(args.get("task"), str) or not args["task"].strip():
-        raise ToolError("delegate needs agent (coder/tester/scout/scribe) and a non-empty task")
+        raise ToolError("delegate needs agent (coder/tester/analyst/writer) and a non-empty task")
 
 
 def main() -> int:

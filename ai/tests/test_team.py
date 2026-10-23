@@ -115,9 +115,9 @@ def test_auto_approve_and_sandbox(repo):
     assert (repo / "scripts/a.gd").exists() and not (repo.parent / "escape.gd").exists()
 
 
-def test_scout_and_scribe_and_fallback(repo):
-    script = Script(lead=[[use("L1", "delegate", agent="scout", task="where is fuel_rate used?")],
-                          [use("L2", "delegate", agent="scribe", task="ticket title")],
+def test_analyst_and_writer_and_fallback(repo):
+    script = Script(lead=[[use("L1", "delegate", agent="analyst", task="where is fuel_rate used?")],
+                          [use("L2", "delegate", agent="writer", task="ticket title")],
                           [text("all good")]])
     out = team(repo, script, gemini_up=False).invoke({"task": "x"}, CONF)
     assert out["report"] == "all good"
@@ -148,3 +148,31 @@ def test_tester_without_godot(repo, monkeypatch):
     tools.godot = None
     with pytest.raises(ToolError, match="MV_GODOT_BIN"):
         tools.run("run_autotest", {"only": "large"})
+
+
+class Recorder(Fake):
+    def __init__(self, name):
+        super().__init__(name)
+        self.calls = []
+
+    def complete(self, system, prompt, images=None):
+        self.calls.append((system, prompt, images))
+        return f"{self.name} says ok"
+
+
+def test_analyst_gets_screenshots_and_writer_gets_reference_text(repo, tmp_path_factory):
+    (repo / "scripts" / "lore.gd").write_text('const LORE := {"vault": "ห้องนิรภัย"}\n')
+    shot_dir = tmp_path_factory.mktemp("mv-autotest-x")
+    (shot_dir / "01_hud.png").write_bytes(b"\x89PNG fake")
+    (repo / "outside.png").write_bytes(b"\x89PNG")
+    script = Script(lead=[[use("L1", "delegate", agent="analyst",
+                               task=f"check {shot_dir}/01_hud.png and outside.png and /etc/passwd.png")],
+                          [use("L2", "delegate", agent="writer", task="เขียนชื่อห้อง vault ใหม่")],
+                          [text("ok")]])
+    cfg = Config(repo_root=repo)
+    llms = {"opus": Fake("opus"), "gemini": Recorder("gemini"), "local": Recorder("local")}
+    build_team(cfg, claude=script, llms=llms, tools=RepoTools(cfg), index=Index.build(repo)).invoke({"task": "x"}, CONF)
+    imgs = llms["gemini"].calls[0][2]
+    assert [m for _, m in imgs] == ["image/png", "image/png"]  # temp autotest shot + repo file, not /etc
+    system, prompt, _ = llms["local"].calls[0]
+    assert "localization" in system and "ห้องนิรภัย" in prompt
