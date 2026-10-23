@@ -19,6 +19,8 @@ Parames's PC. Both follow this file. The game itself is described in `README.md`
 - **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served by Vercel
   from `web/`.
 - Never commit secrets: `cloud_config.json`, `.plane-api-key`, `ai/.env` are git-ignored.
+- PR, review, CI and Vercel deploy events post to Discord (`.github/workflows/discord-notify.yml`,
+  secret `DISCORD_WEBHOOK_URL`). A new CI workflow must be added to its `workflow_run.workflows` list.
 
 ## Definition of done for every feature
 

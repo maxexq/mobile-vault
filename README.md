@@ -375,6 +375,17 @@ Fonts: Chakra Petch & Silkscreen — SIL Open Font License (see `assets/fonts/OF
 2. On vercel.com → **Add New → Project → Import** the repository → keep the defaults (Framework: Other) → **Deploy**. Every push to the main branch redeploys automatically.
 3. After changing the game, re-export into `web/`: `godot --headless --path . --export-release "Web" web/index.html`, commit, push.
 
+### Discord notifications (PRs + CI/CD)
+
+`.github/workflows/discord-notify.yml` posts to a Discord channel when a PR is opened, reopened, ready for review, asked for review, reviewed (approve / changes requested / comment) or merged/closed, when Vercel finishes a Preview or Production deploy (success or failure, with the link), and when a CI workflow listed under `workflow_run` finishes. The message text is built by `.github/scripts/discord-notify.sh` (bash + jq + curl, test locally with `DRY_RUN=1`).
+
+1. Discord: channel → ⚙️ **Edit Channel → Integrations → Webhooks → New Webhook** → **Copy Webhook URL**.
+2. GitHub: repo **Settings → Secrets and variables → Actions → New repository secret**, name `DISCORD_WEBHOOK_URL`, paste the URL. Never commit the URL.
+3. Test: **Actions → Discord notify → Run workflow**.
+4. Optional: repository variable `SKIP_PREVIEW_SUCCESS` = `true` mutes successful Preview deploys (failures and Production still post).
+
+When you add a CI workflow (autotest, web export), put its `name:` in the `workflow_run.workflows` list so its result is posted too.
+
 ### Link preview (Open Graph / Twitter card)
 
 Shared links show a title, a Thai/English description and a 1200×630 pixel-art card. The tags are in the Web preset's **`html/head_include`** (Project → Export → Web → HTML → Head Include; [docs](https://docs.godotengine.org/en/stable/classes/class_editorexportplatformweb.html#class-editorexportplatformweb-property-html-head-include)), so every export writes them into `index.html`. The favicon comes from `html/export_icon` (the project icon).

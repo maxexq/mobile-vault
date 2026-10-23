@@ -1,0 +1,41 @@
+# Posts PR activity, CI results and Vercel deploys to Discord (MV-96).
+# Setup: repo secret DISCORD_WEBHOOK_URL (Discord channel > Integrations > Webhooks).
+# Optional repo variable SKIP_PREVIEW_SUCCESS=true mutes successful Preview deploys.
+# Message logic: .github/scripts/discord-notify.sh
+name: Discord notify
+
+on:
+  # _target runs the workflow from main, so it also has the secret for PRs from forks.
+  # The default checkout for _target is the base branch, never the PR's code.
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, review_requested, closed]
+  pull_request_review:
+    types: [submitted]
+  # Vercel's GitHub integration reports every Preview/Production deploy here.
+  deployment_status:
+  # CI workflows to report. None exist yet: put each new workflow's `name:` here.
+  workflow_run:
+    workflows: [Autotest, Web export]
+    types: [completed]
+  # Actions tab > Discord notify > Run workflow: sends a test message.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SKIP_PREVIEW_SUCCESS: ${{ vars.SKIP_PREVIEW_SUCCESS }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PATH: ${{ github.event_path }}
+        run: bash .github/scripts/discord-notify.sh
