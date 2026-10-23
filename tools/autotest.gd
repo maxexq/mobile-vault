@@ -583,6 +583,7 @@ func _run() -> void:
 		print("[autotest] trace error: ", Trace.fmt_entry(e))
 	print("[autotest] v3/v4 checks done: %d failed total" % _fails)
 	await _roof_deck_test()
+	_share_preview_test()
 	# portrait phone
 	get_window().size = Vector2i(780, 1688)
 	await wait(1.5)
@@ -1855,6 +1856,23 @@ func _deck_hold_wave() -> void:
 
 
 ## roof rest deck (ดาดฟ้า): reserve seat, rest on the cot, tag-in for a fallen defender, cover bonuses
+## link previews (Open Graph / Twitter card) live in the Web preset's html/head_include and need an
+## absolute og:image URL; the 1200x630 PNG itself is web/og-image.png (tools/og_image.py).
+func _share_preview_test() -> void:
+	var cfg := ConfigFile.new()
+	_check("share: export_presets.cfg loads", cfg.load("res://export_presets.cfg") == OK)
+	var head: String = cfg.get_value("preset.0.options", "html/head_include", "")
+	for tag in ["og:title", "og:description", "og:url", "og:image:width", "twitter:card", "theme-color", "name=\"description\""]:
+		_check("share: head_include has " + tag, head.contains(tag))
+	var m := RegEx.create_from_string("property=\"og:image\" content=\"([^\"]+)\"").search(head)
+	var url: String = m.get_string(1) if m else ""
+	_check("share: og:image is an absolute https URL", url.begins_with("https://") and url.ends_with("/og-image.png"))
+	_check("share: twitter:image matches og:image", url != "" and head.contains("name=\"twitter:image\" content=\"%s\"" % url))
+	var img := Image.load_from_file(ProjectSettings.globalize_path("res://web/og-image.png"))
+	_check("share: og-image.png is 1200x630", img != null and img.get_size() == Vector2i(1200, 630))
+	_check("share: favicon exported", cfg.get_value("preset.0.options", "html/export_icon", false))
+
+
 func _roof_deck_test() -> void:
 	_no_events()
 	Game.s.mods.erase("roof_deck")
