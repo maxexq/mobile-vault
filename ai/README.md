@@ -27,6 +27,8 @@ uv run pytest               # เทสออฟไลน์ ไม่เรี�
 
 > หมายเหตุ: `127.0.0.1:8188` คือ ComfyUI (gen ภาพ) ไม่ใช่ LLM ไฟล์ `qwen_3_4b.safetensors` ในนั้นเป็น text encoder ของ Flux ใช้แชทไม่ได้ local LLM ใช้ Ollama ที่พอร์ต 11434 แทน (ตั้งที่ `MV_LOCAL_BASE_URL` ใช้กับ server แบบ OpenAI-compatible ตัวไหนก็ได้)
 
+> ถ้าเจอ error `must include the anthropic-workspace-id header` แปลว่า API key ไม่ได้ผูกกับ workspace ให้ใส่ `ANTHROPIC_WORKSPACE_ID=wrkspc_...` ใน `.env` (ดู ID ได้ที่ Claude Console > Settings > Workspaces) หรือสร้าง key ใหม่จากใน workspace นั้นแทน
+
 ## โมเดลและค่าตั้ง (`.env`)
 
 | ตัวแปร | ค่าเริ่มต้น | หมายเหตุ |
