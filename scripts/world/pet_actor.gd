@@ -44,7 +44,7 @@ func _hop_to_random_room(instant: bool) -> void:
 			if not Game.room_occupants(rv.slot).is_empty():
 				cands.append(rv.slot)      # prefers rooms with people in them
 	if cands.is_empty():
-		cands = [Data.ENGINE_SLOT]
+		cands = [Data.ENGINE_SLOT]   # the body cell behind the cab is always open
 	slot = cands[randi() % cands.size()]
 	var base := vehicle.slot_local_pos(slot)
 	position = Vector2(base.x + randf_range(8, 52), base.y + FLOOR_Y)

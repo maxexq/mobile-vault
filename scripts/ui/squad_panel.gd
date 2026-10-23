@@ -214,7 +214,7 @@ func _build_chooser() -> void:
 		if cur >= 0:
 			where = Combat.ROLES[cur].th
 		elif int(d.room) >= 0:
-			where = Data.room_def(Game.s.rooms[int(d.room)].type).th
+			where = Data.room_def(Game.room(int(d.room)).type).th
 		var l := UIKit.label("%s Lv%d %s%d (%s)" % [d.name, d.lvl, st.to_upper(), d[st], where], UIKit.FS_SMALL)
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(l)
@@ -238,7 +238,7 @@ func _build_vault() -> void:
 	sl.custom_minimum_size.x = 100
 	sp.add_child(sl)
 	_list.add_child(sp)
-	var desc := {"turret": "ยิงศัตรูอัตโนมัติจากผนังท้ายรถ", "plating": "เพิ่มตัวถังสูงสุด ลดความเสียหาย", "engine": "เพิ่มความเร็วและผลิตไฟ", "spikes": "ทำดาเมจศัตรูที่ประชิดท้ายรถ"}
+	var desc := {"turret": "ยิงศัตรูอัตโนมัติจากผนังท้ายรถ", "plating": "เพิ่มตัวถังสูงสุด ลดความเสียหาย", "engine": "เครื่องยนต์ในห้องเครื่องหน้ารถ (แตะห้องเครื่องเพื่อดูรายละเอียด)", "spikes": "ทำดาเมจศัตรูที่ประชิดท้ายรถ"}
 	for slot in Loot.VAN_SLOTS:
 		var it := Loot.van_equipped(slot)
 		var p := UIKit.panel(UIKit.C_BG2, Loot.rar_color(it).darkened(0.3) if not it.is_empty() else UIKit.C_LINE_DARK)
@@ -294,7 +294,7 @@ func _build_deck_chooser() -> void:
 		elif role >= 0:
 			where = Combat.ROLES[role].th
 		elif int(d.room) >= 0:
-			where = Data.room_def(Game.s.rooms[int(d.room)].type).th
+			where = Data.room_def(Game.room(int(d.room)).type).th
 		var l := UIKit.label("%s Lv%d S%d A%d I%d (%s)" % [d.name, d.lvl, d.str, d.agi, d.int, where], UIKit.FS_SMALL)
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(l)

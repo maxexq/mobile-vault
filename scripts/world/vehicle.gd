@@ -34,6 +34,7 @@ const TRAIN_WHEELS := [Vector2(16, 290), Vector2(36, 290), Vector2(150, 290), Ve
 
 var body: Node2D
 var room_views: Array[RoomView] = []
+var cab_view: CabView              # v4.6: the engine room in the cab (Data.CAB_SLOT)
 var wheels: Array[AnimatedSprite2D] = []
 var tracks: AnimatedSprite2D
 var dusts: Array[Node2D] = []
@@ -210,6 +211,11 @@ func rebuild() -> void:
 	for rv in room_views:
 		rv.queue_free()
 	room_views.clear()
+	if cab_view:
+		cab_view.queue_free()
+	cab_view = CabView.new()
+	_rooms_root.add_child(cab_view)
+	cab_view.setup(tier)
 	var n := Data.SLOT_COUNT if empty else Game.slot_count()
 	for slot in n:
 		var rv := RoomView.new()
@@ -241,6 +247,8 @@ func _add_wheel(pos: Vector2, rail: bool) -> void:
 
 
 func slot_local_pos(slot: int) -> Vector2:
+	if slot == Data.CAB_SLOT and cab_view:
+		return cab_view.position
 	if Game.s.is_empty():
 		return Vector2(COLS[slot % 3], ROW0 - FLOOR_H * (slot / 3))
 	var unit := Game.slot_unit(slot)
@@ -251,6 +259,8 @@ func slot_local_pos(slot: int) -> Vector2:
 
 ## size of the whole room at `slot` (a large room spans 2-3 cells, v4.4)
 func room_size(slot: int) -> Vector2:
+	if slot == Data.CAB_SLOT and cab_view:
+		return cab_view.size
 	if Game.s.is_empty():
 		return ROOM_SIZE
 	var cells := Game.room_cells(slot)
@@ -271,6 +281,8 @@ func slot_rect(slot: int) -> Rect2:
 
 ## the room (anchor cell) under a point; any cell of a large room answers with its anchor
 func slot_at(global_pos: Vector2) -> int:
+	if cab_view and cab_view.has_global_point(global_pos):
+		return Data.CAB_SLOT
 	for rv in room_views:
 		var cell := Rect2(body.to_global(slot_local_pos(rv.slot)), ROOM_SIZE * global_scale)
 		if cell.has_point(global_pos):
@@ -307,6 +319,8 @@ func refresh_rooms() -> void:
 	_sync_large_rooms()
 	for rv in room_views:
 		rv.refresh()
+	if cab_view:
+		cab_view.refresh()
 
 
 ## large rooms: the anchor view spans its cells, annex views hide, and the strips of interior hidden behind
@@ -366,6 +380,8 @@ func actor_for(did: int) -> Node2D:
 	for rv in room_views:
 		if rv.actors.has(did):
 			return rv.actors[did]
+	if cab_view and cab_view.actors.has(did):
+		return cab_view.actors[did]
 	return null
 
 
@@ -373,6 +389,8 @@ func all_actors() -> Array:
 	var out := []
 	for rv in room_views:
 		out.append_array(rv.actors.values())
+	if cab_view:
+		out.append_array(cab_view.actors.values())
 	return out
 
 
@@ -434,8 +452,7 @@ func _refresh_mods() -> void:
 			_mod_sprite("mod_fuel_tank", Vector2(232 - 16 * k, roof_y() - 22))
 	var arm := Mods.level("armor_plates")
 	if arm > 0:
-		if tier == "rig":
-			_mod_sprite("mod_armor_cab", Vector2(2, 226))
+		# (the rig's cab armour plate is gone since v4.6: the engine room sits there)
 		var plated := floors if arm >= 3 else (mini(2, floors) if arm == 2 else 0)
 		for fb in plated:
 			_mod_sprite("mod_armor_wall", Vector2(37, ROW0 - FLOOR_H * fb - 2))
@@ -482,6 +499,8 @@ func apply_light(ambient: Color, night: float) -> void:
 	var warm := Color(1.0, 0.97, 0.9).lerp(inv * Color(1.0, 0.9, 0.75), clampf(night * 0.85, 0.0, 1.0))
 	for rv in room_views:
 		rv.set_glow(warm)
+	if cab_view:
+		cab_view.set_glow(warm)
 	headlight.visible = night > 0.15 or Game.s.get("weather", "") in ["storm", "fog", "sandstorm", "snow", "ashfall"]
 	headlight.modulate.a = clampf(maxf(night, 0.5), 0.0, 1.0)
 	antenna_light.modulate = Color("ff5a4a") * Color(inv.r, inv.g, inv.b) if night > 0.3 else Color("ff5a4a")

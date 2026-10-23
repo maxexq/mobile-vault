@@ -58,7 +58,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 	var meta: Dictionary = s.get("meta", {}) if keep_meta else {}
 	var tier_id: String = str(s.get("tier", "van")) if keep_meta else "van"
 	s = {
-		"version": 1, "route_v": 2, "slots_v": 4, "tier": tier_id, "trailers": 0, "pets": [], "outage": {},
+		"version": 1, "route_v": 2, "slots_v": 5, "tier": tier_id, "trailers": 0, "pets": [], "outage": {},
 		"vault_level": 1,
 		"res": {"power": 60.0, "water": 50.0, "food": 50.0, "scrap": 150.0, "fuel": 30.0},
 		"items": {"stimpack": 2, "radaway": 1, "ammo": 5},
@@ -74,12 +74,12 @@ func setup_default_state(keep_meta: bool = false) -> void:
 		"squad": [-1, -1, -1], "deck": -1, "next_uid": 1,
 		"combat": {"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1, "threat": 0.0, "raid_kpm": 0.0, "fight_share": 0.3},
 		"mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true,
+		"cab": {"type": "engine", "level": 1, "job": {}, "build": {}}, "engine": EngineBay.default_state(),
 	}
 	if not meta.is_empty():
 		s.meta = meta
 	for i in slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
-	s.rooms[Data.ENGINE_SLOT].type = "engine"
 	s.rooms[1].type = "kitchen"
 	s.rooms[2].type = "water"
 	if keep_meta:
@@ -87,7 +87,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 		for i in 3:
 			var d := recruit_random()
 			d.lvl = 1 + Meta.generation() / 2
-		s.dwellers[0].room = Data.ENGINE_SLOT
+		s.dwellers[0].room = Data.CAB_SLOT
 		s.dwellers[1].room = 1
 		s.van_gear.turret = Loot.roll_item("turret", 1, 0, "mg_turret")
 		s.items["components"] = 20
@@ -95,7 +95,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 		return
 	var mark := _add_dweller({"name": "จ่ามาร์ค", "lore": "mark", "variant": "dw_army_brown", "str": 7, "int": 3, "agi": 4, "room": -1, "lvl": 3})
 	var leo := _add_dweller({"name": "ลีโอ", "lore": "leo", "variant": "dw_scav_brown", "str": 4, "int": 3, "agi": 7, "room": -1, "lvl": 2})
-	_add_dweller({"name": "ต้น", "lore": "ton", "variant": "dw_jumpsuit_black", "str": 6, "int": 4, "agi": 3, "room": Data.ENGINE_SLOT, "lvl": 1, "role": "builder"})
+	_add_dweller({"name": "ต้น", "lore": "ton", "variant": "dw_jumpsuit_black", "str": 6, "int": 4, "agi": 3, "room": Data.CAB_SLOT, "lvl": 1, "role": "builder"})
 	_add_dweller({"name": "เชฟบ็อบ", "lore": "bob", "variant": "dw_chef_gray", "str": 3, "int": 4, "agi": 7, "room": 1, "lvl": 2})
 	_add_dweller({"name": "พยาบาลคลารา", "lore": "clara", "variant": "dw_medic_red", "str": 3, "int": 7, "agi": 4, "room": 2, "lvl": 2})
 	# starter defence squad + gear (common)
@@ -187,7 +187,43 @@ func _migrate() -> void:
 			d["role"] = "builder" if str(d.get("lore", "")) == "ton" else ""
 	for r in s.rooms:
 		r.merge({"build": {}}, false)
+	_migrate_cab()
 	_fix_large_rooms()
+
+
+## v4.6: the engine room moved from slot 0 into the cab (Data.CAB_SLOT / s.cab). Slot 0 becomes a free cell;
+## the room's level and up to two of its crew come along, the rest go idle.
+func _migrate_cab() -> void:
+	if not s.has("cab"):
+		var old: Dictionary = s.rooms[Data.ENGINE_SLOT] if s.rooms.size() > Data.ENGINE_SLOT else {}
+		var lv := 1
+		if str(old.get("type", "")) == "engine":
+			lv = int(old.get("level", 1))
+			s.rooms[Data.ENGINE_SLOT] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+			var n := 0
+			for d in s.dwellers:
+				if int(d.room) == Data.ENGINE_SLOT:
+					d.room = Data.CAB_SLOT if n < Data.CAB_WORKERS else -1
+					n += 1
+		s["cab"] = {"type": "engine", "level": lv, "job": {}, "build": {}}
+		(s.get("outage", {}) as Dictionary).erase(str(Data.ENGINE_SLOT))
+	(s.cab as Dictionary).merge({"type": "engine", "level": 1, "job": {}, "build": {}}, false)
+	s.merge({"engine": EngineBay.default_state()}, false)
+	(s.engine as Dictionary).merge(EngineBay.default_state(), false)
+	s["slots_v"] = maxi(5, int(s.get("slots_v", 5)))
+
+
+## the room record at `slot`; the cab's engine room (Data.CAB_SLOT) lives outside the grid in s.cab
+func room(slot: int) -> Dictionary:
+	if slot == Data.CAB_SLOT:
+		return s.get("cab", {})
+	if slot < 0 or slot >= s.rooms.size():
+		return {}
+	return s.rooms[slot]
+
+
+func has_room(slot: int) -> bool:
+	return not s.is_empty() and (slot == Data.CAB_SLOT or (slot >= 0 and slot < s.rooms.size()))
 
 
 ## v4.4: an annex cell must sit right of its room (a hand-edited / imported save could break that);
@@ -385,7 +421,7 @@ func room_unlock_level(t: String) -> int:
 
 
 func is_slot_unlocked(slot: int) -> bool:
-	return unlocked_slots().has(slot)
+	return slot == Data.CAB_SLOT or unlocked_slots().has(slot)
 
 
 func weather_def() -> Dictionary:
@@ -419,6 +455,7 @@ func power_flow_pm() -> float:
 		f += float(room_rate_pm(slot).get("power", 0.0))
 	if is_moving():
 		f -= Data.TRAVEL_POWER_PM
+		f += EngineBay.power_pm() - float(EngineBay.burn_pm().get("power", 0.0))
 	return f
 
 
@@ -431,7 +468,7 @@ func hull_max() -> float:
 func speed_factor() -> float:
 	if not is_moving():
 		return 0.0
-	var f: float = weather_def().speed * (1.0 + float(Combat.van_stats().speed) / 100.0) * Env.speed_mult() * Haul.speed_mult()
+	var f: float = weather_def().speed * (1.0 + float(Combat.van_stats().speed) / 100.0) * Env.speed_mult() * Haul.speed_mult() * EngineBay.speed_mult()
 	if s.hull < 30.0:
 		f *= 0.7
 	return f
@@ -458,6 +495,9 @@ func blocked_reason() -> String:
 		return "ตัวถังพัง! ซ่อมก่อนเดินทาง"
 	if s.stall > 0.0:
 		return "จอดรอ %ds" % int(ceil(s.stall))
+	var eng := EngineBay.blocked_reason()
+	if eng != "":
+		return eng
 	if at_checkpoint():
 		if not Combat.boss_beaten(int(s.biome)):
 			if s.biome < Data.BIOMES.size() - 1 and s.vault_level < int(Data.biome(s.biome + 1).req):
@@ -724,9 +764,9 @@ func medical_power() -> float:
 
 func hull_regen_pm() -> float:
 	var r := Mods.val("repair_bay")
-	for slot in [Data.ENGINE_SLOT] + _rooms_of("workshop"):
+	for slot in [Data.CAB_SLOT] + _rooms_of("workshop"):
 		for d in room_workers(slot):
-			r += (2.0 if s.rooms[slot].type == "engine" else 1.5) * float(s.rooms[slot].level) / 2.0 * span_efficiency(slot)
+			r += (2.0 if room(slot).type == "engine" else 1.5) * float(room(slot).level) / 2.0 * (1.0 if slot == Data.CAB_SLOT else span_efficiency(slot))
 			if Crew.has(d, "mechanic"):
 				r += 1.5
 			r += Skills.val(d, "repair")
@@ -813,6 +853,7 @@ func _simulate(dt: float, offline: bool) -> void:
 
 	# --- hazards: heating fuel, generator, radiation, acid, freezing
 	Env.tick(dt, offline)
+	EngineBay.tick(dt, m, is_moving(), offline)
 	# --- hull repair: engine crew (mechanics faster), repair skills, repair bay mod
 	if float(s.hull) < hull_max():
 		s.hull = minf(hull_max(), float(s.hull) + hull_regen_pm() * m)
@@ -822,7 +863,7 @@ func _simulate(dt: float, offline: bool) -> void:
 	_tick_outages(dt, offline)
 	_tick_corrosion(m)
 	# --- solar + rain collector + vault engine part
-	_add_res("power", (solar_output_pm() + float(Combat.van_stats().power)) * m)
+	_add_res("power", (solar_output_pm() + float(Combat.van_stats().power) + EngineBay.power_pm()) * m)
 	_add_res("water", float(wd.water) * (1.0 + Mods.val("rain_catcher")) * m)
 
 	# --- rooms
@@ -912,7 +953,7 @@ func _simulate(dt: float, offline: bool) -> void:
 			target += 16.0 + 3.0 * deck_lv
 			d.hp = minf(float(d.max_hp), float(d.hp) + float(d.max_hp) * 0.006 * deck_lv * m)
 		elif int(d.room) >= 0:
-			var st: String = Data.room_def(s.rooms[int(d.room)].type).get("stat", "")
+			var st: String = Data.room_def(room(int(d.room)).type).get("stat", "")
 			var xpm := 1.5 * (1.2 if Crew.has(d, "genius") else 1.0)
 			if is_constructing(int(d.room)):
 				# hauling beams: builds STR, real builders love it
@@ -949,7 +990,9 @@ func _simulate(dt: float, offline: bool) -> void:
 		s.km = float(s.km) + km
 		s.stats.km_total = float(s.stats.km_total) + km
 		_add_res("power", -Data.TRAVEL_POWER_PM * m)
-		_add_res("fuel", -Haul.fuel_pm() * m)
+		var burn := EngineBay.burn_pm()
+		for k in burn:
+			_add_res(k, -float(burn[k]) * m)
 		_add_res("scrap", float(Data.biome(s.biome).scrap_pm) * m)
 		if not offline:
 			_accumulate_float(-1, "scrap", float(Data.biome(s.biome).scrap_pm) * m)
@@ -1168,7 +1211,7 @@ func assign(d: Dictionary, slot: int) -> bool:
 		if (site_crew(slot) if is_site(slot) else room_workers(slot)).size() >= room_capacity(slot):
 			toast.emit("ห้องนี้เต็มแล้ว (สูงสุด %d คน)" % room_capacity(slot), "warn")
 			return false
-		if s.rooms[slot].type == "empty":
+		if room(slot).get("type", "empty") == "empty":
 			return false
 		var r := squad_role(d)
 		if r >= 0:
@@ -1580,6 +1623,8 @@ func room_scale(slot: int) -> float:
 
 ## crew seats: 2 per cell
 func room_capacity(slot: int) -> int:
+	if slot == Data.CAB_SLOT:
+		return Data.CAB_WORKERS
 	return Data.ROOM_WORKERS * room_span(slot)
 
 

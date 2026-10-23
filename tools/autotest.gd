@@ -225,12 +225,26 @@ func _run() -> void:
 	_check("build quarters", Game.build_room(new_slot, "quarters") and Game.pop_cap() == Data.BASE_POP_CAP)
 	Dev.finish_construction()
 	_check("quarters add beds once built", Game.pop_cap() == Data.BASE_POP_CAP + 4)
-	Game.s.res.scrap = 200.0
-	_check("craft starts", Game.start_craft(Data.ENGINE_SLOT, "repair_hull"))
+	# v4.6: the engine lives in the cab, so cell 0 behind it is a free room cell
+	Game.s.res.scrap = 600.0
+	_check("cell behind the cab is a room cell", Game.is_slot_unlocked(Data.ENGINE_SLOT) and Game.s.rooms[Data.ENGINE_SLOT].type != "engine")
+	Meta.add_blueprint("bp_workshop")
+	var ws := -1
+	for sl in Game.unlocked_slots():
+		if Game.s.rooms[sl].type == "empty":
+			ws = sl
+			break
+	_check("build a workshop", ws >= 0 and Game.build_room(ws, "workshop"))
+	Dev.finish_construction()
+	for dw in Game.s.dwellers:
+		if Game.squad_role(dw) < 0 and not Game.is_away(dw) and int(dw.room) != Data.CAB_SLOT:
+			Game.assign(dw, ws)
+			break
+	_check("craft starts", Game.start_craft(ws, "patch_kit"))
 	Game.s.hull = 50.0
 	for i in 200:
 		Game._simulate(1.0, true)
-	_check("craft finished -> hull repaired", Game.s.rooms[Data.ENGINE_SLOT].job.is_empty() and Game.s.hull >= 74.0)
+	_check("craft finished -> hull repaired", Game.s.rooms[ws].job.is_empty() and Game.s.hull >= 84.0)
 	var d: Dictionary = Game.s.dwellers[1]
 	Game.send_explore(d, 5)
 	_check("explorer away", Game.is_away(d))
@@ -299,13 +313,15 @@ func _run() -> void:
 	Game.s.biome = 4
 	Game.s.tod = 0.9
 	_check("tundra night needs heating fuel", Env.heating_fuel_pm() > 0.0)
-	# room synergy: engine (slot 0) next to quarters (slot 1) = noise; engine next to workshop = faster repairs
-	Game.s.rooms[1].type = "quarters"
-	var noisy := Synergy.happy_mod(1)
-	Game.s.rooms[1].type = "workshop"
+	# room synergy: the cab engine next to quarters (cell 0 behind it) = noise; engine next to workshop = faster repairs
+	var cell0_type: String = Game.s.rooms[Data.ENGINE_SLOT].type
+	Game.s.rooms[Data.ENGINE_SLOT].type = "quarters"
+	var noisy := Synergy.happy_mod(Data.ENGINE_SLOT)
+	Game.s.rooms[Data.ENGINE_SLOT].type = "workshop"
 	Meta.add_blueprint("bp_workshop")
 	_check("synergy: engine noise next to quarters", noisy < 0.0)
 	_check("synergy: engine + workshop repairs +15%", Synergy.repair_bonus() > 1.1)
+	Game.s.rooms[Data.ENGINE_SLOT].type = cell0_type
 	Game.s.rooms[1].type = "kitchen"
 	# weight / drivetrain
 	var w0 := Haul.weight()
@@ -616,6 +632,7 @@ func _run() -> void:
 	await shot("wide_map")
 	main.hud.panels.map.close()
 	await wait(0.4)
+	await _engine_bay_test()
 	await _event_layout_test()
 	await _inspection_test()
 	await _threat_test()
@@ -1986,3 +2003,137 @@ func _roof_deck_test() -> void:
 	if Game.squad_role(cand) == 0 and orig >= 0:
 		Game.set_squad(0, orig)
 	print("[autotest] roof deck checks done: %d failed total" % _fails)
+
+
+## v4.6 engine bay: migration from the slot-0 engine room, heat / auto-rest / stall, jobs, engine fit + swap,
+## noise -> threat calibration, the engine menu and its GOD actions
+func _engine_bay_test() -> void:
+	_no_events()
+	var e := EngineBay.st()
+	# --- migration of a v4.5 save (engine room on cell 0, three crew in it)
+	var keep_room: Dictionary = Game.s.rooms[Data.ENGINE_SLOT].duplicate(true)
+	var keep_cab: Dictionary = Game.s.cab.duplicate(true)
+	var keep_rooms := {}
+	for d in Game.s.dwellers:
+		keep_rooms[int(d.id)] = int(d.room)
+	var movers := []
+	for d in Game.s.dwellers:
+		if Game.squad_role(d) < 0 and not Game.is_away(d) and movers.size() < 3:
+			movers.append(d)
+	Game.s.erase("cab")
+	Game.s.rooms[Data.ENGINE_SLOT] = {"type": "engine", "level": 3, "job": {}, "build": {}}
+	for d in movers:
+		d.room = Data.ENGINE_SLOT
+	Game._migrate_cab()
+	_check("engine mig: cell 0 freed", Game.s.rooms[Data.ENGINE_SLOT].type == "empty")
+	_check("engine mig: cab keeps the room level", int(Game.s.cab.level) == 3 and EngineBay.level() == 3)
+	_check("engine mig: two crew move into the cab", movers.size() < 2 or (int(movers[0].room) == Data.CAB_SLOT and int(movers[1].room) == Data.CAB_SLOT))
+	_check("engine mig: the third goes idle", movers.size() < 3 or int(movers[2].room) == -1)
+	_check("engine mig: cab capacity", Game.room_capacity(Data.CAB_SLOT) == Data.CAB_WORKERS and Game.has_room(Data.CAB_SLOT))
+	Game.s.rooms[Data.ENGINE_SLOT] = keep_room
+	Game.s.cab = keep_cab
+	for d in Game.s.dwellers:
+		d.room = keep_rooms.get(int(d.id), -1)
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	# --- calibration: the stock diesel makes the same noise as before v4.6
+	EngineBay.uninstall()
+	e.merge(EngineBay.default_state(), true)
+	e.job = {}
+	Game.s.stall = 0.0
+	_check("engine: stock diesel4", EngineBay.type_id() == "diesel4" and EngineBay.mode() == "normal")
+	_check("engine: diesel noise = old threat term", Haul.load_ratio() > 1.0 or is_equal_approx(EngineBay.noise_mult(), 1.0))
+	EngineBay.set_mode("silent")
+	_check("engine: silent refused for diesel", EngineBay.mode() == "normal")
+	# --- fit + swap
+	var turbine := Loot.roll_item("engine", 20, 2, "gas_turbine")
+	var v8 := Loot.roll_item("engine", 5, 1, "rusty_v8")
+	Loot.add_to_stash(turbine)
+	Loot.add_to_stash(v8)
+	_check("engine: a turbine is too big for the van", Game.tier() != "van" or not EngineBay.fits(turbine))
+	if Game.tier() == "van":
+		_check("engine: oversized install refused", not Loot.equip_from_stash(int(turbine.uid)) and EngineBay.type_id() == "diesel4")
+	_check("engine: V8 installs", Loot.equip_from_stash(int(v8.uid)) and EngineBay.type_id() == "v8")
+	_check("engine: V8 is faster and louder", EngineBay.speed_mult() > 1.0 and EngineBay.db() > 90.0)
+	_check("engine: V8 burns more fuel", float(EngineBay.burn_pm().get("fuel", 0.0)) > Haul.fuel_pm())
+	_check("engine: owned list shows both", EngineBay.owned_engines().size() >= 2)
+	# --- heat: hard driving in the desert sun auto-rests, parking cools it back down
+	EngineBay.set_mode("boost")
+	e.heat = 40.0
+	e.auto_rest = true
+	e.rest_at = 110.0
+	var mins := 0
+	while not EngineBay.resting() and mins < 240:
+		EngineBay.tick(60.0, 1.0, true, false)
+		mins += 1
+	_check("engine: boosting a V8 overheats -> auto-rest (%d min, settle %d C)" % [mins, int(EngineBay.settle_temp())], EngineBay.resting() and EngineBay.heat() >= 109.0)
+	_check("engine: resting blocks travel", Game.blocked_reason().begins_with("พักเครื่อง"))
+	mins = 0
+	while EngineBay.resting() and mins < 240:
+		EngineBay.tick(60.0, 1.0, false, false)
+		mins += 1
+	_check("engine: cools down and drives on (%d min)" % mins, not EngineBay.resting() and EngineBay.heat() <= EngineBay.RESUME_AT)
+	# auto-rest off: it runs until it dies on its own and takes damage
+	e.auto_rest = false
+	e.heat = 100.0
+	var c0 := EngineBay.cond()
+	mins = 0
+	while not EngineBay.resting() and mins < 240:
+		EngineBay.tick(60.0, 1.0, true, false)
+		mins += 1
+	_check("engine: no auto-rest -> stalls at 120 C with damage", EngineBay.resting() and EngineBay.cond() <= c0 - 4.9)
+	e.resting = false
+	e.heat = 40.0
+	e.auto_rest = true
+	EngineBay.set_mode("normal")
+	# stock-ish driving stays under the rest line
+	_check("engine: normal V8 cruise settles below auto-rest", EngineBay.settle_temp() < 110.0 or Haul.load_ratio() > 1.0 or EngineBay.ambient() >= 40.0)
+	# --- jobs
+	Game.s.res.scrap = maxf(500.0, float(Game.s.res.scrap))
+	Game.s.res.fuel = maxf(50.0, float(Game.s.res.fuel))
+	Game.s.res.water = maxf(50.0, float(Game.s.res.water))
+	e.oil = 10.0
+	_check("engine job: oil change starts", EngineBay.start_job("oil"))
+	_check("engine job: oil change parks the vault", EngineBay.job_holds() and Game.blocked_reason() != "")
+	_check("engine job: one at a time", EngineBay.job_block("coolant") != "")
+	for i in 120:
+		EngineBay._tick_job(1.0, false)
+	_check("engine job: oil full", float(e.oil) >= 99.0 and (e.job as Dictionary).is_empty())
+	e.cond = 50.0
+	_check("engine job: tune", EngineBay.start_job("tune"))
+	Dev.engine_finish_job()
+	_check("engine job: tune +20%", EngineBay.cond() >= 69.0)
+	# --- wear + breakdowns
+	Dev.engine_breakdown()
+	_check("engine: GOD breakdown stalls", float(Game.s.stall) > 0.0 and EngineBay.state_key() == "broken")
+	Game.s.stall = 0.0
+	Dev.engine_set("cond", 100.0)
+	var n0 := Loot.stash().size()
+	Dev.engines_all()
+	_check("engine: GOD gives every engine", Loot.stash().size() >= n0 + 7)
+	# --- the menu: tap the cab, every tab renders
+	var cv: CabView = main.vehicle.cab_view
+	_check("engine: cab room view exists", cv != null and cv.interior.texture != null)
+	_check("engine: tap target inside the cab is the cab", cv != null and main.vehicle.slot_at(cv.global_position + cv.size * cv.global_scale * 0.5) == Data.CAB_SLOT)
+	main.hud.open_panel("engine")
+	await wait(0.6)
+	_check("engine panel opens", main.hud.panels.engine.is_open)
+	await shot("engine_status")
+	for tb in ["engines", "jobs"]:
+		main.hud.panels.engine.tab = tb
+		main.hud.panels.engine.refresh()
+		await wait(0.4)
+		await shot("engine_" + tb)
+	main.hud.panels.engine.tab = "status"
+	main.hud.panels.engine.close()
+	await wait(0.3)
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "veh"
+	main.hud.panels.god.refresh()
+	await wait(0.4)
+	_check("god: engine bay row", _find_text(main.hud.panels.god, "ห้องเครื่อง"))
+	main.hud.panels.god.close()
+	# back to the stock engine for the rest of the run
+	EngineBay.uninstall()
+	e.merge(EngineBay.default_state(), true)
+	e.job = {}

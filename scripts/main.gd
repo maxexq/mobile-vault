@@ -392,13 +392,15 @@ func _on_tap(screen_pos: Vector2) -> void:
 		vehicle.peek(5.0)       # first tap on the closed hull opens the X-ray view
 		return
 	if _placing != "":
-		if slot >= 0 and Game.is_slot_unlocked(slot) and Game.s.rooms[slot].type == "empty":
+		if slot >= 0 and slot != Data.CAB_SLOT and Game.is_slot_unlocked(slot) and Game.s.rooms[slot].type == "empty":
 			if Game.build_room(slot, _placing):
 				vehicle.spark()
 				shake(2.5)
 		_exit_placement()
 		return
-	if slot >= 0:
+	if slot == Data.CAB_SLOT:
+		hud.open_panel("engine")
+	elif slot >= 0:
 		open_closeup(slot)
 	elif vehicle.solar_global_rect().has_point(world_pos):
 		hud.open_panel("solar")
