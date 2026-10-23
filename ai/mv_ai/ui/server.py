@@ -4,6 +4,8 @@ Stdlib HTTP server bound to 127.0.0.1 only. Each run executes the LangGraph team
 records events; the page polls /api/runs/<id>?since=N.
 """
 import json
+import os
+import socket
 import threading
 import time
 import uuid
@@ -256,5 +258,16 @@ def make_handler(hub: Hub):
     return Handler
 
 
+class Server(ThreadingHTTPServer):
+    # HTTPServer sets SO_REUSEADDR, which on Windows lets a second server bind a port that an
+    # old one still holds; the old one keeps answering. Claim the port exclusively instead.
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self):
+        if os.name == "nt":
+            self.socket.setsockopt(socket.SOL_SOCKET, getattr(socket, "SO_EXCLUSIVEADDRUSE", -5), 1)
+        super().server_bind()
+
+
 def serve(cfg: Config, port: int, make_team=None) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer(("127.0.0.1", port), make_handler(Hub(cfg, make_team)))
+    return Server(("127.0.0.1", port), make_handler(Hub(cfg, make_team)))

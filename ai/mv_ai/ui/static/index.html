@@ -482,9 +482,11 @@ function heroHTML() {
     <div class="team-row">${team}</div></div>`;
 }
 
+const STALE = `<div class="errbox" style="margin-left:0">⚠️ หน้าเว็บนี้คุยกับ server ตัวเก่าที่ยังรันค้างอยู่ จึงเลือกทีมไม่ได้และงานจะไปที่ Claude เสมอ
+ปิดหน้าต่าง server เก่า (หรือหา PID ด้วย netstat -ano | findstr 8765 แล้ว taskkill /PID … /F) แล้วรัน uv run python -m mv_ai.ui ใหม่ในโฟลเดอร์ ai</div>`;
 function renderConv() {
   const conv = $("conv");
-  if (!S.cur) { conv.innerHTML = heroHTML(); return; }
+  if (!S.cur) { conv.innerHTML = (S.stale ? STALE : "") + heroHTML(); return; }
   const { items } = build(S.events);
   const running = S.sum && S.sum.status === "running";
   const html = []; let leadOpen = false;
@@ -613,7 +615,8 @@ function fillTeams() {
   sel.value = ready(keep) ? keep : ready(INFO.default) ? INFO.default : (Object.keys(INFO.teams).find(ready) || INFO.default);
 }
 async function loadInfo() {
-  try { INFO = await api("/api/info"); } catch (e) { console.warn(e); }
+  try { INFO = await api("/api/info"); S.stale = false; }
+  catch (e) { console.warn(e); S.stale = true; }   // a server from before the team picker answers 404
   fillTeams();
 }
 function select(id) {

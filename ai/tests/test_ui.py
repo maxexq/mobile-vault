@@ -133,3 +133,10 @@ def test_info_and_team_choice(ui):
     _, run = call(base + "/api/runs", {"task": "x", "auto_approve": True, "team": "bogus"})
     assert run["team"] == "claude"
     assert cost({"model": "gemma4:12b", "input": 5000, "output": 900}) == 0
+
+
+def test_second_server_on_same_port_fails(ui):
+    base, repo = ui
+    port = int(base.rsplit(":", 1)[1])
+    with pytest.raises(OSError):
+        serve(Config(repo_root=repo), port)

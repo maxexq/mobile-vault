@@ -20,7 +20,12 @@ def main() -> int:
         print("note: no ANTHROPIC_API_KEY in ai/.env, so only the Local team can run", file=sys.stderr)
     if not LocalLLM(cfg).available():
         print(f"note: local model server not reachable at {cfg.local_base_url}", file=sys.stderr)
-    httpd = serve(cfg, a.port)
+    try:
+        httpd = serve(cfg, a.port)
+    except OSError as e:
+        print(f"port {a.port} is already in use ({e}). An older UI may still be running: close it, or run "
+              f"with --port {a.port + 1}", file=sys.stderr)
+        return 1
     url = f"http://127.0.0.1:{a.port}/"
     print(f"Agent team UI: {url}  (Ctrl+C to stop)")
     if not a.no_browser:
