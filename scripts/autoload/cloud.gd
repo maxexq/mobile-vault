@@ -9,7 +9,10 @@ extends Node
 ##  * accounts: a guest (anonymous) can link Google so the same user id, and so the same save, follows
 ##    the player to other devices; "sign in with Google" on another device switches to that account.
 ##    Google uses Supabase's redirect (implicit) flow: the page leaves for Google and comes back with the
-##    session in the URL fragment, which _start() reads.
+##    session in the URL fragment, which _start() reads. The title screen asks once per browser: play as
+##    Guest (link Google later from Settings) or log in with Gmail (a browser with no progress signs
+##    straight in and gets that account's save). A Google session the server refuses is never turned
+##    into a guest quietly: need_login asks the player to log in again, the local save stays.
 ## Config: res://cloud_config.json {"url": "https://<ref>.supabase.co", "anon_key": "<anon/publishable key>",
 ##   "site_url": "<public game URL, used when the game runs inside a frame where Google refuses to sign in>"}.
 ## The file is git-ignored; without it the cloud is OFF and the game behaves exactly as before.
@@ -48,7 +51,11 @@ var navigate_hook := Callable()
 ## rev = cloud revision this device last saw; dirty = local save changed since; wiped = progress reset
 ## (an empty save is uploaded on purpose); device_id = random per browser
 ## oauth = {mode: "link"|"signin", from: user id} while the page is away at Google
-var meta := {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}}
+## chose = "" until the player picks Guest or Google on the title screen ("guest" / "google")
+var meta := {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}, "chose": ""}
+## the Google session ended (refresh refused): wait for the player to log in again or pick Guest,
+## instead of quietly turning this browser into a new guest
+var need_login := false
 ## CONFLICT: what the cloud holds {rev, device_id, updated_at, data, settings}
 var remote := {}
 var last_sync_at := 0.0
@@ -61,6 +68,9 @@ var _busy := false
 var _t := 0.0
 var _write_seq := 0
 var _applying := false
+var _refreshing := false
+var _user_checked := false
+signal _refresh_done
 
 
 func _ready() -> void:
@@ -147,6 +157,7 @@ func _load_meta() -> void:
 		meta.wiped = bool(d.get("wiped", false))
 		meta.device_id = str(d.get("device_id", ""))
 		meta.oauth = d.get("oauth", {}) if d.get("oauth") is Dictionary else {}
+		meta.chose = str(d.get("chose", ""))
 
 
 func _save_meta() -> void:
@@ -222,6 +233,8 @@ func sync() -> void:
 func _sync() -> void:
 	if not await _ensure_session():
 		return
+	if not _user_checked:
+		await _check_user()
 	var r := await _rpc("rpc_load", {})
 	if not r.ok:
 		return
@@ -348,17 +361,36 @@ func use_local() -> void:
 func _ensure_session() -> bool:
 	if session.get("access_token", "") != "" and now() < float(session.get("expires_at", 0)) - 60.0:
 		return true
+	# Supabase rotates refresh tokens: two refreshes with the same token can revoke the session,
+	# so a second caller waits for the one already in flight
+	if _refreshing:
+		await _refresh_done
+		return session.get("access_token", "") != ""
+	_refreshing = true
+	var ok := await _renew_session()
+	_refreshing = false
+	_refresh_done.emit()
+	return ok
+
+
+func _renew_session() -> bool:
 	if session.get("refresh_token", "") != "":
 		var r := await _call(HTTPClient.METHOD_POST, "/auth/v1/token?grant_type=refresh_token",
 			{"refresh_token": session.refresh_token}, false)
 		if r.code == 200 and r.body is Dictionary:
 			_take_session(r.body)
 			return true
-		if r.code == 0:
-			_set_state(State.OFFLINE, r.error)
+		if r.code == 0 or r.code >= 500 or r.code == 429:
+			_set_state(State.OFFLINE, r_error(r))
 			return false
-		# refresh token rejected (expired / user removed): fall through to a fresh anonymous account
-		Trace.rec("cloud", "session lost", {"code": r.code})
+		Trace.rec("cloud", "session lost", {"code": r.code, "guest": is_guest()})
+		if not is_guest():
+			# a Google account: keep the local save and ask the player to log in again
+			_lose_google_session()
+			return false
+		# a guest whose token was refused (user removed): fall through to a fresh anonymous account
+	if need_login:
+		return false
 	# anonymous sign-in (Supabase: POST /auth/v1/signup with no email or phone)
 	var s := await _call(HTTPClient.METHOD_POST, "/auth/v1/signup", {"data": {}}, false)
 	if s.code == 200 and s.body is Dictionary and s.body.has("access_token"):
@@ -373,6 +405,32 @@ func _ensure_session() -> bool:
 		return true
 	_set_state(State.OFFLINE, r_error(s))
 	return false
+
+
+func _lose_google_session() -> void:
+	# user_id stays: logging in to the same Google account again keeps this device's rev (no conflict)
+	session = {"user_id": user_id(), "email": str(session.get("email", "")), "anonymous": true}
+	_save_session()
+	meta.chose = ""
+	_save_meta()
+	need_login = true
+	auth_error = "เซสชัน Google หมดอายุ ล็อกอินด้วย Gmail อีกครั้ง (เซฟในเครื่องยังอยู่)"
+	_set_state(State.OFFLINE, "ต้องล็อกอินใหม่")
+	account_changed.emit()
+
+
+## once per start: who this stored session belongs to now (the account may have been linked to Google
+## from another page, e.g. the artifact view opened the game in a new tab)
+func _check_user() -> void:
+	var u := await _call(HTTPClient.METHOD_GET, "/auth/v1/user", {}, true)
+	if u.code == 200 and u.body is Dictionary:
+		_user_checked = true
+		var was_guest := is_guest()
+		_take_user(u.body)
+		_save_session()
+		if was_guest and not is_guest() and meta.chose == "":
+			meta.chose = "google"
+			_save_meta()
 
 
 func _take_session(b: Dictionary) -> void:
@@ -418,6 +476,28 @@ func r_error(r: Dictionary) -> String:
 # ------------------------------------------------------------------ accounts
 func is_guest() -> bool:
 	return bool(session.get("anonymous", true))
+
+
+## title screen: show "play as Guest / log in with Gmail" instead of the menu
+func needs_choice() -> bool:
+	if url == "" or state == State.OFF:
+		return false
+	if need_login:
+		return true
+	return Features.on("google_login") and is_guest() and str(meta.get("chose", "")) == ""
+
+
+## the player picked Guest: keep playing on this browser's anonymous account (made now if needed)
+func play_as_guest() -> void:
+	auth_error = ""
+	link_taken = false
+	meta.chose = "guest"
+	_save_meta()
+	var was_lost := need_login
+	need_login = false
+	account_changed.emit()
+	if was_lost or session.get("refresh_token", "") == "":
+		await sync()
 
 
 func account_text() -> String:
@@ -466,7 +546,9 @@ func sign_in_google(switch: bool = false) -> void:
 		Game.save_game()
 	var back := _return_url().uri_encode()
 	var go := ""
-	var link := is_guest() and user_id() != "" and not switch
+	# link the guest only when it has progress to keep; a fresh browser signs straight in, so a returning
+	# player gets their account's save instead of "this Google account is already used"
+	var link := is_guest() and user_id() != "" and not switch and not need_login and (Save.has_save() or int(meta.rev) > 0)
 	if link and not await _ensure_session():
 		auth_error = "ต่อคลาวด์ไม่ได้ ลองใหม่ตอนออนไลน์"
 		account_changed.emit()
@@ -533,6 +615,10 @@ func _take_oauth_return(params: String) -> void:
 	if u.code == 200 and u.body is Dictionary:
 		_take_user(u.body)
 	_save_session()
+	_user_checked = true
+	need_login = false
+	meta.chose = "google"
+	_save_meta()
 	Trace.rec("cloud", "google ok", {"mode": str(pending.get("mode", "")), "same_user": user_id() == before})
 	if user_id() != before:
 		# another account (Google sign-in on this device): its save is the cloud row; what is local here
@@ -587,6 +673,7 @@ func sign_out() -> bool:
 	meta.rev = 0
 	meta.dirty = false
 	meta.wiped = false
+	meta.chose = ""
 	_save_meta()
 	account_changed.emit()
 	if was_running:
