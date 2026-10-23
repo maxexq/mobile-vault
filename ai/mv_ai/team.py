@@ -15,6 +15,7 @@ committed or pushed: review the result with `git diff` and commit yourself.
 import argparse
 import subprocess
 import sys
+import time
 import uuid
 from typing import TypedDict
 
@@ -105,9 +106,13 @@ def _tool_uses(blocks: list) -> list:
 
 
 def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None, tools: RepoTools | None = None,
-               index: Index | None = None, auto_approve: bool = False, checkpointer=None):
-    """claude(system, messages, tools, effort, one_tool_at_a_time) -> (blocks, stop_reason); injectable for tests."""
+               index: Index | None = None, auto_approve: bool = False, checkpointer=None, emit=None):
+    """claude(system, messages, tools, effort, one_tool_at_a_time) -> (blocks, stop_reason, usage).
+
+    emit(agent, kind, data) receives every step (model turns, tool calls, delegations) for the UI.
+    """
     cfg = cfg or Config.from_env()
+    emit = emit or (lambda agent, kind, data: None)
     if claude is None:
         def claude(system, messages, tool_defs, effort, one=False):
             return claude_turn(cfg, system, messages, tool_defs, effort, one)
@@ -115,8 +120,16 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
     tools = tools or RepoTools(cfg)
     index = index or Index.build(cfg.repo_root)
 
+    def call_claude(agent, system, messages, tool_defs, effort, one=False):
+        t = time.time()
+        blocks, stop, usage = claude(system, messages, tool_defs, effort, one)
+        emit(agent, "llm", {"model": usage.get("model", cfg.claude_model), "effort": effort, "stop": stop,
+                            "blocks": blocks, "usage": usage, "ms": int((time.time() - t) * 1000)})
+        return blocks, stop
+
     def back_to_lead(state: TeamState, result: str, is_error=False) -> TeamState:
         p = state["pending"]
+        emit(p["agent"], "done", {"result": result, "is_error": is_error})
         res = {"type": "tool_result", "tool_use_id": p["id"], "content": result or "(no output)"}
         if is_error:
             res["is_error"] = True
@@ -129,7 +142,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
         turns = state.get("lead_turns", 0) + 1
         if turns > MAX_LEAD_TURNS:
             return {"report": f"Stopped after {MAX_LEAD_TURNS} lead turns.\n" + "\n".join(state.get("log", []))}
-        blocks, stop = claude(LEAD_SYSTEM, msgs, [DELEGATE], "high", True)
+        blocks, stop = call_claude("lead", LEAD_SYSTEM, msgs, [DELEGATE], "high", True)
         msgs = msgs + [{"role": "assistant", "content": blocks}]
         out: TeamState = {"lead": msgs, "lead_turns": turns}
         if stop == "refusal":
@@ -146,6 +159,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
                     {"type": "tool_result", "tool_use_id": c["id"], "content": str(e), "is_error": True}]}]
                 return out
             out["pending"] = {"id": c["id"], **c["input"]}
+            emit(c["input"]["agent"], "task", {"task": c["input"]["task"]})
             out["log"] = state.get("log", []) + [f"lead -> {c['input']['agent']}: {c['input']['task'][:200]}"]
             return out
         out["report"] = _text(blocks) or f"(lead stopped: {stop})"
@@ -166,7 +180,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
         turns = state.get("worker_turns", 0) + 1
         if turns > MAX_WORKER_TURNS:
             return back_to_lead(state, f"{p['agent']} hit {MAX_WORKER_TURNS} turns without finishing.", True)
-        blocks, stop = claude(spec["system"], msgs, schemas(spec["tools"]), spec["effort"])
+        blocks, stop = call_claude(p["agent"], spec["system"], msgs, schemas(spec["tools"]), spec["effort"])
         msgs = msgs + [{"role": "assistant", "content": blocks}]
         if stop == "tool_use" and _tool_uses(blocks):
             return {"worker": msgs, "worker_turns": turns}
@@ -187,8 +201,10 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
                              "changes": [preview(c["name"], c.get("input") or {}) for c in risky]})
             approved = ans is True or str(ans).strip().lower() in ("y", "yes", "ok", "approve")
         results, log = [], []
+        agent = state["pending"]["agent"]
         for c in calls:
             res = {"type": "tool_result", "tool_use_id": c["id"]}
+            t = time.time()
             try:
                 if c["name"] in NEEDS_APPROVAL and not approved:
                     raise ToolError("The human reviewer declined this change.")
@@ -197,22 +213,29 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
             except (ToolError, OSError, UnicodeDecodeError) as e:
                 res.update(content=f"Error: {e}", is_error=True)
                 log.append(f"  {c['name']} error: {e}")
+            emit(agent, "tool", {"name": c["name"], "input": c.get("input"), "result": res["content"],
+                                 "is_error": res.get("is_error", False), "ms": int((time.time() - t) * 1000)})
             results.append(res)
         return {"worker": state["worker"] + [{"role": "user", "content": results}],
                 "log": state.get("log", []) + log}
 
-    def _single_shot(model: str, system: str, prompt: str) -> str:
+    def _single_shot(agent: str, model: str, system: str, prompt: str) -> str:
         order = {"gemini": ("gemini", "opus"), "local": ("local", "opus")}[model]
         for name in order:
             if llms[name].available():
-                return llms[name].complete(system, prompt)
+                t = time.time()
+                ans = llms[name].complete(system, prompt)
+                emit(agent, "llm", {"model": name, "prompt_chars": len(prompt), "stop": "end_turn",
+                                    "blocks": [{"type": "text", "text": ans}], "usage": {},
+                                    "ms": int((time.time() - t) * 1000)})
+                return ans
         raise ToolError("no model available for this agent")
 
     def scout(state: TeamState) -> TeamState:
         task = state["pending"]["task"]
         try:
             ctx = render(index.search(task, k=120))
-            ans = _single_shot("gemini", f"You are the scout on a Godot game team. {PROJECT}\nAnswer from the "
+            ans = _single_shot("scout", "gemini", f"You are the scout on a Godot game team. {PROJECT}\nAnswer from the "
                                "repository excerpts and cite path:line.", f"Repository excerpts:\n\n{ctx}\n\nTask: {task}")
             return back_to_lead(state, ans)
         except Exception as e:
@@ -220,7 +243,7 @@ def build_team(cfg: Config | None = None, claude=None, llms: dict | None = None,
 
     def scribe(state: TeamState) -> TeamState:
         try:
-            ans = _single_shot("local", "You write short, clear text for a game dev team. Reply in the task's "
+            ans = _single_shot("scribe", "local", "You write short, clear text for a game dev team. Reply in the task's "
                                "language.", state["pending"]["task"])
             return back_to_lead(state, ans)
         except Exception as e:

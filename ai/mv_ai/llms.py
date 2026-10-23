@@ -46,7 +46,7 @@ class ClaudeLLM:
 
 
 def claude_turn(cfg: Config, system: str, messages: list, tools: list, effort: str, one_tool_at_a_time=False):
-    """One Claude Opus turn with client tools. Returns (content blocks as dicts, stop_reason).
+    """One Claude Opus turn with client tools. Returns (content blocks as dicts, stop_reason, usage).
 
     Blocks are returned unchanged (as dicts) so the caller can append them to the history
     as-is: thinking blocks must be passed back untouched on the next request.
@@ -62,13 +62,23 @@ def claude_turn(cfg: Config, system: str, messages: list, tools: list, effort: s
         messages=messages,
         tools=[{**t, "eager_input_streaming": True} for t in tools],
         tool_choice=choice,
-        thinking={"type": "adaptive"},
+        cache_control={"type": "ephemeral"},  # agent loops resend the same prefix every turn
+        # "summarized" returns a readable summary of the reasoning for the inspector UI
+        thinking={"type": "adaptive", "display": "summarized"},
         output_config={"effort": effort},
         betas=["server-side-fallback-2026-07-01"],
         fallbacks="default",
     ) as stream:
         msg = stream.get_final_message()
-    return [b.model_dump(exclude_none=True) for b in msg.content], msg.stop_reason
+    u = msg.usage
+    usage = {
+        "model": getattr(msg, "model", cfg.claude_model),
+        "input": u.input_tokens,
+        "output": u.output_tokens,
+        "cache_read": getattr(u, "cache_read_input_tokens", 0) or 0,
+        "cache_write": getattr(u, "cache_creation_input_tokens", 0) or 0,
+    }
+    return [b.model_dump(exclude_none=True) for b in msg.content], msg.stop_reason, usage
 
 
 class GeminiLLM:
