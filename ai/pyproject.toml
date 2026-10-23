@@ -1,0 +1,19 @@
+[project]
+name = "mv-ai"
+version = "0.1.0"
+description = "LangGraph multi-model assistant for Apocarlypse: Mobile Vault (Claude Opus + Gemini + local Qwen3 via Ollama)"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=1.2",
+    "anthropic>=2.2",
+    "google-genai>=2.33",
+    "httpx>=0.28",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
