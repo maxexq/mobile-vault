@@ -46,11 +46,14 @@ func _notification(what: int) -> void:
 # =================================================================== lifecycle
 func new_game() -> void:
 	setup_default_state()
+	s.mode = Modes.take_pending()
 	started = true
 	save_game()
 	game_started.emit()
 	_emit_all(true)
 	toast.emit("ยินดีต้อนรับสู่ Mobile Vault! แตะที่ห้องเพื่อจัดการ ปัดซ้าย-ขวาเพื่อดูถนน", "info")
+	if Modes.id() != "standard" or Modes.diff() != "normal" or not Modes.mutators().is_empty():
+		toast.emit("โหมด: " + Modes.label(), "biome")
 
 
 ## fresh state (also used as the live backdrop behind the title screen)
@@ -75,6 +78,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 		"combat": {"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1, "threat": 0.0, "raid_kpm": 0.0, "fight_share": 0.3},
 		"mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true,
 		"cab": {"type": "engine", "level": 1, "job": {}, "build": {}}, "engine": EngineBay.default_state(),
+		"mode": Modes.DEFAULT.duplicate(true),
 	}
 	if not meta.is_empty():
 		s.meta = meta
@@ -119,7 +123,7 @@ func load_game() -> bool:
 	Trace.rec("save", "loaded save", {"away_sec": int(elapsed), "bytes": JSON.stringify(s).length()})
 	game_started.emit()
 	if elapsed > 30.0:
-		_offline_progress(minf(elapsed, Data.OFFLINE_CAP_SEC))
+		_offline_progress(minf(elapsed, Data.OFFLINE_CAP_SEC * Modes.mul("offline")))
 	_emit_all(true)
 	return true
 
@@ -127,6 +131,8 @@ func load_game() -> bool:
 func _migrate() -> void:
 	# make old saves forward compatible (missing keys get defaults)
 	var pre_combat := not s.has("squad")
+	if not s.get("mode") is Dictionary:
+		s["mode"] = Modes.DEFAULT.duplicate(true)     # saves before game modes = a standard run
 	# route v2 inserted TOXIC BAYOU before the tundra and added SIGNAL METROPOLIS at the end
 	if int(s.get("route_v", 1)) < 2:
 		if int(s.get("biome", 0)) >= 3:
@@ -501,7 +507,9 @@ func blocked_reason() -> String:
 	if at_checkpoint():
 		if not Combat.boss_beaten(int(s.biome)):
 			if s.biome < Data.BIOMES.size() - 1 and s.vault_level < int(Data.biome(s.biome + 1).req):
-				return "ด่านตรวจ: ต้องการ Vault Lv.%d + ปราบบอส" % Data.biome(s.biome + 1).req
+				return "ด่านตรวจ: ต้องการ Vault Lv.%d + %s" % [Data.biome(s.biome + 1).req, "ค่าผ่านทาง" if Modes.peaceful() else "ปราบบอส"]
+			if Modes.peaceful():
+				return "ด่านตรวจ: ค่าผ่านทาง %d เศษเหล็ก" % Modes.toll()
 			return "ด่านตรวจ: ปราบบอส %s" % Combat.BOSSES[Data.biome(s.biome).id].th
 		return "ด่านตรวจ: ต้องการ Vault Lv.%d" % Data.biome(s.biome + 1).req
 	return ""
@@ -858,6 +866,7 @@ func _simulate(dt: float, offline: bool) -> void:
 	if float(s.hull) < hull_max():
 		s.hull = minf(hull_max(), float(s.hull) + hull_regen_pm() * m)
 	Meta.tick(dt, offline)
+	Modes.tick(dt, offline)
 	Expedition.tick(offline)
 	Inspection.tick(dt, offline)
 	_tick_outages(dt, offline)
@@ -907,6 +916,7 @@ func _simulate(dt: float, offline: bool) -> void:
 		present += 1
 		eat += Crew.food_mult(d)
 		Crew.tick(d, m, med)
+	eat *= Modes.mul("eat")
 	_add_res("food", -Data.DWELLER_FOOD_PM * eat * m * (0.92 if has_pet("cat") else 1.0))
 	if has_pet("hen"):
 		_add_res("food", 0.6 * m)
@@ -1000,7 +1010,9 @@ func _simulate(dt: float, offline: bool) -> void:
 			if at_checkpoint():
 				s.km = end_km
 				if not offline:
-					if not Combat.boss_beaten(int(s.biome)):
+					if Modes.peaceful() and not Combat.boss_beaten(int(s.biome)):
+						toast.emit("ถึงด่านตรวจ! ค่าผ่านทาง %d เศษเหล็ก (จ่ายเองเมื่อมีพอ)" % Modes.toll(), "warn")
+					elif not Combat.boss_beaten(int(s.biome)):
 						toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.BOSSES[Data.biome(s.biome).id].th, "warn")
 					else:
 						toast.emit("ถึงด่านตรวจ! อัปเกรด Mobile Vault เป็น Lv.%d เพื่อไปต่อ" % next_req, "warn")
@@ -1043,6 +1055,8 @@ func _simulate(dt: float, offline: bool) -> void:
 func _add_res(k: String, v: float) -> void:
 	if not s.res.has(k):
 		return
+	if k == "fuel" and v > 0.0:
+		v *= Modes.mul("fuel_gain")
 	s.res[k] = clampf(float(s.res[k]) + v, 0.0, cap(k))
 
 

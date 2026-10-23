@@ -762,7 +762,7 @@ func _refresh_combat() -> void:
 	_push_btn.text = "PUSH" if push else "FARM"
 	UIKit.style_button(_push_btn, "yellow" if push else "blue")
 	_push_btn.tooltip_text = "PUSH = ชนะแล้วขึ้นเวฟถัดไป · FARM = วนเวฟเดิมเก็บของ"
-	var show_boss := Game.at_checkpoint() and not Combat.boss_beaten(int(Game.s.biome)) and not Combat.wave_is_warlord
+	var show_boss := Game.at_checkpoint() and not Combat.boss_beaten(int(Game.s.biome)) and not Combat.wave_is_warlord and not Modes.peaceful()
 	if _boss_btn.visible != show_boss:
 		_boss_btn.visible = show_boss
 		_apply_layout.call_deferred()

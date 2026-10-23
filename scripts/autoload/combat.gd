@@ -274,6 +274,8 @@ func hero_stats(d: Dictionary, role_idx: int) -> Dictionary:
 	st.dodge = minf(50.0, st.dodge + Skills.val(d, "dodge"))
 	st.heal *= (1.25 if Crew.has(d, "healer") else 1.0) * (1.0 + Skills.val(d, "medic"))
 	st.signature = Skills.rank(d, "c5") > 0
+	st.dmg *= Modes.mul("hero_dmg")     # mutators (glass cannon)
+	st.hp *= Modes.mul("hero_hp")
 	_deck_cover(st, d, role_idx)
 	st.dps = st.dmg * st.aspd * (1.0 + st.crit / 100.0 * (st.critd - 100.0) / 100.0) * (1.0 + 0.5 * (st.splash - 1))
 	return st
@@ -452,7 +454,7 @@ func set_push(on: bool) -> void:
 
 
 func challenge_warlord() -> void:
-	if not Game.at_checkpoint() or boss_beaten(int(Game.s.biome)):
+	if not Game.at_checkpoint() or boss_beaten(int(Game.s.biome)) or Modes.peaceful():
 		return
 	_clear_enemies()
 	warlord_cd = 0.0
@@ -517,6 +519,8 @@ func _start_wave() -> void:
 
 ## the checkpoint warlord shows up on the next wave (challenged, or the vault is ready to move on)
 func warlord_due() -> bool:
+	if Modes.peaceful():
+		return false     # peaceful runs pay a toll at the checkpoint instead (Modes.tick)
 	return cs().get("warlord_next", false) or (Game.at_checkpoint() and int(Game.s.vault_level) >= _next_req() and not boss_beaten(int(Game.s.biome)) and warlord_cd <= 0.0)
 
 
@@ -586,9 +590,9 @@ func _spawn(q: Dictionary) -> void:
 			mult_dmg = 1.5
 			e.tint = "ffd56b"
 	var L := float(e.lvl)
-	e.max = float(def.hp) * pow(HP_GROWTH, L - 1.0) * mult_hp
+	e.max = float(def.hp) * pow(HP_GROWTH, L - 1.0) * mult_hp * Modes.mul("enemy_hp")
 	e.hp = e.max
-	e.dmg = float(def.dmg) * pow(DMG_GROWTH, L - 1.0) * mult_dmg
+	e.dmg = float(def.dmg) * pow(DMG_GROWTH, L - 1.0) * mult_dmg * Modes.mul("enemy_dmg")
 	e.spd = float(def.spd) * (0.7 if e.boss else 1.0) * rng.randf_range(0.9, 1.1)
 	e.cd = float(def.cd) * (1.3 if e.boss else 1.0)
 	e.kind = "air" if e.get("boss_air", false) else def.kind

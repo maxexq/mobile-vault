@@ -12,7 +12,7 @@ var _log_cat := ""
 var _save_box: TextEdit
 
 const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["log", "LOG/เซฟ"]]
-const SRC_TH := {"code": "ค่าในโค้ด", "default": "ค่าเริ่มต้น", "build": "บิลด์", "remote": "รีโมต", "dev": "ผู้ทดสอบ"}
+const SRC_TH := {"code": "ค่าในโค้ด", "default": "ค่าเริ่มต้น", "build": "บิลด์", "remote": "รีโมต", "mode": "โหมดเกม", "dev": "ผู้ทดสอบ"}
 
 
 func _build() -> void:
@@ -22,6 +22,7 @@ func _build() -> void:
 	Dev.changed.connect(func(): if is_open and tab == "main": refresh())
 	Cloud.status_changed.connect(func(): if is_open and tab == "sys": refresh())
 	Features.changed.connect(func(): if is_open and tab == "feat": refresh())
+	Modes.changed.connect(func(): if is_open and tab == "sys": refresh())
 
 
 func refresh() -> void:
@@ -302,6 +303,25 @@ func _tab_world() -> void:
 
 
 func _tab_sys() -> void:
+	_head("GAME MODE", "โหมดเกม (เปลี่ยนกลางทาง = ไม่นับอันดับ)")
+	_note("ตอนนี้: %s · แต้มวิจัย ×%.2f · %s" % [Modes.label(), Modes.legacy_mult(), "นับอันดับได้" if Modes.ranked() else "ไม่นับอันดับ"])
+	var mb := []
+	for k in Modes.MODES:
+		var mid: String = k
+		mb.append(_b(str(Modes.MODES[k].th), func(): Dev.mode_set(mid), "yellow" if Modes.id() == mid else "gray"))
+	_row(mb, "โหมด")
+	var db := []
+	for k in Modes.DIFFS:
+		var did: String = k
+		db.append(_b(str(Modes.DIFFS[k].th), func(): Dev.mode_set("", did), "yellow" if Modes.diff() == did else "gray"))
+	_row(db, "ความยาก")
+	var xb := []
+	for k in Modes.MUTATORS:
+		var key: String = k
+		xb.append(_b(str(Modes.MUTATORS[k].th), func(): Dev.mode_set("", "", key), "green" if Modes.has_mut(key) else "gray"))
+	_row(xb, "ตัวแปร")
+	if Modes.peaceful():
+		_row([_b("ไปด่านตรวจ + เงินค่าผ่านทาง", Dev.mode_toll_test, "yellow", true)])
 	_head("VERSION", "เวอร์ชัน")
 	for r in BuildInfo.rows().slice(0, 5):
 		_note("%s: %s" % [r[0], r[1]])
@@ -337,7 +357,7 @@ func _tab_sys() -> void:
 func _tab_features() -> void:
 	var st := {"off": "ปิด (เว็บเท่านั้น)", "cached": "ใช้แคช", "loading": "กำลังโหลด", "ok": "โหลดแล้ว", "failed": "โหลดไม่ได้", "rejected": "ไม่ใช่ของเวอร์ชันนี้"}
 	var at := "" if Features.remote_at <= 0.0 or not Features.remote_status in ["ok", "cached"] else " · " + Time.get_datetime_string_from_unix_time(int(Features.remote_at + 7 * 3600), true) + " (เวลาไทย)"
-	_note("ลำดับ: ค่าเริ่มต้น (config/features.json) → บิลด์ → รีโมต (features.json บนเว็บ) → ผู้ทดสอบ (ตรงนี้ / ?ff=) · รีโมต: %s%s" % [st.get(Features.remote_status, Features.remote_status), at])
+	_note("ลำดับ: ค่าเริ่มต้น (config/features.json) → บิลด์ → รีโมต (features.json บนเว็บ) → โหมดเกม → ผู้ทดสอบ (ตรงนี้ / ?ff=) · รีโมต: %s%s" % [st.get(Features.remote_status, Features.remote_status), at])
 	_row([_b("ล้างค่าผู้ทดสอบทั้งหมด", Dev.features_reset, "red"), _b("โหลดรีโมตใหม่", Dev.features_refetch, "yellow")])
 	_head("FEATURES", "เปิด/ปิดระบบ (กดเพื่อสลับ · ค้างไว้ในเครื่องนี้จนกว่าจะล้าง)")
 	for k in Features.FEATURES:

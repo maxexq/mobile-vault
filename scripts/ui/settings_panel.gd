@@ -191,6 +191,11 @@ func _info(key: String, value: String) -> HBoxContainer:
 
 # ------------------------------------------------------------------ tabs
 func _tab_game() -> void:
+	if Game.started and not Game.s.is_empty():
+		_head("RUN", "โหมดของการเดินทางนี้")
+		var mh := _row(Modes.label(), "แต้มวิจัยพันธุกรรม ×%.2f · เปลี่ยนโหมดได้ตอนเริ่มการเดินทางใหม่ (รุ่นถัดไปใช้โหมดเดิม)" % Modes.legacy_mult())
+		mh.add_child(UIKit.label(str(Modes.MODES.get(Modes.id(), Modes.MODES.standard).en), UIKit.FP, UIKit.C_GOLD, true))
+
 	_head("AUDIO", "เสียง")
 	_volume("เสียงรวม", "master")
 	_volume("ดนตรี", "music")

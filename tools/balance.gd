@@ -1,5 +1,6 @@
 extends Node
-## Dev-only balance sim: godot --headless --path . -- --balance [--minutes=N]
+## Dev-only balance sim: godot --headless --path . -- --balance [--minutes=N] [--mode=peaceful/hard/fuel_scarce,...]
+## (--mode takes a game mode id, a difficulty and mutators in any order, comma separated)
 ## Plays the game at max speed with a simple bot and prints a progression log.
 
 var main: Node
@@ -11,6 +12,16 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--minutes="):
 			minutes = int(a.substr(10))
+		if a.begins_with("--mode="):
+			var md := {"id": "standard", "diff": "normal", "mut": []}
+			for part in a.substr(7).replace("/", ",").split(",", false):
+				if Modes.MODES.has(part):
+					md.id = part
+				elif Modes.DIFFS.has(part):
+					md.diff = part
+				else:
+					md.mut.append(part)
+			Modes.pending = md
 	# detach the visual layer: this sim runs many minutes per frame
 	for sig in Combat.get_signal_list():
 		for c in Combat.get_signal_connection_list(sig.name):

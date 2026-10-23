@@ -9,7 +9,8 @@
     "roof_deck": true,
     "large_rooms": true,
     "tutorial": true,
-    "cloud_save": true
+    "cloud_save": true,
+    "modes": true
   },
   "events": {},
   "tune": {}

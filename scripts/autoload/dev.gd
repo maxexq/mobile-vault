@@ -855,6 +855,28 @@ func settings_reset() -> void:
 	Settings.reset_defaults()
 
 
+# ---- game modes (Game.s.mode; switching mid-run marks the save as cheated = never ranked)
+func mode_set(id: String = "", diff: String = "", toggle_mut: String = "") -> void:
+	var cur: Dictionary = Modes.m()
+	var mu: Array = (cur.get("mut", []) as Array).duplicate()
+	if toggle_mut != "":
+		if mu.has(toggle_mut):
+			mu.erase(toggle_mut)
+		else:
+			mu.append(toggle_mut)
+	act("mode %s / %s / %s" % [id, diff, toggle_mut])
+	Modes.set_mode({"id": id if id != "" else Modes.id(), "diff": diff if diff != "" else Modes.diff(), "mut": mu})
+	Game.toast.emit("โหมด: " + Modes.label(), "info")
+
+
+## peaceful: jump to the checkpoint with the toll in hand
+func mode_toll_test() -> void:
+	act("mode toll test")
+	Game.s.km = Game.biome_end_km()
+	Game.s.res.scrap = float(Modes.toll()) + 10.0
+	Game.travel_changed.emit()
+
+
 # ---- feature switches (Features layer "dev": kept in user://dev.cfg until reset or GOD is hidden)
 func feature_set(key: String, v: Variant) -> void:
 	act("feature %s = %s" % [key, v])
