@@ -2011,6 +2011,13 @@ func _roof_deck_test() -> void:
 ## Features: layers, per-event switches / weights / date windows, remote file rules, ?ff=, and every gate
 ## Guest -> link Google keeps the same account and save; second device: Google already taken -> switch
 ## (conflict between this device's guest run and the account's save) -> sign out back to a fresh guest
+## wipe the local save the way a new browser starts (no "progress reset" flag for the cloud)
+func _applying_wipe() -> void:
+	Cloud._applying = true
+	Save.wipe()
+	Cloud._applying = false
+
+
 func _cloud_account_test() -> void:
 	var fake = load("res://tools/cloud_fake.gd").new()
 	var opened: Array = []
@@ -2030,8 +2037,16 @@ func _cloud_account_test() -> void:
 	_check("account: Google available on a top-level page", Cloud.can_google())
 	main.hud.title_screen.modulate.a = 1.0
 	main.hud.title_screen.visible = true
+	var ts = main.hud.title_screen
+	ts._refresh_account()
 	await wait(0.2)
-	_check("account: title shows the guest login button", main.hud.title_screen._account_btn.visible and main.hud.title_screen._account_btn.text.contains("Gmail"))
+	_check("account: first visit asks Guest or Gmail (two buttons, menu hidden)", ts._gate.visible and not ts._menu.visible
+		and ts._gate.get_children().filter(func(c): return c is Button and c.visible and (c.text.contains("Guest") or c.text.contains("Gmail"))).size() == 2)
+	await shot("account_choice")
+	await Cloud.play_as_guest()
+	await wait(0.2)
+	_check("account: Guest -> menu, same guest, link Gmail offered", not ts._gate.visible and ts._menu.visible
+		and Cloud.user_id() == guest and ts._account_btn.text.contains("Gmail") and not Cloud.needs_choice())
 	await shot("account_title_guest")
 	await Cloud.sign_in_google()
 	_check("account: guest links Google (manual linking URL)", opened.size() == 1 and str(opened[0]).contains("link=" + guest) and str(Cloud.meta.oauth.get("mode", "")) == "link")
@@ -2041,7 +2056,41 @@ func _cloud_account_test() -> void:
 	await Cloud.sync()
 	_check("account: linked, same user id", Cloud.user_id() == guest and not Cloud.is_guest() and Cloud.session.email == "parames@gmail.com")
 	_check("account: the guest save is now the Google save", int(fake.rows[guest].data.meta.gen) == 20 and Cloud.state == Cloud.State.OK and Cloud.meta.oauth.is_empty())
-	_check("account: title shows the email", main.hud.title_screen._account_btn.text.contains("parames@gmail.com"))
+	_check("account: title shows the email", ts._account_btn.text.contains("parames@gmail.com") and not ts._gate.visible)
+	# coming back later (new page load): the stored session is used, nobody is asked to log in again
+	var calls_before: int = fake.calls.size()
+	Cloud._load_session()
+	Cloud._load_meta()
+	Cloud._user_checked = false
+	await Cloud.start_for_test(fake)
+	_check("account: reopening keeps the Google session", Cloud.user_id() == guest and not Cloud.is_guest()
+		and Cloud.state == Cloud.State.OK and not fake.calls.slice(calls_before).has("/auth/v1/signup"))
+	# an hour later: the access token expired; two callers refresh at once (rotation must not end the session)
+	fake.expire_tokens()
+	Cloud.session.expires_at = 0.0
+	var r1 = [null]
+	var both := func(): r1[0] = await Cloud._ensure_session()
+	both.call()
+	var r2: bool = await Cloud._ensure_session()
+	await wait(0.1)
+	_check("account: expired token refreshes once for two callers, still Google", r1[0] == true and r2 and fake.refreshes == 1
+		and Cloud.user_id() == guest and not Cloud.is_guest())
+	# the server ends the session: ask to log in again, keep the save, no silent new guest
+	fake.revoke(guest)
+	Cloud.session.erase("access_token")
+	var users_before: int = fake.accounts.size()
+	await Cloud.sync()
+	await wait(0.2)
+	_check("account: refused Google session -> log in again, no new guest", Cloud.need_login and fake.accounts.size() == users_before
+		and Cloud.needs_choice() and ts._gate.visible and ts._gate_err.text != "" and _local_gen() == 20)
+	await shot("account_relogin")
+	opened.clear()
+	await Cloud.sign_in_google()
+	_check("account: log in again signs in (not link)", opened.size() == 1 and str(opened[0]).contains("/auth/v1/authorize?provider=google"))
+	await Cloud._take_oauth_return(fake.google_return(opened[0], "parames@gmail.com"))
+	await Cloud.sync()
+	_check("account: back on the same account, no conflict", Cloud.user_id() == guest and not Cloud.is_guest()
+		and not Cloud.need_login and Cloud.state == Cloud.State.OK and not ts._gate.visible)
 	# another browser: a new guest with its own run, then Google -> already linked to the first account
 	Cloud.session = {}
 	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}}
@@ -2070,6 +2119,20 @@ func _cloud_account_test() -> void:
 	_check("account: picked the account's save", _local_gen() == 20 and Cloud.state == Cloud.State.OK)
 	await wait(0.3)
 	await shot("account_google")
+	# a new browser with no progress: Gmail signs straight in and loads the account's save
+	Cloud.session = {}
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}, "chose": ""}
+	Cloud._save_session()
+	Cloud._save_meta()
+	_applying_wipe()
+	await Cloud.start_for_test(fake)
+	_check("account: fresh browser is asked to choose", Cloud.needs_choice() and not Save.has_save())
+	opened.clear()
+	await Cloud.sign_in_google()
+	_check("account: fresh browser signs in (no link, so no 'already used')", opened.size() == 1 and str(opened[0]).contains("/auth/v1/authorize?provider=google"))
+	await Cloud._take_oauth_return(fake.google_return(opened[0], "parames@gmail.com"))
+	await Cloud.sync()
+	_check("account: fresh browser gets the account's save", Cloud.user_id() == guest and _local_gen() == 20 and Cloud.state == Cloud.State.OK and not Cloud.needs_choice())
 	# a cancelled / failed Google page
 	await Cloud._take_oauth_return("error=access_denied&error_description=The+user+denied")
 	_check("account: Google error shown", Cloud.auth_error.contains("The user denied") and Cloud.user_id() == guest)
@@ -2079,6 +2142,7 @@ func _cloud_account_test() -> void:
 	var ok: bool = await Cloud.sign_out()
 	_check("account: sign out uploads, then a new guest", ok and Cloud.is_guest() and Cloud.user_id() != guest and Cloud.user_id() != "")
 	_check("account: signed-out device has no save, account keeps it", not Save.has_save() and int(fake.rows[guest].data.meta.gen) == 21)
+	_check("account: after sign out the title asks again", Cloud.needs_choice())
 	fake.online = false
 	_check("account: guest cannot sign out", not await Cloud.sign_out())
 	fake.online = true

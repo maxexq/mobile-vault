@@ -22,6 +22,9 @@ var _pick_scroll: ScrollContainer
 var _pick := {"id": "standard", "diff": "normal", "mut": []}
 var _continue: Button
 var _account_btn: Button
+var _gate: VBoxContainer
+var _gate_err: Label
+var _gate_switch: Button
 var _settings_btn: Button
 var _chars := 0.0
 var _boot_text := ""
@@ -63,7 +66,6 @@ func _ready() -> void:
 	_menu.add_child(_account_btn)
 	Cloud.account_changed.connect(_refresh_account)
 	Cloud.status_changed.connect(_refresh_account)
-	_refresh_account()
 	_settings_btn = UIKit.button("ตั้งค่า  SETTINGS", "gray", "gear")
 	_settings_btn.pressed.connect(func(): settings_requested.emit("game"))
 	_menu.add_child(_settings_btn)
@@ -75,12 +77,14 @@ func _ready() -> void:
 		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 			settings_requested.emit("about"))
 	_menu.add_child(note)
+	_build_gate(v)
 	_pick_scroll = UIKit.scroll()
 	_pick_scroll.visible = false
 	v.add_child(_pick_scroll)
 	_picker = UIKit.vbox(4)
 	_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pick_scroll.add_child(_picker)
+	_refresh_account()
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 
@@ -91,11 +95,41 @@ func _process(delta: float) -> void:
 		_log.text = _boot_text.substr(0, int(_chars)) + ("_" if int(_chars * 0.2) % 2 == 0 else "")
 
 
+## first visit with the cloud on (or a Google session that ended): Guest or Gmail, as two separate choices
+func _build_gate(v: VBoxContainer) -> void:
+	_gate = UIKit.vbox(4)
+	_gate.visible = false
+	v.add_child(_gate)
+	var t := UIKit.label("เลือกวิธีเล่น", UIKit.FS, UIKit.C_TEXT)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_gate.add_child(t)
+	_gate_err = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_RED)
+	_gate.add_child(_gate_err)
+	var guest := UIKit.button("เล่นเลยแบบ Guest", "green", "play")
+	guest.pressed.connect(func(): Cloud.play_as_guest())
+	_gate.add_child(guest)
+	var gmail := UIKit.button("ล็อกอินด้วย Gmail", "blue", "book")
+	gmail.pressed.connect(func(): Cloud.sign_in_google())
+	_gate.add_child(gmail)
+	_gate_switch = UIKit.button("สลับไปบัญชี Google นั้น", "yellow", "play")
+	_gate_switch.pressed.connect(func(): Cloud.switch_to_google())
+	_gate.add_child(_gate_switch)
+	_gate.add_child(UIKit.wrap_label("Guest เล่นได้ทันที เซฟอยู่ในเบราว์เซอร์นี้ ผูก Gmail ทีหลังได้ที่ ตั้งค่า > เซฟ · Gmail เก็บเซฟไว้ในบัญชี เล่นต่อจากเครื่องไหนก็ได้", UIKit.FS_SMALL, UIKit.C_DIM))
+
+
 ## cloud on: who is playing (Guest / Google) and the way to the account section
 func _refresh_account() -> void:
+	if _gate == null:
+		return
+	var choose := Cloud.needs_choice() and not _pick_scroll.visible
+	_gate.visible = choose
+	_menu.visible = not choose and not _pick_scroll.visible
+	_gate_err.text = Cloud.auth_error
+	_gate_err.visible = Cloud.auth_error != ""
+	_gate_switch.visible = Cloud.link_taken
 	_account_btn.visible = Cloud.enabled()
 	if Cloud.is_guest():
-		_account_btn.text = "Guest · ล็อกอินด้วย Gmail"
+		_account_btn.text = "Guest · ผูกบัญชี Gmail"
 	else:
 		_account_btn.text = "บัญชี: " + str(Cloud.session.get("email", "Google"))
 	_panel.custom_minimum_size.y = 0

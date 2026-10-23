@@ -1,7 +1,7 @@
 extends RefCounted
 ## In-memory stand-in for the Supabase endpoints Cloud uses (dev only, excluded from exports):
 ## anonymous sign-up, refresh, user, Google sign-in / manual identity linking (redirect flow),
-## logout, and rpc_load / rpc_save with the same rev rules as supabase/migrations/0001_cloud_save.sql.
+## logout (refresh tokens rotate like Supabase's), and rpc_load / rpc_save with the same rev rules as supabase/migrations/0001_cloud_save.sql.
 ## `clock` is the fake server time.
 
 const GOOGLE := "https://accounts.google.test/o/oauth2"
@@ -12,6 +12,7 @@ var users := {}       # access/refresh token -> user id
 var accounts := {}    # user id -> {email, anon}
 var rows := {}        # user id -> {rev, data, settings, device_id, updated_at}
 var calls: Array = []
+var refreshes := 0
 var _n := 0
 
 
@@ -29,9 +30,12 @@ func handle(method: int, path: String, headers: PackedStringArray, body: String)
 		accounts[uid] = {"email": "", "anon": true}
 		return {"code": 200, "body": _session(uid)}
 	if path.begins_with("/auth/v1/token"):
+		# like Supabase, a refresh token works once (rotation): a reused one is refused
 		var uid = users.get("r:" + str(b.get("refresh_token", "")))
 		if uid == null:
-			return {"code": 400, "body": {"error": "invalid_grant"}}
+			return {"code": 400, "body": {"error": "invalid_grant", "error_description": "Invalid Refresh Token: Already Used"}}
+		users.erase("r:" + str(b.refresh_token))
+		refreshes += 1
 		return {"code": 200, "body": _session(uid)}
 	var uid = null
 	for h in headers:
@@ -122,4 +126,11 @@ func write_from_other_device(uid: String, data: Dictionary, settings: Dictionary
 func expire_tokens() -> void:
 	for k in users.keys():
 		if k.begins_with("a:"):
+			users.erase(k)
+
+
+## the server ends every session of this user (refresh tokens refused, e.g. session time-box)
+func revoke(uid: String) -> void:
+	for k in users.keys():
+		if users[k] == uid:
 			users.erase(k)

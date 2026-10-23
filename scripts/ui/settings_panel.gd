@@ -317,7 +317,7 @@ func _account_rows() -> void:
 	if Cloud.is_guest():
 		_list.add_child(UIKit.wrap_label("ตอนนี้เล่นแบบ Guest เซฟผูกกับเบราว์เซอร์นี้ ล็อกอินด้วย Gmail เพื่อเก็บเซฟนี้ไว้ในบัญชี Google แล้วเล่นต่อจากเครื่องไหนก็ได้", UIKit.FS_SMALL, UIKit.C_DIM))
 		if Cloud.can_google():
-			_action("ล็อกอินด้วย Gmail (เก็บเซฟนี้ไว้)", "blue", "up", func():
+			_action("ผูกบัญชี Gmail (เก็บเซฟนี้ไว้)" if Save.has_save() else "ล็อกอินด้วย Gmail", "blue", "up", func():
 				_say("กำลังไปหน้า Google...")
 				await Cloud.sign_in_google())
 			if Cloud.link_taken:
