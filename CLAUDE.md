@@ -45,6 +45,30 @@ Parames's PC. Both follow this file. The game itself is described in `README.md`
 - PR title/body mention `MV-<n>`; one feature per PR. Bump the version only in
   `BuildInfo.GAME_VERSION` (`scripts/build_info.gd`).
 
+### Opening the PR (Claude Code CLI)
+
+Open the PR yourself with the GitHub CLI (`gh`, logged in once with `gh auth login`).
+When the work is committed and the autotest passed:
+
+```
+git fetch origin main && git rebase origin/main      # branch you created; resolve conflicts
+git push -u origin mv-<n>-short-name
+gh pr create --base main --title "MV-<n>: <what changed>" --assignee @me --body-file <tmp file>
+python tools/plane.py link MV-<n> <PR url> "PR #<number>"
+python tools/plane.py move MV-<n> "In Review"
+```
+
+- PR body sections: **What** (bullet list of changes), **Testing** (autotest result, web
+  export done or why not, what you checked in the browser), `Plane: MV-<n>`, and a line
+  `Artifact: needs update` when the game changed. Write the body to a temp file outside the
+  repo (Thai text and backticks break inline `--body` quoting on Windows).
+- Use `gh pr view --web` to show Parames the PR. Never merge it yourself: Parames merges.
+- After a merge: `python tools/plane.py move MV-<n> Done` (or "Awaiting Verify" when it still
+  needs a real phone/web check), then `git checkout main && git pull`.
+- If `gh` is missing or not logged in, push the branch and give Parames the link
+  `https://github.com/maxexq/mobile-vault/compare/main...<branch>?expand=1`. Do not install
+  `gh` yourself (ask first, see Hard rules).
+
 ## Plane tickets (workspace `mobile-vault`, project `MV`)
 
 Every task has a ticket that matches reality, from start to done. Use `tools/plane.py`
