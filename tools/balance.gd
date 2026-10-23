@@ -29,22 +29,42 @@ func _ready() -> void:
 	var last_kills := 0
 	var stall := 0
 	var dumped := false
+	var blk_count := {}
+	var kmh_sum := [0.0]
+	var fac_sum := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 	for sec in minutes * 60:
 		if sec % 60 == 0:
 			await get_tree().process_frame
 		Game._simulate(1.0, true)
+		var br := Game.blocked_reason().get_slice(" ", 0)
+		blk_count[br] = int(blk_count.get(br, 0)) + 1
+		kmh_sum[0] += Game.speed_kmh()
+		if Game.is_moving():
+			fac_sum[0] += 1.0
+			fac_sum[1] += Game.weather_def().speed
+			fac_sum[2] += Env.speed_mult()
+			fac_sum[3] += Haul.speed_mult()
+			fac_sum[4] += 1.0 if float(Game.s.res.fuel) <= 0.0 else 0.0
+			fac_sum[5] += 1.0 if Game.s.hull < 30.0 else 0.0
+			fac_sum[6] += (EngineBay.speed_mult() - 1.0) * 100.0
 		Game.active_event = ""
 		for k in 10:
 			Combat.tick(0.1)
 		if sec % 30 == 0:
 			Loot.auto_equip_squad()
+			# engines are never auto-equipped: the bot swaps in a faster engine that fits, like a player would
+			for it in Loot.stash():
+				if str(it.slot) == "engine" and EngineBay.fits(it) \
+						and float(EngineBay.TYPES[EngineBay.type_of(it)].speed) > float(EngineBay.t().speed):
+					Loot.equip_from_stash(int(it.uid))
+					break
 			# bot: spend scrap like a player would
 			if Game.s.vault_level < Data.MAX_VAULT_LEVEL and Game.s.res.scrap >= Game.vault_upgrade_cost():
 				Game.upgrade_vault()
 				print("[bal] %3dm vault -> Lv.%d" % [sec / 60, Game.s.vault_level])
 				if Game.s.vault_level >= 2 and int(Game.s.squad[2]) < 0:
 					for d in Game.s.dwellers:
-						if Game.squad_role(d) < 0 and int(d.room) != Data.ENGINE_SLOT:
+						if Game.squad_role(d) < 0 and int(d.room) != Data.CAB_SLOT:
 							Game.set_squad(2, int(d.id))
 							break
 			for it in Loot.stash():
@@ -76,6 +96,9 @@ func _ready() -> void:
 			for h in Combat.heroes:
 				if not h.is_empty():
 					print("[stall]   hero ", h.slot, " alive ", h.alive, " hp ", h.hp, " range ", h.st.range, " dmg ", h.st.dmg, " aspd ", h.st.aspd)
+		if sec == minutes * 60 - 1:
+			print("[bal] factors moving=%d weather %.3f env %.3f haul %.3f nofuel %d hull<30 %d vanspd %.2f" % [fac_sum[0], fac_sum[1] / fac_sum[0], fac_sum[2] / fac_sum[0], fac_sum[3] / fac_sum[0], fac_sum[4], fac_sum[5], fac_sum[6] / fac_sum[0]])
+			print("[bal] blocked seconds: ", blk_count, " avg kmh %.1f" % (kmh_sum[0] / float(minutes * 60)))
 		if Game.s.biome != last_biome:
 			print("[bal] %3dm ENTER biome %d (%s) lap %d" % [sec / 60, Game.s.biome, Data.biome(Game.s.biome).id, Game.s.lap])
 			last_biome = Game.s.biome
@@ -87,9 +110,9 @@ func _ready() -> void:
 				if int(did) >= 0:
 					var d := Game.dweller_by_id(int(did))
 					sq.append("%s L%d dps%.0f" % [d.name, d.lvl, Combat.hero_stats(d, Game.squad_role(d)).dps])
-			print("[bal] %3dm wave %d (best %d) Lv%d | km %.1f biome %d %s | scrap %d comp %d | stash %d | %s | turretDPS %.0f | wipes %d | block '%s'" % [
+			print("[bal] %3dm wave %d (best %d) Lv%d | km %.1f biome %d %s | scrap %d comp %d | stash %d | %s | turretDPS %.0f | wipes %d | block '%s' | eng %dC %d%% oil %d x%.2f kmh %.1f load %.2f" % [
 				sec / 60, Combat.wave(), Game.s.combat.best, Combat.enemy_level(), Game.s.km, Game.s.biome, "CP" if Game.at_checkpoint() else "",
-				Game.s.res.scrap, int(Game.s.items.get("components", 0)), Loot.stash().size(), ", ".join(sq), Combat.van_stats().turret_dps, wipes[0], Game.blocked_reason()])
+				Game.s.res.scrap, int(Game.s.items.get("components", 0)), Loot.stash().size(), ", ".join(sq), Combat.van_stats().turret_dps, wipes[0], Game.blocked_reason(), int(EngineBay.heat()), int(EngineBay.cond()), int(EngineBay.st().oil), EngineBay.speed_mult(), Game.speed_kmh(), Haul.load_ratio()])
 	print("[bal] drops by rarity: ", drops, "  warlord minutes: ", warlords.slice(0, 20))
 	print("[bal] boss_beaten: ", Game.s.combat.boss_beaten, " kills ", Game.s.combat.kills)
 	get_tree().quit()

@@ -164,6 +164,14 @@ func _tab_vehicle() -> void:
 	_row(vb, "Vault Lv")
 	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
+	_head("ENGINE BAY", "ห้องเครื่อง · %s %d°C สภาพ %d%%" % [EngineBay.t().th, int(EngineBay.heat()), int(EngineBay.cond())])
+	_row([_b("40°C", func(): Dev.engine_set("heat", 40.0), "green"), _b("100°C", func(): Dev.engine_set("heat", 100.0)), _b("115°C", func(): Dev.engine_set("heat", 115.0), "red")], "ความร้อน")
+	_row([_b("100%", func(): Dev.engine_set("cond", 100.0), "green"), _b("30%", func(): Dev.engine_set("cond", 30.0)), _b("0", func(): Dev.engine_set("cond", 0.0), "red")], "สภาพ")
+	_row([_b("น้ำมัน 100", func(): Dev.engine_set("oil", 100.0), "green"), _b("น้ำมัน 10", func(): Dev.engine_set("oil", 10.0)),
+		_b("หม้อน้ำ 100", func(): Dev.engine_set("coolant", 100.0), "green"), _b("หม้อน้ำ 0", func(): Dev.engine_set("coolant", 0.0), "red")])
+	_row([_b("เครื่องทุกแบบ", func(): Dev.engines_all(), "green"), _b("เครื่องดับ", func(): Dev.engine_breakdown(), "red"),
+		_b("หยุดพัก" if EngineBay.resting() else "สั่งพัก", func(): Dev.engine_rest(not EngineBay.resting()), "yellow" if EngineBay.resting() else "gray"),
+		_b("งานซ่อมเสร็จ", func(): Dev.engine_finish_job())])
 	_head("ROOMS & MODS", "ห้องและมอด")
 	_row([_b("สร้างห้องทุกช่องว่าง", func(): Dev.rooms_fill(), "green"), _b("ทุกห้อง Lv สูงสุด", func(): Dev.rooms_max())])
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())

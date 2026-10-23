@@ -136,7 +136,7 @@ func room_mult(slot: int) -> float:
 	var workers := Game.room_workers(slot)
 	if workers.is_empty():
 		return 1.0
-	var rt: String = Game.s.rooms[slot].type
+	var rt: String = Game.room(slot).type
 	var m := 1.0
 	var fits := 0
 	var night := Game.is_night()
@@ -170,7 +170,7 @@ func synergy_text(slot: int) -> String:
 	var workers := Game.room_workers(slot)
 	if workers.is_empty():
 		return ""
-	var rt: String = Game.s.rooms[slot].type
+	var rt: String = Game.room(slot).type
 	var parts := []
 	var fits := 0
 	for d in workers:

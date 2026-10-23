@@ -4,6 +4,7 @@ Shared geometry (scripts/world/vehicle.gd + scripts/autoload/data.gd VEHICLES â€
   every main shell is 280x300; rooms are 64x52, three per floor, at cols x=44/118/184;
   floor f (bottom = 0) sits at y = 210 - 56*f; roof slab top = 210 - 56*(floors-1) - 6;
   ladder shaft x=108..117; front (cab / nose) x=0..37; rear deck x=254..278 (floor y=262).
+  The cab's bottom floor is cut open for the engine room (engine_bay.CAB, drawn as cab_<tier>_<state>).
 
   van   2 floors  pale-blue camper van, sliding door, roof rack          wheels (26,284) (214,284)
   bus   3 floors  rusted yellow double/triple-decker, destination sign   wheels (34,284) (214,284)
@@ -17,6 +18,7 @@ Shared geometry (scripts/world/vehicle.gd + scripts/autoload/data.gd VEHICLES â€
 import math, random
 from .common import *
 from . import truck as T
+from . import engine_bay as EB
 
 FLOOR_H = 56
 RW, RH = 64, 52
@@ -224,12 +226,13 @@ def front_bus(img, paint):
     for k in range(5):
         rect(img, 6 + k * 6, roof + 9, 4, 4, c("lamp1") if k != 2 else c("red3"))
     # big windshield (two panes) on the top deck and the bottom deck
-    for (wy, wh) in ((roof + 22, 30), (row_y(0) - 14, 34)):
+    # the bottom-deck pane is short: the engine room (engine_bay.CAB) sits under the driver
+    for (wy, wh) in ((roof + 22, 30), (row_y(0) - 16, 20)):
         rect(img, 2, wy, 30, wh, OL)
         rect(img, 3, wy + 1, 28, wh - 2, c("blue2"))
         vline(img, 17, wy + 1, wh - 2, OL)
         line(img, 5, wy + wh - 4, 12, wy + 4, c("blue4"))
-    driver(img, 20, row_y(0) - 2)
+    driver(img, 20, row_y(0) - 13)
     rect(img, 1, row_y(1) + 20, 37, 5, c("ol1"))
     T.bolts(img, 35, roof + 20, by - 6, 6, pc(paint, 0))
     headlight(img, 0, by - 24)
@@ -476,8 +479,9 @@ def rails_strip():
 def gen_vehicles():
     for tier, cfg in TIERS.items():
         shell = T.weather(gen_tier(tier), len(tier) * 11)
-        add(f"veh_{tier}", shell)
         add(f"ext_{tier}", exterior(shell, cfg["floors"], COLS, cfg["paint"], tier))
+        EB.cut_cab(shell, tier)          # v4.6: the cab's bottom floor is the walk-in engine room
+        add(f"veh_{tier}", shell)
     for kind in ("trailer", "wagon"):
         sh = T.weather(gen_trailer(kind), len(kind) * 5)
         add(f"veh_{kind}", sh)

@@ -247,8 +247,8 @@ func pick_line(d: Dictionary, rng: RandomNumberGenerator) -> String:
 	if LINES_PERSONAL.has(k):
 		pools.append([LINES_PERSONAL[k], 3])
 	var slot := int(d.get("room", -1))
-	if slot >= 0 and slot < Game.s.rooms.size():
-		var rt := str(Game.s.rooms[slot].type)
+	if Game.has_room(slot):
+		var rt := str(Game.room(slot).type)
 		if Game.is_constructing(slot):
 			pools.append([LINES_BUILD, 6])
 		elif LINES_ROOM.has(rt):

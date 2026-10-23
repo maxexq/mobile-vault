@@ -5,7 +5,7 @@ extends RefCounted
 ## to res://build_info.json by tools/stamp_build.sh right before a web export; a plain checkout has
 ## no stamp and reports itself as a "dev" build.
 
-const GAME_VERSION := "4.3"
+const GAME_VERSION := "4.6"
 const CODENAME := "MAMMOTH-7"
 const STAMP_PATH := "res://build_info.json"
 

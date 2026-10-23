@@ -292,6 +292,44 @@ func set_hull(frac: float) -> void:
 	act("hull %d%%" % int(frac * 100))
 
 
+# ------------------------------------------------------------------ engine bay (v4.6)
+func engine_set(key: String, v: float) -> void:
+	var e := EngineBay.st()
+	e[key] = v
+	act("engine %s %d" % [key, int(v)])
+	EngineBay._changed()
+
+
+## one of every engine base into the stash (rare, ilvl 20)
+func engines_all() -> void:
+	for id in Loot.BASES:
+		if str(Loot.BASES[id].get("slot", "")) == "engine":
+			Loot.add_to_stash(Loot.roll_item("engine", 20, 2, id))
+	act("engines all")
+	Game.gear_changed.emit()
+
+
+func engine_breakdown() -> void:
+	EngineBay.st().cond = minf(EngineBay.cond(), EngineBay.BREAK_BELOW - 5.0)
+	Game.s.stall = 45.0
+	act("engine breakdown")
+	EngineBay._changed()
+
+
+func engine_rest(on: bool) -> void:
+	EngineBay.st().resting = on
+	act("engine rest %s" % on)
+	EngineBay._changed()
+
+
+func engine_finish_job() -> void:
+	var j: Dictionary = EngineBay.st().get("job", {})
+	if not j.is_empty():
+		j.left = 0.0
+		EngineBay._tick_job(0.0, false)
+	act("engine job done")
+
+
 func mods_all(maxed: bool) -> void:
 	if not Game.s.has("mods"):
 		Game.s["mods"] = {}

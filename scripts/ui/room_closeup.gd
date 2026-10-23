@@ -217,7 +217,7 @@ func _build_assign(def: Dictionary) -> void:
 	if list.is_empty():
 		_content.add_child(UIKit.wrap_label("ไม่มีผู้ลี้ภัยว่าง (ทุกคนทำงานอยู่ที่นี่หรือออกสำรวจ)"))
 	for d in list:
-		var where: String = "ว่าง" if int(d.room) < 0 else Data.room_def(Game.s.rooms[int(d.room)].type).th
+		var where: String = "ว่าง" if int(d.room) < 0 else Data.room_def(Game.room(int(d.room)).type).th
 		if Game.squad_role(d) >= 0:
 			where = Combat.ROLES[Game.squad_role(d)].th
 		var b := _row_button(d, "%s  %s%d  (%s)" % [d.name, st.to_upper(), d[st], where], "gray" if int(d.room) >= 0 else "green")
@@ -245,7 +245,7 @@ func _build_assign_builders() -> void:
 	if list.is_empty():
 		_content.add_child(UIKit.wrap_label("ไม่มีผู้ลี้ภัยว่าง (ทุกคนทำงานอยู่ที่นี่หรือออกสำรวจ)"))
 	for d in list:
-		var where: String = "ว่าง" if int(d.room) < 0 else Data.room_def(Game.s.rooms[int(d.room)].type).th
+		var where: String = "ว่าง" if int(d.room) < 0 else Data.room_def(Game.room(int(d.room)).type).th
 		if Game.squad_role(d) >= 0:
 			where = Combat.ROLES[Game.squad_role(d)].th
 		var tags := Crew.build_tags(d)

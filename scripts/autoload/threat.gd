@@ -102,7 +102,7 @@ func rate_parts() -> Dictionary:
 	var night := Game.is_night()
 	p.biome = 1.0 + float(Data.biome(int(Game.s.biome)).get("danger", 1))
 	if Game.is_moving():
-		p.engine = 0.12 * Game.speed_kmh()
+		p.engine = 0.12 * Game.speed_kmh() * EngineBay.noise_mult() + EngineBay.smoke_pm()
 	else:
 		p.parked = 2.0
 	if night:
@@ -115,6 +115,7 @@ func rate_parts() -> Dictionary:
 		var lv := float(r.get("level", 1)) * Game.room_span(slot)   # a knocked-through room is as loud as its cells
 		rooms += float(NOISE.get(r.type, 0.0)) * lv
 		rooms += float(LIGHT.get(r.type, 0.0)) * lv * (2.0 if night else 0.25)
+	rooms += float(NOISE.engine) * float(Game.room(Data.CAB_SLOT).get("level", 1))   # the engine bay in the cab
 	p.rooms = rooms
 	p.cargo = 4.0 * clampf((Haul.load_ratio() - 0.7) / 0.3, 0.0, 1.0) if Game.trailers() > 0 else 0.0
 	p.blood = _blood
