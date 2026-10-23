@@ -11,6 +11,15 @@ class LLMError(RuntimeError):
     pass
 
 
+def claude_client():
+    """Anthropic client. An org-level API key (not scoped to one workspace) must name the
+    workspace on every request, so ANTHROPIC_WORKSPACE_ID becomes the anthropic-workspace-id header."""
+    import anthropic
+
+    ws = os.environ.get("ANTHROPIC_WORKSPACE_ID", "").strip()
+    return anthropic.Anthropic(default_headers={"anthropic-workspace-id": ws} if ws else None)
+
+
 class ClaudeLLM:
     """Claude Opus through the official Anthropic SDK (reasoning-heavy work)."""
 
@@ -23,9 +32,7 @@ class ClaudeLLM:
         return any(os.environ.get(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE"))
 
     def complete(self, system: str, prompt: str) -> str:
-        import anthropic
-
-        client = anthropic.Anthropic()
+        client = claude_client()
         # Streaming avoids HTTP timeouts on long answers; adaptive thinking + effort is
         # the only thinking control on Opus 5.5. "default" fallbacks reroute a
         # safety-classifier refusal to a suitable model server-side.
@@ -51,9 +58,7 @@ def claude_turn(cfg: Config, system: str, messages: list, tools: list, effort: s
     Blocks are returned unchanged (as dicts) so the caller can append them to the history
     as-is: thinking blocks must be passed back untouched on the next request.
     """
-    import anthropic
-
-    client = anthropic.Anthropic()
+    client = claude_client()
     choice = {"type": "auto", "disable_parallel_tool_use": True} if one_tool_at_a_time else {"type": "auto"}
     with client.beta.messages.stream(
         model=cfg.claude_model,

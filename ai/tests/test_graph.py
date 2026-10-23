@@ -99,3 +99,12 @@ def test_local_llm_strips_thinking(monkeypatch):
         raise AssertionError("expected LLMError")
     except LLMError:
         pass
+
+
+def test_claude_client_sends_workspace_header(monkeypatch):
+    from mv_ai.llms import claude_client
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+    monkeypatch.delenv("ANTHROPIC_WORKSPACE_ID", raising=False)
+    assert "anthropic-workspace-id" not in claude_client().default_headers
+    monkeypatch.setenv("ANTHROPIC_WORKSPACE_ID", "wrkspc_123")
+    assert claude_client().default_headers["anthropic-workspace-id"] == "wrkspc_123"
