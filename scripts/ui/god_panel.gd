@@ -116,6 +116,16 @@ func _tab_main() -> void:
 		var wid: String = w
 		wb.append(_b(str(Data.WEATHER[w].get("th", w)), func(): Dev.weather(wid), "yellow" if Game.s.weather == wid else "gray"))
 	_row(wb)
+	_head("SCREEN", "ขนาดจอ")
+	_note(Dev.view_info())
+	if not OS.has_feature("web"):
+		var sizes := [[Vector2i(720, 1280), "มือถือ 720x1280"], [Vector2i(780, 1688), "มือถือ 780x1688"], [Vector2i(1170, 2532), "iPhone 1170x2532"],
+			[Vector2i(1280, 640), "แนวนอน 1280x640"], [Vector2i(1366, 1024), "แท็บเล็ต 1366x1024"]]
+		var sb := []
+		for it in sizes:
+			var sz: Vector2i = it[0]
+			sb.append(_b(it[1], func(): Dev.window_preset(sz), "gray", true))
+		_row(sb, "จำลองจอ")
 	_head("OVERLAY", "ข้อมูลดีบักบนจอ")
 	_row([_b("FPS/ดีบัก: " + ("เปิด" if Dev.overlay else "ปิด"), func(): Dev.set_overlay(not Dev.overlay), "green" if Dev.overlay else "gray"),
 		_b("ซ่อนปุ่ม GOD", func(): Dev.lock(), "red", true)])

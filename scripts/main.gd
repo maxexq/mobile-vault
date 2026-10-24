@@ -11,6 +11,8 @@ extends Node2D
 ##  pulls back for boss fights and long trailer convoys. Pinch / mouse wheel / the zoom button switch it.
 
 const PAN_LIMIT := 220.0
+const FIT_MARGIN := 4.0       # art px kept around the main body when a portrait phone zooms in (MV-148)
+const FIT_CAP := 2.0          # portrait zoom-in stops at this many times the UI pixel scale
 const TAP_SLOP := 8.0
 const PINCH_STEP := 1.25      # finger distance ratio for one pinch zoom step
 const PORTRAIT_BASE := Vector2i(360, 640)
@@ -50,6 +52,7 @@ var _shake := 0.0
 var zoom_mode := "auto"          # normal | wide | auto
 var world_scale := 1.0           # physical px per art pixel used by the world (whole number)
 var view_k := 1.0                # world viewport px per UI/design px (S / world_scale)
+var pan_right := PAN_LIMIT       # how far right a swipe may move the camera (world px), set by _fit_camera
 var _touches := {}
 var _pinch_d := 0.0
 
@@ -214,21 +217,52 @@ func _on_resize() -> void:
 	_apply_world_scale()
 
 
-## picks the world's whole-number scale for the current zoom mode and resizes the world viewport
-func _apply_world_scale() -> void:
+## the world's whole-number scale (screen px per art px) for the current zoom mode: wide pulls back (S-1 ...);
+## auto on a portrait phone zooms in to fill the screen (_fit_ws, MV-148); otherwise S
+func target_ws() -> float:
 	var s := pixel_scale
 	var wide := zoom_mode == "wide" or (zoom_mode == "auto" and _auto_wide())
 	if _closeup_slot >= 0:
 		wide = false
-	var ws := maxf(1.0, s - 1.0) if wide else s
-	if s >= 4.0 and wide:
-		ws = floorf(s * 0.67)
+	if wide:
+		return floorf(s * 0.67) if s >= 4.0 else maxf(1.0, s - 1.0)
+	if zoom_mode == "auto":
+		return maxf(s, _fit_ws())
+	return s
+
+
+## portrait fill (MV-148): the largest whole scale at which the main body (without trailers) fits the width the
+## HUD leaves free and the whole vehicle fits its height. Trailers then sit off-screen and are reached by swiping.
+## 0 = not in use (landscape, title screen, switch portrait_fit off)
+func _fit_ws() -> float:
+	if not Features.on("portrait_fit") or not is_portrait() or hud == null or not Game.started or Game.s.is_empty():
+		return 0.0
+	var free: Rect2 = hud.world_rect()
+	var m := Features.num("view.fit_margin", FIT_MARGIN)
+	var w := Vehicle.MAIN_W + 2.0 * m
+	var h := Vehicle.ROAD_Y - (vehicle.top_y() - 6.0) + 12.0 + m
+	var ws := floorf(minf(free.size.x * pixel_scale / w, free.size.y * pixel_scale / h))
+	return minf(ws, floorf(pixel_scale * Features.num("view.fit_cap", FIT_CAP)))
+
+
+## picks the world's whole-number scale for the current zoom mode and resizes the world viewport
+func _apply_world_scale() -> void:
+	var s := pixel_scale
+	var ws := target_ws()
 	world_scale = ws
 	view_k = s / ws
 	var design := Vector2(get_window().content_scale_size)
-	var want := Vector2i(int(floorf(design.x * view_k)), int(floorf(design.y * view_k)))
+	# zoomed in, the viewport is rounded UP and the texture drawn at exactly vp * ws screen px (anchored top-left,
+	# the overhang is off-screen) so every art pixel is ws screen px; zoomed out, the design size divides evenly
+	var want := Vector2i(int(ceilf(design.x * view_k)), int(ceilf(design.y * view_k))) if view_k < 1.0 \
+		else Vector2i(int(floorf(design.x * view_k)), int(floorf(design.y * view_k)))
 	if world_vp.size != want:
 		world_vp.size = want
+	if view_k < 1.0:
+		world_tex.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		world_tex.size = Vector2(want) / view_k
+	elif world_tex.anchor_right != 1.0:
+		world_tex.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fit_camera.call_deferred()
 
 
@@ -237,14 +271,16 @@ func _auto_wide() -> bool:
 		return false
 	if not Combat.current_boss().is_empty():
 		return true
-	return Game.trailers() > 0
+	# a portrait phone fills the screen with the main body instead; trailers are a swipe away
+	return Game.trailers() > 0 and _fit_ws() <= 0.0
 
 
 func set_zoom_mode(m: String) -> void:
 	zoom_mode = m
 	Settings.set_value("zoom", m)
 	_apply_world_scale()
-	Game.toast.emit({"normal": "มุมกล้อง: ปกติ", "wide": "มุมกล้อง: มุมกว้าง", "auto": "มุมกล้อง: อัตโนมัติ (กว้างตอนสู้บอส/ลากพ่วง)"}[m], "info")
+	var auto_txt := "มุมกล้อง: อัตโนมัติ (รถเต็มจอ ปัดดูโบกี้ ถอยกว้างตอนสู้บอส)" if _fit_ws() > 0.0 else "มุมกล้อง: อัตโนมัติ (กว้างตอนสู้บอส/ลากพ่วง)"
+	Game.toast.emit({"normal": "มุมกล้อง: ปกติ", "wide": "มุมกล้อง: มุมกว้าง", "auto": auto_txt}[m], "info")
 
 
 func cycle_zoom() -> void:
@@ -269,6 +305,8 @@ func _fit_camera() -> void:
 	var left := free.position.x + 4.0
 	if free.size.x > span + 8.0:
 		left = free.position.x + floorf((free.size.x - span) * 0.5)
+	# swiping right reaches the end of the convoy and the fight behind it, however far that is off-screen
+	pan_right = maxf(PAN_LIMIT, span + 8.0 - free.size.x)
 	var road_screen := free.end.y - 12.0
 	cam_home = Vector2(round(-left + vp.x * 0.5), round(Vehicle.ROAD_Y - road_screen + vp.y * 0.5))
 	var need := Vehicle.ROAD_Y - (vehicle.top_y() - 6.0)
@@ -285,10 +323,7 @@ func _fit_camera() -> void:
 func _process(delta: float) -> void:
 	_last_input_t += delta
 	if zoom_mode == "auto" and Engine.get_process_frames() % 20 == 0:
-		var want_k := pixel_scale / (maxf(1.0, pixel_scale - 1.0) if _auto_wide() and _closeup_slot < 0 else pixel_scale)
-		if pixel_scale >= 4.0 and _auto_wide() and _closeup_slot < 0:
-			want_k = pixel_scale / floorf(pixel_scale * 0.67)
-		if not is_equal_approx(want_k, view_k):
+		if not is_equal_approx(target_ws(), world_scale):
 			_apply_world_scale()
 	if _closeup_slot < 0 and not _pressing and _last_input_t > 3.0 and absf(pan_x) > 0.5:
 		pan_x = lerpf(pan_x, 0.0, clampf(delta * 1.5, 0.0, 1.0))
@@ -380,7 +415,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.position.distance_to(_press_pos) > TAP_SLOP:
 			_dragged = true
 		if _dragged and _closeup_slot < 0:
-			pan_x = clampf(pan_x - event.relative.x, -PAN_LIMIT, PAN_LIMIT)
+			# relative is in UI px; the camera moves in world px, so the road follows the finger at any zoom
+			pan_x = clampf(pan_x - event.relative.x * view_k, -PAN_LIMIT, pan_right)
 			camera.position.x = cam_home.x + round(pan_x)
 		_last_input_t = 0.0
 

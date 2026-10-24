@@ -129,6 +129,27 @@ func set_overlay(v: bool) -> void:
 	changed.emit()
 
 
+## preview another screen on desktop (MV-148): the window takes a phone / tablet size. Not on web, where the
+## browser owns the size. Read-only for the save (not cheated)
+func window_preset(sz: Vector2i) -> void:
+	Trace.rec("god", "window %dx%d" % [sz.x, sz.y])
+	get_window().size = sz
+
+
+## one line for GOD: real window, UI pixel scale S, world scale (art px -> screen px) and why
+func view_info() -> String:
+	var m = get_tree().current_scene
+	if m == null or not m.has_method("target_ws"):
+		return "-"
+	var win := DisplayServer.window_get_size()
+	var why := "ปกติ"
+	if m.world_scale > m.pixel_scale:
+		why = "ซูมเต็มจอแนวตั้ง"
+	elif m.world_scale < m.pixel_scale:
+		why = "มุมกว้าง"
+	return "จอ %dx%d · UI x%d · โลก x%d (%s) · กล้อง %s" % [win.x, win.y, int(m.pixel_scale), int(m.world_scale), why, m.zoom_mode]
+
+
 ## every god action goes through here: logged + the save is marked as a test save
 func act(what: String, data: Dictionary = {}) -> void:
 	Trace.rec("god", what, data)
