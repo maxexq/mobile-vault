@@ -1,16 +1,28 @@
 class_name BuildInfo
 extends RefCounted
 ## One place for every version string the game shows (title screen, Settings > About, trace log).
-## GAME_VERSION is bumped by hand per release. The build stamp (git commit, branch, time) is written
+## GAME_VERSION is semver (MAJOR.MINOR.PATCH[-alpha.N|-beta.N|-rc.N], MV-111); its pre-release tag is the
+## release channel shown in game. Bump it with tools/release.py, which also updates the web shell and
+## CHANGELOG.md; a v<GAME_VERSION> git tag publishes the GitHub Release (.github/workflows/release.yml). The build stamp (git commit, branch, time) is written
 ## to res://build_info.json by tools/stamp_build.sh right before a web export; a plain checkout has
 ## no stamp and reports itself as a "dev" build.
 
 const GAME_NAME := "Apocarlypse: Mobile Vault"   # player-facing title; the repo, domain and save keys keep "mobile-vault"
-const GAME_VERSION := "4.6"
+const GAME_VERSION := "4.7.0-alpha.1"
 const CODENAME := "MAMMOTH-7"
 const STAMP_PATH := "res://build_info.json"
 
+## alpha / beta / rc / stable: [EN badge, Thai note, UIKit color name]
+const CHANNELS := {
+	"alpha": ["ALPHA", "รุ่นทดสอบ ระบบยังเปลี่ยนได้ เซฟอาจถูกรีเซ็ต", "red"],
+	"beta": ["BETA", "รุ่นทดสอบก่อนเปิดตัว ระบบครบแล้ว กำลังเก็บบั๊ก", "yellow"],
+	"rc": ["RC", "รุ่นเตรียมเปิดตัว", "blue"],
+	"stable": ["", "", "green"],
+}
+
 static var _stamp := {}
+## GOD MODE preview of another channel's badge ("" = the real one), never saved
+static var channel_preview := ""
 
 
 ## {commit, branch, built (ISO UTC), dirty} or the dev fallback
@@ -39,14 +51,82 @@ static func godot_hash() -> String:
 	return str(Engine.get_version_info().get("hash", "")).substr(0, 9)
 
 
-## "v4.3 · GODOT 4.7.2 · 1a2b3c4" (short line under the title menu)
+## "v4.7.0-alpha.1 · GODOT 4.7.2 · 1A2B3C4" (short line under the title menu)
 static func short_line() -> String:
 	var v := Engine.get_version_info()
 	return "v%s · GODOT %d.%d.%d · %s" % [GAME_VERSION, int(v.major), int(v.minor), int(v.patch), commit_short().to_upper()]
 
 
-static func channel() -> String:
+## debug (editor / debug export) or release export
+static func build_type() -> String:
 	return "debug" if OS.is_debug_build() else "release"
+
+
+# ---------------------------------------------------------------- semver
+## "4.7.0-beta.2" -> {major 4, minor 7, patch 0, pre ["beta", "2"]}; short forms like "4.6" fill in zeros
+static func parse_version(v: String) -> Dictionary:
+	var core := v.strip_edges().trim_prefix("v").get_slice("+", 0)
+	var pre := []
+	var dash := core.find("-")
+	if dash >= 0:
+		pre = Array(core.substr(dash + 1).split("."))
+		core = core.substr(0, dash)
+	var n := core.split(".")
+	return {
+		"major": int(n[0]) if n.size() > 0 else 0,
+		"minor": int(n[1]) if n.size() > 1 else 0,
+		"patch": int(n[2]) if n.size() > 2 else 0,
+		"pre": pre,
+	}
+
+
+## semver precedence: -1 / 0 / 1. A pre-release sorts before its release (4.7.0-alpha.1 < 4.7.0),
+## numeric parts compare as numbers, alpha < beta < rc by text.
+static func ver_cmp(a: String, b: String) -> int:
+	var x := parse_version(a)
+	var y := parse_version(b)
+	for k in ["major", "minor", "patch"]:
+		if x[k] != y[k]:
+			return -1 if x[k] < y[k] else 1
+	var p: Array = x.pre
+	var q: Array = y.pre
+	if p.is_empty() or q.is_empty():
+		return 0 if p.size() == q.size() else (1 if p.is_empty() else -1)
+	for i in mini(p.size(), q.size()):
+		var s: String = p[i]
+		var t: String = q[i]
+		if s == t:
+			continue
+		if s.is_valid_int() and t.is_valid_int():
+			return -1 if int(s) < int(t) else 1
+		if s.is_valid_int() != t.is_valid_int():
+			return -1 if s.is_valid_int() else 1
+		return -1 if s < t else 1
+	return 0 if p.size() == q.size() else (-1 if p.size() < q.size() else 1)
+
+
+## the release channel from a version's pre-release tag (or the GOD preview)
+static func release_channel(v: String = "") -> String:
+	if v == "" and channel_preview != "":
+		return channel_preview
+	var pre: Array = parse_version(GAME_VERSION if v == "" else v).pre
+	if pre.is_empty():
+		return "stable"
+	var tag := str(pre[0]).to_lower()
+	return tag if CHANNELS.has(tag) else "alpha"
+
+
+## "ALPHA" / "BETA" / "RC" / "" for a stable release
+static func channel_badge() -> String:
+	return str(CHANNELS[release_channel()][0])
+
+
+static func channel_note() -> String:
+	return str(CHANNELS[release_channel()][1])
+
+
+static func channel_color() -> String:
+	return str(CHANNELS[release_channel()][2])
 
 
 ## browser user agent on web, "" elsewhere
@@ -62,7 +142,8 @@ static func rows() -> Array:
 	var st := stamp()
 	var out := [
 		["GAME", "%s v%s" % [GAME_NAME, GAME_VERSION]],
-		["BUILD", "%s · %s" % [commit_short(), channel()]],
+		["CHANNEL", (channel_badge() + " · " + channel_note()) if channel_badge() != "" else "STABLE"],
+		["BUILD", "%s · %s" % [commit_short(), build_type()]],
 	]
 	if str(st.branch) != "":
 		out.append(["BRANCH", str(st.branch)])

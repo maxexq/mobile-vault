@@ -46,8 +46,11 @@ Parames's PC. Both follow this file. The game itself is described in `README.md`
 
 - `git pull origin main` before starting. Never push to `main` directly.
 - Branch name starts with the ticket: `mv-<n>-short-name` (e.g. `mv-91-local-squad`).
-- PR title/body mention `MV-<n>`; one feature per PR. Bump the version only in
-  `BuildInfo.GAME_VERSION` (`scripts/build_info.gd`).
+- PR title/body mention `MV-<n>`; one feature per PR. The version is semver in
+  `BuildInfo.GAME_VERSION` (`4.7.0-alpha.1`; `-alpha.N`/`-beta.N`/`-rc.N` = test channel). Change it
+  only with `python tools/release.py bump <alpha|beta|rc|stable|patch|minor|major>`, which also
+  updates the web shell and `CHANGELOG.md`; add a line under `[Unreleased]` in `CHANGELOG.md` for
+  player-visible changes. Releases: Actions → Release → Run workflow on main (README "Versioning & releases").
 
 ### Opening the PR (Claude Code CLI)
 

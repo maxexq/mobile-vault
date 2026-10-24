@@ -11,7 +11,8 @@
     "tutorial": true,
     "cloud_save": true,
     "google_login": true,
-    "modes": true
+    "modes": true,
+    "channel_badge": true
   },
   "events": {},
   "tune": {}

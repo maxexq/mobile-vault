@@ -879,6 +879,14 @@ func mode_toll_test() -> void:
 	Game.travel_changed.emit()
 
 
+# ---- version channel (MV-111)
+## preview another channel's ALPHA/BETA/RC badge on the title + About ("" = the real channel); not saved
+func channel_preview(ch: String) -> void:
+	act("channel preview %s" % (ch if ch != "" else "off"))
+	BuildInfo.channel_preview = ch if BuildInfo.CHANNELS.has(ch) else ""
+	Features.changed.emit()
+
+
 # ---- feature switches (Features layer "dev": kept in user://dev.cfg until reset or GOD is hidden)
 func feature_set(key: String, v: Variant) -> void:
 	act("feature %s = %s" % [key, v])

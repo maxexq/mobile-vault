@@ -41,6 +41,7 @@ const FEATURES := {
 	"cloud_save": "เซฟบนคลาวด์ (มีผลตอนเปิดเกมครั้งถัดไป)",
 	"google_login": "ล็อกอิน / ผูกบัญชีด้วย Google (ปิด = เล่นแบบ Guest อย่างเดียว)",
 	"modes": "เลือกโหมดตอนเริ่มเกมใหม่ (ปิด = เริ่มโหมดปกติเสมอ)",
+	"channel_badge": "ป้าย ALPHA / BETA บนหน้าเริ่มเกมและหน้าเกี่ยวกับ",
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
@@ -287,22 +288,11 @@ func _accepts(d) -> bool:
 	if not d is Dictionary:
 		return false
 	var v := BuildInfo.GAME_VERSION
-	if d.get("min_game") is String and d.min_game != "" and _ver_cmp(v, d.min_game) < 0:
+	if d.get("min_game") is String and d.min_game != "" and BuildInfo.ver_cmp(v, d.min_game) < 0:
 		return false
-	if d.get("max_game") is String and d.max_game != "" and _ver_cmp(v, d.max_game) > 0:
+	if d.get("max_game") is String and d.max_game != "" and BuildInfo.ver_cmp(v, d.max_game) > 0:
 		return false
 	return true
-
-
-func _ver_cmp(a: String, b: String) -> int:
-	var x := a.split(".")
-	var y := b.split(".")
-	for i in maxi(x.size(), y.size()):
-		var p := int(x[i]) if i < x.size() else 0
-		var q := int(y[i]) if i < y.size() else 0
-		if p != q:
-			return -1 if p < q else 1
-	return 0
 
 
 # =================================================================== remote (layer 3)

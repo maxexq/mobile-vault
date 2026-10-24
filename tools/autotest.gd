@@ -65,6 +65,10 @@ func _run() -> void:
 		await _large_room_test()
 		_finish()
 		return
+	if "--only=version" in OS.get_cmdline_user_args():
+		await _version_test()
+		_finish()
+		return
 	if "--only=thai" in OS.get_cmdline_user_args():
 		_thai_terms_test()
 		_finish()
@@ -659,6 +663,7 @@ func _run() -> void:
 	await _large_room_test()
 	await _features_test()
 	await _modes_test()
+	await _version_test()
 	_thai_terms_test()
 	_finish()
 
@@ -2449,6 +2454,63 @@ func _engine_bay_test() -> void:
 	EngineBay.uninstall()
 	e.merge(EngineBay.default_state(), true)
 	e.job = {}
+
+
+## MV-111: semver + release channel badge + changelog / release tooling
+func _version_test() -> void:
+	var v := BuildInfo.GAME_VERSION
+	var p := BuildInfo.parse_version(v)
+	_check("version: GAME_VERSION is semver X.Y.Z[-alpha|beta|rc.N]", RegEx.create_from_string("^\\d+\\.\\d+\\.\\d+(-(alpha|beta|rc)\\.\\d+)?$").search(v) != null)
+	_check("version: parse 4.7.0-beta.2", BuildInfo.parse_version("v4.7.0-beta.2") == {"major": 4, "minor": 7, "patch": 0, "pre": ["beta", "2"]})
+	_check("version: short forms fill zeros", BuildInfo.ver_cmp("4.6", "4.6.0") == 0 and BuildInfo.ver_cmp("4.3", v) < 0)
+	var order := ["4.6", "4.7.0-alpha.1", "4.7.0-alpha.2", "4.7.0-alpha.10", "4.7.0-beta.1", "4.7.0-rc.1", "4.7.0", "4.7.1", "4.10.0", "5.0.0-alpha.1"]
+	var sorted_ok := true
+	for i in order.size() - 1:
+		sorted_ok = sorted_ok and BuildInfo.ver_cmp(order[i], order[i + 1]) < 0 and BuildInfo.ver_cmp(order[i + 1], order[i]) > 0
+	_check("version: semver precedence (pre-release < release, numbers as numbers)", sorted_ok)
+	_check("version: channel from the pre-release tag", BuildInfo.release_channel("4.7.0-alpha.1") == "alpha" and BuildInfo.release_channel("4.8.0-beta.3") == "beta"
+		and BuildInfo.release_channel("4.8.0-rc.1") == "rc" and BuildInfo.release_channel("4.8.0") == "stable")
+	_check("version: current channel %s" % BuildInfo.release_channel(), BuildInfo.release_channel() == ("stable" if p.pre.is_empty() else str(p.pre[0])))
+	_check("version: About rows show the channel", BuildInfo.as_text().contains("CHANNEL: ") and BuildInfo.as_text().contains("BUILD: "))
+	# the remote features.json version gate uses the same compare
+	_check("version: remote min_game 4.3 accepted", Features._accepts({"min_game": "4.3"}))
+	_check("version: remote for the stable release refused by its pre-release", Features._accepts({"min_game": "%d.%d.%d" % [p.major, p.minor, p.patch]}) == p.pre.is_empty())
+	_check("version: remote max_game below us refused", not Features._accepts({"max_game": "4.6"}))
+	# title screen badge: preview every channel through GOD, then the switch hides it
+	Features.clear_overrides()
+	var tag: Label = main.hud.title_screen._channel
+	for ch in ["alpha", "beta", "rc"]:
+		Dev.channel_preview(ch)
+		_check("version: %s badge on the title" % ch, tag.visible and tag.text.begins_with(str(BuildInfo.CHANNELS[ch][0]) + " TEST"))
+	Dev.channel_preview("stable")
+	_check("version: no badge on a stable release", not tag.visible)
+	Dev.channel_preview("alpha")
+	Dev.feature_set("channel_badge", false)
+	_check("version: channel_badge switch off hides it", not tag.visible)
+	Features.clear_overrides()
+	Dev.channel_preview("nope")
+	_check("version: unknown preview falls back to the real channel", BuildInfo.channel_preview == "" and tag.visible == (BuildInfo.channel_badge() != ""))
+	# GOD system tab: preview row
+	var god = main.hud.panels.god
+	main.hud.open_panel("god")
+	god.tab = "sys"
+	god.refresh()
+	await wait(0.25)
+	_check("version: GOD system tab has the channel preview row", _find_text(god, "ดูป้ายช่อง") and _find_text(god, "CHANNEL: "))
+	god.close()
+	# Settings > About: badge under the logo
+	Dev.channel_preview("beta")
+	main.hud.open_settings("about")
+	await wait(0.4)
+	var about_tag = main.hud.settings_panel.find_child("ChannelTag", true, false)
+	_check("version: About shows the badge", about_tag is Label and about_tag.visible and about_tag.text.begins_with("BETA TEST"))
+	await shot("about_channel_beta")
+	main.hud.settings_panel.close()
+	Dev.channel_preview("")
+	# release tooling + changelog
+	var log := FileAccess.get_file_as_string("res://CHANGELOG.md")
+	_check("version: CHANGELOG.md has a section for %s" % v, log.contains("## [%s]" % v) and log.contains("## [Unreleased]"))
+	_check("version: release workflow + tool present", FileAccess.file_exists("res://.github/workflows/release.yml") and FileAccess.file_exists("res://tools/release.py"))
 
 
 ## game modes: migration, the New Game picker, peaceful toll, multipliers, mutators, GOD switch, next generation
