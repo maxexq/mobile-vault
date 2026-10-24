@@ -74,7 +74,9 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var off := Vector2(round(randf_range(-_shake, _shake)), round(randf_range(-_shake, _shake) * 0.5))
+	# follows the screen-shake setting and strength like the camera (MV-175)
+	var sk := _shake * Features.num("fx.shake", 0.5) if bool(Settings.get_value("shake")) else 0.0
+	var off := Vector2(round(randf_range(-sk, sk)), round(randf_range(-sk, sk) * 0.5))
 	var slide: float = roundf((1.0 - _shown) * -40.0)
 	var r := Rect2(off + Vector2(0, slide), Vector2(size.x, H))
 	var border := UIKit.C_LINE
