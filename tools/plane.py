@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """Small Plane (app.plane.so) client for the Mobile Vault tickets (project MV).
 
-Used by Claude Code (cloud or local CLI) and by hand to keep tickets in sync with the work.
+Used by Claude Code (cloud or local CLI), Gemini CLI and by hand to keep tickets in sync with the work.
 Stdlib only, so it runs on Windows/macOS/Linux with any Python 3.8+.
 
   python tools/plane.py list [--state "In Progress"] [--limit 20]
   python tools/plane.py show MV-12
   python tools/plane.py create "Title" [--state Todo] [--priority medium] [--label feature ...]
                                        [--desc "text"] [--link URL [TITLE]]
+  python tools/plane.py claim MV-12 [--force]      # take a ticket: In Progress + "Claimed by <agent>"
   python tools/plane.py move MV-12 "In Review"
   python tools/plane.py link MV-12 https://github.com/maxexq/mobile-vault/pull/40 "PR #40"
   python tools/plane.py comment MV-12 "text"
   python tools/plane.py states | labels
+
+Who is working: --by "Gemini CLI" (before the command) or env MV_AGENT. create and claim then
+leave a "Claimed by ..." comment, so the other agents can see who owns an In Progress ticket.
 
 API key, first match wins (never commit it, never paste it into a chat):
   1. env PLANE_API_KEY
@@ -144,7 +148,24 @@ def cmd_create(a):
     i = api("POST", f"{PJ}/work-items/", body)
     for link in a.link or []:
         api("POST", f"{PJ}/work-items/{i['id']}/links/", {"url": link[0], "title": " ".join(link[1:]) or link[0]})
+    if a.state.lower() == "in progress":
+        claim_note(i, a)
     print(f"{ref_of(i)} created: {url_of(i)}")
+
+
+def claim_note(i, a):
+    if a.by:
+        api("POST", f"{PJ}/work-items/{i['id']}/comments/", {"comment_html": f"<p>Claimed by {html.escape(a.by)}</p>"})
+
+
+def cmd_claim(a):
+    i = item(a.ref)
+    st = states()
+    if i.get("state") == st.get("In Progress") and not a.force:
+        raise SystemExit(f"{ref_of(i)} is already In Progress (someone owns it); --force to take it anyway")
+    api("PATCH", f"{PJ}/work-items/{i['id']}/", {"state": state_id("In Progress", st)})
+    claim_note(i, a)
+    print(f"{ref_of(i)} -> In Progress" + (f" (claimed by {a.by})" if a.by else ""))
 
 
 def cmd_move(a):
@@ -169,6 +190,8 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # Thai titles on a Windows console
     p = argparse.ArgumentParser(description="Mobile Vault Plane tickets (project MV)")
+    p.add_argument("--by", default=os.environ.get("MV_AGENT", ""),
+                   help='who is doing the work, e.g. "Gemini CLI" (default: env MV_AGENT)')
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("list"); s.add_argument("--state"); s.add_argument("--limit", type=int, default=30)
     s.set_defaults(f=cmd_list)
@@ -179,6 +202,8 @@ def main():
     s.add_argument("--label", action="append"); s.add_argument("--desc", default="")
     s.add_argument("--link", nargs="+", action="append", metavar=("URL", "TITLE"))
     s.add_argument("--external-id"); s.set_defaults(f=cmd_create)
+    s = sub.add_parser("claim"); s.add_argument("ref"); s.add_argument("--force", action="store_true")
+    s.set_defaults(f=cmd_claim)
     s = sub.add_parser("move"); s.add_argument("ref"); s.add_argument("state"); s.set_defaults(f=cmd_move)
     s = sub.add_parser("link"); s.add_argument("ref"); s.add_argument("url"); s.add_argument("title", nargs="?")
     s.set_defaults(f=cmd_link)

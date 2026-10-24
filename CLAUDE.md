@@ -1,9 +1,11 @@
-# Apocarlypse: Mobile Vault — rules for Claude
+# Apocarlypse: Mobile Vault — rules for every AI agent
 
 Idle survival game on an armoured vehicle after the apocalypse, for mobile web.
-Two Claudes work on this repo: the claude.ai project (cloud threads) and Claude Code CLI on
-Parames's PC. Both follow this file. The game itself is described in `README.md` and
-`docs/PROJECT_CONTEXT.md`; read the relevant README section before touching a system.
+Three agents work on this repo: the claude.ai project (cloud threads), Claude Code CLI on
+Parames's PC, and Gemini CLI (`gemini-4-argon`) on Parames's PC, which loads this file through
+`GEMINI.md`. All of them follow this file, so a new standing rule goes here (not in `GEMINI.md`).
+The game itself is described in `README.md` and `docs/PROJECT_CONTEXT.md`; read the relevant
+README section before touching a system. Setup for each agent: `docs/AI_AGENTS.md`.
 
 ## Hard rules
 
@@ -41,8 +43,18 @@ Parames's PC. Both follow this file. The game itself is described in `README.md`
    `cloud_config.json` must exist first or the build ships with cloud save OFF
    (copy `cloud_config.example.json`, or recover it from the committed `web/index.pck`).
 5. Branch + PR into `main`, README updated, Plane ticket moved (below).
-6. The claude.ai playable artifact is updated by the project side after the PR; CLI sessions
+6. The claude.ai playable artifact is updated by the project side after the PR; CLI sessions (Claude or Gemini)
    just say in the PR/ticket that the artifact still needs updating.
+
+## Working alongside the other agents
+
+- Plane is the lock. One agent per ticket: start with `plane.py --by "<you>" claim MV-<n>` (or
+  `create`), which refuses a ticket that is already In Progress. Names: `Claude (claude.ai)`,
+  `Claude Code CLI`, `Gemini CLI`. If two tickets need the same files, say so in a Plane comment
+  and let the second one wait or rebase after the first PR merges.
+- Never commit to, rebase or push another agent's branch; leave a PR review comment or a Plane
+  comment instead. Reviewing each other's PRs is welcome (comments only; Parames merges).
+- Every PR body has a line `Agent: <you>` so Parames and Discord show who made it.
 
 ## Git workflow
 
@@ -54,7 +66,7 @@ Parames's PC. Both follow this file. The game itself is described in `README.md`
   updates the web shell and `CHANGELOG.md`; add a line under `[Unreleased]` in `CHANGELOG.md` for
   player-visible changes. Releases: Actions → Release → Run workflow on main (README "Versioning & releases").
 
-### Opening the PR (Claude Code CLI)
+### Opening the PR (Claude Code CLI and Gemini CLI)
 
 Open the PR yourself with the GitHub CLI (`gh`, logged in once with `gh auth login`).
 When the work is committed and the autotest passed:
@@ -68,7 +80,7 @@ python tools/plane.py move MV-<n> "In Review"
 ```
 
 - PR body sections: **What** (bullet list of changes), **Testing** (autotest result, web
-  export done or why not, what you checked in the browser), `Plane: MV-<n>`, and a line
+  export done or why not, what you checked in the browser), `Plane: MV-<n>`, `Agent: <you>`, and a line
   `Artifact: needs update` when the game changed. Write the body to a temp file outside the
   repo (Thai text and backticks break inline `--body` quoting on Windows).
 - Use `gh pr view --web` to show Parames the PR. Never merge it yourself: Parames merges.
@@ -85,7 +97,8 @@ Every task has a ticket that matches reality, from start to done. Use `tools/pla
 
 ```
 python tools/plane.py list --state "In Progress"     # check nobody else is on it
-python tools/plane.py create "Title" --label feature --desc "..."   # starts In Progress
+python tools/plane.py --by "Claude Code CLI" claim MV-12      # take an existing ticket
+python tools/plane.py --by "Claude Code CLI" create "Title" --label feature --desc "..."   # starts In Progress
 python tools/plane.py move MV-12 "In Review"
 python tools/plane.py link MV-12 https://github.com/maxexq/mobile-vault/pull/40 "PR #40"
 python tools/plane.py comment MV-12 "waiting for Parames to pick option B"

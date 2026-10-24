@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "context": {
+    "fileName": ["GEMINI.md"]
+  },
+  "tools": {
+    "allowed": [
+      "run_shell_command(python tools/plane.py)",
+      "run_shell_command(python3 tools/plane.py)",
+      "run_shell_command(gh pr create)",
+      "run_shell_command(gh pr view)",
+      "run_shell_command(gh pr list)",
+      "run_shell_command(gh pr checks)",
+      "run_shell_command(git status)",
+      "run_shell_command(git diff)",
+      "run_shell_command(git log)"
+    ]
+  }
+}

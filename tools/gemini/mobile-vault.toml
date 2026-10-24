@@ -1,0 +1,31 @@
+# Gemini CLI policy for the Mobile Vault repo: the same hard limits as .claude/settings.json.
+# Workspace policies (.gemini/policies) are disabled in Gemini CLI, so this is a USER policy:
+# copy it to %USERPROFILE%\.gemini\policies\ (Windows) or ~/.gemini/policies/ and restart gemini.
+# Docs: https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/policy-engine.md
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = '[^"]*git push[^"]*[ :/]main\b'
+decision = "deny"
+priority = 900
+denyMessage = "Mobile Vault: never push to main. Push your mv-<n> branch and open a PR."
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = '[^"]*git push[^"]*(--force|\s-f\b)'
+decision = "deny"
+priority = 900
+denyMessage = "Mobile Vault: no force pushes."
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "gh pr merge"
+decision = "deny"
+priority = 900
+denyMessage = "Mobile Vault: Parames merges PRs, agents never do."
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = '[^"]*pixellab\.py[^"]*--yes'
+decision = "ask_user"
+priority = 900

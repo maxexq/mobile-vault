@@ -16,3 +16,6 @@ __pycache__/
 # PixelLab (tools/pixellab.py): token and generated candidates stay local; accepted overrides are committed
 .pixellab-api-key
 tools/art/pixellab/candidates/
+
+# Gemini CLI: API key and local settings stay on the PC
+.gemini/.env
