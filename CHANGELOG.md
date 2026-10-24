@@ -15,6 +15,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Medical room redrawn with PixelLab (first AI-assisted sprite, snapped to the 16-bit palette) (MV-162)
 - All other rooms redrawn with PixelLab: quarters, kitchen, hydroponics, water, armory, science, radio, engine, refinery, workshop, empty (MV-166)
 
+### Fixed
+- The ladder shaft no longer cuts through a knocked-through large room; a steel post marks the old wall instead (MV-146)
+
 ## [4.7.0-alpha.1] - 2026-10-24
 
 First tagged release. The game is in **alpha**: systems still change and saves may be reset.
