@@ -1,0 +1,26 @@
+{
+  "toolPermission": "request-review",
+  "permissions": {
+    "allow": [
+      "command(python tools/plane.py)",
+      "command(gh pr view)",
+      "command(gh pr list)",
+      "command(gh pr checks)",
+      "command(git status)",
+      "command(git diff)",
+      "command(git log)"
+    ],
+    "ask": [
+      "command(python tools/pixellab.py gen)"
+    ],
+    "deny": [
+      "command(gh pr merge)",
+      "command(git push origin main)",
+      "command(git push -u origin main)",
+      "command(git push origin HEAD:main)",
+      "command(git push --force)",
+      "command(git push -f)",
+      "command(git push --force-with-lease)"
+    ]
+  }
+}

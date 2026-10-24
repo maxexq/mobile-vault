@@ -2,7 +2,7 @@
 
 Idle survival game on an armoured vehicle after the apocalypse, for mobile web.
 Three agents work on this repo: the claude.ai project (cloud threads), Claude Code CLI on
-Parames's PC, and Gemini CLI (`gemini-4-argon`) on Parames's PC, which loads this file through
+Parames's PC, and Gemini 4 Argon via Antigravity CLI (`agy`) on Parames's PC, which loads this file through
 `GEMINI.md`. All of them follow this file, so a new standing rule goes here (not in `GEMINI.md`).
 The game itself is described in `README.md` and `docs/PROJECT_CONTEXT.md`; read the relevant
 README section before touching a system. Setup for each agent: `docs/AI_AGENTS.md`.
@@ -50,7 +50,7 @@ README section before touching a system. Setup for each agent: `docs/AI_AGENTS.m
 
 - Plane is the lock. One agent per ticket: start with `plane.py --by "<you>" claim MV-<n>` (or
   `create`), which refuses a ticket that is already In Progress. Names: `Claude (claude.ai)`,
-  `Claude Code CLI`, `Gemini CLI`. If two tickets need the same files, say so in a Plane comment
+  `Claude Code CLI`, `Gemini`. If two tickets need the same files, say so in a Plane comment
   and let the second one wait or rebase after the first PR merges.
 - Never commit to, rebase or push another agent's branch; leave a PR review comment or a Plane
   comment instead. Reviewing each other's PRs is welcome (comments only; Parames merges).
@@ -66,7 +66,7 @@ README section before touching a system. Setup for each agent: `docs/AI_AGENTS.m
   updates the web shell and `CHANGELOG.md`; add a line under `[Unreleased]` in `CHANGELOG.md` for
   player-visible changes. Releases: Actions → Release → Run workflow on main (README "Versioning & releases").
 
-### Opening the PR (Claude Code CLI and Gemini CLI)
+### Opening the PR (Claude Code CLI and Gemini)
 
 Open the PR yourself with the GitHub CLI (`gh`, logged in once with `gh auth login`).
 When the work is committed and the autotest passed:

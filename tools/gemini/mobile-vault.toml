@@ -1,4 +1,4 @@
-# Gemini CLI policy for the Mobile Vault repo: the same hard limits as .claude/settings.json.
+# Gemini CLI policy (only for the API-key Gemini CLI route; Antigravity uses agy-settings.json).
 # Workspace policies (.gemini/policies) are disabled in Gemini CLI, so this is a USER policy:
 # copy it to %USERPROFILE%\.gemini\policies\ (Windows) or ~/.gemini/policies/ and restart gemini.
 # Docs: https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/policy-engine.md

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Small Plane (app.plane.so) client for the Mobile Vault tickets (project MV).
 
-Used by Claude Code (cloud or local CLI), Gemini CLI and by hand to keep tickets in sync with the work.
+Used by Claude Code (cloud or local CLI), Gemini (Antigravity CLI) and by hand to keep tickets in sync with the work.
 Stdlib only, so it runs on Windows/macOS/Linux with any Python 3.8+.
 
   python tools/plane.py list [--state "In Progress"] [--limit 20]
@@ -14,7 +14,7 @@ Stdlib only, so it runs on Windows/macOS/Linux with any Python 3.8+.
   python tools/plane.py comment MV-12 "text"
   python tools/plane.py states | labels
 
-Who is working: --by "Gemini CLI" (before the command) or env MV_AGENT. create and claim then
+Who is working: --by "Gemini" (before the command) or env MV_AGENT. create and claim then
 leave a "Claimed by ..." comment, so the other agents can see who owns an In Progress ticket.
 
 API key, first match wins (never commit it, never paste it into a chat):
@@ -191,7 +191,7 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")  # Thai titles on a Windows console
     p = argparse.ArgumentParser(description="Mobile Vault Plane tickets (project MV)")
     p.add_argument("--by", default=os.environ.get("MV_AGENT", ""),
-                   help='who is doing the work, e.g. "Gemini CLI" (default: env MV_AGENT)')
+                   help='who is doing the work, e.g. "Gemini" (default: env MV_AGENT)')
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("list"); s.add_argument("--state"); s.add_argument("--limit", type=int, default=30)
     s.set_defaults(f=cmd_list)
