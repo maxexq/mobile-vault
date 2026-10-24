@@ -57,6 +57,10 @@ func _run() -> void:
 	await wait(2.5)
 	if "--only=touch" in OS.get_cmdline_user_args():
 		Tutorial.skip()
+		# the full run reaches the touch test in this landscape window; at the default 405x720 the UI scale is 1,
+		# so wide = normal = auto and the pinch checks have no zoom level to step to (MV-172)
+		get_window().size = Vector2i(1280, 640)
+		await wait(1.2)
 		await _touch_test()
 		_finish()
 		return
@@ -304,10 +308,15 @@ func _run() -> void:
 	# the explorer is back with the new assault rifle: put them on the gun so ranged / flying enemies die too
 	Game.set_squad(0, int(d.id))
 	Combat.rebuild_heroes()
-	Threat.force_raid(3)
+	# a fixed wave of plain Lv1 desert mobs (a walker + a flyer). A real raid here is Lv21 with random elites and
+	# mutants: this 2-hero squad wiped before its first kill in ~6% of rolls (17/300 seeds), MV-172
+	Combat.debug_spawn([{"t": 0.3, "mob": "scorpion", "lvl": 1, "no_mutate": true},
+		{"t": 0.8, "mob": "vulture", "lvl": 1, "no_mutate": true}], false)
+	var kills0 := int(Game.s.combat.kills)
 	for i in 600:
 		Combat.tick(0.1)
-	_check("combat kills enemies", int(Game.s.combat.kills) > 0)
+	var killed := int(Game.s.combat.kills) - kills0
+	_check("combat kills enemies (%d of 2)" % killed, killed == 2)
 	var r := Game.resolve_event("trader", 2, [])
 	_check("event resolve", r.ok)
 	_check("6 hero gear slots", Loot.HERO_SLOTS.size() == 6 and Loot.HERO_SLOTS.has("backpack"))
@@ -3273,6 +3282,18 @@ func _finger(idx: int, p: Vector2, down: bool) -> void:
 	await get_tree().process_frame
 
 
+## waits until a ScrollContainer's fling has stopped: the scroll offset unchanged for 5 frames in a row (max 5 s)
+func _scroll_settled(sc: ScrollContainer) -> void:
+	var still := 0
+	var last := Vector2i(sc.scroll_horizontal, sc.scroll_vertical)
+	var t0 := Time.get_ticks_msec()
+	while still < 5 and Time.get_ticks_msec() - t0 < 5000:
+		await get_tree().process_frame
+		var now := Vector2i(sc.scroll_horizontal, sc.scroll_vertical)
+		still = still + 1 if now == last else 0
+		last = now
+
+
 ## moves fingers idx[i] from a[i] to b[i] together over `steps` frames
 func _fingers_drag(idx: Array, a: Array, b: Array, steps: int = 10) -> void:
 	for s in steps:
@@ -3372,7 +3393,9 @@ func _touch_test() -> void:
 	await wait(0.5)
 	_check("touch: finger drag over a list scrolls it (%d px)" % sc.scroll_vertical, sc.scroll_vertical > 40)
 	_check("touch: the button under a scrolling finger does not fire", fired[0] == 0)
-	await wait(0.4)
+	# the fling keeps the list gliding for a time that depends on the frame rate (ScrollContainer measures the
+	# finger speed per frame): pick the button only once it stands still, or the tap lands next to it (MV-172)
+	await _scroll_settled(sc)
 	btn = builds.filter(func(b): return sr.grow(-4).has_point(b.get_global_rect().get_center()))[0]
 	var p1 := btn.get_global_rect().get_center()
 	await _finger(21, p1, true)
