@@ -388,6 +388,12 @@ When you add a CI workflow (autotest, web export), put its `name:` in the `workf
 
 ### Link preview (Open Graph / Twitter card)
 
+### Boot / loading screen
+
+The loading page is the Web preset's **custom HTML shell** (`html/custom_html_shell` = `res://tools/web_shell.html`, [docs](https://docs.godotengine.org/en/stable/tutorials/platform/web/customizing_html5_shell.html)): the rusted-steel Apocarlypse card with `web/logo.png` (a copy of `assets/ui/logo.png`, committed because Godot doesn't export it), a progress bar fed by `Engine.startGame({onProgress})`, a pixel driving scene (the Mobile Vault crossing the desert, walkers shot by the roof turret; tap to fire, kill counter) drawn on a 240×112 canvas from `web/boot/*.png` (made by `python3 tools/boot_art.py` from the atlas and the desert backdrop, committed; rerun after art regen), flavour lines on the status label, and one random gameplay tip every 6 s from `TIPS`. No patch notes on this page during the test phase (autotest checks). The scene stops when the game starts and honours `prefers-reduced-motion`. Godot fills `$GODOT_URL`, `$GODOT_CONFIG`, `$GODOT_HEAD_INCLUDE` (the share tags below) and `$GODOT_THREADS_ENABLED`. Edit the tips in `TIPS`; bump the `v4.x` line together with `BuildInfo.GAME_VERSION` (autotest checks it).
+
+The claude.ai playable artifact is built from the same export, so both show the same page: `python3 tools/artifact_html.py --out build/artifact` gzips `index.wasm`/`index.pck` to `engine.wasm`/`pack.wasm` (the artifact host caps files at 15 MB) and puts a fetch shim where the shell has `<!--BOOT_SHIM-->`. Publish `build/artifact/index.html` with the other files in that folder.
+
 Shared links show a title, a Thai/English description and a 1200×630 pixel-art card. The tags are in the Web preset's **`html/head_include`** (Project → Export → Web → HTML → Head Include; [docs](https://docs.godotengine.org/en/stable/classes/class_editorexportplatformweb.html#class-editorexportplatformweb-property-html-head-include)), so every export writes them into `index.html`. The favicon comes from `html/export_icon` (the project icon).
 
 - Image: `web/og-image.png`, made from the game art by `python3 tools/og_image.py` (rerun after regenerating art). Godot does not export it, so it stays committed in `web/`.

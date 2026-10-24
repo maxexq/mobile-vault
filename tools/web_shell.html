@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>$GODOT_PROJECT_NAME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Silkscreen&display=swap">
+$GODOT_HEAD_INCLUDE
+<style>
+/* Apocarlypse boot card: the Web preset's custom HTML shell (html/custom_html_shell), used by the
+   Vercel build and, through tools/artifact_html.py, by the claude.ai playable artifact.
+   One full-screen canvas; a rusted-steel card floats over it while the engine streams in. */
+:root {
+  --bg: #0a0a0c;
+  --panel: #141416;
+  --line: #b0702e;
+  --line-dim: #5c4e40;
+  --text: #d4ccb2;
+  --dim: #8e8670;
+  --gold: #e0b048;
+  --warn: #d4523c;
+  --font-pixel: "Silkscreen", "Courier New", monospace;
+  --font-body: "Chakra Petch", "Noto Sans Thai", "Leelawadee UI", "Thonburi", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#canvas {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  bottom: env(safe-area-inset-bottom, 0px);
+  left: env(safe-area-inset-left, 0px);
+  right: env(safe-area-inset-right, 0px);
+  width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  height: calc(100% - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  display: block;
+  touch-action: none;
+  outline: none;
+  image-rendering: pixelated;
+  background: var(--bg);
+}
+#boot {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: radial-gradient(120% 90% at 50% 100%, #3a1c14 0%, var(--bg) 70%);
+  overflow-y: auto;
+  z-index: 5;
+}
+.card {
+  margin: auto;  /* centred, but scrolls from the top when taller than the screen */
+  width: min(440px, 100%);
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 3px solid var(--line);
+  box-shadow: 4px 4px 0 rgba(0,0,0,.5);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+.brand { display: grid; justify-items: center; gap: 6px; }
+.logo { display: block; width: 384px; max-width: 100%; height: auto; aspect-ratio: 384 / 120; image-rendering: pixelated; }
+.sub { font: 400 11px/1.2 var(--font-pixel); color: var(--gold); letter-spacing: .14em; margin-top: 4px; }
+.bar { height: 18px; border: 2px solid var(--line-dim); background: #0c0c0e; padding: 2px; }
+.fill {
+  height: 100%;
+  width: 0%;
+  background: repeating-linear-gradient(90deg, var(--line) 0 10px, transparent 10px 12px);
+  transition: width .2s steps(4);
+}
+.row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#stage { font: 700 15px/1.4 var(--font-body); }
+#bytes { font: 400 11px/1.6 var(--font-pixel); color: var(--dim); font-variant-numeric: tabular-nums; }
+.scene-wrap { position: relative; border: 2px solid var(--line-dim); background: #0c0c0e; line-height: 0; }
+#scene { display: block; width: 100%; height: auto; aspect-ratio: 240 / 112; image-rendering: pixelated; cursor: crosshair; touch-action: manipulation; }
+.hud { position: absolute; left: 6px; right: 6px; top: 5px; display: flex; justify-content: space-between; pointer-events: none;
+  font: 400 10px/1 var(--font-pixel); color: var(--text); text-shadow: 1px 1px 0 #000; letter-spacing: .06em; }
+#kills { color: var(--gold); }
+.tip { margin: 0; min-height: 3em; color: var(--dim); font-size: 13px; line-height: 1.5; transition: opacity .3s; }
+.tip::before { content: "TIP > "; color: var(--line); font: 400 11px var(--font-pixel); }
+.tip.fade { opacity: 0; }
+#boot[hidden], #err[hidden] { display: none !important; }
+#err { color: var(--warn); font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+@media (prefers-reduced-motion: reduce) { .fill, .tip { transition: none; } }
+</style>
+</head>
+<body>
+
+<canvas id="canvas" tabindex="0">เบราว์เซอร์นี้ไม่รองรับ HTML5 canvas</canvas>
+<noscript>ต้องเปิด JavaScript เพื่อเล่นเกมนี้</noscript>
+
+<div id="boot" role="status" aria-live="polite">
+  <div class="card">
+    <div class="brand">
+      <img class="logo" src="logo.png" width="384" height="120" alt="$GODOT_PROJECT_NAME">
+      <div class="sub">v4.6 · GODOT 4.7.2</div>
+    </div>
+    <div class="scene-wrap">
+      <canvas id="scene" width="240" height="112" aria-label="รถ Mobile Vault วิ่งฝ่าทะเลทราย แตะเพื่อยิงซอมบี้"></canvas>
+      <div class="hud"><span>แตะเพื่อยิง</span><span id="kills">ZOMBIES 0</span></div>
+    </div>
+    <div class="row"><span id="stage">กำลังติดเครื่องยนต์รถบ้าน…</span><span id="bytes">0.0 MB</span></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <p class="tip" id="tip"></p>
+    <div id="err" hidden></div>
+  </div>
+</div>
+
+<script>
+// Boot scene: the Mobile Vault driving through the desert while the engine streams in (sprites in
+// boot/, made by tools/boot_art.py). Tap to fire the roof turret. Plus a random rotating tip and
+// flavour lines on the stage label. Stops when the game starts.
+(function () {
+  // Gameplay tips only. No patch notes here while they are rewritten during the test phase.
+  const TIPS = [
+    "ออกแบบมาสำหรับจอแนวตั้ง หมุนแนวนอนก็เล่นได้",
+    "แตะห้องเพื่อซูมเข้าไปจัดการ · ปัดซ้าย-ขวาเพื่อดูถนน",
+    "จีบสองนิ้วเข้า = มุมกว้าง ถ่างออก = มุมปกติ",
+    "ลากนิ้วบนรายการในเมนูเพื่อเลื่อนขึ้นลงได้ แตะบนปุ่มแล้วลากก็เลื่อน ปุ่มจะไม่ทำงาน",
+    "เริ่มเกมใหม่จะมีจ่ามาร์คสอนเล่นทีละขั้น ดูซ้ำได้ที่ Log",
+    "สร้างห้องต้องใช้เวลา ส่งช่างก่อสร้างไปช่วยจะเสร็จเร็วขึ้น",
+    "ห้องชนิดเดียวกัน เลเวลเท่ากัน อยู่ติดกันบนชั้นเดียวกัน ทุบผนังรวมเป็นห้องใหญ่ได้ (แตะห้อง > ขยายห้อง)",
+    "ห้องใหญ่ 2–3 ช่องรับคนทำงานได้ 4/6 คน และผลงานเพิ่ม +10% / +25%",
+    "สร้างดาดฟ้าพักทีมป้องกันที่เมนู MODS ตัวสำรองบนหลังคาจะกระโดดลงไปแทนคนที่ล้มระหว่างเวฟ",
+    "แตะห้องเครื่องที่หัวรถเพื่อเปลี่ยนเครื่อง เลือกโหมดขับ ดูความร้อน หรือสั่งซ่อม",
+    "เครื่องร้อนเกินจะจอดพักเอง ส่งช่าง 2 คนไปประจำห้องเครื่องช่วยระบายร้อน",
+    "ส่งคนจากทีมป้องกันไปสำรวจได้ ช่องป้องกันจะว่างให้เติมคนใหม่ทันที",
+    "ทีมสำรวจอาจวิทยุกลับมาว่าเจอจุดพิเศษ ถ้าไม่สั่งก่อนทีมกลับ ทีมจะเลือกทางปลอดภัยเอง",
+    "คนแปลกหน้าที่มาเคาะประตูอาจติดเชื้อหรือเป็นสายลับโจร ตรวจตา ฟัน มือ หรือซักประวัติก่อนรับขึ้นรถ",
+    "ยิ่งขับเร็วและเปิดไฟตอนกลางคืน ภัยคุกคามยิ่งขึ้นเร็ว พายุกับหมอกช่วยพรางตัว",
+    "เริ่มการเดินทางใหม่เลือกโหมด ความยาก และตัวแปรกฎได้ ยิ่งยากยิ่งได้แต้มวิจัยพันธุกรรมเพิ่ม",
+    "เกมเซฟในเครื่องทุก 15 วินาที และสำรองขึ้นคลาวด์เมื่อออนไลน์",
+    "ล็อกอินด้วย Gmail เพื่อเล่นต่อข้ามเครื่องได้ (หน้าแรก / ตั้งค่า > เซฟ)",
+    "ปุ่มเฟืองใต้แถบเสบียง: เสียง กล้อง เฟรมเรต และข้อมูลเวอร์ชัน",
+  ];
+  const STAGES = [
+    "กำลังติดเครื่องยนต์รถบ้าน…", "เติมดีเซลเต็มถัง…", "ขันน็อตเกราะรอบคัน…", "บรรจุกระสุนป้อมปืนหลังคา…",
+    "ปลุกจ่ามาร์ค…", "ตรวจกรองน้ำ…", "จูนวิทยุหาสัญญาณ…", "นับเสบียงในคลัง…",
+  ];
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // --- tips + stage lines
+  const tipEl = document.getElementById("tip");
+  const stageEl = document.getElementById("stage");
+  const order = TIPS.map((t, i) => [Math.random(), i]).sort((a, b) => a[0] - b[0]).map((p) => p[1]);
+  let tipAt = 0, stageAt = 0, loading = true;
+  function nextTip() {
+    tipEl.classList.add("fade");
+    setTimeout(function () {
+      tipEl.textContent = TIPS[order[tipAt++ % order.length]];
+      tipEl.classList.remove("fade");
+    }, reduced ? 0 : 300);
+  }
+  tipEl.textContent = TIPS[order[tipAt++]];
+  const tipTimer = setInterval(nextTip, 6000);
+  const stageTimer = setInterval(function () {
+    if (loading) stageEl.textContent = STAGES[++stageAt % STAGES.length];
+  }, 1700);
+
+  // --- scene
+  const cv = document.getElementById("scene");
+  const ctx = cv.getContext("2d");
+  const W = cv.width, H = cv.height;
+  const killsEl = document.getElementById("kills");
+  const img = {};
+  let pending = 0;
+  ["sky", "sun", "far", "mid", "near", "road", "bus", "walker"].forEach(function (n) {
+    const im = new Image();
+    pending++;
+    im.onload = im.onerror = function () { if (--pending === 0) start(); };
+    im.src = "boot/" + n + ".png";
+    img[n] = im;
+  });
+
+  const ROAD_Y = 88;          // top of the road strip
+  const LANE_Y = 101;         // where wheels touch
+  const BUS_X = 128;          // cab faces left: we drive right-to-left
+  const SPEED = { far: 3, mid: 9, near: 22, road: 48 };  // px/s, parallax
+  let t = 0, last = 0, raf = 0, running = true, kills = 0;
+  let zombies = [], shots = [], dust = [], splats = [];
+  let nextZombie = 1.2, autoFire = 0;
+
+  function ok(im) { return im && im.complete && im.naturalWidth > 0; }
+  function tiled(im, speed, y) {
+    if (!ok(im)) return;
+    const w = im.naturalWidth;
+    const x = Math.floor((t * speed) % w) - w;  // world slides right: the bus heads left
+    for (let ox = x; ox < W; ox += w) ctx.drawImage(im, ox, y);
+  }
+  function busTop() { return LANE_Y - 5 - (ok(img.bus) ? img.bus.naturalHeight : 75); }
+  function turret() { return { x: BUS_X + 30, y: busTop() + 3 }; }
+
+  function spawn() {
+    zombies.push({ x: -14, v: 6 + Math.random() * 10, f: Math.random() * 2, dead: 0 });
+  }
+  function fire(target) {
+    const g = turret();
+    shots.push({ x0: g.x, y0: g.y, x1: target.x + 6, y1: LANE_Y - 12, life: 0.12 });
+    target.dead = 0.001;
+    kills++;
+    killsEl.textContent = "ZOMBIES " + kills;
+  }
+  function nearest() {
+    let best = null;
+    for (const z of zombies) if (!z.dead && z.x > -12 && (!best || z.x > best.x)) best = z;
+    return best;
+  }
+  cv.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    const z = nearest();
+    if (z) fire(z);
+    else shots.push({ x0: turret().x, y0: turret().y, x1: 0, y1: turret().y - 6, life: 0.1 });
+    if (reduced) draw();
+  });
+
+  function wheel(cx, cy) {
+    ctx.fillStyle = "#111014";
+    ctx.fillRect(cx - 4, cy - 5, 9, 11); ctx.fillRect(cx - 5, cy - 4, 11, 9);
+    ctx.fillStyle = "#3a3a40";
+    ctx.fillRect(cx - 2, cy - 2, 5, 5);
+    ctx.fillStyle = "#8e8670";  // spinning hub mark
+    const a = Math.floor(t * 12) % 4;
+    const dx = [0, 1, 0, -1][a], dy = [-1, 0, 1, 0][a];
+    ctx.fillRect(cx + dx * 2, cy + dy * 2, 1, 1);
+    ctx.fillRect(cx, cy, 1, 1);
+  }
+
+  function step(dt) {
+    t += dt;
+    nextZombie -= dt;
+    if (nextZombie <= 0) { spawn(); nextZombie = 1.4 + Math.random() * 2.2; }
+    for (const z of zombies) {
+      if (z.dead) { z.dead += dt; z.x += SPEED.road * dt; continue; }
+      z.x += (SPEED.road - z.v) * dt;  // they shamble toward us, we drive at them
+      z.f += dt * 4;
+    }
+    // the turret covers the bus if nobody taps
+    autoFire -= dt;
+    const z = nearest();
+    if (z && z.x > BUS_X - 70 && autoFire <= 0) { fire(z); autoFire = 0.6; }
+    for (const z2 of zombies) if (z2.dead && z2.dead < 0.02) splats.push({ x: z2.x + 6, life: 0.5 });
+    zombies = zombies.filter(function (q) { return q.x < W + 20 && q.dead < 0.6; });
+    shots = shots.filter(function (s) { return (s.life -= dt) > 0; });
+    splats = splats.filter(function (s) { s.x += SPEED.road * dt; return (s.life -= dt) > 0; });
+    if (Math.random() < dt * 14) dust.push({ x: BUS_X + 86, y: LANE_Y - 2, vx: 20 + Math.random() * 25, vy: -6 - Math.random() * 6, life: 0.7 });
+    dust = dust.filter(function (d) { d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 14 * dt; return (d.life -= dt) > 0; });
+  }
+
+  function draw() {
+    ctx.imageSmoothingEnabled = false;
+    if (ok(img.sky)) ctx.drawImage(img.sky, 0, 0, 1, img.sky.naturalHeight, 0, 0, W, H);
+    else { ctx.fillStyle = "#2e1414"; ctx.fillRect(0, 0, W, H); }
+    if (ok(img.sun)) ctx.drawImage(img.sun, 30, 6);
+    tiled(img.far, SPEED.far, 8);
+    tiled(img.mid, SPEED.mid, -26);
+    tiled(img.near, SPEED.near, -18);
+    tiled(img.road, SPEED.road, ROAD_Y);
+    // dust behind the rear wheels
+    ctx.fillStyle = "rgba(176,140,90,.7)";
+    for (const d of dust) ctx.fillRect(Math.round(d.x), Math.round(d.y), 2, 2);
+    // the Mobile Vault, bouncing on the washboard road
+    const bob = Math.floor(t * 6) % 2;
+    if (ok(img.bus)) ctx.drawImage(img.bus, BUS_X, busTop() - bob);
+    wheel(BUS_X + 16, LANE_Y - 5);
+    wheel(BUS_X + 71, LANE_Y - 5);
+    // zombies
+    for (const z of zombies) {
+      if (!ok(img.walker)) break;
+      const fr = Math.floor(z.f) % 2;
+      if (z.dead) {
+        ctx.save();
+        ctx.translate(Math.round(z.x + 6), LANE_Y - 2);
+        ctx.rotate(-Math.min(1.4, z.dead * 6));  // knocked back, away from the bus
+        ctx.drawImage(img.walker, 0, 0, 12, 20, -6, -18, 12, 20);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.translate(Math.round(z.x) + 12, 0);
+        ctx.scale(-1, 1);  // sprite faces left; turn it toward the bus
+        ctx.drawImage(img.walker, fr * 12, 0, 12, 20, 0, LANE_Y - 21, 12, 20);
+        ctx.restore();
+      }
+    }
+    ctx.fillStyle = "#7a1a14";
+    for (const s of splats) ctx.fillRect(Math.round(s.x) - 2, LANE_Y - 2, 5, 2);
+    // tracers + muzzle flash
+    for (const s of shots) {
+      ctx.strokeStyle = "#ffd36a";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(s.x0 + 0.5, s.y0 + 0.5); ctx.lineTo(s.x1 + 0.5, s.y1 + 0.5); ctx.stroke();
+      ctx.fillStyle = "#fff2b0";
+      ctx.fillRect(s.x0 - 1, s.y0 - 1, 3, 3);
+    }
+  }
+
+  function frame(now) {
+    if (!running) return;
+    const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+    last = now;
+    step(dt);
+    draw();
+    raf = requestAnimationFrame(frame);
+  }
+  function start() {
+    if (reduced) { for (let i = 0; i < 40; i++) step(0.05); draw(); return; }
+    raf = requestAnimationFrame(frame);
+  }
+
+  window.bootScene = {
+    done: function () { loading = false; },
+    stop: function () {
+      running = false; loading = false;
+      cancelAnimationFrame(raf);
+      clearInterval(tipTimer); clearInterval(stageTimer);
+    },
+  };
+})();
+</script>
+<!--BOOT_SHIM-->
+<script src="$GODOT_URL"></script>
+<script>
+(function () {
+  const GODOT_CONFIG = $GODOT_CONFIG;
+  const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+  const boot = document.getElementById("boot");
+  const stage = document.getElementById("stage");
+  const fill = document.getElementById("fill");
+  const bytes = document.getElementById("bytes");
+  const err = document.getElementById("err");
+  const MB = 1048576;
+
+  function fail(e) {
+    console.error(e);
+    if (window.bootScene) window.bootScene.done();
+    stage.textContent = "เปิดเกมไม่สำเร็จ";
+    err.textContent = (e && e.message) ? e.message : String(e);
+    err.hidden = false;
+  }
+
+  // The artifact shim (tools/artifact_html.py) streams gzipped files and reports its own progress.
+  const shimProgress = typeof window.bootShimProgress === "function";
+
+  if (typeof Engine === "undefined") { fail(new Error("โหลดสคริปต์เอนจิน ($GODOT_URL) ไม่สำเร็จ")); return; }
+  const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
+  if (missing.length) { fail(new Error("เบราว์เซอร์นี้ขาดฟีเจอร์ที่ Godot ต้องใช้:\n" + missing.join("\n"))); return; }
+
+  const engine = new Engine(GODOT_CONFIG);
+  engine.startGame({
+    onProgress: function (current, total) {
+      if (!shimProgress && total > 0) {
+        fill.style.width = Math.min(100, current / total * 100).toFixed(1) + "%";
+        bytes.textContent = (current / MB).toFixed(1) + " / " + (total / MB).toFixed(1) + " MB";
+      }
+      if (total > 0 && current >= total) {
+        if (window.bootScene) window.bootScene.done();
+        stage.textContent = "กำลังสตาร์ทเกม…";
+      }
+    },
+  }).then(function () {
+    if (window.bootScene) window.bootScene.stop();
+    boot.hidden = true;
+    document.getElementById("canvas").focus();
+  }, fail);
+})();
+</script>
+</body>
+</html>
