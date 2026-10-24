@@ -12,7 +12,7 @@ var _log_cat := ""
 var _save_box: TextEdit
 var _crew_anim := "idle"       # MV-170 roster preview: animation every preview sprite plays
 
-const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["log", "LOG/เซฟ"]]
+const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["icons", "Icons"], ["log", "LOG/เซฟ"]]
 const SRC_TH := {"code": "ค่าในโค้ด", "default": "ค่าเริ่มต้น", "build": "บิลด์", "remote": "รีโมต", "mode": "โหมดเกม", "dev": "ผู้ทดสอบ"}
 
 
@@ -53,6 +53,7 @@ func refresh() -> void:
 		"world": _tab_world()
 		"feat": _tab_features()
 		"sys": _tab_sys()
+		"icons": _tab_icons()
 		"log": _tab_log()
 
 
@@ -91,6 +92,39 @@ func _note(text: String) -> void:
 
 
 # ------------------------------------------------------------------ tabs
+func _tab_icons() -> void:
+	_head("ICON ATLAS", "16x16 / 1x / 2x / 3x")
+	var sizes := []
+	for scale in [1, 2, 3]:
+		var picked: int = scale
+		sizes.append(_b("%dx (%d px)" % [picked, picked * 16], func(): Dev.icon_preview(picked), "yellow" if Dev.icon_scale == picked else "gray"))
+	_row(sizes)
+	var names: Array[String] = []
+	for key in Atlas.regions:
+		if str(key).begins_with("ic_"):
+			names.append(str(key).trim_prefix("ic_"))
+	names.sort()
+	_note("%d icons / nearest filtering / integer scale" % names.size())
+	var grid := GridContainer.new()
+	grid.name = "IconGrid"
+	grid.columns = 3
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 8)
+	_list.add_child(grid)
+	for key in names:
+		var cell := VBoxContainer.new()
+		cell.name = "ic_" + key
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(cell)
+		var icon := UIKit.icon_rect(key, Dev.icon_scale * 16)
+		icon.name = "Icon"
+		cell.add_child(icon)
+		var label := UIKit.label(key, 9, UIKit.C_DIM)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cell.add_child(label)
+
+
 func _tab_main() -> void:
 	var cheated: bool = Game.s.stats.get("cheated", false)
 	_note("ทุกการกดถูกบันทึกลง LOG · เซฟนี้%s" % (" ถูกทำเครื่องหมายว่า 'ใช้ god mode แล้ว'" if cheated else "ยังไม่เคยใช้ god mode"))

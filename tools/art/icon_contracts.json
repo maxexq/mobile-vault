@@ -1,0 +1,1793 @@
+{
+  "provenance": "MV-275: 12 user-reviewed authored native drafts; 80 Codex-authored family refinements. No paid or external image generation.",
+  "icons": {
+    "ic_power": {
+      "ticket": "MV-276",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "yellow3"
+      ],
+      "detail": "Stepped electric-bolt shading and a clean zigzag.",
+      "original_rgba_sha256": "32d0c4e2cf7e94ccc516ef9abe8549703f58e707dacfa727254bcf659d3b5476",
+      "approved_rgba_sha256": "4d633a7b9aed3869dd945f3c58bf1887d3e1b9e92cba8cf2305908a116128870"
+    },
+    "ic_water": {
+      "ticket": "MV-277",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4"
+      ],
+      "detail": "Fuller droplet with four flat steel-blue tones.",
+      "original_rgba_sha256": "f91626ddff4c924b0fe7df97ed36fa2fe7c02667ed73d3b99e6246d268350d72",
+      "approved_rgba_sha256": "5fb9b54ec9383cad0953ab088b626159b9e10457861d28ea2246b8b1294411bc"
+    },
+    "ic_food": {
+      "ticket": "MV-278",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream1",
+        "cream2",
+        "red1",
+        "red2",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Pull-tab can, rolled metal rims and worn red label.",
+      "original_rgba_sha256": "e6d3266bb847608c5e98c98d8913471c966dd2e5867150fed43f4d940ec1358f",
+      "approved_rgba_sha256": "4bb7a4443e08f9ffc019824cdd92413befc67230e216407faa686bedcd81ddf6"
+    },
+    "ic_scrap": {
+      "ticket": "MV-279",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "ol1",
+        "orange1",
+        "orange2",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Bent plate, exposed edge and a small rust patch.",
+      "original_rgba_sha256": "3a6a409446cbe4b59c88ebf5f41e228761ea45fd08816277e709bdca40b016da",
+      "approved_rgba_sha256": "82e35ad4dc1e558a70b98bb4af59faf6cea9b47b9af22c13eac378c33f47846f"
+    },
+    "ic_fuel": {
+      "ticket": "MV-280",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red0",
+        "red1",
+        "red2",
+        "orange1",
+        "orange2",
+        "gray3",
+        "gray4",
+        "gray5"
+      ],
+      "detail": "Readable handle, filler cap and embossed cross-brace.",
+      "original_rgba_sha256": "51f0807b447a53e0232056b919dc721fa564fac93cfa120c742064b68bc90158",
+      "approved_rgba_sha256": "7d16b26be8d0b24bd1349af7d3fd63ce74637a399480b189315301f1a03c3606"
+    },
+    "ic_medkit": {
+      "ticket": "MV-281",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood1",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "red2"
+      ],
+      "detail": "Cream field case, open handle and clear red cross.",
+      "original_rgba_sha256": "d5ab351285f1e842b6d78a246f70e0109d36aef5046c1b14a47295e32a49e9ee",
+      "approved_rgba_sha256": "73b29d1838a2d434791198a7daee287750946c624b21515655118f5c92cf8e0d"
+    },
+    "ic_rifle": {
+      "ticket": "MV-282",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood1",
+        "wood2",
+        "wood3",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5"
+      ],
+      "detail": "Separate stock, receiver, muzzle, grip and magazine.",
+      "original_rgba_sha256": "71422ae1c99cc860b6a9fa790fee7e7193a96453411aef474bcb1b1cbde375d5",
+      "approved_rgba_sha256": "37361c9214cfc4f63c4b19110c866cddc037c7e0033b9e4fd7a2bbb9b0e84fef"
+    },
+    "ic_armor": {
+      "ticket": "MV-283",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray5"
+      ],
+      "detail": "Olive straps, plate panel, pouches and center seam.",
+      "original_rgba_sha256": "02befe3caa163761da597837f5725029a1bde047ef23493ed9c3a99a1d2ef25d",
+      "approved_rgba_sha256": "1c60286090aba32ca16707487c48a2df5a96336d2d9feac4a03914d5561f9548"
+    },
+    "ic_wrench": {
+      "ticket": "MV-284",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Open jaws, stepped steel edge and worn grip end.",
+      "original_rgba_sha256": "9ba707100745e1031103dff9ebb8f4a91526e9252593f7707b2219b71051c54d",
+      "approved_rgba_sha256": "94c1047b2349912d1c0c68b62bae38d4ad466cb8a87905ad6bd54a1a32b76770"
+    },
+    "ic_gear": {
+      "ticket": "MV-285",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "orange2",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5"
+      ],
+      "detail": "Separate teeth, dark center hole and controlled rust.",
+      "original_rgba_sha256": "b8438e13327ce14a3449d4b25d3d71b76e4e211a36256735a7793da3b68cb0da",
+      "approved_rgba_sha256": "5114441ecd55da5cb537198ab1f0a6801eac67c00f59ae0ae5a8c427178e6e6a"
+    },
+    "ic_map": {
+      "ticket": "MV-286",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "red2",
+        "green2"
+      ],
+      "detail": "Folded paper silhouette, route and small destination mark.",
+      "original_rgba_sha256": "33c548dc96a56abd826a6ff9d3887a369b896b76f4afa388680ecb2badb636b1",
+      "approved_rgba_sha256": "561ae7a80faeee63c486b9ad8c906d8591636abf5019763b1092b491ff41c3d3"
+    },
+    "ic_engine": {
+      "ticket": "MV-287",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red1",
+        "orange1",
+        "orange2",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Two cylinder blocks, ribbed casing and front pulley.",
+      "original_rgba_sha256": "44c37fa1897ca23e5686e02d267effbd0c7c75a19bd67451107314c5cbf5dd9e",
+      "approved_rgba_sha256": "4fff30b6681845a9e3c0f8ac5268d733d38a4f548aef750cb70d7273cabd411e"
+    },
+    "ic_acid": {
+      "ticket": "MV-288",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "gray2",
+        "gray3",
+        "gray5",
+        "toxic0",
+        "toxic1",
+        "toxic2",
+        "toxic3"
+      ],
+      "detail": "Keep a low toxic cloud with three separated falling acid streaks; step the cloud lobes and use tiny bright droplet tips, with no glow haze.",
+      "original_rgba_sha256": "d21c93141961452997eb1adeacebf19a609c1f54ddfdb99790c0d83d298bec63"
+    },
+    "ic_agi": {
+      "ticket": "MV-289",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "teal0",
+        "teal1",
+        "teal2",
+        "teal3",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the existing twin angular speed/zigzag shape and its direction; strengthen the main stroke and separate the two turns with a clear dark gap.",
+      "original_rgba_sha256": "f5ed3b43dbd68051caf8c71b1b50565c87beda6e0f16e6c8908318f1b9e5fcb3"
+    },
+    "ic_ammo": {
+      "ticket": "MV-290",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange3",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Three upright cartridges with pointed copper tips, brass casings and one-pixel base rims; separate each cartridge with a dark gutter.",
+      "original_rgba_sha256": "c5ea7ca1ed0431cb5d576e483f54f304044a8a367ad176da55a74ff9f5e5e883"
+    },
+    "ic_ash": {
+      "ticket": "MV-291",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the low dark ash cloud and five falling flecks; use stepped cloud lobes and subdued lighter flecks, distinguishable from rain and snow.",
+      "original_rgba_sha256": "873dfcf847ce4850f74284386b3a025920c8a3e240f05ff486ae2f4a2fa23c74"
+    },
+    "ic_backpack": {
+      "ticket": "MV-292",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "skin1",
+        "red0",
+        "red1",
+        "red2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Red pack with a handle, main flap, single front pocket and two short shoulder straps; keep its compact load-bearing silhouette.",
+      "original_rgba_sha256": "eae8318b665eaca205318f02bf6419c3eed30278e388a98ba617d3f61f865022"
+    },
+    "ic_blueprint": {
+      "ticket": "MV-293",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Rolled blue plan sheet with a darker rolled edge, sparse grid and one simple outlined mechanical plan; no lettering or tiny illegible drafting marks.",
+      "original_rgba_sha256": "36ab9ba60c4e0aa0bbd8bb20ad0a1b5746dca306aeaf1941fc4ce92fe816e133"
+    },
+    "ic_book": {
+      "ticket": "MV-294",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood1",
+        "wood2",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "red2",
+        "red3",
+        "orange0",
+        "orange2",
+        "sand1"
+      ],
+      "detail": "Rust-bound book with a clear spine, cream page block, two restrained page-line clusters and red bookmark projecting above the pages.",
+      "original_rgba_sha256": "f766cabdfa2e727df8b36c43403a0b232f4850775249d3ed89370720fe7242c7"
+    },
+    "ic_boots": {
+      "ticket": "MV-295",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood0",
+        "wood1",
+        "wood2",
+        "wood3",
+        "wood4",
+        "gray2",
+        "gray5",
+        "gray6",
+        "sand2"
+      ],
+      "detail": "One sturdy tan boot with a taller ankle, folded cuff, toe cap and dark flat sole; preserve the existing boot orientation.",
+      "original_rgba_sha256": "d94722268fdb69296cf83e88eda957da31858dd4aaffd9167fc249cdc03bba2e"
+    },
+    "ic_can": {
+      "ticket": "MV-296",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red2",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Small ration tin with a rolled top rim, dark side seam and worn red band; keep the narrower silhouette distinct from the main food-resource can.",
+      "original_rgba_sha256": "b854ad893bbf1aaca28e72f9145dc98e623557b2447ca0f527a90f98b049d9b9"
+    },
+    "ic_charm": {
+      "ticket": "MV-297",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Round olive talisman suspended from a short chain; show an outer rim, recessed center and simple stamped motif without text.",
+      "original_rgba_sha256": "132bdb8bcc08ce5cd184bf9129a45cd0700c0a0ffd56f0949a5ba51695b711a2"
+    },
+    "ic_chat": {
+      "ticket": "MV-298",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the three-dot speech symbol and lower tail; clarify the tail and dot spacing, with only a restrained two-tone stepped edge.",
+      "original_rgba_sha256": "7d0796cbf6434e59afe4f4d05f00ac77b3659a89fca2a4ede724625f55b3db79"
+    },
+    "ic_chest": {
+      "ticket": "MV-299",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood0",
+        "wood1",
+        "wood2",
+        "wood3",
+        "wood4",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Wood salvage chest with separate lid/body, two metal bands and a central brass latch; show at most two broad plank seams.",
+      "original_rgba_sha256": "ce7bd0d39340e055b95eddf8fc0dafc6ce2de6def8f89fe0f4ce44ea94c96cc3"
+    },
+    "ic_chip": {
+      "ticket": "MV-300",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "ol1",
+        "red3",
+        "yellow2",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Dark integrated circuit on an olive board with separated contact pins and one small status diode; preserve its square gadget silhouette.",
+      "original_rgba_sha256": "6a092247682cf4fa8f521c25de64ecac191442eaf7c05af665e6dd27c124a642"
+    },
+    "ic_close": {
+      "ticket": "MV-301",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red0",
+        "red1",
+        "red2",
+        "red3",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep a balanced diagonal X with an open center and equal arms; use a subtle inner red step, with no rust, extra corners or ornament that weakens recognition.",
+      "original_rgba_sha256": "9e433e62561c6c162532edb1a7111aa5a055cbb458b27f791cddcbf4cb968f7b"
+    },
+    "ic_cog": {
+      "ticket": "MV-302",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange0",
+        "orange1",
+        "orange2",
+        "orange3",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Rust-orange cog with separated teeth, an open dark center and one chipped rim cluster; retain its color/shape distinction from the steel gear icon.",
+      "original_rgba_sha256": "3516bf557096dcb7d4d29b844caa7ce941cd7ed10344b787c4437c3b4e590e62"
+    },
+    "ic_crown": {
+      "ticket": "MV-303",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red3",
+        "orange1",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep three crown points, a dark rim band and the tiny central red inset; use muted brass tones and clear gaps between points.",
+      "original_rgba_sha256": "84c7291e5b3018d63bdc6c83614d28b3156fad2c3139bb3d48cc779974763bf1"
+    },
+    "ic_dodge": {
+      "ticket": "MV-304",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "teal0",
+        "teal1",
+        "teal2",
+        "teal3",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep three parallel dodge streaks rising along the existing direction; separate their ends and use a restrained light-to-dark ordering instead of adding objects.",
+      "original_rgba_sha256": "2e41e107fb13e227d5c3bb783e0b6c8f7aa13d6403152c3adf68869d097bc85a"
+    },
+    "ic_dog": {
+      "ticket": "MV-305",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood0",
+        "wood1",
+        "wood2",
+        "wood3",
+        "wood4",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the small tan dog silhouette, pointed muzzle, single dark eye, two separated leg groups and raised tail; add only a scruffy chest cluster.",
+      "original_rgba_sha256": "1ee19c31d7c16a32645ea5dcd50cb43d882df3e085b5e76a431197454f155561"
+    },
+    "ic_explore": {
+      "ticket": "MV-306",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange0",
+        "orange1",
+        "orange2",
+        "orange3",
+        "yellow2",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the upright navigation needle/arrow with its hollow lower notch; split its two faces into restrained rust tones and a small center inset.",
+      "original_rgba_sha256": "6e7c39e7520025c1fde629584bcf7d0418c8c981742397a44dff6f4915e569a6"
+    },
+    "ic_eye": {
+      "ticket": "MV-307",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "teal2",
+        "gray2",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the horizontal eye silhouette, teal iris and dark pupil; separate upper/lower lid edges and retain just one subdued highlight pixel.",
+      "original_rgba_sha256": "7f38268a083b5bdeb7da8cb362a38cb94397c81f2a38d27a4f896856f674e07a"
+    },
+    "ic_fist": {
+      "ticket": "MV-308",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "skin0",
+        "skin1",
+        "skin2",
+        "skin3",
+        "gray1",
+        "gray3"
+      ],
+      "detail": "Keep the closed tan fist and short wrist; define three knuckle divisions, thumb fold and one palm shadow without realistic fingernails.",
+      "original_rgba_sha256": "907341e29032ed7c0ccdd7867f7eec01971a247c7fff23cfc7cee8cda0e57053"
+    },
+    "ic_flee": {
+      "ticket": "MV-309",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the LEFT-pointing escape arrow, original direction and broad silhouette; add one inner material step without an extra arrow or decoration.",
+      "original_rgba_sha256": "0cfe52a5c322a1052b99c95d8d03cc806bf577da6ba3535c3350c64e2ca7a35a"
+    },
+    "ic_fog": {
+      "ticket": "MV-310",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "gray2",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep three horizontal fog bars with separated gaps; stagger two ends by one pixel and use nearby subdued gray/cream steps, never blur.",
+      "original_rgba_sha256": "bec131950e21e1966546942e0cf31acd69cd972f5a27c6f9913eeb641cde5336"
+    },
+    "ic_framepack": {
+      "ticket": "MV-311",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "skin1",
+        "orange0",
+        "orange1",
+        "orange2",
+        "orange3",
+        "green2",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Rust pack on an external steel frame, visible frame rails and a small olive bedroll; keep rail gaps readable at 1x.",
+      "original_rgba_sha256": "6ba677e456706cb9dc89c8ba16ad3405f244099fe896d33d0f11013f60dca978"
+    },
+    "ic_gasmask": {
+      "ticket": "MV-312",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Two round muted olive eye lenses, dark center bridge and projecting filter canister; keep a clear head-mask outline and no extra helmet.",
+      "original_rgba_sha256": "b7734f60bd1cb46a1fb9973cc04bc6e540b3552af1b39d71f679c98f35eb7616"
+    },
+    "ic_hammer": {
+      "ticket": "MV-313",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood3",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Diagonal wood handle and steel hammer head; separate the striking face from the claw/back edge, with a one-pixel worn grip stripe.",
+      "original_rgba_sha256": "50e9d9c9693c4bf7b1039674591c25fbecfc3bae7e9211c708f444154bb5a2c7"
+    },
+    "ic_happy": {
+      "ticket": "MV-314",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the round warm face, two one-pixel eyes and unmistakable upward smile; add one modest edge shadow, never facial realism or extra expression marks.",
+      "original_rgba_sha256": "43f60ebba69d3222b244537d667b251ec50f78a9b03a5628ac3d0acc4b0ca3a6"
+    },
+    "ic_hardhat": {
+      "ticket": "MV-315",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Hazard-yellow safety hardhat with a raised center rib, side brim and dark underside; retain its distinction from the military helmet.",
+      "original_rgba_sha256": "6e495864fbc0ce2ca8fd4a79c517241d61f1615d37eb5801aa6e0bbc4642897c"
+    },
+    "ic_harpoon": {
+      "ticket": "MV-316",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange0",
+        "orange1",
+        "orange2",
+        "orange3",
+        "gray2",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Low rust-red launcher mount with a visible forward shaft and barbed spear tip; preserve muzzle direction and empty space beside the barb.",
+      "original_rgba_sha256": "977068d34ae1179d8bc6ec9a68ce17e648972eee959b463b34658ebd9d65211d"
+    },
+    "ic_heal": {
+      "ticket": "MV-317",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the healing plus symbol with balanced arms and clean corners; restrained inner olive shading only, no case or medical-bag silhouette.",
+      "original_rgba_sha256": "3b7998e80a6b3393ae44c7688734291a60cb90cd850e7849ba20cbff70359481"
+    },
+    "ic_helmet": {
+      "ticket": "MV-318",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Olive military steel helmet with a rounded stepped dome, short brim and dark underside; add one modest chipped edge, no new insignia.",
+      "original_rgba_sha256": "d0e1bad1aa3e8400a4fffa8865dbbf714302d10fe8ac1a6f58252bd2debd3792"
+    },
+    "ic_hikingpack": {
+      "ticket": "MV-319",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow2",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "sky2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Steel-blue hiking pack with a small tan/yellow bedroll, front pocket and dark straps; keep the bedroll distinct from the main pack.",
+      "original_rgba_sha256": "248d294863453ff41b017e6481ae16b082ef852ff0953829b1ba1ac8b4db0244"
+    },
+    "ic_hull": {
+      "ticket": "MV-320",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the armored shield outline and pointed lower end; show one overlapping steel plate, two tiny rivets and a darker protected underside.",
+      "original_rgba_sha256": "ce015e4fa2a3d7e0a1234b48097f0293a51e22b1f4fd6f272d476ec9166c5cd3"
+    },
+    "ic_int": {
+      "ticket": "MV-321",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "purple0",
+        "purple1",
+        "pink0",
+        "pink1",
+        "pink2",
+        "pink3"
+      ],
+      "detail": "Keep the rounded muted pink brain, center cleft and two large fold clusters; avoid tiny wrinkles or detailed anatomy.",
+      "original_rgba_sha256": "19e6f0c081fd41ba12846797389dcb13ec5e2bf2e7ec30d14525e185db93db00"
+    },
+    "ic_jacket": {
+      "ticket": "MV-322",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange0",
+        "orange1",
+        "orange2",
+        "orange3",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Rust leather vest/jacket with clear collar, shoulder cutouts, center seam and one pocket; separate it from the plated olive armor icon.",
+      "original_rgba_sha256": "a3cab172ac4efc5c311d469f777af3731d3c87adfd37792fdf1a314b0e4c6019"
+    },
+    "ic_jetboots": {
+      "ticket": "MV-323",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red2",
+        "orange1",
+        "yellow2",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Steel boot with a dark sole and small ember exhaust nozzle beneath the heel; the only bright accent is the tiny actual exhaust flame.",
+      "original_rgba_sha256": "a8367f7996c9a9d5bfdced1492c973e2ba4c82bf13a057bf1bdfbbce53e7278a"
+    },
+    "ic_laser": {
+      "ticket": "MV-324",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "teal2",
+        "teal3",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Pale steel laser pistol/rifle with a straight teal energy channel, grip and separate muzzle; no glow halo, beams or oversized battery.",
+      "original_rgba_sha256": "28764856e6b1975a73194df3ad83b695e7c4bfedb555549b16fa3677b81be263"
+    },
+    "ic_lock": {
+      "ticket": "MV-325",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Muted brass padlock with a separated steel U-shaped shackle, dark keyhole and bottom edge; keep shackle interior transparent and legible.",
+      "original_rgba_sha256": "094bfa4286e3580554b7e8a649e0f1ba7f2232142b7d7279345c199ea8a1f8b8"
+    },
+    "ic_mail": {
+      "ticket": "MV-326",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Steel mail vest with collar opening, dark armholes and two sparse linked-metal clusters; no checker noise covering the entire torso.",
+      "original_rgba_sha256": "4a13d068ce24d5c23f5cb766e07170fe9b9e471706b6719f20f7dcbb889b9aae"
+    },
+    "ic_meat": {
+      "ticket": "MV-327",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red0",
+        "red1",
+        "red2",
+        "red3",
+        "gray2",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Dark red meat cut with a small cream bone end and one broad fat/muscle cluster; preserve the familiar food silhouette without realistic gore.",
+      "original_rgba_sha256": "eb90317988b9ba8a7453bc2300931d8e9bb666775f9c0d133d06bcf8c0c383bb"
+    },
+    "ic_moon": {
+      "ticket": "MV-328",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the crescent with a clean open interior and two flat cream steps; no stars, face or extra glow.",
+      "original_rgba_sha256": "28b10664621a1e1dc579e9d03b6183bbf7c5162bdaadf7821e0d1fa9ae3b6965"
+    },
+    "ic_pause": {
+      "ticket": "MV-329",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "gray2",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep two equal upright bars with a clear center gap; restrained edge shading only, no wear marks or added shapes.",
+      "original_rgba_sha256": "b595a64a009d174d1091c91ae67a6bbe636ca35d270c7c1a2b31fb17913de870"
+    },
+    "ic_people": {
+      "ticket": "MV-330",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red2",
+        "red3",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep two offset head-and-shoulder silhouettes and their existing blue/red grouping; separate the heads and body overlap, no invented named crew.",
+      "original_rgba_sha256": "95dccc50f86b3d696fef74637949abaf01a0b9aadd127ee82d7fea216a98caba"
+    },
+    "ic_pill": {
+      "ticket": "MV-331",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "red1",
+        "red2",
+        "sky3",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the existing medicine BOTTLE identity rather than replacing it with a capsule; show cap ridges, cream label, small red medicine mark and dark bottle edge.",
+      "original_rgba_sha256": "8dd3f1b42482c8a28ca4713fbe39465efe872c2178cfd9083a8706bc463019f8"
+    },
+    "ic_pistol": {
+      "ticket": "MV-332",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood2",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Compact pistol with separate slide, muzzle, trigger/grip junction and worn wood grip; preserve its facing direction and distinction from the long rifle.",
+      "original_rgba_sha256": "86bd6e3990c80387b9b0716051c7c149ec3df19549b491610aa86f6e12a80282"
+    },
+    "ic_plates": {
+      "ticket": "MV-333",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Two offset riveted armor plates with clean overlap, three small rivets and one steel edge highlight; no shield outline.",
+      "original_rgba_sha256": "0f141204dd8ff798da918154cde6a8bd4bffcdbd04ad86b80ba354acaa048bcc"
+    },
+    "ic_play": {
+      "ticket": "MV-334",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the RIGHT-pointing play triangle with balanced stepped diagonal edges; one darker inner face only, no extra arrows or objects.",
+      "original_rgba_sha256": "c306043811001c77ff2a56a825df0f9fc6a6241bfa8377a84413cde5e27d3e68"
+    },
+    "ic_plow": {
+      "ticket": "MV-335",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the angled hazard-painted plow blade with reinforced lower edge and two large ribs; restrained chipped paint, no fine scratch field.",
+      "original_rgba_sha256": "439fc80112c66a39b610003d7abb5e8ff7c1bc8bab16fa4ff918b321219f0a6d"
+    },
+    "ic_powerframe": {
+      "ticket": "MV-336",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Muted brass/steel powered torso frame with clear collar opening, two shoulder brackets and one center coupling; no emissive trim.",
+      "original_rgba_sha256": "8e31b9d1154f60528101ae65f255772cf93f18613aec3cb689fbf27abeee050d"
+    },
+    "ic_rad": {
+      "ticket": "MV-337",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the recognizable three-lobed radiation trefoil and central dot; preserve equal negative-space wedges, with a restrained worn rim.",
+      "original_rgba_sha256": "4b6b421b009c4b0b4ec738c0e6a07f63ddbeb42dcbd15772b9e23b8454831982"
+    },
+    "ic_radaway": {
+      "ticket": "MV-338",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the tall anti-radiation medicine bottle, metal cap and dark radiation-label motif; separate it from the cream pill bottle and thin stimpack.",
+      "original_rgba_sha256": "e38f83bf2c70c28e213e8211bccdddca5216fc8cb35204f230576be20326390c"
+    },
+    "ic_rain": {
+      "ticket": "MV-339",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Stepped gray cloud with three separated diagonal blue rain streaks; darker cloud underside and no haze, mist or droplet clutter.",
+      "original_rgba_sha256": "a3d84aa24a4aa68288e54d43a4e792ec1e48726cd7b1070a57e4f0b773fd4e57"
+    },
+    "ic_riot": {
+      "ticket": "MV-340",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Dark steel-blue riot vest with hard shoulder panels, collar and broad chest plate; distinguish it from leather jacket, mail and powered armor.",
+      "original_rgba_sha256": "c27faa4aaff9b0d8bf8af315ca1dc815503f669b671db07d4f3e662807374440"
+    },
+    "ic_ruck": {
+      "ticket": "MV-341",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Olive military rucksack with a top bedroll, two side straps and a broad flap pocket; keep its boxy load silhouette and muted color identity.",
+      "original_rgba_sha256": "e4096e1828939611e8b5b7e87f85434c72e74e1dd5a245534102c785e49124a0"
+    },
+    "ic_sad": {
+      "ticket": "MV-342",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange0",
+        "orange1",
+        "orange2",
+        "orange3",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the round muted warm face, one-pixel eyes and unmistakable downward mouth; modest edge shadow, no detailed tears or facial realism.",
+      "original_rgba_sha256": "a9e4625dfa44f900417885f00c24a88c6d8bd5f6683546dd2b4c97e9bc1f1337"
+    },
+    "ic_sand": {
+      "ticket": "MV-343",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "yellow3",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep three sand-wind streaks with separated ends; add a few attached coarse sand pixels and two muted sand/brass shades, no cloud blob.",
+      "original_rgba_sha256": "50e745e1218420c5abf6677eba5e1168533c564f1a706eff6f0a34c156c21b8a"
+    },
+    "ic_saw": {
+      "ticket": "MV-344",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the circular saw blade with clearly separated coarse teeth, dark axle hole and one worn steel face; no dense scratches.",
+      "original_rgba_sha256": "64989ffa496f57f830033902ce6de66ed1c190afa886cd71d4f6fddccc5c1318"
+    },
+    "ic_seed": {
+      "ticket": "MV-345",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood3",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Brown seed/soil base with a short upright green shoot and two distinct leaves; make leaf/body attachment readable without flowers or extra seedlings.",
+      "original_rgba_sha256": "2300a748ed66e809f93def6c5e6613739e25db1d220884b95fc8094ac3dfc8c3"
+    },
+    "ic_shield": {
+      "ticket": "MV-346",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the steel-blue shield silhouette, center ridge and dark lower edge; two small rivets at most, distinct from hull and loose plates.",
+      "original_rgba_sha256": "c570533e9978b8117a92707f09c7e96393fd9c770593250e0e39d26c63aa6d03"
+    },
+    "ic_shotgun": {
+      "ticket": "MV-347",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood2",
+        "wood3",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Long shotgun with a thicker barrel, wood stock and short pump fore-end; keep it distinguishable from rifle and SMG at 1x.",
+      "original_rgba_sha256": "482ca029fdfa28cf2a051ee355b068ecde4b9cc1f6d35265e660f401aed42f37"
+    },
+    "ic_signal": {
+      "ticket": "MV-348",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "red3",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the short aerial mast and two separated radio arcs; strengthen their gaps, with a tiny physical red status lamp at the mast tip.",
+      "original_rgba_sha256": "0b26f74b446760bed9eb5f16659952f0462dedbb5aa12328c89b23f05ab4f781"
+    },
+    "ic_skull": {
+      "ticket": "MV-349",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "gray2",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the cream skull, two dark eye sockets, small nasal gap and short jaw/teeth blocks; no realistic cracks or added horns.",
+      "original_rgba_sha256": "7e68224351a2c3233b2b42b4dfa77a41c6ff9bbca59efa97b6b4793bc2ee86ba"
+    },
+    "ic_smg": {
+      "ticket": "MV-350",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "ol1",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Compact dark submachine gun with short barrel, straight magazine and small grip; keep receiver/stock silhouette shorter than the rifle.",
+      "original_rgba_sha256": "4cee5c379ce42cb1283e075436d408af961cd6e0db3b30daf00f97d30324ddad"
+    },
+    "ic_snow": {
+      "ticket": "MV-351",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "gray2",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the six-spoke snowflake with an open center and symmetric coarse branches; pale muted snow/cream steps, no sparkle particles.",
+      "original_rgba_sha256": "eba46ebe0f4b1d678da50b6755c10ff602e55329d242a52e20d1d15bedc155db"
+    },
+    "ic_spikes": {
+      "ticket": "MV-352",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep three forward-pointing triangular spikes attached to a single back rail; separate their gaps and give each one steel face highlight.",
+      "original_rgba_sha256": "fea489f1f28caf390a6544146b4437ddb5283b376a924b863d0dc3ab625cf642"
+    },
+    "ic_stimpack": {
+      "ticket": "MV-353",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "red1",
+        "red2",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the diagonal syringe, separate needle and plunger, cream barrel and red medicine band; no bottle or neon liquid glow.",
+      "original_rgba_sha256": "95a615a3eb1901272f2f2ec7a59db6c19e2c57d089922300ba9c91589b3ff921"
+    },
+    "ic_storm": {
+      "ticket": "MV-354",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Stepped dark cloud with a clearly separated amber lightning bolt; keep the bolt readable below the cloud and no glow haze.",
+      "original_rgba_sha256": "a6fb2e7e54223fa643e67e05709e7387bf90cbd80189bec3f3b6c3d301f9ca17"
+    },
+    "ic_str": {
+      "ticket": "MV-355",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "skin0",
+        "skin1",
+        "skin2",
+        "skin3",
+        "gray1",
+        "gray3"
+      ],
+      "detail": "Keep the flexed tan arm/biceps symbol with elbow, fist and one muscle shadow; no extra hands, veins or detailed anatomy.",
+      "original_rgba_sha256": "998b38c1a662f6d8d3aa9e398ec0cf40f345bef04a8ac02f101398ecc4c6325f"
+    },
+    "ic_sun": {
+      "ticket": "MV-356",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the round sun and separated coarse rays; use a small physical warm-light center and subdued surrounding rays, no glow haze.",
+      "original_rgba_sha256": "5561313ee9cdaf401a7baa6416f840efdef43ea4fee85ce256c351ccc124f442"
+    },
+    "ic_supply": {
+      "ticket": "MV-357",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "red1",
+        "red2",
+        "blue2",
+        "gray3",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the paired ration tin and blue water bottle; separate their silhouettes, show the bottle cap and one tin rim, no third item.",
+      "original_rgba_sha256": "9de24b0b045cd5d63a6df611068b3b4b1e215914d8f6b9806dd09d24c3173d16"
+    },
+    "ic_sword": {
+      "ticket": "MV-358",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "yellow2",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the diagonal straight blade, short brass crossguard and wrapped grip; clear steel blade edge and no glow or fantasy ornament.",
+      "original_rgba_sha256": "fdd526d04ce2401afe67e92273e079cfab1f4b8a95e730c15b5df5422700d5cb"
+    },
+    "ic_tacboots": {
+      "ticket": "MV-359",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Dark tactical boot with olive cuff/strap, reinforced toe and segmented dark sole; keep the slim combat-boot silhouette distinct from heavy workboots.",
+      "original_rgba_sha256": "317bde685438211b8991ebd9795b611b4b90ec1c53d487620fc6738969e6bc64"
+    },
+    "ic_tesla": {
+      "ticket": "MV-360",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "teal2",
+        "teal3",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Small coil turret with visible winding, two dark supports and a compact teal electrode cap; emissive detail only on the powered cap, no haze.",
+      "original_rgba_sha256": "6254ab2e8cb5f8c53d23ed53928886788318e1716dc3ee8060809472da9cb20f"
+    },
+    "ic_thermo": {
+      "ticket": "MV-361",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "cream0",
+        "cream1",
+        "cream2",
+        "cream3",
+        "red1",
+        "red2",
+        "red4",
+        "gray3",
+        "gray6"
+      ],
+      "detail": "Keep the upright thermometer with a narrow stem, red liquid column and round red bulb; add two coarse tick notches without numerals.",
+      "original_rgba_sha256": "d26e055f81978e49ffba6b0acca50ac4d7143fa9a2e2d4ce859766f4b831eb6f"
+    },
+    "ic_turret": {
+      "ticket": "MV-362",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "ol1",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray2",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the low olive gun turret with dark mount, separate receiver and short right-facing barrel; preserve its orientation and equipment identity.",
+      "original_rgba_sha256": "946bda263cde8cad84bf9a0be2daba3648f7f2359ae2f0dd52349ce205b3c58c"
+    },
+    "ic_up": {
+      "ticket": "MV-363",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "green0",
+        "green1",
+        "green2",
+        "green3",
+        "green4",
+        "gray3",
+        "gray5"
+      ],
+      "detail": "Keep the UP-pointing upgrade arrow with broad head and centered stem; one restrained bevel/shadow step, no extra chevrons.",
+      "original_rgba_sha256": "84b8900b49b68314e31d5ef08056e44952fc3aebdb1560668a4cc69cf86db8a1"
+    },
+    "ic_visor": {
+      "ticket": "MV-364",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "orange1",
+        "teal2",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the steel protective helmet with a horizontal teal visor; separate its dome, visor slot and dark brim, no face detail.",
+      "original_rgba_sha256": "9b379b62fe7dcbc3ec8f7808eb21940e47e5e06e6ed1e931633c34bca6fd5205"
+    },
+    "ic_workboots": {
+      "ticket": "MV-365",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood0",
+        "wood1",
+        "wood2",
+        "wood3",
+        "wood4",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Heavy brown work boot with reinforced toe, thicker sole and one ankle seam; retain its existing orientation and rugged silhouette.",
+      "original_rgba_sha256": "1ff81a79d45da77733ad57837a012b9bc78ec3b0c3680ee9adbdc83bd2817b96"
+    },
+    "ic_xp": {
+      "ticket": "MV-366",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "gray2",
+        "gray5"
+      ],
+      "detail": "Keep the five-point experience star with balanced points and open exterior notches; two nearby brass steps, no numbers or extra sparkles.",
+      "original_rgba_sha256": "7861b33503d60ab2b5ee9b02e22141ffdcbf7d899dc147f2c98854577565ea62"
+    },
+    "ic_zoom": {
+      "ticket": "MV-367",
+      "size": [
+        16,
+        16
+      ],
+      "palette": [
+        "ol0",
+        "wood2",
+        "orange1",
+        "blue2",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6"
+      ],
+      "detail": "Keep the magnifying glass with a round rim, dark-blue lens and short wood handle; leave the handle/rim junction readable and use one restrained lens highlight.",
+      "original_rgba_sha256": "5217bf01143940b07e3570c6b96dc825659c18ffae86d4e5b01448517f88c8c7"
+    }
+  }
+}
