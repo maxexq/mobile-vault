@@ -1,0 +1,22 @@
+{
+ "style": "dark post-apocalyptic, gritty grime and rust, soot black outlines, muted colours with warm lamp light, 16-bit SNES era pixel art, crisp pixels",
+ "negative": "blurry, smooth gradients, anti-aliasing, bright cheerful colours, text, watermark, frame",
+ "defaults": {"outline": "single color black outline", "shading": "medium shading", "detail": "medium detail", "view": "side"},
+ "prefixes": {
+  "room_": "flat side-view cross-section of one room inside an armoured survival truck: {subject} room, metal walls, floor plate at the bottom, orthographic",
+  "en_": "side-view enemy sprite facing west, mutated wasteland {subject}, full body",
+  "boss_": "side-view boss monster sprite facing west, huge mutated {subject}, full body, menacing",
+  "lm_": "side-view ruined landmark building on the roadside: abandoned {subject}, broken windows, orthographic",
+  "eng_": "side-view truck engine, {subject} engine, pipes and bolts, orthographic",
+  "turret_": "side-view roof-mounted {subject} turret on a truck, facing east",
+  "mod_": "side-view armoured truck part: {subject}",
+  "ic_": "game icon of {subject}, centered, readable at 16 pixels",
+  "pet_": "side-view pet sprite: scruffy wasteland {subject}, facing east",
+  "veh_": "side-view armoured survival {subject} vehicle, orthographic, facing east"
+ },
+ "sprites": {
+  "room_medical": "flat side-view cross-section of a field hospital room inside an armoured survival truck: one bed with stained sheets, IV drip stand, medicine cabinet with red cross, flickering ceiling lamp, metal walls, orthographic",
+  "room_kitchen": "flat side-view cross-section of a scrap kitchen inside an armoured survival truck: rusty stove with a pot, canned food shelves, hanging pans, metal walls, orthographic",
+  "room_hydroponics": "flat side-view cross-section of a hydroponics room inside an armoured survival truck: green plants in trays under grow lamps, water pipes, metal walls, orthographic"
+ }
+}

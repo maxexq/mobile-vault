@@ -308,7 +308,19 @@ def quantize(img, alpha_cut=96, keep_alpha=False):
 atlas_items = {}
 
 
+OVERRIDES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pixellab", "overrides")
+
+
 def add(name, img, q=True):
+    # a sprite redrawn with tools/pixellab.py and accepted replaces the drawn one (same size, so the
+    # atlas layout and every hardcoded coordinate stay valid); MV_NO_OVERRIDES=1 builds the drawn set
+    ov = os.path.join(OVERRIDES, name + ".png")
+    if os.path.exists(ov) and not os.environ.get("MV_NO_OVERRIDES"):
+        o = Image.open(ov).convert("RGBA")
+        if o.size == img.size:
+            img = o
+        else:
+            print(f"pixellab override {name}.png is {o.size}, sprite is {img.size}: ignored")
     atlas_items[name] = quantize(img) if q else img
 
 

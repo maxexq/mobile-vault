@@ -12,3 +12,7 @@ __pycache__/
 
 # Plane API key for tools/plane.py (local CLI)
 .plane-api-key
+
+# PixelLab (tools/pixellab.py): token and generated candidates stay local; accepted overrides are committed
+.pixellab-api-key
+tools/art/pixellab/candidates/
