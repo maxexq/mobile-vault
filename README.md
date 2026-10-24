@@ -32,7 +32,7 @@ Controls (touch or mouse) — designed for **portrait 9:16** phones, landscape a
 - **Tap the blurred area / "ปิด"** → zoom back out.
 - **Swipe left/right** → look along the highway, as far as the end of the trailers and the fight behind them (springs back after 3 s). The road follows the finger at every zoom.
 - **Portrait phones (MV-148):** the AUTO camera zooms the vehicle in to the largest whole-number scale at which the main body still fits the screen width (and the vehicle its height), so it fills the screen instead of sitting small under the sky; trailers are a swipe away and boss fights still pull back to the wide view. Switch `portrait_fit`, tune `view.fit_cap` (max ×2 the UI pixel scale) / `view.fit_margin` (4 art px).
-- **Pinch** (two fingers) → closing = wide view, spreading = normal view, one step per gesture.
+- **Pinch** (two fingers) / **mouse wheel** / trackpad → one step farther or closer through the camera levels that look different right now (`Main.zoom_ladder`): กว้าง → ปกติ → อัตโนมัติ, where a level shared by two modes is taken by อัตโนมัติ. So spreading the fingers always gets back to auto (on a portrait phone: the vehicle fills the screen), and one step never moves the wrong way.
 - **Drag a finger over any list** (map, build, squad…) → it scrolls, also when the finger lands on a button; a button only fires on a tap.
 - **Tap the weather chip / solar panel on the roof** → solar system window.
 - Bottom bar: **Build / Squad / Map / Crew / Loot / Log**, above it the travel strip (**park / drive**, speed, hull).

@@ -2453,6 +2453,21 @@ func _portrait_fit_test() -> void:
 	_check("view: portrait AUTO is not the wide convoy view (S %d, world %d, trailers %d)" % [main.pixel_scale, main.world_scale, trailers],
 		main.world_scale >= main.pixel_scale and is_equal_approx(main.world_scale, main.target_ws()))
 	_check("view: the main body fits the screen width", Vehicle.MAIN_W * main.world_scale <= win.x)
+	# pinch / wheel walk the distinct zoom levels and can always get back to AUTO (fill the screen)
+	if is_equal_approx(main._ws_for("auto"), main._ws_for("normal")):
+		_check("view: zoom ladder here = wide, auto (%s)" % str(main.zoom_ladder()), main.zoom_ladder() == ["wide", "auto"])
+	main.set_zoom_mode("normal")
+	main.zoom_step(1)
+	_check("view: zooming in from normal returns to auto", main.zoom_mode == "auto")
+	main.zoom_step(-1)
+	main.zoom_step(-1)
+	_check("view: zooming out stops at the widest level", main.zoom_mode == main.zoom_ladder()[0] and main.world_scale < main.pixel_scale)
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel.pressed = true
+	main._unhandled_input(wheel)
+	_check("view: mouse wheel up from wide -> auto (%s)" % main.zoom_mode, main.zoom_mode == "auto" and main.world_scale >= main.pixel_scale)
+	await wait(0.4)
 	if trailers > 0:
 		_check("view: a swipe reaches the end of the convoy (pan %.0f)" % main.pan_right, main.pan_right > main.PAN_LIMIT)
 	# smaller UI pixels (S - 1): now the world zooms in past S, through the rounded-up viewport
@@ -2513,7 +2528,10 @@ func _logs_test() -> void:
 	_check("logs: the whole queue drains in batches", await _drain_logs())
 	var first := func(e): return str(e.msg) == "logs test first" and str(e.sid) == Trace.session and str(e.version) == BuildInfo.GAME_VERSION
 	_check("logs: entries arrive with session, category and version", fake.logs.get(uid, []).any(first))
-	_check("logs: entries from before this session stay local", fake.logs[uid].all(func(e): return float(e.t) > Trace._t0))
+	var older: Array = fake.logs[uid].filter(func(e): return float(e.t) <= Trace._t0)
+	for e in older.slice(0, 5):
+		print("[autotest] sent but older than this session (t0 %.3f): %.3f %s %s" % [Trace._t0, float(e.t), str(e.cat), str(e.msg)])
+	_check("logs: entries from before this session stay local", older.is_empty())
 	_check("logs: queue empty after sending", Telemetry.pending().is_empty())
 	var calls: int = fake.log_calls
 	_check("logs: nothing new = no request", await Telemetry.flush() and fake.log_calls == calls)
@@ -3188,13 +3206,13 @@ func _touch_test() -> void:
 	await _fingers_drag([10, 11], [c - Vector2(60, 0), c + Vector2(60, 0)], [c - Vector2(8, 0), c + Vector2(8, 0)], 16)
 	await _finger(10, c - Vector2(8, 0), false)
 	await _finger(11, c + Vector2(8, 0), false)
-	_check("touch: pinch in -> wide view, one toast (%d)" % toasts.size(), main.zoom_mode == "wide" and toasts.size() == 1)
+	_check("touch: pinch in -> wide view, one toast (%d)" % toasts.size(), main.world_scale < main.pixel_scale and toasts.size() == 1)
 	await _finger(12, c - Vector2(10, 0), true)
 	await _finger(13, c + Vector2(10, 0), true)
 	await _fingers_drag([12, 13], [c - Vector2(10, 0), c + Vector2(10, 0)], [c - Vector2(80, 0), c + Vector2(80, 0)], 16)
 	await _finger(12, c - Vector2(80, 0), false)
 	await _finger(13, c + Vector2(80, 0), false)
-	_check("touch: pinch out -> normal view", main.zoom_mode == "normal" and toasts.size() == 2)
+	_check("touch: pinch out -> closer view again (%s)" % main.zoom_mode, main.world_scale >= main.pixel_scale and toasts.size() == 2)
 	_check("touch: no fingers left after the pinches", main._touches.is_empty())
 	Game.toast.disconnect(on_toast)
 	main.set_zoom_mode(zoom_was)
