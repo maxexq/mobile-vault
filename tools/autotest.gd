@@ -58,6 +58,11 @@ func _run() -> void:
 	await wait(0.3)
 	main.hud.title_screen._go(true)
 	await wait(2.5)
+	if "--only=background" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _industrial_background_test()
+		_finish()
+		return
 	if "--only=icons" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _icon_art_test()
@@ -755,6 +760,7 @@ func _run() -> void:
 	await _crew_roster_test()
 	await _announce_test()
 	await _scene_art_test()
+	await _industrial_background_test()
 	_thai_terms_test()
 	_finish()
 
@@ -4072,6 +4078,84 @@ func _scene_art_test() -> void:
 	Game.s["at_site"] = site0
 	Game.s.km = km0
 	Game.travel_changed.emit()
+	await wait(0.3)
+
+
+func _industrial_background_test() -> void:
+	var old_window := get_window().size
+	var old_tod: float = Game.s.tod
+	var old_biome: int = int(Game.s.biome)
+	var old_weather: String = Game.s.weather
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "industrial_parallax", true)
+	get_window().size = Vector2i(1280, 640)
+	Game.s.biome = 0
+	Game.force_weather("clear")
+	main.background._on_biome_changed(0, true)
+	await wait(0.8)
+	var live: IndustrialBackdrop = main.background.groups.industrial.modern
+	_check("background: new art only on the industrial biome", live.is_visible_in_tree() and not main.background.groups.desert.has("modern"))
+	var long_layers := true
+	var periods := {}
+	for key in live.layers:
+		var px: Parallax2D = live.layers[key].node
+		long_layers = long_layers and px.repeat_size.x >= 1920 and px.repeat_size.x == (px.get_child(0) as Sprite2D).texture.get_width()
+		periods[int(px.repeat_size.x)] = true
+	_check("background: actual texture widths drive long independent repeats", long_layers and periods.size() >= 4)
+	var child_count := live.get_child_count()
+	for entry in [[0.25, "sunrise", true, 1], [0.5, "daylight", true, 2], [0.75, "sunset", false, 3], [0.0, "moonlight", false, 0]]:
+		Game.s.tod = float(entry[0])
+		live.update_clock()
+		_check("background: simulation clock selects %s sky and celestial body" % entry[1], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]))
+		_check("background: %s celestial position stays on the pixel grid" % entry[1], live.celestial_position == live.celestial_position.round())
+		await wait(0.5)
+		await shot("industrial_" + str(entry[1]))
+	Game.s.tod = 0.35
+	live.update_clock()
+	var morning := live.celestial_position
+	Game.s.tod = 0.60
+	live.update_clock()
+	_check("background: sun moves after an in-game clock jump", morning.distance_to(live.celestial_position) > 20)
+	var phase0 := live.phase
+	await wait(0.6)
+	_check("background: smoke/dust animation advances without spawning nodes", live.phase > phase0 and live.get_child_count() == child_count)
+	live.preview_offset(99999.0)
+	var snapped := true
+	for key in live.layers:
+		var px: Parallax2D = live.layers[key].node
+		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
+	_check("background: large travel offsets wrap on whole pixels", snapped)
+	Features.set_override("features", "industrial_parallax", false)
+	_check("background: feature off restores the old industrial background", not live.visible and main.background.groups.industrial.legacy[0].visible)
+	Features.set_override("features", "industrial_parallax", true)
+	main.background._on_biome_changed(1, true)
+	phase0 = live.phase
+	await wait(0.3)
+	_check("background: hidden industrial biome stops ambience updates", live.phase == phase0)
+	main.background._on_biome_changed(0, true)
+	Game.s.tod = 0.0
+	get_window().size = Vector2i(405, 720)
+	await wait(0.8)
+	await shot("industrial_portrait_moonlight")
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "world"
+	god.refresh()
+	await wait(0.2)
+	var preview_buttons := {}
+	for row in god._list.get_children():
+		for control in row.get_children():
+			if control is Button:
+				preview_buttons[control.text] = control
+	_check("background: GOD world tab provides all four clock previews", preview_buttons.has("Sunrise") and preview_buttons.has("Daylight") and preview_buttons.has("Sunset") and preview_buttons.has("Moonlight") and preview_buttons.has("Legacy background"))
+	god.close()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s.tod = old_tod
+	Game.s.biome = old_biome
+	Game.force_weather(old_weather)
+	main.background._on_biome_changed(old_biome, true)
+	get_window().size = old_window
 	await wait(0.3)
 
 

@@ -1,0 +1,55 @@
+{
+  "native": true,
+  "sky_height": 900,
+  "smokestacks": [
+    [
+      440,
+      96
+    ],
+    [
+      1704,
+      126
+    ],
+    [
+      1732,
+      116
+    ]
+  ],
+  "lamps": [
+    [
+      282,
+      202
+    ],
+    [
+      784,
+      194
+    ],
+    [
+      1504,
+      204
+    ]
+  ],
+  "source": "user-approved wide industrial daylight draft; palette/grid-normalized imagegen input",
+  "layers": {
+    "far": [
+      1920,
+      300
+    ],
+    "mid": [
+      1920,
+      230
+    ],
+    "near": [
+      2112,
+      124
+    ],
+    "road": [
+      2304,
+      64
+    ],
+    "clouds": [
+      1984,
+      220
+    ]
+  }
+}

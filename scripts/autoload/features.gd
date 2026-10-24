@@ -34,6 +34,7 @@ const TIMEOUT_SEC := 10.0
 
 ## every switch the game knows; the remote file cannot invent new ones
 const FEATURES := {
+	"industrial_parallax": "Industrial map: wide scenery, dynamic sky, sun/moon and pixel ambience",
 	"road_events": "อีเว้นต์สุ่มบนถนน",
 	"raids": "ศัตรูบุกรถ (บอสด่านตรวจยังขวางทางเสมอ)",
 	"encounters": "จุดพิเศษระหว่างสำรวจ",
@@ -62,6 +63,10 @@ const FEATURES := {
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
+	"background.fps": [2.0, 12.0, "Industrial ambience frames per second"],
+	"background.smoke": [0.0, 1.0, "Industrial smoke intensity"],
+	"background.particles": [0.0, 48.0, "Industrial dust particle limit per strip"],
+	"background.lights": [0.0, 1.0, "Industrial amber lamps"],
 	"events.gap_min": [20.0, 1800.0, "อีเว้นต์ถนน: เว้นขั้นต่ำ (วิ)"],
 	"events.gap_max": [20.0, 3600.0, "อีเว้นต์ถนน: เว้นสูงสุด (วิ)"],
 	"events.decide_scale": [0.25, 4.0, "อีเว้นต์ถนน: เวลาตัดสินใจ (เท่า)"],

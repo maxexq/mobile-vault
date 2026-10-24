@@ -1,6 +1,7 @@
 {
   "tz_hours": 7,
   "features": {
+    "industrial_parallax": true,
     "road_events": true,
     "raids": true,
     "encounters": true,

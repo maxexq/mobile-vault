@@ -355,6 +355,9 @@ func _tab_fight() -> void:
 
 
 func _tab_world() -> void:
+	_head("INDUSTRIAL SKY", "Wide parallax / game-time lighting")
+	_row([_b("Sunrise", func(): Dev.background_preview(0.25)), _b("Daylight", func(): Dev.background_preview(0.5)), _b("Sunset", func(): Dev.background_preview(0.75)), _b("Moonlight", func(): Dev.background_preview(0.0))])
+	_row([_b("New background ON", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("Legacy background", func(): Dev.feature_set("industrial_parallax", false), "gray")])
 	var bb := []
 	for i in Data.BIOMES.size():
 		var bi: int = i
