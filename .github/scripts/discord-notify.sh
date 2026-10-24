@@ -119,7 +119,7 @@ esac
 payload=$(jq -n \
   --arg title "$(short "$title" 250)" --arg url "$url" --arg desc "$desc" \
   --argjson color "$color" --argjson fields "$fields" --arg repo "$REPO" \
-  '{username: "Mobile Vault CI",
+  '{
     allowed_mentions: {parse: []},
     embeds: [{title: $title, color: $color, footer: {text: $repo}, fields: $fields}
       + (if $url  != "" then {url: $url} else {} end)
