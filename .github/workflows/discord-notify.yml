@@ -15,9 +15,10 @@ on:
   status:
   # Kept for providers that create GitHub deployments instead.
   deployment_status:
-  # CI workflows to report. None exist yet: put each new workflow's `name:` here.
+  # CI workflows to report: put each new workflow's `name:` here. Scheduled runs are reported
+  # only when they fail (Error spike runs every 15 min).
   workflow_run:
-    workflows: [Autotest, Web export, Release]
+    workflows: [Autotest, Web export, Release, Error spike]
     types: [completed]
   # Actions tab > Discord notify > Run workflow: sends a test message.
   workflow_dispatch:

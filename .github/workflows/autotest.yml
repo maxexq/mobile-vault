@@ -38,6 +38,10 @@ jobs:
       - name: Version check
         run: python3 tools/release.py check
 
+      # Error spike alerts (MV-171): script with saved answers + the SQL on the runner's PostgreSQL
+      - name: Error spike alert tests
+        run: bash tools/test_error_spike.sh
+
       - name: Cache Godot
         id: godot-cache
         uses: actions/cache@v4

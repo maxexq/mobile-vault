@@ -1,0 +1,66 @@
+# Error spike alerts from the player logs in Supabase (MV-171). Every 15 minutes asks
+# public.log_alert_check() (supabase/migrations/0005_log_alerts.sql) and posts to Discord when errors jump
+# or a never-seen error shows up. Logic + all settings: .github/scripts/error-spike.sh
+# Setup (repo Settings > Secrets and variables > Actions):
+#   secret   SUPABASE_SERVICE_KEY        Supabase > Project Settings > API Keys: secret key (or legacy service_role)
+#   variable SUPABASE_URL                https://<ref>.supabase.co
+#   secret   DISCORD_ALERTS_WEBHOOK_URL  webhook of the #alerts channel; unset = posts to DISCORD_WEBHOOK_URL (dev feed)
+#   variables ERROR_SPIKE_*              optional thresholds (README "Player logs")
+# Discord notify reports this workflow only when it fails (scheduled successes are muted there).
+name: Error spike
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"   # every 15 min, off the :00 rush (GitHub may run it a few minutes late)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check = real check now · test = post a sample alert to see where it lands"
+        type: choice
+        options: [check, test]
+        default: check
+      include_test:
+        description: "Count GOD \"ส่ง error ทดสอบ\" errors too"
+        type: boolean
+        default: false
+      dry_run:
+        description: "Print the Discord message in the log only (nothing sent or recorded)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: error-spike
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+      - name: Check player errors
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          DISCORD_ALERTS_WEBHOOK_URL: ${{ secrets.DISCORD_ALERTS_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ERROR_SPIKE_WINDOW_MIN: ${{ vars.ERROR_SPIKE_WINDOW_MIN }}
+          ERROR_SPIKE_MIN_ERRORS: ${{ vars.ERROR_SPIKE_MIN_ERRORS }}
+          ERROR_SPIKE_MIN_PLAYERS: ${{ vars.ERROR_SPIKE_MIN_PLAYERS }}
+          ERROR_SPIKE_RATIO: ${{ vars.ERROR_SPIKE_RATIO }}
+          ERROR_SPIKE_BASELINE_HOURS: ${{ vars.ERROR_SPIKE_BASELINE_HOURS }}
+          ERROR_SPIKE_COOLDOWN_MIN: ${{ vars.ERROR_SPIKE_COOLDOWN_MIN }}
+          ERROR_SPIKE_NEW_DAYS: ${{ vars.ERROR_SPIKE_NEW_DAYS }}
+          ERROR_SPIKE_KINDS: ${{ vars.ERROR_SPIKE_KINDS }}
+          ERROR_SPIKE_NEW_ALERTS: ${{ vars.ERROR_SPIKE_NEW_ALERTS }}
+          ERROR_SPIKE_MENTION: ${{ vars.ERROR_SPIKE_MENTION }}
+          MODE: ${{ inputs.mode || 'check' }}
+          INCLUDE_TEST: ${{ inputs.include_test && 'true' || 'false' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: bash .github/scripts/error-spike.sh

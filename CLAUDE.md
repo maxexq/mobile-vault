@@ -24,6 +24,8 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
 - Never commit secrets: `cloud_config.json`, `.plane-api-key`, `ai/.env` are git-ignored.
 - PR, review, CI and Vercel deploy events post to Discord (`.github/workflows/discord-notify.yml`,
   secret `DISCORD_WEBHOOK_URL`). A new CI workflow must be added to its `workflow_run.workflows` list.
+  Player error spikes go to a separate alerts channel (`.github/workflows/error-spike.yml`, secret
+  `DISCORD_ALERTS_WEBHOOK_URL`, falls back to the dev feed). Never put `SUPABASE_SERVICE_KEY` in game code.
 
 ## Definition of done for every feature
 

@@ -1,0 +1,46 @@
+{
+  "new": [
+    {
+      "n": 18,
+      "fp": "Out of bounds get index '#' (base size #) (rooms.gd:# room)",
+      "msg": "Out of bounds get index '3' (base size 3) (rooms.gd:212 room)",
+      "first_t": "2026-10-24T13:05:02+00:00",
+      "players": 2,
+      "game_version": "4.7.0-alpha.1"
+    },
+    {
+      "n": 8,
+      "fp": "Invalid access to property or key 'hp' on a base object of type 'Nil'. (combat.gd:# _hit)",
+      "msg": "Invalid access to property or key 'hp' on a base object of type 'Nil'. (combat.gd:9 _hit)",
+      "first_t": "2026-10-24T13:07:02+00:00",
+      "players": 2,
+      "game_version": "4.7.0-alpha.1"
+    }
+  ],
+  "top": [
+    {
+      "n": 18,
+      "fp": "Out of bounds get index '#' (base size #) (rooms.gd:# room)",
+      "msg": "Out of bounds get index '3' (base size 3) (rooms.gd:212 room)",
+      "players": 2
+    },
+    {
+      "n": 8,
+      "fp": "Invalid access to property or key 'hp' on a base object of type 'Nil'. (combat.gd:# _hit)",
+      "msg": "Invalid access to property or key 'hp' on a base object of type 'Nil'. (combat.gd:9 _hit)",
+      "players": 2
+    }
+  ],
+  "ratio": null,
+  "spike": true,
+  "errors": 26,
+  "players": 2,
+  "versions": {
+    "4.7.0-alpha.1": 26
+  },
+  "checked_at": "2026-10-24T13:31:02+00:00",
+  "window_min": 60,
+  "baseline_hours": 24,
+  "last_spike_alert": null,
+  "baseline_per_window": 0.0
+}
