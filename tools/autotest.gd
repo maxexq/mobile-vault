@@ -95,6 +95,11 @@ func _run() -> void:
 		await _tips_test()
 		_finish()
 		return
+	if "--only=scene_art" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _scene_art_test()
+		_finish()
+		return
 	if "--only=qte" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _qte_test()
@@ -749,6 +754,7 @@ func _run() -> void:
 	await _icon_art_test()
 	await _crew_roster_test()
 	await _announce_test()
+	await _scene_art_test()
 	_thai_terms_test()
 	_finish()
 
@@ -3982,3 +3988,97 @@ func _announce_test() -> void:
 	Features.set_override("tune", "announce.speed", null)
 	Announce.seen.clear()
 	await get_tree().process_frame
+
+
+## MV-189: the 49 approved V2 scene images (tools/art/v2, built by tools/art/v2_native.py) keep the art contract
+## in the game itself: event/encounter art 160x80 and interiors 256x100, opaque; interiors repeat without a seam;
+## the 13 landmark sprites keep a 100 px width, binary alpha, ground contact and something solid at the door x=30
+func _scene_art_test() -> void:
+	var ev_ok := true
+	var ev_n := 0
+	for f in DirAccess.get_files_at("res://assets/events"):
+		if not f.ends_with(".png"):
+			continue
+		var im: Image = (load("res://assets/events/" + f) as Texture2D).get_image()
+		ev_n += 1
+		if im.get_size() != Vector2i(160, 80) or im.detect_alpha() != Image.ALPHA_NONE:
+			ev_ok = false
+			print("scene art: bad event image ", f, " ", im.get_size())
+	_check("scene art: %d event/encounter images are opaque 160x80" % ev_n, ev_ok and ev_n == 29)
+	var int_ok := true
+	for k in ["bunker", "hospital", "lab", "mine", "plant", "ruins", "store"]:
+		var im: Image = (load("res://assets/exp/exp_%s.png" % k) as Texture2D).get_image()
+		if im.get_size() != Vector2i(256, 100) or im.detect_alpha() != Image.ALPHA_NONE:
+			int_ok = false
+			print("scene art: bad interior ", k)
+			continue
+		# the wrap from the last column to the first is no rougher than the room's own busy columns
+		var steps: Array = []
+		for x in 255:
+			steps.append(_col_diff(im, x, x + 1))
+		steps.sort()
+		if _col_diff(im, 255, 0) > float(steps[int(steps.size() * 0.9)]) + 0.001:
+			int_ok = false
+			print("scene art: seam in interior ", k)
+	_check("scene art: 7 interiors are opaque 256x100 and tile without a seam", int_ok)
+	var sheet: Image = Atlas.sheet.get_image()
+	var lm_ok := true
+	for id in Expedition.SITES:
+		var key := str(Expedition.SITES[id].sprite)
+		var r: Array = Atlas.regions.get(key, [])
+		if r.is_empty():
+			lm_ok = false
+			continue
+		var im := sheet.get_region(Rect2i(int(r[0]), int(r[1]), int(r[2]), int(r[3])))
+		var used := im.get_used_rect()
+		var ground := used.end.y - 1
+		var door := false
+		for y in range(ground - 5, ground + 1):
+			door = door or im.get_pixel(int(ExpeditionView.DOOR_OFF), y).a > 0.5
+		var binary := true
+		for y in range(0, im.get_height(), 2):
+			for x in im.get_width():
+				var a := im.get_pixel(x, y).a
+				binary = binary and (a == 0.0 or a == 1.0)
+		if im.get_width() != 100 or ground < im.get_height() - 2 or not door or not binary:
+			lm_ok = false
+			print("scene art: landmark ", key, " w=", im.get_width(), " ground=", ground, " door=", door, " binary=", binary)
+	_check("scene art: every landmark sprite is 100 px wide, stands on the ground with its door at x=30", lm_ok and Expedition.SITES.size() >= 12)
+	# in the real consumers (Sgt. Mark's tips off so they don't cover the art)
+	var tips0: Variant = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	main.hud.tip_card.dismiss()
+	Dev.event("raiders")
+	await wait(0.8)
+	await shot("scene_art_event_raiders")
+	await wait(0.4)
+	main.hud.event_popup.close()
+	Game.cancel_event()
+	await wait(0.3)
+	var km0 := float(Game.s.km)
+	var site0 := Expedition.at_site()
+	Expedition.arrive("mall")
+	await wait(2.6)
+	var ev: ExpeditionView = main.expedition_view
+	_check("scene art: the mall landmark rolls in at the stop", ev.site_spr != null and ev.site_spr.visible)
+	await shot("scene_art_landmark_mall")
+	await wait(0.4)
+	main.hud.open_expedition("mall")
+	await wait(0.6)
+	await shot("scene_art_planner_mall")
+	await wait(0.4)
+	main.hud.panels.expedition.close()
+	Settings.set_value("tips", tips0)
+	Game.s["at_site"] = site0
+	Game.s.km = km0
+	Game.travel_changed.emit()
+	await wait(0.3)
+
+
+func _col_diff(im: Image, a: int, b: int) -> float:
+	var d := 0.0
+	for y in im.get_height():
+		var p := im.get_pixel(a, y)
+		var q := im.get_pixel(b, y)
+		d += absf(p.r - q.r) + absf(p.g - q.g) + absf(p.b - q.b)
+	return d

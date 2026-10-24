@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Changed
+- New artwork for every road event, expedition encounter, expedition interior and landmark (49 images), in the same dark 16-bit style with the crew and the truck as you know them (MV-189)
+
 ## [4.7.0-alpha.2] - 2026-10-24
 
 ### Merged pull requests
