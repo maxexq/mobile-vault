@@ -703,6 +703,7 @@ func _run() -> void:
 	await _version_test()
 	await _env_test()
 	await _english_test()
+	await _shake_test()
 	_thai_terms_test()
 	_finish()
 
@@ -2877,6 +2878,32 @@ func _engine_bay_test() -> void:
 
 
 ## MV-111: semver + release channel badge + changelog / release tooling
+## MV-175: screen shake at half strength by default, tunable, off in settings, same size on screen at any zoom
+func _shake_test() -> void:
+	var was: bool = bool(Settings.get_value("shake"))
+	Settings.set_value("shake", true)
+	main._shake = 0.0
+	Dev.shake_test(6.0)
+	_check("shake: half strength by default (%.2f)" % main._shake, is_equal_approx(main._shake, 3.0))
+	main._shake = 0.0
+	Features.set_override("tune", "fx.shake", 1.0)
+	main.shake(6.0)
+	_check("shake: tune fx.shake 1.0 = the old strength", is_equal_approx(main._shake, 6.0))
+	Features.set_override("tune", "fx.shake", null)
+	main._shake = 0.0
+	Settings.set_value("shake", false)
+	main.shake(6.0)
+	_check("shake: off in settings = no shake", main._shake == 0.0)
+	Settings.set_value("shake", true)
+	main.shake(6.0)
+	await get_tree().process_frame
+	var lim: float = ceilf(main._shake * main.view_k + 0.5)
+	_check("shake: camera offset scaled to the zoom (|%.0f| <= %.0f)" % [main.camera.offset.x, lim],
+		absf(main.camera.offset.x) <= lim and absf(main.camera.offset.y) <= lim)
+	Settings.set_value("shake", was)
+	await wait(0.6)
+
+
 ## visible Label / Button texts under a node that still contain Thai
 func _thai_left(root: Node) -> Array:
 	var out := []

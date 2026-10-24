@@ -123,6 +123,12 @@ func set_speed(x: float) -> void:
 	changed.emit()
 
 
+## feel the screen shake at a given strength (MV-175): 6 = the biggest hit in the game (boss slam)
+func shake_test(amount: float = 6.0) -> void:
+	Trace.rec("god", "shake test %.1f" % amount)
+	get_tree().call_group("shake", "shake", amount)
+
+
 func set_overlay(v: bool) -> void:
 	overlay = v
 	_save_cfg()
