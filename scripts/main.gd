@@ -220,15 +220,49 @@ func _on_resize() -> void:
 ## the world's whole-number scale (screen px per art px) for the current zoom mode: wide pulls back (S-1 ...);
 ## auto on a portrait phone zooms in to fill the screen (_fit_ws, MV-148); otherwise S
 func target_ws() -> float:
+	return _ws_for(zoom_mode)
+
+
+func _ws_for(mode: String) -> float:
 	var s := pixel_scale
-	var wide := zoom_mode == "wide" or (zoom_mode == "auto" and _auto_wide())
+	var wide := mode == "wide" or (mode == "auto" and _auto_wide())
 	if _closeup_slot >= 0:
 		wide = false
 	if wide:
 		return floorf(s * 0.67) if s >= 4.0 else maxf(1.0, s - 1.0)
-	if zoom_mode == "auto":
+	if mode == "auto":
 		return maxf(s, _fit_ws())
 	return s
+
+
+## pinch / mouse wheel steps (MV-148): one mode per distinct zoom level right now, farthest first, so every step
+## visibly moves and one step in never pulls back. Where modes look the same, auto stands for that level (it also
+## follows bosses and, on a portrait phone, fills the screen): landscape with trailers = [auto, normal],
+## a 780 px portrait phone = [wide, auto], a 1170 px one = [wide, normal, auto]
+func zoom_ladder() -> Array:
+	var by := {}
+	for m in ["wide", "normal", "auto"]:
+		by[_ws_for(m)] = m        # later wins on a tie: auto over normal over wide
+	var levels := by.keys()
+	levels.sort()
+	return levels.map(func(w): return by[w])
+
+
+## one pinch / wheel step: +1 closer, -1 farther; nothing (no toast) at either end. Spreading the fingers in
+## normal when auto looks the same still switches to auto, so the gestures can always get back to it
+func zoom_step(dir: int) -> void:
+	var ladder := zoom_ladder()
+	var cur := _ws_for(zoom_mode)
+	var i := 0
+	for k in ladder.size():
+		if is_equal_approx(_ws_for(ladder[k]), cur):
+			i = k
+	if dir > 0 and ladder[i] == "auto" and zoom_mode != "auto":
+		set_zoom_mode("auto")
+		return
+	var j := clampi(i + dir, 0, ladder.size() - 1)
+	if j != i:
+		set_zoom_mode(ladder[j])
 
 
 ## portrait fill (MV-148): the largest whole scale at which the main body (without trailers) fits the width the
@@ -385,10 +419,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	# zoom: mouse wheel / trackpad magnify / two-finger pinch
 	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 		if _closeup_slot < 0:
-			set_zoom_mode("normal" if event.button_index == MOUSE_BUTTON_WHEEL_UP else "wide")
+			zoom_step(1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1)
 		return
 	if event is InputEventMagnifyGesture and _closeup_slot < 0:
-		set_zoom_mode("normal" if event.factor > 1.0 else "wide")
+		zoom_step(1 if event.factor > 1.0 else -1)
 		return
 	if event is InputEventScreenTouch and event.pressed:
 		_touches[event.index] = event.position
@@ -430,16 +464,15 @@ func _pinch(pts: Array) -> void:
 		return
 	if _closeup_slot >= 0:
 		return
-	var want := ""
+	var dir := 0
 	if d > _pinch_d * PINCH_STEP:
-		want = "normal"
+		dir = 1
 	elif d * PINCH_STEP < _pinch_d:
-		want = "wide"
-	if want == "":
+		dir = -1
+	if dir == 0:
 		return
 	_pinch_d = d
-	if zoom_mode != want:
-		set_zoom_mode(want)
+	zoom_step(dir)
 
 
 func _on_tap(screen_pos: Vector2) -> void:
