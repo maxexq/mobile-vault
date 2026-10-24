@@ -1,5 +1,5 @@
-# Runs the Godot autotest on every PR into main and every push to main (MV-110).
-# The job is named "autotest": make it a required status check in the main branch ruleset
+# Runs the Godot autotest on every PR into and push to main, uat and staging (MV-110, MV-112).
+# The job is named "autotest": make it a required status check in the main / uat / staging ruleset
 # so a red run blocks the merge. Discord notify (MV-96) reports it through workflow_run,
 # which matches this workflow's `name:`, so keep it "Autotest".
 # Run the same thing locally on Linux: bash tools/ci_autotest.sh
@@ -10,9 +10,9 @@ name: Autotest
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, uat, staging]
   push:
-    branches: [main]
+    branches: [main, uat, staging]
   workflow_dispatch:
 
 permissions:

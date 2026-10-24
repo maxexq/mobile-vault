@@ -1,0 +1,17 @@
+{
+  "_doc": "MV-112: which environment a web build is in, from the page's host name (first match wins, * = any text). One build serves every environment; only the exact production hosts are prod. Add a custom domain here when you give a branch one. docs/environments.md",
+  "hosts": {
+    "apocarlypse-mobile-vault.vercel.app": "prod",
+    "*-git-main-*.vercel.app": "prod",
+    "*-git-uat-*.vercel.app": "uat",
+    "*-git-staging-*.vercel.app": "staging"
+  },
+  "unknown": "dev",
+  "desktop": "dev",
+  "projects": {
+    "prod": "prod",
+    "uat": "test",
+    "staging": "test",
+    "dev": "test"
+  }
+}

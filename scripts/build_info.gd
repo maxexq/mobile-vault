@@ -20,9 +20,22 @@ const CHANNELS := {
 	"stable": ["", "", "green"],
 }
 
+## deploy environments (MV-112): [EN badge, Thai note, UIKit color name]. prod shows no badge
+const ENV_PATH := "res://config/environments.json"
+const ENVS := {
+	"prod": ["", "", "green"],
+	"uat": ["UAT", "เซิร์ฟเวอร์ทดสอบแบบเปิด เซฟและ log แยกจากเกมจริง", "blue"],
+	"staging": ["STAGING", "เซิร์ฟเวอร์ทดสอบภายใน เซฟและ log แยกจากเกมจริง", "yellow"],
+	"dev": ["DEV", "บิลด์นักพัฒนา/พรีวิว เซฟและ log แยกจากเกมจริง", "red"],
+}
+
 static var _stamp := {}
 ## GOD MODE preview of another channel's badge ("" = the real one), never saved
 static var channel_preview := ""
+static var _env := ""
+static var _env_cfg := {}
+## GOD MODE preview of another environment's badge ("" = the real one); never changes the servers used
+static var env_preview := ""
 
 
 ## {commit, branch, built (ISO UTC), dirty} or the dev fallback
@@ -60,6 +73,61 @@ static func short_line() -> String:
 ## debug (editor / debug export) or release export
 static func build_type() -> String:
 	return "debug" if OS.is_debug_build() else "release"
+
+
+# ---------------------------------------------------------------- environments (MV-112)
+## one build serves every environment: the page's host name decides (config/environments.json). Only the exact
+## production hosts are prod; anything unknown (Vercel PR previews, desktop, the editor) is dev, so it can
+## never reach the production Supabase project or remote config
+static func env() -> String:
+	if _env == "":
+		_env = env_for_host(page_host())
+	return _env
+
+
+## the web page's host name; "" on desktop / in the editor
+static func page_host() -> String:
+	if not OS.has_feature("web"):
+		return ""
+	var h = JavaScriptBridge.eval("window.location.hostname", true)
+	return str(h) if h != null else ""
+
+
+static func env_for_host(host: String) -> String:
+	var cfg := env_config()
+	if host == "":
+		return str(cfg.get("desktop", "dev"))
+	var hosts: Dictionary = cfg.get("hosts", {})
+	for pattern in hosts:
+		if host.matchn(str(pattern)) and ENVS.has(str(hosts[pattern])):
+			return str(hosts[pattern])
+	return str(cfg.get("unknown", "dev"))
+
+
+## the Supabase project section of cloud_config.json this environment uses ("prod" / "test")
+static func cloud_project() -> String:
+	return str(env_config().get("projects", {}).get(env(), "test"))
+
+
+static func env_config() -> Dictionary:
+	if _env_cfg.is_empty() and FileAccess.file_exists(ENV_PATH):
+		var d = JSON.parse_string(FileAccess.get_file_as_string(ENV_PATH))
+		if d is Dictionary:
+			_env_cfg = d
+	return _env_cfg
+
+
+## "STAGING" / "UAT" / "DEV", "" in production (or the GOD preview)
+static func env_badge() -> String:
+	return str(ENVS.get(env_preview if env_preview != "" else env(), ENVS.dev)[0])
+
+
+static func env_note() -> String:
+	return str(ENVS.get(env_preview if env_preview != "" else env(), ENVS.dev)[1])
+
+
+static func env_color() -> String:
+	return str(ENVS.get(env_preview if env_preview != "" else env(), ENVS.dev)[2])
 
 
 # ---------------------------------------------------------------- semver
@@ -143,6 +211,7 @@ static func rows() -> Array:
 	var out := [
 		["GAME", "%s v%s" % [GAME_NAME, GAME_VERSION]],
 		["CHANNEL", (channel_badge() + " · " + channel_note()) if channel_badge() != "" else "STABLE"],
+		["ENV", "%s · server %s%s" % [env().to_upper(), cloud_project(), (" · " + page_host()) if page_host() != "" else ""]],
 		["BUILD", "%s · %s" % [commit_short(), build_type()]],
 	]
 	if str(st.branch) != "":
