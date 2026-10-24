@@ -109,6 +109,11 @@ func _run() -> void:
 		await _env_test()
 		_finish()
 		return
+	if "--only=crew" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _crew_roster_test()
+		_finish()
+		return
 	if "--only=shake" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _shake_test()
@@ -731,6 +736,7 @@ func _run() -> void:
 	await _qte_test()
 	await _creatures_test()
 	await _engine_shake_test()
+	await _crew_roster_test()
 	_thai_terms_test()
 	_finish()
 
@@ -3462,6 +3468,154 @@ func _engine_shake_test() -> void:
 		moved = moved or main.vehicle.body.position.y != 0.0
 	_check("engine shake: the body stays still when off in settings", not moved)
 	Settings.set_value("car_shake", was)
+	await wait(0.3)
+
+
+## MV-170: 20 named crew: atlas regions + palette-clean frames, gated recruit path, save/load, rooms, GOD preview
+func _crew_roster_test() -> void:
+	get_window().size = Vector2i(1280, 640)
+	var ids: Array = Data.CREW_ROSTER.keys()
+	var regs_ok := ids.size() == 20
+	for id in ids:
+		var r: Array = Atlas.regions.get("dw_crew_" + str(id), [])
+		var p: Array = Atlas.regions.get("pt_dw_crew_" + str(id), [])
+		regs_ok = regs_ok and r.size() == 4 and int(r[2]) == 280 and int(r[3]) == 20 and p.size() == 4 and int(p[2]) == 20 \
+			and int(p[3]) == 20 and Atlas.dweller_variants.has("dw_crew_" + str(id))
+	_check("crew roster: 20 strips 280x20 + 20 portraits 20x20 in the atlas", regs_ok)
+	# every one of the 20 cells is drawn, alpha is binary, and standing poses keep the feet on the same baseline
+	var img: Image = Atlas.sheet.get_image()
+	if img.is_compressed():
+		img.decompress()
+	var empty := []
+	var soft := []
+	var off_floor := []
+	var standing := [0, 1, 2, 3, 4, 5, 7, 8, 11, 12, 15, 16, 17, 18, 19]
+	for id in ids:
+		var r: Array = Atlas.regions["dw_crew_" + str(id)]
+		for f in 20:
+			var bottom := -1
+			for y in 20:
+				for x in 14:
+					var a := img.get_pixel(int(r[0]) + f * 14 + x, int(r[1]) + y).a
+					if a > 0.0:
+						bottom = y
+					if a > 0.0 and a < 1.0:
+						soft.append("%s:%d" % [id, f])
+			if bottom < 0:
+				empty.append("%s:%d" % [id, f])
+			elif f in standing and bottom != 19:
+				off_floor.append("%s:%d" % [id, f])
+	_check("crew roster: all 400 frames drawn %s" % str(empty.slice(0, 4)), empty.is_empty())
+	_check("crew roster: binary alpha %s" % str(soft.slice(0, 4)), soft.is_empty())
+	_check("crew roster: standing frames end on the actor baseline %s" % str(off_floor.slice(0, 4)), off_floor.is_empty())
+	var sf := Atlas.dweller_frames("dw_crew_max")
+	_check("crew roster: loader contract (hammer 3 + carry 2 frames, 14x20)", sf.get_frame_count("hammer") == 3 and sf.get_frame_count("carry") == 2
+		and sf.get_frame_count("walk") == 4 and sf.get_frame_texture("idle", 0).get_size() == Vector2(14, 20))
+	# recruit path: switch on + chance 1 -> named crew (never twice), switch off -> the old outfit x hair path
+	Game.setup_default_state()
+	_no_events()
+	Features.set_override("features", "crew_roster_20", true)
+	Dev.roster_chance(1.0)
+	var named := 0
+	var seen := {}
+	var dup := false
+	for i in 30:
+		var d := Game.recruit_random()
+		if Crew.is_roster(str(d.variant)):
+			named += 1
+			dup = dup or seen.has(d.variant)
+			seen[d.variant] = true
+			if str(d.name) != str(Data.CREW_ROSTER[str(d.variant).trim_prefix("dw_crew_")].name):
+				dup = true
+		elif str(d.role) != "builder" and named < Data.CREW_ROSTER.size():
+			dup = true
+	_check("crew roster: chance 1 = every non-builder recruit is named until all 20 are aboard (%d)" % named, named >= 12 and not dup)
+	_check("crew roster: named recruits keep the professions (role/bio)", Lore.bio(Game.s.dwellers[-1]).role != "")
+	Features.set_override("features", "crew_roster_20", false)
+	var leaked := 0
+	for i in 20:
+		if Crew.is_roster(str(Game.recruit_random().variant)):
+			leaked += 1
+	_check("crew roster: switch off = old recruit path", leaked == 0)
+	Dev.roster_chance(0.0)
+	Features.set_override("features", "crew_roster_20", true)
+	leaked = 0
+	for i in 10:
+		if Crew.is_roster(str(Game.recruit_random().variant)):
+			leaked += 1
+	_check("crew roster: tune crew.roster_chance 0 = none", leaked == 0)
+	Dev.roster_chance(-1.0)
+	_check("crew roster: tune back to the code default", is_equal_approx(Features.num("crew.roster_chance", Crew.ROSTER_CHANCE), Crew.ROSTER_CHANCE))
+	# GOD: board every one directly, they survive a save/load with the switch off and still render
+	Game.setup_default_state()
+	_no_events()
+	Dev.spawn_roster_all()
+	var on_board: Array = Game.s.dwellers.filter(func(d): return Crew.is_roster(str(d.variant)))
+	_check("crew roster: GOD boards all 20", on_board.size() == 20)
+	var mae: Dictionary = on_board.filter(func(d): return str(d.variant) == "dw_crew_mae")[0]
+	Dev.toggle_builder(mae)
+	Dev.roster_chance(1.0)
+	var gb := Dev.spawn_builder("")
+	_check("crew roster: GOD builder keeps the hard hat with chance 1", str(gb.variant).begins_with("dw_builder_") and Crew.is_builder(gb))
+	Dev.roster_chance(-1.0)
+	_check("crew roster: builder toggle keeps the named look", str(mae.variant) == "dw_crew_mae" and Crew.is_builder(mae))
+	Dev.toggle_builder(mae)
+	Features.set_override("features", "crew_roster_20", false)
+	Game.s.tier = "rig"
+	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	var types := ["quarters", "kitchen", "hydroponics", "water", "workshop", "medical", "science", "radio", "armory", "refinery"]
+	while Game.s.rooms.size() < Game.slot_count():
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	for i in Game.s.rooms.size():
+		Game.s.rooms[i] = {"type": types[i % types.size()], "level": 1, "job": {}, "build": {}}
+	Game.s.res.power = 500.0
+	Game.save_game()
+	Game.load_game()
+	Tutorial.skip()
+	var kept: Array = Game.s.dwellers.filter(func(d): return Crew.is_roster(str(d.variant)))
+	_check("crew roster: saved crew load back with the switch off", kept.size() == 20)
+	var slot := 0
+	for d in kept:
+		if slot < Game.s.rooms.size() and Game.room_workers(slot).size() < Game.room_capacity(slot) and not Game.s.rooms[slot].type in ["empty", "annex"]:
+			Game.assign(d, slot)
+		slot = (slot + 1) % maxi(Game.s.rooms.size(), 1)
+	Game.dwellers_changed.emit()
+	Game.rooms_changed.emit()
+	main.vehicle.refresh_rooms()
+	await wait(3.5)
+	var acting := 0
+	var right_frames := true
+	for d in kept:
+		var a = main.vehicle.actor_for(int(d.id))
+		if a != null:
+			acting += 1
+			right_frames = right_frames and a.spr.sprite_frames == Atlas.dweller_frames(str(d.variant))
+	_check("crew roster: named crew walk/work in rooms with the switch off (%d)" % acting, acting >= 1 and right_frames)
+	_check("crew roster: portraits resolve for the UI", kept.all(func(d): return Atlas.has("pt_" + str(d.variant))))
+	await shot("crew_roster_rooms")
+	main.hud.open_panel("dwellers")
+	await wait(0.5)
+	await shot("crew_roster_list")
+	main.hud.panels.dwellers.close()
+	Features.set_override("features", "crew_roster_20", null)
+	# GOD preview: one cell per crew member with the chosen animation playing
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "crew"
+	god._crew_anim = "hammer"
+	god.refresh()
+	await wait(0.5)
+	var grid: Node = god._list.find_child("RosterGrid", true, false)
+	var scroll := god._list.get_parent() as ScrollContainer
+	if scroll and grid:
+		scroll.scroll_vertical = int((grid as Control).position.y) - 80
+		await wait(0.3)
+	var cells := grid.get_child_count() if grid else 0
+	var spr: AnimatedSprite2D = grid.find_child("Sprite", true, false) if grid else null
+	_check("crew roster: GOD preview shows 20 with the picked animation (%d)" % cells, cells == 20 and spr != null and spr.animation == "hammer" and spr.is_playing())
+	await shot("god_crew_roster")
+	god._crew_anim = "idle"
+	god.close()
 	await wait(0.3)
 
 

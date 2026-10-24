@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- 20 new named survivors can join the crew, each with their own look, animations and portrait: 15 originals and 5 guest cameos (MV-170)
 - Sgt. Mark explains each system the first time you open it (map, squad, solar, loot, garage, skills, expeditions, strangers, engine bay and more); turn tips off or see them again in Settings (MV-150)
 - Road events have a clock (about 5–30 seconds by danger); if you don't choose in time the crew takes the safe option. The clock waits while you're away; Settings can double it or turn it off (MV-134)
 - English, part 1: menus, settings, panels and the tutorial (testers only for now; the game's content follows) (MV-151)

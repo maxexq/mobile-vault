@@ -1,0 +1,58 @@
+{
+  "spec": "micro-asset/1",
+  "id": "pt_dw_crew_tomas",
+  "title": "Tomas - matching portrait",
+  "why": "Make the water engineer readable in the existing crew sprite family.",
+  "parent": "pt_dw_jumpsuit_brown",
+  "kind": "portrait",
+  "size": [
+    20,
+    20
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin1",
+    "skin2",
+    "gray1",
+    "gray3",
+    "teal1",
+    "teal3",
+    "orange1",
+    "orange2",
+    "wood1"
+  ],
+  "outline": "ol0",
+  "light": "top-left",
+  "layer": "ui",
+  "anchor": {
+    "x": 0,
+    "y": 0,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/chars.py",
+    "function": "portrait_crew_tomas"
+  },
+  "feature": "crew_roster_20",
+  "refs": [
+    "tools/art/crew_roster_20/concepts/tomas.png",
+    "tools/art/crew_roster_20/style-reference.png",
+    "tools/art/chars.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Exactly one atlas region named pt_dw_crew_tomas, 20x20 pixels, with binary transparency and only the listed palette names.",
+    "Preserve the large head, tiny right-facing eye, projecting nose, compact body and soot outline of the supplied existing-character reference.",
+    "An original bald older man water engineer with tiny dark square beard cluster, warm tan skin, muted teal maintenance jumpsuit, rust-brown tool belt and one dull gray buckle, charcoal boots. No cap or external tool.",
+    "No blur, antialiasing, fractional scaling, rotation, gradient pixels or isolated export specks; inspect at 1x and nearest 8x.",
+    "Portrait matches this same character, with a readable face and outfit at native 20x20 in the crew list and detail panel."
+  ],
+  "notes": "An original bald older man water engineer with tiny dark square beard cluster, warm tan skin, muted teal maintenance jumpsuit, rust-brown tool belt and one dull gray buckle, charcoal boots. No cap or external tool. Parent and anchor describe the matching atlas construction reference, not a second sprite attached in the world. The UI loads pt_<variant>; match the approved idle face and outfit.",
+  "author": "Codex art analyst",
+  "replace": false,
+  "priority": "medium"
+}

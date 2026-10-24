@@ -1,0 +1,59 @@
+{
+  "spec": "micro-asset/1",
+  "id": "dw_crew_isha",
+  "title": "Isha - packed crew animation strip",
+  "why": "Make the lab scientist readable in the existing crew sprite family.",
+  "parent": "dw_lab_black",
+  "kind": "anim",
+  "size": [
+    280,
+    20
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin0",
+    "skin1",
+    "gray0",
+    "gray1",
+    "cream1",
+    "cream3",
+    "teal2",
+    "blue1",
+    "blue3"
+  ],
+  "outline": "ol0",
+  "light": "top-left",
+  "layer": "on_parent",
+  "anchor": {
+    "x": 0,
+    "y": 0,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/chars.py",
+    "function": "crew_strip_isha"
+  },
+  "feature": "crew_roster_20",
+  "refs": [
+    "tools/art/crew_roster_20/concepts/isha.png",
+    "tools/art/crew_roster_20/style-reference.png",
+    "tools/art/chars.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Exactly one atlas region named dw_crew_isha, 280x20 pixels, with binary transparency and only the listed palette names.",
+    "Preserve the large head, tiny right-facing eye, projecting nose, compact body and soot outline of the supplied existing-character reference.",
+    "An original woman lab scientist with dark brown skin and compact short curly black hair silhouette, bone short lab jacket over muted teal shirt, slate-blue pants, dark boots. Small dark collar seam; no glasses, vial or logo.",
+    "No blur, antialiasing, fractional scaling, rotation, gradient pixels or isolated export specks; inspect at 1x and nearest 8x.",
+    "All 20 cells fit 14x20 with stable head, feet and accessories: idle 0-1; walk 2-5; sit 6; work 7-8; guitar 9-10; coffee 11-12; clean 13-14; hammer 15-17; carry 18-19.",
+    "Feet remain on the existing actor baseline with no clipping, unexpected pose jitter or missing tool/hand silhouettes."
+  ],
+  "notes": "An original woman lab scientist with dark brown skin and compact short curly black hair silhouette, bone short lab jacket over muted teal shirt, slate-blue pants, dark boots. Small dark collar seam; no glasses, vial or logo. Parent and anchor describe the matching atlas construction reference, not a second sprite attached in the world. frames.count=1 means ONE packed atlas region, not one gameplay pose. The region contains 20 horizontal 14x20 cells; do not emit _0.._19 regions. Use Atlas.DW_FRAMES and DW_FPS unchanged. Runtime actor stays bottom-center (-7,-20), at room FLOOR_Y=46.",
+  "author": "Codex art analyst",
+  "replace": false,
+  "priority": "medium"
+}

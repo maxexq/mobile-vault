@@ -1225,6 +1225,12 @@ func recruit_random() -> Dictionary:
 		stats.str = maxi(int(stats.str), 4)
 	var variant := "dw_%s_%s" % [outfit, Data.HAIRS[rng.randi() % Data.HAIRS.size()]]
 	var nm: String = Data.TITLES.get(outfit, "") + Data.FIRST_NAMES[rng.randi() % Data.FIRST_NAMES.size()]
+	# MV-170: sometimes one of the 20 named crew boards instead (switch off = the old path, same rolls)
+	if role == "" and Features.on("crew_roster_20") and rng.randf() < Features.num("crew.roster_chance", Crew.ROSTER_CHANCE):
+		var rid := Crew.roster_pick(best, rng)
+		if rid != "":
+			variant = "dw_crew_" + rid
+			nm = str(Data.CREW_ROSTER[rid].name)
 	var d := _add_dweller({"name": nm, "variant": variant, "str": stats.str, "int": stats.int, "agi": stats.agi, "lvl": 1 + int(s.lap), "role": role})
 	# builders head straight for an open building site; everybody else to a free room matching their best stat
 	for i in s.rooms.size():
