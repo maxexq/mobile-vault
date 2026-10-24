@@ -96,9 +96,20 @@ func _hook() -> void:
 	Expedition.expedition_finished.connect(func(r): rec("expedition", "finish %s ok=%s" % [str(r.get("site", "")), str(r.get("ok", false))], {"loot": str(r.get("loot", "")), "dead": r.get("dead", [])}))
 	Meta.wrecked.connect(func(): rec("meta", "vehicle wrecked", _summary()))
 	Meta.generation_started.connect(func(g): rec("meta", "generation %d (%s)" % [g, Game.tier()]))
+	Cloud.account_changed.connect(_on_account)
+	_on_account()
 
 
 var _boss_ids := {}
+var _pid := ""
+
+
+## log which player this session belongs to (MV-115), once per id: sign-in, Google link, account switch
+func _on_account() -> void:
+	var pid := Cloud.player_id()
+	if pid != "" and pid != _pid:
+		_pid = pid
+		rec("session", "player", {"pid": pid})
 
 
 func _on_wave() -> void:
@@ -194,7 +205,7 @@ func filtered(cat: String = "", errors_only: bool = false) -> Array:
 
 
 func export_text() -> String:
-	return JSON.stringify({"game": "mobile_vault", "v": VERSION, "session": session, "exported": Time.get_datetime_string_from_system(true),
+	return JSON.stringify({"game": "mobile_vault", "v": VERSION, "session": session, "player": Cloud.player_id(), "exported": Time.get_datetime_string_from_system(true),
 		"summary": _summary(), "dev": {"flags": Dev.flags, "speed": Dev.speed}, "features": Features.snapshot(), "entries": entries}, " ")
 
 

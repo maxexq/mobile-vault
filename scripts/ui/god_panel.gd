@@ -353,6 +353,9 @@ func _tab_sys() -> void:
 	_row(sb, "ไปขั้น")
 	_head("CLOUD SAVE", "เซฟคลาวด์")
 	_note("สถานะ: %s · rev %d%s" % [Cloud.status_text(), int(Cloud.meta.get("rev", 0)), "" if Cloud.user_id() == "" else " · " + Cloud.user_id().substr(0, 8)])
+	_note("ไอดีผู้เล่น: " + (Cloud.player_id() if Cloud.player_id() != "" else ("- (สวิตช์ player_id ปิดอยู่)" if not Features.on("player_id") else "- (ยังไม่มีบัญชี)")))
+	if Cloud.user_id() != "":
+		_row([_b("คัดลอกไอดีผู้เล่น + user id", func(): Dev.player_id_copy(), "gray", true)], "ไอดี")
 	if Cloud.enabled():
 		_row([_b("ซิงก์ตอนนี้", func(): Dev.cloud_sync(), "green"), _b("บังคับอัปโหลด", func(): Dev.cloud_force_upload(), "yellow"),
 			_b("ลืมการเชื่อมต่อ", func(): Dev.cloud_forget(), "red")])

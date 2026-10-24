@@ -879,6 +879,15 @@ func cloud_forget() -> void:
 	Cloud.sync()
 
 
+## copy "player id · full auth user id" for support lookups (MV-115); read-only, so the save stays ranked
+func player_id_copy() -> String:
+	var t := "%s · %s" % [Cloud.player_id() if Cloud.player_id() != "" else "-", Cloud.user_id() if Cloud.user_id() != "" else "-"]
+	DisplayServer.clipboard_set(t)
+	Trace.rec("god", "copy player id", {"pid": Cloud.player_id()})
+	Game.toast.emit("คัดลอกแล้ว: " + t, "info")
+	return t
+
+
 ## save, then reload the page like a player pressing refresh (checks resume_on_reload + staying logged in)
 func reload_page() -> void:
 	act("reload page")

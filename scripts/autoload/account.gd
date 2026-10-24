@@ -4,6 +4,7 @@ extends Node
 ##  * `a` = the account: lives forever, survives every Next Generation (meta = research points, perks,
 ##    blueprints; logbook lore; memorial; tutorial; difficulty setting; room for events, skill tree, places)
 ##  * Game.s = the active vehicle (one generation's run), exactly as before
+##  * a.pid = the owner's short public player id (Cloud.player_id, MV-115), written on every save once known
 ## The account keys in SHARED are also put into Game.s as references to the same Dictionary / Array, so code
 ## that reads Game.s.meta or Game.s.lore keeps working; save() stores them once, in the account.
 ## A save without "v" is a v1 save (one dictionary per run) and is migrated on load.
@@ -74,6 +75,10 @@ func collect(veh: Dictionary) -> void:
 ## envelope for Save.write: the account once, the vehicle without the shared keys
 func envelope(veh: Dictionary) -> Dictionary:
 	collect(veh)
+	# the save carries its owner's public id (MV-115) so an exported / pasted save can be traced to a player
+	var pid := Cloud.player_id()
+	if pid != "":
+		a["pid"] = pid
 	var main := {}
 	for k in veh:
 		if not SHARED.has(k):
