@@ -2,6 +2,8 @@ class_name TitleScreen
 extends Control
 ## Start menu over the live scene: a green terminal boot log types itself out, then the menu.
 ## NEW RUN opens the rules picker (mode / difficulty / mutators, see Modes) unless the "modes" switch is off.
+## A web page reload with a save goes straight back into the game (switch "resume_on_reload") once the cloud
+## has answered, unless the player is needed first (Guest / Gmail choice, log in again, save conflict).
 
 signal start_requested(new_game: bool)
 signal settings_requested(tab: String)
@@ -29,6 +31,8 @@ var _settings_btn: Button
 var _chars := 0.0
 var _boot_text := ""
 var _channel: Label
+## set at start on a web reload; cleared once the game was entered (or by the player tapping anything)
+var auto_continue := false
 
 
 func _ready() -> void:
@@ -83,6 +87,8 @@ func _ready() -> void:
 	_picker = UIKit.vbox(4)
 	_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pick_scroll.add_child(_picker)
+	auto_continue = Features.on("resume_on_reload") and _is_page_reload()
+	settings_requested.connect(func(_tab: String): auto_continue = false)
 	_refresh_account()
 	get_viewport().size_changed.connect(_layout)
 	# the boot log types itself out and the account line / UI scale can change after _ready: re-place the
@@ -136,12 +142,33 @@ func _refresh_account() -> void:
 		_account_btn.text = "บัญชี: " + str(Cloud.session.get("email", "Google"))
 	_panel.custom_minimum_size.y = 0
 	_layout.call_deferred()
+	try_auto_continue()
 
 
 func refresh_buttons() -> void:
 	_continue.visible = Save.has_save()
 	_panel.custom_minimum_size.y = 0
 	_layout.call_deferred()
+	try_auto_continue()
+
+
+# ------------------------------------------------------------------ resume after a page reload
+static func _is_page_reload() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	return bool(JavaScriptBridge.eval("(performance.getEntriesByType('navigation')[0] || {}).type === 'reload'", true))
+
+
+## enter the saved game on our own once nothing needs the player: the cloud has answered (a newer save
+## from another device is pulled first, not turned into a conflict) and no login / conflict is pending
+func try_auto_continue() -> void:
+	if not auto_continue or not visible or not Save.has_save():
+		return
+	if Cloud.url != "" and Cloud.state in [Cloud.State.OFF, Cloud.State.CONNECTING]:
+		return    # cloud configured but not answered yet; status_changed calls this again
+	if Cloud.state == Cloud.State.CONFLICT or Cloud.needs_choice():
+		return
+	_go(false)
 
 
 func _layout() -> void:
@@ -169,6 +196,7 @@ func _new_run() -> void:
 
 
 func open_picker() -> void:
+	auto_continue = false
 	_menu.visible = false
 	_log.visible = false
 	_pick_scroll.visible = true
@@ -260,6 +288,7 @@ func _relayout() -> void:
 
 
 func _go(new_game: bool) -> void:
+	auto_continue = false
 	var tw := create_tween()
 	tw.tween_property(self, "modulate:a", 0.0, 0.3)
 	tw.tween_callback(func():
