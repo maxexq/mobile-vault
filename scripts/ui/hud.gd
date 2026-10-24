@@ -69,6 +69,7 @@ var _xray_btn: Button
 var _zoom_btn: Button
 var _god_btn: Button
 var tutorial_overlay: TutorialOverlay
+var tip_card: TipCard
 var settings_panel: SettingsPanel
 var _settings_btn: Button
 signal zoom_pressed
@@ -187,6 +188,10 @@ func _ready() -> void:
 	tutorial_overlay = TutorialOverlay.new()
 	tutorial_overlay.hud = self
 	add_child(tutorial_overlay)
+	# contextual tips (MV-150): Sgt. Mark explains a system the first time its window opens
+	tip_card = TipCard.new()
+	tip_card.hud = self
+	add_child(tip_card)
 
 
 func _set_hud_visible(v: bool) -> void:
