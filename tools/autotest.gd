@@ -660,6 +660,7 @@ func _run() -> void:
 	_event_variety_test()
 	await _cloud_test()
 	await _cloud_account_test()
+	await _account_test()
 	await _resume_test()
 	await _large_room_test()
 	await _features_test()
@@ -1056,7 +1057,7 @@ func _tutorial_test() -> void:
 	Tutorial.next()
 	_check("tutorial: completed", not Tutorial.active() and bool(Game.s.tutorial.done))
 	Game.save_game()
-	_check("tutorial: progress saved", bool(Save.read().get("tutorial", {}).get("done", false)))
+	_check("tutorial: progress saved", bool(Account.account_of(Save.read()).get("tutorial", {}).get("done", false)))
 	Tutorial.restart()
 	_check("tutorial: replay from the logbook", Tutorial.active() and Tutorial.step() == 0)
 	Tutorial.skip()
@@ -1502,7 +1503,75 @@ func _fake_run(gen: int) -> Dictionary:
 
 
 func _local_gen() -> int:
-	return int(Save.read().get("meta", {}).get("gen", -1))
+	return int(Account.account_of(Save.read()).get("meta", {}).get("gen", -1))
+
+
+## persistent account (MV-159): v1 saves migrate, the account survives the next generation, no picker,
+## difficulty is a setting, switch "persistent_account" off brings NEW RUN back
+func _account_test() -> void:
+	Features.clear_overrides()
+	main._on_start(true)
+	await wait(0.4)
+	Tutorial.skip()
+	# a v1 save: one run picked as peaceful / hard / fuel_scarce, generation 3 with perks and logbook entries
+	var v1: Dictionary = Account.envelope(Game.s).main.duplicate(true)
+	v1.meta = {"gen": 3, "legacy": 5, "perks": {"efficient": 2}, "blueprints": ["bp_bus"], "best_km": 40.0}
+	v1.lore = ["signal"]
+	v1.memorial = [{"name": "ทดสอบ", "lvl": 3, "cause": "test", "km": 1.0}]
+	v1.tutorial = {"step": 0, "done": true}
+	v1.mode = {"id": "peaceful", "diff": "hard", "mut": ["fuel_scarce"], "started_at": 1234.0}
+	Game.started = false
+	Save.write(v1)
+	var toasts: Array = []
+	var grab := func(t: String, _k: String): toasts.append(t)
+	Game.toast.connect(grab)
+	var ok := Game.load_game()
+	Game.toast.disconnect(grab)
+	_check("account: v1 save loads", ok and Game.started)
+	_check("account: v1 run keeps generation, perks, blueprints, logbook", Meta.generation() == 3 and Meta.perk("efficient") == 2 and Meta.has_blueprint("bp_bus") and Lore.is_unlocked("signal"))
+	_check("account: account data shared with the vehicle (same objects)", is_same(Game.s.meta, Account.a.meta) and is_same(Game.s.lore, Account.a.lore))
+	_check("account: peaceful + mutators become standard, difficulty kept", Modes.id() == "standard" and Modes.diff() == "hard" and Modes.mutators().is_empty()
+		and Features.on("raids") and Account.diff() == "hard" and str(Account.a.legacy_mode.id) == "peaceful")
+	_check("account: one-time notice about the change", toasts.any(func(t): return str(t).contains("ไอดีถาวร")) and not Account.take_mode_notice())
+	Game.save_game()
+	var env := Save.read()
+	_check("account: saved as envelope v2, account keys stored once", int(env.get("v", 0)) == 2 and int(env.account.meta.gen) == 3
+		and not (env.main as Dictionary).has("meta") and not (env.main as Dictionary).has("lore") and (env.main as Dictionary).has("rooms"))
+	# the next generation keeps the account
+	Lore.unlock("helios")
+	Meta.next_generation([int(Game.s.dwellers[0].id)])
+	await wait(0.3)
+	_check("account: next generation keeps logbook, memorial, tutorial", Meta.generation() == 4 and Lore.is_unlocked("signal") and Lore.is_unlocked("helios")
+		and (Game.s.memorial as Array).size() == 1 and bool(Game.s.tutorial.done) and is_same(Game.s.lore, Account.a.lore))
+	_check("account: next generation is standard at the account difficulty", Modes.id() == "standard" and Modes.diff() == "hard")
+	# difficulty is a setting and survives a reload
+	Account.set_diff("easy")
+	Game.save_game()
+	Game.started = false
+	Game.load_game()
+	_check("account: difficulty setting applies and is saved", Modes.diff() == "easy" and Account.diff() == "easy" and Meta.generation() == 4 and Lore.is_unlocked("helios"))
+	main.hud.open_settings("game")
+	await wait(0.4)
+	await shot("account_settings_difficulty")
+	main.hud.settings_panel.close()
+	Account.set_diff("normal")
+	Game.save_game()
+	# title: no rules picker, no NEW RUN while there is a save
+	var ts = main.hud.title_screen
+	ts.refresh_buttons()
+	_check("account: title has CONTINUE and no NEW RUN with a save", ts._continue.visible and not ts._new_btn.visible)
+	Dev.feature_set("persistent_account", false)
+	ts.refresh_buttons()
+	_check("account: switch off shows NEW RUN", ts._new_btn.visible and ts._new_btn.text.contains("NEW RUN"))
+	main._on_start(true)
+	await wait(0.3)
+	Tutorial.skip()
+	_check("account: switch off NEW RUN starts over from nothing", Meta.generation() == 1 and not Lore.is_unlocked("helios"))
+	Dev.feature_set("persistent_account", null)
+	Save.wipe()
+	ts.refresh_buttons()
+	_check("account: a browser without a save gets START", ts._new_btn.visible and ts._new_btn.text.contains("START") and not ts._continue.visible)
+	Game.save_game()
 
 
 ## a web page reload goes back into the saved game on its own, but waits for the cloud to answer and never
@@ -1589,6 +1658,13 @@ func _cloud_test() -> void:
 	fake.online = true
 	await Cloud.sync()
 	_check("cloud: catches up when back online", Cloud.state == Cloud.State.OK and int(fake.rows[uid].data.meta.gen) == 12)
+	# schema guard (0002): a tab still on an older build can't overwrite the account save
+	_check("cloud: rows remember the save schema", int(fake.rows[uid].get("schema", 0)) == Cloud.SCHEMA)
+	var old_write: Dictionary = await fake.handle(HTTPClient.METHOD_POST, "/rest/v1/rpc/rpc_save",
+		PackedStringArray(["Authorization: Bearer " + str(Cloud.session.access_token)]),
+		JSON.stringify({"p_base_rev": int(fake.rows[uid].rev), "p_data": {"rooms": []}, "p_settings": {}, "p_schema": 1, "p_device_id": "old", "p_force": true}))
+	_check("cloud: an older build cannot overwrite a newer save", not bool(old_write.body.ok) and bool(old_write.body.get("old_client", false))
+		and str(fake.rows[uid].device_id) != "old")
 	# expired access token -> refresh token -> retried call
 	fake.expire_tokens()
 	Save.write(_fake_run(13))
@@ -1609,7 +1685,7 @@ func _cloud_test() -> void:
 	Game.setup_default_state()
 	Game.started = true
 	Game.save_game()
-	_check("cloud: saved_at stamped with server time", absf(float(Save.read().saved_at) - fake.clock) < 5.0)
+	_check("cloud: saved_at stamped with server time", absf(float(Account.vehicle_of(Save.read()).saved_at) - fake.clock) < 5.0)
 	Game.started = false
 	Save.wipe()
 	Cloud.transport = null
@@ -2566,28 +2642,12 @@ func _modes_test() -> void:
 	_check("modes: make() drops unknown ids and combat mutators in peaceful",
 		Modes.make("nope", "nope", ["horde", "fuel_scarce", "made_up"]) == {"id": "standard", "diff": "normal", "mut": ["fuel_scarce", "horde"]}
 		and Modes.make("peaceful", "hard", ["horde", "glass_cannon", "lean_rations"]).mut == ["lean_rations"])
-	# the picker on the title screen
-	var ts = main.hud.title_screen
-	ts.visible = true
-	ts.modulate.a = 1.0
-	ts._new_run()
-	await wait(0.4)
-	ts.pick("id", "peaceful")
-	ts.pick("diff", "hard")
-	ts.pick("mut", "fuel_scarce")
-	ts.pick("mut", "horde")       # combat-only: not offered in peaceful
-	await wait(0.3)
-	_check("modes: picker opens from NEW RUN", ts._pick_scroll.visible and not ts._menu.visible)
-	_check("modes: picker keeps a clean choice", ts._pick == {"id": "peaceful", "diff": "hard", "mut": ["fuel_scarce"]})
-	await shot("mode_picker")
-	ts.close_picker()
-	_check("modes: back returns to the menu", ts._menu.visible and not ts._pick_scroll.visible)
-	ts.open_picker()
-	Modes.pending = ts._pick.duplicate(true)
-	ts._go(true)
-	await wait(2.5)
+	# other rules on a vehicle: event vehicles / the balance bot start like this (players have no picker any more)
+	Modes.pending = {"id": "peaceful", "diff": "hard", "mut": ["fuel_scarce", "horde"]}
+	main._on_start(true)
+	await wait(0.5)
 	Tutorial.skip()
-	_check("modes: START begins a run with the picked rules", Modes.id() == "peaceful" and Modes.diff() == "hard" and Modes.mutators() == ["fuel_scarce"]
+	_check("modes: pending rules start a run, cleaned (no combat mutator in peaceful)", Modes.id() == "peaceful" and Modes.diff() == "hard" and Modes.mutators() == ["fuel_scarce"]
 		and Modes.pending.is_empty() and float(Game.s.mode.get("started_at", 0.0)) > 0.0)
 	_check("modes: peaceful switches raids off through the mode layer", not Features.on("raids") and Features.source("features", "raids") == "mode")
 	_check("modes: peaceful x hard x fuel = research x0.84", is_equal_approx(Modes.legacy_mult(), 0.5 * 1.4 * 1.2) and not Modes.ranked())
@@ -2653,23 +2713,15 @@ func _modes_test() -> void:
 	main.hud.panels.god.close()
 	main.hud.open_settings("game")
 	await wait(0.4)
-	_check("modes: settings shows the run's mode", main.hud.settings_panel.is_open)
-	await shot("settings_mode_row")
+	_check("modes: settings shows the difficulty row", main.hud.settings_panel.is_open)
+	await shot("settings_difficulty_row")
 	main.hud.settings_panel.close()
-	# the next generation keeps the rules
+	# the next generation is the account's main vehicle again: standard at the account's difficulty
+	Account.a.settings.diff = "hard"
 	Meta.next_generation([int(Game.s.dwellers[0].id)])
 	await wait(0.5)
-	_check("modes: next generation keeps the mode", Modes.mutators() == ["lone_road"] and not Features.on("expeditions"))
-	# switch "modes" off: NEW RUN skips the picker and starts a standard run
-	Dev.feature_set("modes", false)
-	ts.visible = true
-	ts.modulate.a = 1.0
-	Modes.pending = {"id": "peaceful"}
-	ts._new_run()
-	await wait(2.5)
-	Tutorial.skip()
-	_check("modes: switch off = NEW RUN starts standard without the picker", Modes.id() == "standard" and Modes.mutators().is_empty() and Features.on("expeditions"))
-	Dev.feature_set("modes", null)
+	_check("modes: next generation = standard at the account difficulty", Modes.id() == "standard" and Modes.diff() == "hard" and Modes.mutators().is_empty() and Features.on("expeditions"))
+	Account.set_diff("normal")
 
 
 ## Thai wording (MV-93, docs/glossary_th.md): names players pick between are unique, the player is

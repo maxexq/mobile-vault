@@ -130,6 +130,23 @@ func _choice(th: String, key: String, opts: Array, hint: String = "") -> void:
 			UIKit.style_button(e[0], "yellow" if on else "gray"))
 
 
+## difficulty of the account's vehicle: a setting, not a run rule (Account.set_diff)
+func _difficulty() -> void:
+	var h := _row("ความยาก", "เปลี่ยนได้ทุกเมื่อ มีผลทันที · ยากขึ้น = ศัตรูแรงขึ้น กินมากขึ้น ได้แต้มวิจัยพันธุกรรมมากขึ้น")
+	var btns := []
+	for k in Modes.DIFFS:
+		var did: String = k
+		var b := UIKit.button(str(Modes.DIFFS[k].th), "gray")
+		b.custom_minimum_size = Vector2(34, 22)
+		b.add_theme_font_size_override("font_size", UIKit.FS_SMALL)
+		b.pressed.connect(func(): Account.set_diff(did))
+		h.add_child(b)
+		btns.append([b, did])
+	_syncs.append(func():
+		for e in btns:
+			UIKit.style_button(e[0], "yellow" if Account.diff() == e[1] else "gray"))
+
+
 func _toggle(th: String, key: String, hint: String = "") -> void:
 	_choice(th, key, [[true, "เปิด"], [false, "ปิด"]], hint)
 
@@ -195,9 +212,8 @@ func _info(key: String, value: String) -> HBoxContainer:
 # ------------------------------------------------------------------ tabs
 func _tab_game() -> void:
 	if Game.started and not Game.s.is_empty():
-		_head("RUN", "โหมดของการเดินทางนี้")
-		var mh := _row(Modes.label(), "แต้มวิจัยพันธุกรรม ×%.2f · เปลี่ยนโหมดได้ตอนเริ่มการเดินทางใหม่ (รุ่นถัดไปใช้โหมดเดิม)" % Modes.legacy_mult())
-		mh.add_child(UIKit.label(str(Modes.MODES.get(Modes.id(), Modes.MODES.standard).en), UIKit.FP, UIKit.C_GOLD, true))
+		_head("DIFFICULTY", "ความยาก")
+		_difficulty()
 
 	_head("AUDIO", "เสียง")
 	_volume("เสียงรวม", "master")
@@ -245,11 +261,12 @@ func _tab_data() -> void:
 	if d.is_empty():
 		_list.add_child(UIKit.wrap_label("ยังไม่มีเซฟในเครื่องนี้", UIKit.FS, UIKit.C_TEXT))
 	else:
-		var at := int(float(d.get("saved_at", 0)))
+		var at := int(float(Account.vehicle_of(d).get("saved_at", 0)))
 		var bias := int(Time.get_time_zone_from_system().get("bias", 0)) * 60
 		_info("SAVED", Time.get_datetime_string_from_unix_time(at + bias, true) if at > 0 else "-")
 		_info("SIZE", "%.1f KB" % (JSON.stringify(d).length() / 1024.0))
-		_info("RUN", "รุ่นที่ %d · Vault %d · %.1f กม." % [int(d.get("meta", {}).get("gen", 1)), int(d.get("vault_level", 1)), float(d.get("stats", {}).get("km_total", d.get("km", 0.0)))])
+		var veh := Account.vehicle_of(d)
+		_info("RUN", "รุ่นที่ %d · Vault %d · %.1f กม." % [int(Account.account_of(d).get("meta", {}).get("gen", 1)), int(veh.get("vault_level", 1)), float(veh.get("stats", {}).get("km_total", veh.get("km", 0.0)))])
 		_info("STORE", ("localStorage ของเบราว์เซอร์" if OS.has_feature("web") else ProjectSettings.globalize_path(Save.FILE_PATH)) + (" + Supabase" if Cloud.enabled() else ""))
 	if Cloud.enabled():
 		_list.add_child(UIKit.wrap_label("เกมเซฟลงเครื่องทุก 15 วินาที และส่งขึ้นคลาวด์ทุกนาทีเมื่อออนไลน์ ถ้าออฟไลน์จะเก็บในเครื่องไว้ก่อนแล้วส่งตามทีหลัง", UIKit.FS_SMALL, UIKit.C_DIM))
@@ -269,7 +286,7 @@ func _tab_data() -> void:
 		Settings.begin_import())
 
 	_head("DANGER", "ล้างความคืบหน้า")
-	_list.add_child(UIKit.wrap_label("ลบรถ ลูกเรือ ของ และรุ่นทั้งหมด แล้วกลับไปหน้าแรก ย้อนคืนไม่ได้ (ค่าตั้งค่ายังอยู่)", UIKit.FS_SMALL, UIKit.C_DIM))
+	_list.add_child(UIKit.wrap_label("ลบไอดีนี้ทั้งหมด: รถ ลูกเรือ ของ ทุกรุ่น แต้มวิจัย และบันทึก แล้วกลับไปหน้าแรก ย้อนคืนไม่ได้ (ค่าตั้งค่ายังอยู่)", UIKit.FS_SMALL, UIKit.C_DIM))
 	_reset_btn = _action("รีเซ็ตความคืบหน้า", "red", "skull", _on_reset_pressed)
 	_reset_btn.disabled = d.is_empty() and not Game.started
 
@@ -345,7 +362,8 @@ func _when(unix: float) -> String:
 func _run_text(d: Dictionary) -> String:
 	if d.is_empty():
 		return "ไม่มีเซฟ"
-	return "รุ่นที่ %d · Vault %d · %.1f กม. · %s" % [int(d.get("meta", {}).get("gen", 1)), int(d.get("vault_level", 1)), float(d.get("stats", {}).get("km_total", d.get("km", 0.0))), _when(float(d.get("saved_at", 0)))]
+	var veh := Account.vehicle_of(d)
+	return "รุ่นที่ %d · Vault %d · %.1f กม. · %s" % [int(Account.account_of(d).get("meta", {}).get("gen", 1)), int(veh.get("vault_level", 1)), float(veh.get("stats", {}).get("km_total", veh.get("km", 0.0))), _when(float(veh.get("saved_at", 0)))]
 
 
 func _on_reset_pressed() -> void:
@@ -370,9 +388,9 @@ func _process(delta: float) -> void:
 
 func _extra_rows() -> Array:
 	var out := []
-	var d: Dictionary = Game.s if Game.started else Save.read()
+	var d: Dictionary = Game.s if Game.started else Account.vehicle_of(Save.read())
 	if not d.is_empty():
-		out.append(["SAVE FMT", "v%d · route %d · slots %d" % [int(d.get("version", 1)), int(d.get("route_v", 1)), int(d.get("slots_v", 1))]])
+		out.append(["SAVE FMT", "account v%d · v%d · route %d · slots %d" % [Account.V, int(d.get("version", 1)), int(d.get("route_v", 1)), int(d.get("slots_v", 1))]])
 	out.append(["SESSION", Trace.session])
 	return out
 

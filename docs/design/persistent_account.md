@@ -53,8 +53,11 @@ lap, combat, mods, engine, squad, gear, exp, sites_done, weather, tod...) plus:
 ```
 
 - At runtime `Game.s` keeps pointing at the **active vehicle** dictionary and a new autoload `Account` holds
-  `Account.a` (the `account` dictionary). The ~975 existing `Game.s` references stay unchanged; only code that
-  touches account data moves (`Meta.m()`, `Lore`, `Tutorial`, memorial in `Crew`, `stats.cheated` in `Dev`/`Modes`/`Trace`).
+  `Account.a` (the `account` dictionary). The ~975 existing `Game.s` references stay unchanged.
+  **Built (step 1):** the account keys `meta`, `lore`, `memorial`, `tutorial` (`Account.SHARED`) are put into
+  `Game.s` as references to the same objects (`Account.attach`), so `Meta`, `Lore`, `Tutorial` and `Crew` did
+  not change; `Account.envelope` stores them once, in the account. `stats.cheated` stays per vehicle (an event
+  vehicle needs its own flag for the leaderboard).
 - `Save.write` / `Save.read` work on the envelope; `Game.save_game()` writes the envelope, `Game.load_game()`
   unwraps it. Same localStorage key `mobile_vault_save_v1` / `user://savegame.json`, so no new storage keys.
 - `Meta.next_generation()` replaces only `envelope.main`; the account is untouched (no more copying `meta` and
@@ -143,8 +146,10 @@ generation 3 with perks).
 | – | MV-126 account skill tree | 1 | uses `account.tree` |
 | – | MV-129 procedural map | 1 | uses `main.map_seed` + `account.places` |
 
-Ticket 1 is the risky one (every save goes through it) and should ship alone, behind the `account_v2`
-feature switch for the first web build (off = old single-save path still loads and writes v1).
+Ticket 1 is the risky one (every save goes through it) and ships alone. **Built in MV-159.** The save format
+itself is not behind a switch: the v1 → v2 migration is one-way, so an "off" that wrote v1 again would lose
+account data. The switch `persistent_account` covers what the player sees (off = NEW RUN is back and starts
+over from nothing).
 
 ## 7. Open points (small, decide while building)
 

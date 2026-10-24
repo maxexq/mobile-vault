@@ -1,6 +1,7 @@
 extends Node
 ## Core simulation: resources, rooms, dwellers, travel, biomes, weather, events, idle/offline progress.
-## The whole save is the `s` Dictionary (JSON-friendly). Views listen to signals and read `s`.
+## `s` is the active vehicle (JSON-friendly); the save wraps it with the persistent account (Account,
+## envelope v2). Views listen to signals and read `s`.
 
 signal resources_changed
 signal rooms_changed
@@ -46,7 +47,11 @@ func _notification(what: int) -> void:
 # =================================================================== lifecycle
 func new_game() -> void:
 	setup_default_state()
-	s.mode = Modes.take_pending()
+	if not Features.on("persistent_account"):
+		Account.a = {}      # switch off: NEW RUN starts over from nothing, as before the account
+	Account.attach(s)
+	# the main vehicle always plays standard at the account's difficulty; pending rules = test / balance runs
+	s.mode = Modes.take_pending() if not Modes.pending.is_empty() else Account.main_mode()
 	started = true
 	save_game()
 	game_started.emit()
@@ -111,10 +116,12 @@ func setup_default_state(keep_meta: bool = false) -> void:
 
 
 func load_game() -> bool:
-	var d := Save.read()
-	if d.is_empty() or not d.has("rooms"):
+	var u := Account.unwrap(Save.read())
+	if u.is_empty() or not (u.main as Dictionary).has("rooms"):
 		return false
-	s = d
+	Account.a = u.account
+	s = u.main
+	Account.attach(s)
 	_migrate()
 	started = true
 	# Cloud.now() is the server clock once the cloud has answered, so a moved phone clock can't fake time away
@@ -125,6 +132,8 @@ func load_game() -> bool:
 	if elapsed > 30.0:
 		_offline_progress(minf(elapsed, Data.OFFLINE_CAP_SEC * Modes.mul("offline")))
 	_emit_all(true)
+	if Account.take_mode_notice():
+		toast.emit("ตอนนี้ทุกคนเล่นด้วยไอดีถาวรแล้ว ขบวนของคุณกลับสู่โหมดเอาชีวิตรอด (ความยากเดิม) ของทุกอย่างยังอยู่ครบ", "biome")
 	return true
 
 
@@ -299,7 +308,7 @@ func save_game() -> void:
 	if not started:
 		return
 	s.saved_at = Cloud.now()
-	Save.write(s)
+	Save.write(Account.envelope(s))
 
 
 func reset_game() -> void:
