@@ -2,6 +2,7 @@ extends Node
 ## Dev-only balance sim: godot --headless --path . -- --balance [--minutes=N] [--mode=peaceful/hard/fuel_scarce,...]
 ## (--mode takes a game mode id, a difficulty and mutators in any order, comma separated)
 ## Plays the game at max speed with a simple bot and prints a progression log.
+## --off=<feature>[,<feature>] runs with feature switches off (e.g. --off=raw_food for the old food economy).
 
 var main: Node
 
@@ -22,6 +23,13 @@ func _ready() -> void:
 				else:
 					md.mut.append(part)
 			Modes.pending = md
+		if a.begins_with("--off="):
+			# this run only: straight into the in-memory tester layer (set_override would save it to dev.cfg)
+			var dev: Dictionary = Features.layers.dev
+			if not dev.has("features"):
+				dev["features"] = {}
+			for f in a.substr(6).split(",", false):
+				dev.features[f] = false
 	# detach the visual layer: this sim runs many minutes per frame
 	for sig in Combat.get_signal_list():
 		for c in Combat.get_signal_connection_list(sig.name):
@@ -42,11 +50,14 @@ func _ready() -> void:
 	var dumped := false
 	var blk_count := {}
 	var kmh_sum := [0.0]
+	var starve := [0]
 	var fac_sum := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 	for sec in minutes * 60:
 		if sec % 60 == 0:
 			await get_tree().process_frame
 		Game._simulate(1.0, true)
+		if float(Game.s.res.food) <= 0.0:
+			starve[0] += 1
 		var br := Game.blocked_reason().get_slice(" ", 0)
 		blk_count[br] = int(blk_count.get(br, 0)) + 1
 		kmh_sum[0] += Game.speed_kmh()
@@ -116,6 +127,7 @@ func _ready() -> void:
 		if Combat.wave_is_warlord and (warlords.is_empty() or warlords[-1] != sec / 60):
 			warlords.append(sec / 60)
 		if sec % 600 == 0 or sec == minutes * 60 - 1:
+			print("[bal] %3dm food %d crops %d meat %d water %d | crew %d | starving %ds" % [sec / 60, int(Game.s.res.food), int(Game.s.res.get("crops", 0)), int(Game.s.res.get("meat", 0)), int(Game.s.res.water), Game.s.dwellers.size(), starve[0]])
 			var sq := []
 			for did in Game.s.squad:
 				if int(did) >= 0:
