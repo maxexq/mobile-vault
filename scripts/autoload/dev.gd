@@ -371,6 +371,16 @@ func rooms_max() -> void:
 	Game.rooms_changed.emit()
 
 
+## every room lamp (and the cab's) stutters for 2 s: check the lighting / micro animation layer
+func lamps_flicker() -> int:
+	var n := 0
+	for a in get_tree().get_nodes_in_group(RoomAmbience.GROUP):
+		(a as RoomAmbience).flicker(2.0)
+		n += 1
+	act("lamps flicker x%d" % n)
+	return n
+
+
 func blackout(all_rooms: bool) -> void:
 	if all_rooms:
 		Game.s.res.power = 0.0

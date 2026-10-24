@@ -65,6 +65,11 @@ func _run() -> void:
 		await _large_room_test()
 		_finish()
 		return
+	if "--only=ambience" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _ambience_test()
+		_finish()
+		return
 	if "--only=version" in OS.get_cmdline_user_args():
 		await _version_test()
 		_finish()
@@ -663,6 +668,7 @@ func _run() -> void:
 	await _account_test()
 	await _resume_test()
 	await _large_room_test()
+	await _ambience_test()
 	await _features_test()
 	await _modes_test()
 	await _version_test()
@@ -2787,6 +2793,68 @@ func _title_backdrop_test() -> void:
 	await wait(0.2)
 	_check("title: window re-fits after it grows", vp.encloses(p.get_rect()))
 	main.hud.title_screen._refresh_account()
+
+
+# ------------------------------------------------------------------ room ambience (MV-167)
+## lamp light pools + micro animation: every room type has moving parts, the layer hides in a blackout,
+## on building sites and wide rooms, follows its Features switch, and the GOD flicker reaches every lamp
+func _ambience_test() -> void:
+	get_window().size = Vector2i(1280, 640)
+	Features.set_override("features", "room_ambience", null)
+	Game.setup_default_state()
+	Game.s.tier = "rig"
+	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	var types := ["medical", "quarters", "kitchen", "hydroponics", "water", "armory", "science", "radio", "engine", "refinery", "workshop", "empty"]
+	while Game.s.rooms.size() < Game.slot_count():
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	for i in Game.s.rooms.size():
+		Game.s.rooms[i] = {"type": types[i % types.size()], "level": 1, "job": {}, "build": {}}
+	Game.s.outage = {}
+	Game.s.res.power = 500.0
+	Game.s.tod = 0.9
+	Game.rooms_changed.emit()
+	main.vehicle.refresh_rooms()
+	_no_events()
+	await wait(0.5)
+	var seen := {}
+	var moving := true
+	for rv in main.vehicle.room_views:
+		var r: RoomView = rv
+		if not r.visible or not Game.is_slot_unlocked(r.slot):
+			continue
+		var t: String = Game.s.rooms[r.slot].type
+		seen[t] = r.ambience.visible and r.ambience.kind == t
+		moving = moving and r.ambience.fx_count() >= (2 if t == "empty" else 3)
+	_check("ambience: every room type lit (%d types)" % seen.size(), seen.size() == types.size() and not seen.values().has(false))
+	_check("ambience: every room has moving parts", moving)
+	var cv: CabView = main.vehicle.cab_view
+	_check("ambience: cab engine bay has lamp + gauge + rockers", cv.ambience.visible and cv.ambience.kind.begins_with("cab_") and cv.ambience.fx_count() >= 5)
+	var r0: RoomView = main.vehicle.room_views[2]
+	var f0 := r0.ambience._frame
+	await wait(0.3)
+	_check("ambience: redraws while time runs", r0.ambience._frame != f0)
+	_check("ambience: night makes the light pools stronger", not Game.is_night() or r0.ambience.night > 0.2)
+	_check("god: lamps flicker reaches every lamp", Dev.lamps_flicker() >= Game.slot_count() and r0.ambience.flicker_left > 1.5)
+	await wait(0.4)
+	await shot("rooms_ambience_night")
+	main.open_closeup(2)
+	await wait(0.8)
+	await shot("closeup_ambience_kitchen")
+	main.hud.room_closeup.close()
+	await wait(0.4)
+	Game.s.outage = {"2": 60.0}
+	await wait(0.2)
+	_check("ambience: off in a blackout (torches only)", not r0.ambience.visible)
+	Game.s.outage = {}
+	await wait(0.2)
+	_check("ambience: back when the power is", r0.ambience.visible)
+	Features.set_override("features", "room_ambience", false)
+	await wait(0.1)
+	_check("ambience: Features switch hides it", not r0.ambience.visible and not cv.ambience.visible)
+	Features.set_override("features", "room_ambience", null)
+	await wait(0.1)
+	_check("ambience: switch back on", r0.ambience.visible and cv.ambience.visible)
+	Game.s.tod = 0.4
 
 
 # ------------------------------------------------------------------ mobile touch
