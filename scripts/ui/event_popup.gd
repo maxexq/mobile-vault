@@ -32,12 +32,64 @@ func show_event(id: String) -> void:
 	_outcome_ok = -1
 	_choice = -1
 	_selected = []
+	decide_total = Game.event_decide_sec(id)
+	decide_left = decide_total if decide_total > 0.0 else -1.0
 	open()
 
 
+# ------------------------------------------------------------------ quick-time timer (MV-134)
+const IDLE_SEC := 20.0
+var decide_total := 0.0
+var decide_left := -1.0       # seconds left to decide, -1 = no timer
+var since_input := 999.0      # seconds since the player last pressed anything (any window)
+var _timer_bar: ProgressBar
+var _timer_lbl: Label
+
+
+## every press, before the GUI eats it: the clock only runs for a player who is actually there
+func _input(e: InputEvent) -> void:
+	if (e is InputEventMouseButton or e is InputEventScreenTouch or e is InputEventKey) and e.pressed:
+		since_input = 0.0
+
+
+## the clock runs while the player is deciding and has touched the screen in the last IDLE_SEC: idle play or a
+## dark screen leaves the event waiting (the vehicle stays parked), like before
+func clock_running() -> bool:
+	return is_open and decide_left > 0.0 and _outcome_ok == -1 and since_input < IDLE_SEC
+
+
+func _tick_timer(delta: float) -> void:
+	if clock_running():
+		decide_left -= delta
+		if decide_left <= 0.0:
+			time_out()
+			return
+	if _timer_bar and is_instance_valid(_timer_bar):
+		_timer_bar.value = decide_left / maxf(decide_total, 0.01)
+		var auto: Dictionary = Data.EVENTS[event_id].choices[Game.event_auto_choice(event_id)]
+		_timer_lbl.text = (Loc.t("ตัดสินใจภายใน %d วิ · หมดเวลา = %s") % [int(ceilf(decide_left)), Loc.t(str(auto.th))]) if clock_running() \
+			else Loc.t("เวลาหยุดรอ แตะจอเพื่อเดินต่อ · หมดเวลา = %s") % Loc.t(str(auto.th))
+
+
+## time is up: the crew does the cautious thing (Game.event_auto_choice); a fight goes out with the two strongest
+func time_out() -> void:
+	if not is_open or _outcome_ok != -1:
+		return
+	var i := _choice if _choice >= 0 else Game.event_auto_choice(event_id)
+	var ch: Dictionary = Data.EVENTS[event_id].choices[i]
+	if str(ch.action) == "fight" and _selected.is_empty():
+		_selected = Game.auto_defenders()
+	decide_left = -1.0
+	Trace.rec("event", "time out %s -> #%d %s" % [event_id, i, str(ch.action)])
+	Game.toast.emit(Loc.t("หมดเวลา! ลูกเรือตัดสินใจเอง: %s") % Loc.t(str(ch.th)), "warn")
+	_resolve(i)
+
+
 func _process(delta: float) -> void:
+	since_input += delta
 	if not is_open:
 		return
+	_tick_timer(delta)
 	_t += delta
 	match _outcome_ok:
 		1: _alarm.border_color = UIKit.C_GREEN if int(_t * 1.5) % 2 == 0 else UIKit.C_LINE
@@ -63,6 +115,20 @@ func refresh() -> void:
 	dt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	dh.add_child(dt)
 	v.add_child(dh)
+	_timer_bar = null
+	if decide_left > 0.0:
+		var th := UIKit.hbox(3)
+		var tl := UIKit.label("TIME", UIKit.FP, UIKit.C_ORANGE, true)
+		tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		th.add_child(tl)
+		_timer_bar = UIKit.progress(UIKit.C_ORANGE, 4)
+		_timer_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_timer_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		th.add_child(_timer_bar)
+		v.add_child(th)
+		_timer_lbl = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_ORANGE)
+		v.add_child(_timer_lbl)
+		_tick_timer(0.0)
 	if _choice < 0:
 		for i in ev.choices.size():
 			v.add_child(_choice_button(ev.choices[i], i))

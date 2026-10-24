@@ -291,6 +291,8 @@ func _tab_world() -> void:
 	var bag: Array = Game.s.get("ev_bag", []) if int(Game.s.get("ev_bag_biome", -1)) == int(Game.s.biome) else []
 	_note("สำรับด่านนี้เหลือ %d ใบ · ล่าสุด: %s" % [bag.size(), ", ".join(Game.s.get("ev_recent", []).map(func(e): return str(Data.EVENTS.get(e, {}).get("th", e))))])
 	_row([_b("จั่วใบถัดไป", func(): Dev.event_draw(), "yellow", true), _b("สับสำรับใหม่", func(): Dev.event_deck_reset())])
+	_note("จับเวลาตัดสินใจ: %s · ตั้งค่า %s · x%.2f" % ["เปิด" if Features.on("event_timer") else "ปิด", str(Settings.get_value("event_timer")), Features.num("events.decide_scale", 1.0)])
+	_row([_b("อีเว้นต์สุ่ม หมดเวลาใน 2 วิ", func(): Dev.event_quick_timeout(), "red", true)], "จับเวลา")
 	var eb := []
 	for id in Data.EVENTS:
 		var eid: String = id

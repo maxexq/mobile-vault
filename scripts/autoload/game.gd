@@ -1937,6 +1937,47 @@ func event_danger(id: String) -> int:
 	return int(Data.EVENTS[id].danger) + int(s.lap)
 
 
+# ------------------------------------------------------------------ quick-time events (MV-134)
+const DECIDE_MIN := 5.0
+const DECIDE_MAX := 30.0
+## what the crew does when the commander doesn't answer in time: the most cautious thing they can afford
+const AUTO_ORDER := ["ignore", "detour", "shelter", "flee", "push", "ram", "pay", "repair", "trade", "gift", "adopt",
+	"loot", "check", "gamble", "recruit", "fight"]
+
+
+## seconds to decide, 0 = no timer (switch event_timer off / setting "off"). By danger: a safe event gives 30 s, the
+## deadliest about 5 s; an event can set its own "decide"; tune events.decide_scale; the "long" setting doubles it
+func event_decide_sec(id: String) -> float:
+	if not Features.on("event_timer") or str(Settings.get_value("event_timer")) == "off" or not Data.EVENTS.has(id):
+		return 0.0
+	var ev: Dictionary = Data.EVENTS[id]
+	var sec := float(ev.get("decide", DECIDE_MAX / (1.0 + 0.5 * float(event_danger(id)))))
+	sec = clampf(sec * Features.num("events.decide_scale", 1.0), DECIDE_MIN, DECIDE_MAX)
+	if str(Settings.get_value("event_timer")) == "long":
+		sec *= 2.0
+	return sec
+
+
+## index of the choice taken on time-out: a choice marked "auto": true, else the first affordable one in AUTO_ORDER
+func event_auto_choice(id: String) -> int:
+	var chs: Array = Data.EVENTS[id].choices
+	for i in chs.size():
+		if bool(chs[i].get("auto", false)) and (not chs[i].has("cost") or can_afford(chs[i].cost)):
+			return i
+	for a in AUTO_ORDER:
+		for i in chs.size():
+			if str(chs[i].action) == a and (not chs[i].has("cost") or can_afford(chs[i].cost)):
+				return i
+	return 0
+
+
+## the two strongest crew who are aboard: who goes out when a fight is picked for the commander
+func auto_defenders() -> Array:
+	var list: Array = s.dwellers.filter(func(d): return not is_away(d))
+	list.sort_custom(func(a, b): return dweller_power(a) > dweller_power(b))
+	return list.slice(0, 2).map(func(d): return int(d.id))
+
+
 ## resolves an event choice; returns {"ok":bool, "text":String}
 func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictionary:
 	Trace.rec("event", "choice %s #%d" % [id, choice_idx], {"defenders": defender_ids.size()})

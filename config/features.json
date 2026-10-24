@@ -16,6 +16,7 @@
     "portrait_fit": true,
     "env_badge": true,
     "tutorial_tips": true,
+    "event_timer": true,
     "engine_bay": true,
     "english": false,
     "persistent_account": true,
