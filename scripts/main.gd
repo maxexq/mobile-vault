@@ -159,6 +159,8 @@ func _ready() -> void:
 	crt.visible = bool(Settings.get_value("crt"))
 	zoom_mode = str(Settings.get_value("zoom"))
 	Settings.changed.connect(_on_setting_changed)
+	# a switch like portrait_fit (GOD panel, remote features.json) reframes at once, not on the next 20-frame check
+	Features.changed.connect(_on_features_changed)
 
 	Game.floating_text.connect(_spawn_float)
 	get_viewport().size_changed.connect(_on_resize)
@@ -390,6 +392,11 @@ func _on_setting_changed(key: String) -> void:
 			if zoom_mode != str(Settings.get_value("zoom")):
 				zoom_mode = str(Settings.get_value("zoom"))
 				_apply_world_scale()
+
+
+func _on_features_changed() -> void:
+	if world_vp != null and not is_equal_approx(target_ws(), world_scale):
+		_apply_world_scale()
 
 
 func screen_to_world(p: Vector2) -> Vector2:
