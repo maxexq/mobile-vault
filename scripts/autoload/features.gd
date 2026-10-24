@@ -17,7 +17,9 @@ extends Node
 ##  {"min_game": "4.3", "max_game": "", "tz_hours": 7,
 ##   "features": {"raids": false},
 ##   "events": {"raiders": {"on": false}, "trader": {"weight": 2.0}, "gas_station": {"biomes": ["*"], "from": "2026-11-14", "to": "2026-11-16 23:59"}},
-##   "tune": {"threat.rate_scale": 1.5}}
+##   "tune": {"threat.rate_scale": 1.5},
+##   "announce": [{"id": "s1-open", "text": "ข้อความไทย", "text_en": "optional", "from": "2026-11-01", "to": "2026-11-03",
+##                 "loops": 3}]}            (MV-188: top-of-screen marquee, each id shows once per browser, see Announce)
 ## Event dates are local time at tz_hours (default 7 = Thailand); "to" without a time means the end of that day.
 
 signal changed
@@ -55,6 +57,7 @@ const FEATURES := {
 	"resume_on_reload": "รีเฟรชหน้าเว็บแล้วเข้าเกมต่อเลย ไม่ต้องกด เดินทางต่อ",
 	"crew_roster_20": "ลูกเรือมีชื่อ 20 คน (MV-170) สุ่มมาขึ้นรถแทนผู้รอดชีวิตทั่วไป (ปิด = สุ่มแบบเดิม คนที่ขึ้นรถแล้วยังอยู่ครบ)",
 	"anticheat": "กันโกงเวลา: คิดเวลาออฟไลน์ไม่เกินที่เซิร์ฟเวอร์เห็นเซฟล่าสุด (ฝั่งเซิร์ฟเวอร์ตรวจเสมอ)",
+	"announce": "แถบประกาศตัวอักษรวิ่งบนจอ: ข่าวจาก features.json + แจ้งเวอร์ชันใหม่ระหว่างเล่น (MV-188)",
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
@@ -77,6 +80,9 @@ const TUNE := {
 	"crew.roster_chance": [0.0, 1.0, "โอกาสคนใหม่เป็นลูกเรือมีชื่อ (ไม่นับช่าง)"],
 	"crew.cameo_weight": [0.0, 10.0, "น้ำหนักแขกรับเชิญ 5 คน เทียบลูกเรือออริจินัล (1 = เท่ากัน)"],
 	"view.fit_margin": [0.0, 40.0, "มือถือแนวตั้ง: ขอบรอบตัวรถตอนซูม (พิกเซลภาพ)"],
+	"announce.loops": [1.0, 5.0, "แถบประกาศ: วิ่งกี่รอบแล้วหาย"],
+	"announce.speed": [10.0, 120.0, "แถบประกาศ: ความเร็วตัวอักษร (พิกเซล/วิ)"],
+	"announce.poll_min": [1.0, 60.0, "แถบประกาศ: เช็กประกาศ/เวอร์ชันใหม่ระหว่างเล่นทุก (นาที)"],
 }
 const LAYERS := ["default", "build", "remote", "mode", "dev"]
 
@@ -184,6 +190,30 @@ func event_pool(biome: int, base: Array) -> Array:
 	return pool
 
 
+## MV-188: the "announce" messages of every layer (a later layer's entry replaces one with the same id) whose
+## from/to window is open right now
+func announcements() -> Array:
+	var by_id := {}
+	var order := []
+	for l in LAYERS:
+		var an = _layer(l).get("announce", [])
+		for a in (an if an is Array else []):
+			if not by_id.has(a.id):
+				order.append(a.id)
+			by_id[a.id] = a
+	var out := []
+	var t := now()
+	var tz := float(_value("", "tz_hours", 7.0))
+	for id in order:
+		var a: Dictionary = by_id[id]
+		if a.has("from") and (parse_time(str(a.from), tz, false) < 0.0 or t < parse_time(str(a.from), tz, false)):
+			continue
+		if a.has("to") and (parse_time(str(a.to), tz, true) < 0.0 or t > parse_time(str(a.to), tz, true)):
+			continue
+		out.append(a)
+	return out
+
+
 func now() -> float:
 	return now_override if now_override > 0.0 else Cloud.now()
 
@@ -289,6 +319,21 @@ func _clean(d: Dictionary) -> Dictionary:
 		out.tune = t
 	if d.get("tz_hours") is float or d.get("tz_hours") is int:
 		out.tz_hours = clampf(float(d.tz_hours), -12.0, 14.0)
+	if d.get("announce") is Array:
+		var an := []
+		for a in d.announce:
+			if not (a is Dictionary and a.get("id") is String and a.get("text") is String) or str(a.id) == "" or str(a.text).strip_edges() == "":
+				continue
+			var c := {"id": str(a.id).left(64), "text": str(a.text).strip_edges().left(300)}
+			if a.get("text_en") is String and str(a.text_en).strip_edges() != "":
+				c.text_en = str(a.text_en).strip_edges().left(300)
+			for k in ["from", "to"]:
+				if a.get(k) is String and parse_time(a[k], 0.0, false) >= 0.0:
+					c[k] = a[k]
+			if a.get("loops") is float or a.get("loops") is int:
+				c.loops = clampi(int(a.loops), 1, 5)
+			an.append(c)
+		out.announce = an
 	return out
 
 

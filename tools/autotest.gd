@@ -115,6 +115,11 @@ func _run() -> void:
 		await _engine_shake_test()
 		_finish()
 		return
+	if "--only=announce" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _announce_test()
+		_finish()
+		return
 	if "--only=thai" in OS.get_cmdline_user_args():
 		_thai_terms_test()
 		_finish()
@@ -731,6 +736,7 @@ func _run() -> void:
 	await _qte_test()
 	await _engine_shake_test()
 	await _crew_roster_test()
+	await _announce_test()
 	_thai_terms_test()
 	_finish()
 
@@ -3756,3 +3762,98 @@ func _touch_test() -> void:
 		bp.close()
 	Input.emulate_touch_from_mouse = touch_was
 	await wait(0.3)
+
+
+## MV-188: announcement strip: features.json "announce" list (clean, window, once per browser), loops then hides,
+## version.json newer build -> tappable update notice first in line, switch off hides it, GOD actions
+func _announce_test() -> void:
+	var m: Marquee = main.marquee
+	Announce.queue.clear()
+	if not m.msg.is_empty():
+		m._stop()
+	Features.set_override("tune", "announce.speed", 120.0)
+	Features.set_override("tune", "announce.loops", null)
+	_check("announce: 3 loops by default", Announce.loops_for({"loops": -1}) == 3)
+	Features.apply_remote({"announce": [{"id": "t-hello", "text": "ทดสอบประกาศ hello", "loops": 2},
+		{"id": "", "text": "no id"}, {"text": "missing id"}, {"id": "t-blank", "text": "  "},
+		{"id": "t-future", "text": "later", "from": "2099-01-01"}, {"id": "t-past", "text": "old", "to": "2001-01-01"},
+		{"id": "t-loops", "text": "x", "loops": 99}]}, 1.0)
+	var ids := []
+	for a in Features.announcements():
+		ids.append(a.id)
+	_check("announce: only valid messages inside their window (%s)" % str(ids), ids == ["t-hello", "t-loops"])
+	_check("announce: loops clamped to 1-5", Features.layers.remote.announce.back().loops == 5)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("announce: the strip shows the first message", m.visible and str(m.msg.get("id", "")) == "t-hello" and m._label.text == "ทดสอบประกาศ hello")
+	_check("announce: shown id is remembered", Announce.seen.has("t-hello"))
+	_check("announce: info message lets taps through", m._strip.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	await wait(0.3)
+	await shot("announce_marquee")
+	_check("announce: text moves on whole pixels", m._label.position.x == roundf(m._label.position.x) and m._label.position.x < m._width())
+	var loops := []
+	var t := 0.0
+	while str(m.msg.get("id", "")) == "t-hello" and t < 20.0:
+		if not loops.has(m.loops_done):
+			loops.append(m.loops_done)
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	_check("announce: scrolled 2 times then moved on (%s, %.1fs)" % [str(loops), t], loops == [0, 1] and t < 20.0)
+	_check("announce: next message follows", str(m.msg.get("id", "")) == "t-loops")
+	m._stop()
+	await get_tree().process_frame
+	Announce.collect()
+	_check("announce: a seen message is not shown again", not Announce.has_id("t-hello") and Announce.queue.is_empty())
+	# new deploy detection
+	var stamp: Dictionary = BuildInfo.stamp().duplicate()
+	BuildInfo._stamp["built"] = "2026-10-24T10:00:00Z"
+	_check("announce: same or older build -> no notice", not Announce.check_version({"built": "2026-10-24T10:00:00Z"})
+		and not Announce.check_version({"built": "2026-10-24T09:00:00Z"}) and not Announce.check_version("junk"))
+	Announce.push("info on the strip", "")
+	Announce.push("info waiting", "")
+	_check("announce: newer build -> notice", Announce.check_version({"version": "4.7.0-alpha.9", "built": "2026-10-24T11:00:00Z"}))
+	_check("announce: the same build is not queued twice", not Announce.check_version({"version": "4.7.0-alpha.9", "built": "2026-10-24T11:00:00Z"}))
+	_check("announce: a message on the strip is not cut off", m._label.text == "info on the strip")
+	m._stop()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("announce: update notice jumps the queue", str(m.msg.get("kind", "")) == "update" and "4.7.0-alpha.9" in m._label.text and m._tag.text == "UPDATE")
+	_check("announce: update notice is tappable", m._strip.mouse_filter == Control.MOUSE_FILTER_STOP)
+	await wait(2.0)
+	await shot("announce_update")
+	var reloaded := [false]
+	Announce.reload_hook = func(): reloaded[0] = true
+	var tap := InputEventMouseButton.new()
+	tap.button_index = MOUSE_BUTTON_LEFT
+	tap.pressed = true
+	m._on_strip_input(tap)
+	_check("announce: tap on the update notice saves and reloads", reloaded[0])
+	Announce.reload_hook = Callable()
+	BuildInfo._stamp = stamp
+	_check("announce: dev build (no stamp) never asks to reload", BuildInfo.stamp().get("built", "") != "" or not Announce.check_version({"built": "9999-01-01T00:00:00Z"}))
+	# switch off hides the strip and holds the queue
+	Dev.feature_set("announce", false)
+	await get_tree().process_frame
+	_check("announce: switch off hides the strip", not m.visible and m.msg.is_empty() and Announce.take().is_empty())
+	Dev.feature_set("announce", null)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("announce: switch on shows what waits", m.visible)
+	m._stop()
+	Announce.queue.clear()
+	await get_tree().process_frame
+	# GOD actions
+	Dev.announce_test()
+	Dev.announce_update_test()
+	_check("announce: GOD test message + update notice queued", (m.visible and Announce.queue.size() == 1) or Announce.queue.size() == 2)
+	Announce.seen.append("t-hello")
+	Dev.announce_forget_seen()
+	_check("announce: GOD forget seen", not Announce.seen.has("t-hello"))
+	m._stop()
+	Announce.queue.clear()
+	m._stop()
+	Announce.queue.clear()
+	Features.clear_remote()
+	Features.set_override("tune", "announce.speed", null)
+	Announce.seen.clear()
+	await get_tree().process_frame
