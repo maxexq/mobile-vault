@@ -43,6 +43,26 @@ const STEPS := [
 const BUILDER_TEXT := " ตอนนี้ %s เป็นช่างของเรา"
 const START_SCRAP := 120.0
 
+## CONTEXTUAL TIPS (MV-150): the first time a system's window opens, Sgt. Mark explains it once (TipCard). Systems
+## that aren't unlocked can't be opened, so they are never taught early; a system whose Features switch is off gets
+## no tip. Seen tips live in Game.s.tutorial.tips (account data: kept across generations). key = HUD panel key, or
+## "event" / "encounter" for the first road event / special encounter pop-up.
+const TIPS := {
+	"map": {"feature": "", "text": "นี่คือแผนที่เส้นทางครับ ดูว่าพื้นที่ข้างหน้าอันตรายแค่ไหน มีจุดสำรวจอะไรบ้าง สุดเขตแต่ละพื้นที่มีด่านตรวจกับบอสรออยู่ จะจอดหรือออกรถก็สั่งจากตรงนี้ได้"},
+	"squad": {"feature": "", "text": "ทีมป้องกันมี 3 ตำแหน่งครับ มือปืนหลังคา นักสู้ท้ายรถ และแพทย์สนาม เลือกคนที่ค่าสถานะเหมาะกับตำแหน่งแล้วใส่อุปกรณ์ดีๆ ให้ คนในทีมจะไม่ได้ทำงานในห้อง"},
+	"solar": {"feature": "", "text": "แผงโซลาร์บนหลังคาครับ ผลิตไฟตอนกลางวัน ฝุ่นกับใบไม้ทำให้ได้ไฟน้อยลง กดล้างแผงฟรีบ่อยๆ แล้วค่อยเพิ่มแผงกับแบตเตอรี่เมื่อมีเศษเหล็กพอ"},
+	"inventory": {"feature": "", "text": "คลังอุปกรณ์ครับ ของที่ศัตรูดรอปมาอยู่ที่นี่ แตะของเพื่อใส่ให้ลูกเรือ ตีบวกด้วยชิ้นส่วน หรือหลอมของระดับเดียวกัน 3 ชิ้นให้ได้ชิ้นที่ดีขึ้น ล็อกของที่ไม่อยากให้ถูกแยกไว้ด้วยครับ"},
+	"log": {"feature": "", "text": "สมุดบันทึกครับ เรื่องของโลก สิ่งที่เราเจอ และประวัติลูกเรือจะถูกจดไว้ที่นี่ รวมถึงกำแพงอนุสรณ์ของคนที่จากไป อยากดูบทแนะนำอีกครั้งก็กดได้จากตรงนี้"},
+	"garage": {"feature": "", "text": "อู่ปรับแต่งครับ ติดของภายนอกอย่างเกราะ ป้อมปืน ล้อออฟโรด และอัปเกรดระบบภายในเพื่อรับมือภัยของแต่ละพื้นที่ บางชิ้นต้องมีพิมพ์เขียวจากการสำรวจ และอย่าลืมดูน้ำหนักรถครับ"},
+	"skills": {"feature": "", "text": "ผังสกิลครับ ลูกเรือได้แต้มเมื่อเลเวลขึ้น ใช้อัปเกรดสกิลทีละช่อง ช่องถัดไปต้องมีช่องก่อนหน้าอย่างน้อย 1 ระดับ"},
+	"expedition": {"feature": "expeditions", "text": "ส่งทีมสำรวจครับ เลือก 2-3 คนแล้วพกเสบียงไปด้วย รถจะจอดรอจนทีมกลับ ยิ่งอันตรายยิ่งได้ของดี แต่อาจมีคนบาดเจ็บหรือไม่ได้กลับมา สติมแพ็กกับยาปฏิชีวนะช่วยได้มากครับ"},
+	"nextgen": {"feature": "", "text": "เมื่อรถคันนี้ไปต่อไม่ไหว เราจะส่งต่อรุ่นถัดไปครับ เลือกคนที่จะไปกับรถคันใหม่ ใช้แต้มวิจัยซื้อความสามารถถาวร และทุกอย่างในสมุดบันทึกจะตามไปด้วย"},
+	"door": {"feature": "strangers", "text": "มีคนแปลกหน้ามาเคาะประตูครับ ส่องไฟตรวจร่างกายก่อนตัดสินใจ บางคนติดเชื้อ บางคนเป็นโจร สัญญาณที่เห็นเป็นแค่หลักฐานแวดล้อม เลือกให้ดีครับ"},
+	"engine": {"feature": "engine_bay", "text": "ห้องเครื่องครับ ดูความร้อน สภาพเครื่อง น้ำมันเครื่อง และน้ำหล่อเย็น ส่งคน STR สูงมาประจำช่วยระบายร้อนและซ่อม เครื่องร้อนเกินจะต้องจอดพัก และเปลี่ยนเครื่องที่ดีกว่าได้จากของดรอปครับ"},
+	"event": {"feature": "road_events", "text": "เหตุการณ์บนถนนครับ ทุกตัวเลือกมีผลกับเสบียง ลูกเรือ หรือตัวรถ ดูระดับอันตรายก่อนเลือก บางตัวเลือกส่งคนออกไปสู้ได้"},
+	"encounter": {"feature": "encounters", "text": "ทีมสำรวจเจอจุดพิเศษครับ สั่งการภายในเวลาที่กำหนด ไม่งั้นทีมจะตัดสินใจเอง ผลจะกลับมาพร้อมทีม"},
+}
+
 var hud: Node            # set by main: HUD (panels, room_closeup, any_modal_open)
 var main: Node           # set by main: placement state (_placing)
 var _t := 0.0
@@ -102,6 +122,51 @@ func text() -> String:
 		if not names.is_empty():
 			t += Loc.t(BUILDER_TEXT) % ", ".join(names)
 	return t
+
+
+# ------------------------------------------------------------------ contextual tips (MV-150)
+## tips are allowed: build switch + the player's setting, and never on top of the first-run tutorial
+func tips_on() -> bool:
+	return Game.started and not active() and Features.on("tutorial_tips") and bool(Settings.get_value("tips"))
+
+
+func tip_seen(key: String) -> bool:
+	return (state().get("tips", []) as Array).has(key)
+
+
+## the first unseen tip among the systems open right now ("" = none)
+func pending_tip(open_keys: Array) -> String:
+	if not tips_on():
+		return ""
+	for k in open_keys:
+		if TIPS.has(k) and not tip_seen(k):
+			var f := str(TIPS[k].feature)
+			if f == "" or Features.on(f):
+				return k
+	return ""
+
+
+func tip_text(key: String) -> String:
+	return Loc.t(str(TIPS.get(key, {}).get("text", "")))
+
+
+func mark_tip(key: String) -> void:
+	if Game.s.is_empty() or not TIPS.has(key):
+		return
+	if not Game.s.get("tutorial") is Dictionary:
+		Game.s["tutorial"] = {"step": 0, "done": true}
+	var tips: Array = Game.s.tutorial.get("tips", [])
+	if not tips.has(key):
+		tips.append(key)
+	Game.s.tutorial["tips"] = tips
+	Trace.rec("tutorial", "tip " + key)
+
+
+## every tip shows again the next time its window opens
+func reset_tips() -> void:
+	if not Game.s.is_empty() and Game.s.get("tutorial") is Dictionary:
+		Game.s.tutorial["tips"] = []
+	Trace.rec("tutorial", "tips reset")
 
 
 func builder_names() -> Array:

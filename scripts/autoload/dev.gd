@@ -736,6 +736,22 @@ func tutorial_goto(id: String) -> void:
 	Tutorial.goto(id)
 
 
+## contextual tips (MV-150): forget which tips were seen; read-only for the save (not cheated)
+func tips_reset() -> void:
+	Trace.rec("god", "tips reset")
+	Tutorial.reset_tips()
+
+
+## show one tip now: forget it, then open its window (event / encounter tips show on the next pop-up)
+func tip_show(k: String) -> void:
+	Trace.rec("god", "tip show " + k)
+	if not Game.s.is_empty() and Game.s.get("tutorial") is Dictionary:
+		(Game.s.tutorial.get("tips", []) as Array).erase(k)
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud and hud.panels.has(k) and k != "god":
+		hud.open_panel(k)
+
+
 # ---- construction & builders
 ## a refugee with the builder role (hard hat) and, optionally, one construction trait
 func spawn_builder(build_trait: String = "") -> Dictionary:

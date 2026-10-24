@@ -83,6 +83,10 @@ func _run() -> void:
 		await _anticheat_test()
 		_finish()
 		return
+	if "--only=tips" in OS.get_cmdline_user_args():
+		await _tips_test()
+		_finish()
+		return
 	if "--only=english" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _english_test()
@@ -715,6 +719,7 @@ func _run() -> void:
 	await _env_test()
 	await _english_test()
 	await _shake_test()
+	await _tips_test()
 	await _engine_shake_test()
 	await _crew_roster_test()
 	_thai_terms_test()
@@ -2915,6 +2920,50 @@ func _engine_bay_test() -> void:
 
 
 ## MV-111: semver + release channel badge + changelog / release tooling
+## MV-150: contextual tips: Sgt. Mark explains a system once, the first time its window opens
+func _tips_test() -> void:
+	Tutorial.skip()
+	Settings.set_value("tips", true)
+	Tutorial.reset_tips()
+	var hud = main.hud
+	hud.open_panel("map")
+	await wait(0.4)
+	_check("tips: first time the map opens, Sgt. Mark's tip shows", hud.tip_card.visible and hud.tip_card.key == "map"
+		and hud.tip_card._text.text == Tutorial.tip_text("map") and hud.tip_card._text.text != "")
+	await shot("tip_map")
+	hud.tip_card.dismiss()
+	hud.panels.map.close()
+	await wait(0.2)
+	hud.open_panel("map")
+	await wait(0.4)
+	_check("tips: shown once (seen after Got it)", Tutorial.tip_seen("map") and not hud.tip_card.visible)
+	hud.panels.map.close()
+	_check("tips: kept with the account (survive generations)", "tutorial" in Account.SHARED and (Game.s.tutorial.tips as Array).has("map"))
+	Features.set_override("features", "expeditions", false)
+	_check("tips: a switched-off system gets no tip", Tutorial.pending_tip(["expedition"]) == "")
+	Features.set_override("features", "expeditions", null)
+	_check("tips: an unseen, unlocked system does", Tutorial.pending_tip(["expedition"]) == "expedition")
+	Settings.set_value("tips", false)
+	_check("tips: player setting off -> none", Tutorial.pending_tip(["solar"]) == "")
+	Settings.set_value("tips", true)
+	Features.set_override("features", "tutorial_tips", false)
+	_check("tips: switch off -> none", Tutorial.pending_tip(["solar"]) == "")
+	Features.set_override("features", "tutorial_tips", null)
+	Tutorial.restart()
+	_check("tips: never on top of the first-run tutorial", Tutorial.pending_tip(["solar"]) == "")
+	Tutorial.skip()
+	Dev.tip_show("solar")
+	await wait(0.4)
+	_check("tips: GOD shows a tip again", hud.panels.solar.is_open and hud.tip_card.key == "solar")
+	hud.tip_card.dismiss()
+	hud.panels.solar.close()
+	var all_th := true
+	for k in Tutorial.TIPS:
+		all_th = all_th and Loc.t(Tutorial.TIPS[k].text) != "" and str(Tutorial.TIPS[k].text).contains("ครับ")
+	_check("tips: every tip is in Sgt. Mark's voice", all_th)
+	await wait(0.2)
+
+
 ## MV-175: screen shake at half strength by default, tunable, off in settings, same size on screen at any zoom
 func _shake_test() -> void:
 	var was: bool = bool(Settings.get_value("shake"))
