@@ -1914,7 +1914,10 @@ func _share_preview_test() -> void:
 	var shell := FileAccess.get_file_as_string(shell_path) if shell_path != "" else ""
 	for key in ["$GODOT_URL", "$GODOT_CONFIG", "$GODOT_HEAD_INCLUDE", "$GODOT_THREADS_ENABLED", "<!--BOOT_SHIM-->", "src=\"logo.png\""]:
 		_check("boot: shell has " + key, shell.contains(key))
-	_check("boot: patch-note tips stay hidden during the test phase", shell.contains("<ul class=\"tips\" hidden>"))
+	_check("boot: no patch notes on the loading page during the test phase", not shell.contains("ชื่อใหม่") and not shell.contains("class=\"tips\""))
+	_check("boot: random tips + driving scene", shell.contains("const TIPS = [") and shell.contains("id=\"scene\""))
+	for sprite in ["sky", "sun", "far", "mid", "near", "road", "bus", "walker"]:
+		_check("boot: web/boot/%s.png exported" % sprite, FileAccess.file_exists("res://web/boot/%s.png" % sprite))
 	_check("boot: shell version matches BuildInfo", shell.contains(">v%s · GODOT 4.7.2<" % BuildInfo.GAME_VERSION))
 	var web_logo := Image.load_from_file(ProjectSettings.globalize_path("res://web/logo.png"))
 	_check("boot: web/logo.png is the 192x60 pixel logo", web_logo != null and web_logo.get_size() == Vector2i(192, 60))

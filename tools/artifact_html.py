@@ -8,8 +8,7 @@ else, boot card included, comes from web/index.html, i.e. tools/web_shell.html.
 
     python3 tools/artifact_html.py [--web web] [--out build/artifact]
 
-Then publish <out>/index.html with the files engine.wasm, pack.wasm, index.js, logo.png,
-features.json and index.audio*.js next to it.
+Then publish <out>/index.html with every other file in <out> (boot/ sprites included).
 """
 import argparse
 import gzip
@@ -69,7 +68,8 @@ SHIM = """<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako_in
 </script>"""
 
 GZIPPED = {"index.wasm": ("engine.wasm", "application/wasm"), "index.pck": ("pack.wasm", "application/octet-stream")}
-COPIED = ["index.js", "logo.png", "features.json", "index.audio.worklet.js", "index.audio.position.worklet.js"]
+COPIED = ["index.js", "logo.png", "boot/sky.png", "boot/sun.png", "boot/far.png", "boot/mid.png",
+          "boot/near.png", "boot/road.png", "boot/bus.png", "boot/walker.png", "features.json", "index.audio.worklet.js", "index.audio.position.worklet.js"]
 
 
 def main() -> None:
@@ -90,11 +90,12 @@ def main() -> None:
         shim_map[src] = {"file": dst, "type": mime, "gz": os.path.getsize(out)}
     for name in COPIED:
         if os.path.exists(os.path.join(a.web, name)):
+            os.makedirs(os.path.dirname(os.path.join(a.out, name)), exist_ok=True)
             shutil.copy2(os.path.join(a.web, name), os.path.join(a.out, name))
     html = html.replace("<!--BOOT_SHIM-->", SHIM % {"map": json.dumps(shim_map)})
     # Google sign-in can't run inside the artifact frame; the game offers the Vercel page instead.
-    html = html.replace("(ปุ่มบนหน้าแรก / ตั้งค่า &gt; เซฟ)</li>",
-                        "(ปุ่มบนหน้าแรก / ตั้งค่า &gt; เซฟ) · ล็อกอิน Google ต้องเปิดเกมบนเว็บโดยตรง ไม่ใช่ในหน้านี้</li>")
+    html = html.replace('"ล็อกอินด้วย Gmail เพื่อเล่นต่อข้ามเครื่องได้ (หน้าแรก / ตั้งค่า > เซฟ)",',
+                        '"ล็อกอินด้วย Gmail เพื่อเล่นต่อข้ามเครื่องได้ แต่ต้องเปิดเกมบนเว็บโดยตรง ไม่ใช่ในหน้านี้",')
     open(os.path.join(a.out, "index.html"), "w", encoding="utf-8").write(html)
     for k, v in shim_map.items():
         print(f"{k} -> {v['file']} {v['gz'] / 1048576:.1f} MB gz")
