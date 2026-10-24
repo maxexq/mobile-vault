@@ -59,12 +59,12 @@ func _ready() -> void:
 	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_hint)
-	_skip_btn = UIKit.button("ข้าม", "gray")
+	_skip_btn = UIKit.button(Loc.t("ข้าม"), "gray")
 	_skip_btn.custom_minimum_size = Vector2(40, 22)
-	_skip_btn.tooltip_text = "ข้ามบทแนะนำทั้งหมด (เปิดใหม่ได้ที่ Log)"
+	_skip_btn.tooltip_text = Loc.t("ข้ามบทแนะนำทั้งหมด (เปิดใหม่ได้ที่ Log)")
 	_skip_btn.pressed.connect(Tutorial.skip)
 	row.add_child(_skip_btn)
-	_next_btn = UIKit.button("ต่อไป", "green", "play")
+	_next_btn = UIKit.button(Loc.t("ต่อไป"), "green", "play")
 	_next_btn.custom_minimum_size = Vector2(56, 22)
 	_next_btn.pressed.connect(_on_next)
 	row.add_child(_next_btn)
@@ -129,7 +129,7 @@ func _enter_step() -> void:
 	_chars = 0.0
 	_text.visible_characters = 0
 	_next_btn.visible = manual
-	_next_btn.text = "เริ่มเลย" if st.id == "done" else "ต่อไป"
+	_next_btn.text = Loc.t("เริ่มเลย") if st.id == "done" else Loc.t("ต่อไป")
 	_skip_btn.visible = st.id != "done"
 	_hint.text = "" if manual else "> DO IT NOW"
 	_bar.visible = st.id == "construct"

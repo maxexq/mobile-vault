@@ -11,7 +11,8 @@ const KEY := "mobile_vault_settings_v1"
 const FILE_PATH := "user://settings.json"
 const IMPORT_PATH := "user://import_save.json"     # desktop import source
 const BUSES := ["Music", "SFX"]
-const LANGS := [["th", "ไทย", true], ["en", "English (เร็วๆ นี้)", false]]
+## [id, name shown in its own language]; English is offered while the Features switch "english" is on (MV-151)
+const LANGS := [["th", "ไทย"], ["en", "English"]]
 const DEFAULTS := {
 	"master": 0.8, "music": 0.7, "sfx": 0.8, "mute": false,
 	"lang": "th",
@@ -121,7 +122,7 @@ func _apply(k: String) -> void:
 		"master", "music", "sfx", "mute":
 			_apply_audio()
 		"lang":
-			TranslationServer.set_locale(str(v.lang))
+			pass      # Loc (MV-151) sets the locale: it also checks the "english" switch
 		"fx_gpu":
 			FX.use_gpu = bool(v.fx_gpu)
 		"fps":

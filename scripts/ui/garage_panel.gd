@@ -9,7 +9,7 @@ var _list: VBoxContainer
 
 
 func _build() -> void:
-	set_title("GARAGE / อู่ปรับแต่งรถ")
+	set_title(Loc.t("GARAGE / อู่ปรับแต่งรถ"))
 	_tabs = UIKit.hbox(3)
 	body.add_child(_tabs)
 	_list = make_list(4)
@@ -32,14 +32,14 @@ func refresh() -> void:
 			tab = key
 			refresh())
 		_tabs.add_child(b)
-	set_title("GARAGE %s / อู่ปรับแต่ง %s" % [Meta.vehicle_name(), "ภายนอกรถ" if tab == "ext" else ("ภายในรถ" if tab == "int" else "")])
+	set_title(Loc.t("GARAGE %s / อู่ปรับแต่ง %s") % [Meta.vehicle_name(), Loc.t("ภายนอกรถ") if tab == "ext" else (Loc.t("ภายในรถ") if tab == "int" else "")])
 	if tab == "bp":
 		_build_blueprints()
 		return
 	_list.add_child(_weight_card())
 	if tab == "ext":
 		_list.add_child(_trailer_card())
-	_list.add_child(UIKit.wrap_label("ของที่ติดตั้งภายนอกจะเห็นบนตัวรถจริง · บางชิ้นต้องมีพิมพ์เขียวจากการสำรวจสถานที่สำคัญ" if tab == "ext" else "อัปเกรดระบบภายในเพื่อรับมือภัยของแต่ละพื้นที่"))
+	_list.add_child(UIKit.wrap_label(Loc.t("ของที่ติดตั้งภายนอกจะเห็นบนตัวรถจริง · บางชิ้นต้องมีพิมพ์เขียวจากการสำรวจสถานที่สำคัญ") if tab == "ext" else Loc.t("อัปเกรดระบบภายในเพื่อรับมือภัยของแต่ละพื้นที่")))
 	for id in Mods.MODS:
 		var md: Dictionary = Mods.MODS[id]
 		if md.side != tab or not Mods.enabled(id):
@@ -66,7 +66,7 @@ func _card(id: String, md: Dictionary) -> Control:
 	v.add_child(th)
 	v.add_child(UIKit.wrap_label(md.desc, UIKit.FS_SMALL))
 	if locked:
-		v.add_child(UIKit.label("ต้องมี: " + Mods.BLUEPRINT_TH.get(md.bp, md.bp), UIKit.FS_SMALL, UIKit.C_ORANGE))
+		v.add_child(UIKit.label(Loc.t("ต้องมี: ") + Mods.BLUEPRINT_TH.get(md.bp, md.bp), UIKit.FS_SMALL, UIKit.C_ORANGE))
 	h.add_child(v)
 	if lv < int(md.max):
 		var cost := Mods.next_cost(id)
@@ -89,21 +89,21 @@ func _weight_card() -> Control:
 	var cap := Haul.capacity()
 	var r := Haul.load_ratio()
 	var h := UIKit.hbox(4)
-	h.add_child(UIKit.label("น้ำหนัก %d / %d ตัน" % [int(w), int(cap)], UIKit.FS_SMALL, UIKit.C_TEXT))
+	h.add_child(UIKit.label(Loc.t("น้ำหนัก %d / %d ตัน") % [int(w), int(cap)], UIKit.FS_SMALL, UIKit.C_TEXT))
 	h.add_child(UIKit.spacer())
-	h.add_child(UIKit.label("ความเร็ว x%.2f · น้ำมัน %.1f/นาที" % [Haul.speed_mult(), Haul.fuel_pm()], UIKit.FS_SMALL, UIKit.C_DIM))
+	h.add_child(UIKit.label(Loc.t("ความเร็ว x%.2f · น้ำมัน %.1f/นาที") % [Haul.speed_mult(), Haul.fuel_pm()], UIKit.FS_SMALL, UIKit.C_DIM))
 	v.add_child(h)
 	var bar := UIKit.progress(UIKit.C_GREEN if r <= 0.8 else (UIKit.C_GOLD if r <= 1.0 else UIKit.C_RED), 6)
 	bar.max_value = 1.5
 	bar.value = minf(r, 1.5)
 	v.add_child(bar)
-	v.add_child(UIKit.wrap_label(Haul.status_text() + " · ห้อง/เกราะ/รถพ่วงทำให้หนัก · จูนเครื่อง/ช่วงล่าง/ล้อออฟโรดช่วยรับน้ำหนัก", UIKit.FS_SMALL,
+	v.add_child(UIKit.wrap_label(Haul.status_text() + Loc.t(" · ห้อง/เกราะ/รถพ่วงทำให้หนัก · จูนเครื่อง/ช่วงล่าง/ล้อออฟโรดช่วยรับน้ำหนัก"), UIKit.FS_SMALL,
 		UIKit.C_RED if r > 1.0 else UIKit.C_DIM))
 	return p
 
 
 func _trailer_card() -> Control:
-	var kind := "โบกี้" if Game.vehicle_def().trailer == "wagon" else "รถพ่วงท้าย"
+	var kind := Loc.t("โบกี้") if Game.vehicle_def().trailer == "wagon" else Loc.t("รถพ่วงท้าย")
 	var p := UIKit.panel(UIKit.C_BG2, UIKit.C_GOLD if Game.trailers() > 0 else UIKit.C_LINE_DARK)
 	var h := UIKit.hbox(4)
 	p.add_child(h)
@@ -111,7 +111,7 @@ func _trailer_card() -> Control:
 	var v := UIKit.vbox(1)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(UIKit.label("%s  %d/%d" % [kind, Game.trailers(), Data.MAX_TRAILERS], UIKit.FS_SMALL, UIKit.C_TEXT))
-	v.add_child(UIKit.wrap_label("ต่อพ่วง 2 ชั้น +6 ห้อง ปลดล็อกทันที · หนัก +%d ตัน กินไฟ/น้ำมันมากขึ้น" % int(Haul.TRAILER_W), UIKit.FS_SMALL))
+	v.add_child(UIKit.wrap_label(Loc.t("ต่อพ่วง 2 ชั้น +6 ห้อง ปลดล็อกทันที · หนัก +%d ตัน กินไฟ/น้ำมันมากขึ้น") % int(Haul.TRAILER_W), UIKit.FS_SMALL))
 	var why := Mods.can_add_trailer()
 	if why != "" and Game.trailers() < Data.MAX_TRAILERS:
 		v.add_child(UIKit.label(why, UIKit.FS_SMALL, UIKit.C_ORANGE))
@@ -132,7 +132,7 @@ func _cost_short(cost: Dictionary) -> String:
 	if cost.has("scrap"):
 		parts.append(str(int(cost.scrap)))
 	if cost.has("components"):
-		parts.append("%dชส" % int(cost.components))
+		parts.append(Loc.t("%dชส") % int(cost.components))
 	return " ".join(parts)
 
 
@@ -143,7 +143,7 @@ func _update_buttons() -> void:
 
 
 func _build_blueprints() -> void:
-	_list.add_child(UIKit.wrap_label("พิมพ์เขียวได้จากการส่งทีมสำรวจสถานที่สำคัญ และจะติดตัวไปถึงรถรุ่นถัดไป", UIKit.FS_SMALL))
+	_list.add_child(UIKit.wrap_label(Loc.t("พิมพ์เขียวได้จากการส่งทีมสำรวจสถานที่สำคัญ และจะติดตัวไปถึงรถรุ่นถัดไป"), UIKit.FS_SMALL))
 	for bp in Mods.BLUEPRINT_TH:
 		var have := Meta.has_blueprint(bp)
 		var h := UIKit.hbox(4)
@@ -154,5 +154,5 @@ func _build_blueprints() -> void:
 		for sid in Expedition.SITES:
 			if (Expedition.SITES[sid].loot.get("bp", []) as Array).has(bp):
 				where = Expedition.SITES[sid].th
-		h.add_child(UIKit.label("มีแล้ว" if have else where, UIKit.FS_SMALL, UIKit.C_GOLD if have else UIKit.C_DIM))
+		h.add_child(UIKit.label(Loc.t("มีแล้ว") if have else where, UIKit.FS_SMALL, UIKit.C_GOLD if have else UIKit.C_DIM))
 		_list.add_child(h)

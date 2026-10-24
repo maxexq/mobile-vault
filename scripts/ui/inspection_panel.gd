@@ -24,13 +24,13 @@ func open_door() -> void:
 
 func refresh() -> void:
 	clear_body()
-	set_title("STRANGER / คนแปลกหน้าที่ประตู")
+	set_title(Loc.t("STRANGER / คนแปลกหน้าที่ประตู"))
 	if _outcome != "":
 		_show_outcome()
 		return
 	var c := Inspection.current()
 	if c.is_empty():
-		var l := UIKit.wrap_label("ไม่มีใครเคาะประตู... ตอนนี้", UIKit.FS, UIKit.C_DIM)
+		var l := UIKit.wrap_label(Loc.t("ไม่มีใครเคาะประตู... ตอนนี้"), UIKit.FS, UIKit.C_DIM)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		body.add_child(l)
 		return
@@ -52,7 +52,7 @@ func refresh() -> void:
 	var tr := []
 	for t in c.traits:
 		tr.append(Crew.TRAITS[t].th)
-	info.add_child(UIKit.wrap_label("นิสัย: " + ", ".join(tr), UIKit.FS_SMALL, UIKit.C_GREEN))
+	info.add_child(UIKit.wrap_label(Loc.t("นิสัย: ") + ", ".join(tr), UIKit.FS_SMALL, UIKit.C_GREEN))
 	var pts := UIKit.hbox(2)
 	pts.add_child(UIKit.label("CHECKS", UIKit.FP, UIKit.C_DIM, true))
 	for i in int(c.get("max_points", c.points)):
@@ -62,16 +62,16 @@ func refresh() -> void:
 		dot.color = UIKit.C_GOLD if i < int(c.points) else UIKit.C_LINE_DARK
 		pts.add_child(dot)
 	info.add_child(pts)
-	info.add_child(UIKit.label("รอได้อีก %s" % Game.fmt_time(float(c.wait)), UIKit.FS_SMALL, UIKit.C_DIM))
+	info.add_child(UIKit.label(Loc.t("รอได้อีก %s") % Game.fmt_time(float(c.wait)), UIKit.FS_SMALL, UIKit.C_DIM))
 	if Inspection.queue().size() > 1:
-		info.add_child(UIKit.label("+%d คนรอคิว" % (Inspection.queue().size() - 1), UIKit.FS_SMALL, UIKit.C_DIM))
+		info.add_child(UIKit.label(Loc.t("+%d คนรอคิว") % (Inspection.queue().size() - 1), UIKit.FS_SMALL, UIKit.C_DIM))
 	# magnified detail of the last check
 	if _last_check != "" and (c.seen as Dictionary).has(_last_check):
 		list.add_child(_detail(c, _last_check))
 	else:
-		list.add_child(UIKit.wrap_label("ส่องไฟฉายผ่านช่องประตู... เลือกจุดที่จะตรวจ (ตรวจได้ไม่ครบทุกจุด เลือกให้ดี)", UIKit.FS_SMALL, UIKit.C_DIM))
+		list.add_child(UIKit.wrap_label(Loc.t("ส่องไฟฉายผ่านช่องประตู... เลือกจุดที่จะตรวจ (ตรวจได้ไม่ครบทุกจุด เลือกให้ดี)"), UIKit.FS_SMALL, UIKit.C_DIM))
 	# check buttons
-	list.add_child(UIKit.header("INSPECT", "ตรวจร่างกาย (ใช้ 1 แต้ม)"))
+	list.add_child(UIKit.header("INSPECT", Loc.t("ตรวจร่างกาย (ใช้ 1 แต้ม)")))
 	var grid := GridContainer.new()
 	grid.columns = 4 if wide else 2
 	grid.add_theme_constant_override("h_separation", 3)
@@ -85,10 +85,10 @@ func refresh() -> void:
 		var sg := str(c.seen[chk])
 		notes.append("%s %s: %s" % ["!" if sg != "normal" else "-", Inspection.CHECKS[chk].th, _sign_text(c, chk, sg)])
 	if not notes.is_empty():
-		list.add_child(UIKit.header("NOTES", "สิ่งที่สังเกตได้"))
+		list.add_child(UIKit.header("NOTES", Loc.t("สิ่งที่สังเกตได้")))
 		for n in notes:
 			list.add_child(UIKit.wrap_label(n, UIKit.FS_SMALL, UIKit.C_ORANGE if n.begins_with("!") else UIKit.C_TEXT))
-	var gb := UIKit.button("คู่มือสังเกตสัญญาณ" if not _guide else "ซ่อนคู่มือ", "gray", "book")
+	var gb := UIKit.button(Loc.t("คู่มือสังเกตสัญญาณ") if not _guide else Loc.t("ซ่อนคู่มือ"), "gray", "book")
 	gb.pressed.connect(func():
 		_guide = not _guide
 		refresh())
@@ -97,26 +97,26 @@ func refresh() -> void:
 		for k in Inspection.SIGN_TEXT:
 			if k != "normal":
 				list.add_child(UIKit.wrap_label("• " + Inspection.SIGN_TEXT[k], UIKit.FS_SMALL, UIKit.C_DIM))
-		list.add_child(UIKit.wrap_label("สัญญาณเป็นแค่หลักฐานแวดล้อม: คนดีก็อาจมี 1 อย่าง คนร้ายก็ไม่ได้มีครบทุกอย่าง", UIKit.FS_SMALL, UIKit.C_GOLD))
+		list.add_child(UIKit.wrap_label(Loc.t("สัญญาณเป็นแค่หลักฐานแวดล้อม: คนดีก็อาจมี 1 อย่าง คนร้ายก็ไม่ได้มีครบทุกอย่าง"), UIKit.FS_SMALL, UIKit.C_GOLD))
 	# the call
 	list.add_child(UIKit.divider(UIKit.C_LINE_DIM))
 	var hb := UIKit.hbox(3)
 	var full: bool = Game.s.dwellers.size() >= Game.pop_cap()
-	var admit := UIKit.button("รับขึ้นรถ" if not full else "ที่พักเต็ม", "green", "people")
+	var admit := UIKit.button(Loc.t("รับขึ้นรถ") if not full else Loc.t("ที่พักเต็ม"), "green", "people")
 	admit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	admit.disabled = full
 	admit.pressed.connect(func():
 		var d := Inspection.admit(c)
 		if not d.is_empty():
-			_outcome = "%s ก้าวขึ้นรถมาพร้อมรอยยิ้ม... หวังว่าคุณจะคิดถูก" % d.name
+			_outcome = Loc.t("%s ก้าวขึ้นรถมาพร้อมรอยยิ้ม... หวังว่าคุณจะคิดถูก") % d.name
 			refresh())
 	hb.add_child(admit)
-	var no := UIKit.button("ไล่ไป", "gray", "close")
+	var no := UIKit.button(Loc.t("ไล่ไป"), "gray", "close")
 	no.pressed.connect(func():
 		_outcome = Inspection.refuse(c)
 		refresh())
 	hb.add_child(no)
-	var shoot := UIKit.button("ยิง", "red", "shotgun")
+	var shoot := UIKit.button(Loc.t("ยิง"), "red", "shotgun")
 	shoot.pressed.connect(func():
 		_outcome = Inspection.shoot(c)
 		get_tree().call_group("shake", "shake", 4.0)
@@ -183,7 +183,7 @@ func _check_button(c: Dictionary, chk: String) -> Button:
 	var col := "yellow"
 	if seen:
 		col = "gray" if sg == "normal" else "red"
-	var b := UIKit.button(def.th + ((": ปกติ" if sg == "normal" else ": !") if seen else ""), col, def.icon)
+	var b := UIKit.button(def.th + ((Loc.t(": ปกติ") if sg == "normal" else ": !") if seen else ""), col, def.icon)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.disabled = not seen and not Inspection.can_check(c, chk)
 	b.pressed.connect(func():
@@ -205,13 +205,13 @@ func _show_outcome() -> void:
 	var hb := UIKit.hbox(4)
 	hb.alignment = BoxContainer.ALIGNMENT_CENTER
 	if Inspection.pending():
-		var nx := UIKit.button("คนต่อไป", "yellow", "people")
+		var nx := UIKit.button(Loc.t("คนต่อไป"), "yellow", "people")
 		nx.pressed.connect(func():
 			_outcome = ""
 			_last_check = ""
 			refresh())
 		hb.add_child(nx)
-	var ok := UIKit.button("ปิดประตู", "green", "play")
+	var ok := UIKit.button(Loc.t("ปิดประตู"), "green", "play")
 	ok.pressed.connect(close)
 	hb.add_child(ok)
 	v.add_child(hb)

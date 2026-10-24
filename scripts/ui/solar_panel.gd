@@ -14,7 +14,7 @@ var _box: BoxContainer
 
 
 func _build() -> void:
-	set_title("ROOFTOP SOLAR / ระบบโซลาร์เซลล์บนหลังคา")
+	set_title(Loc.t("ROOFTOP SOLAR / ระบบโซลาร์เซลล์บนหลังคา"))
 	var outer := UIKit.scroll()
 	body.add_child(outer)
 	var h := BoxContainer.new()
@@ -58,12 +58,12 @@ func refresh() -> void:
 		_ups.remove_child(c)
 		c.queue_free()
 	var sol: Dictionary = Game.s.solar
-	_ups.add_child(_up_row("pickaxe", "ทำความสะอาดแผง", "ฝุ่น/ใบไม้เกาะ %d%% (ลดกำลังผลิตสูงสุด 60%%) · ฟรี" % int(float(sol.dirt) * 100), "clean", {}, float(sol.dirt) < 0.01))
+	_ups.add_child(_up_row("pickaxe", Loc.t("ทำความสะอาดแผง"), Loc.t("ฝุ่น/ใบไม้เกาะ %d%% (ลดกำลังผลิตสูงสุด 60%%) · ฟรี") % int(float(sol.dirt) * 100), "clean", {}, float(sol.dirt) < 0.01))
 	var pl: int = sol.panels
-	_ups.add_child(_up_row("solar", "เพิ่มแผงโซลาร์เซลล์ใหม่ (Lv.%d)" % pl, "+25% กำลังผลิตต่อแผง", "panels", {"scrap": Game.SOLAR_COSTS.panels[mini(pl + 1, 4)]}, pl >= 4))
+	_ups.add_child(_up_row("solar", Loc.t("เพิ่มแผงโซลาร์เซลล์ใหม่ (Lv.%d)") % pl, Loc.t("+25% กำลังผลิตต่อแผง"), "panels", {"scrap": Game.SOLAR_COSTS.panels[mini(pl + 1, 4)]}, pl >= 4))
 	var bl: int = sol.battery
-	_ups.add_child(_up_row("battery", "แบตเตอรี่สำรอง (Lv.%d)" % bl, "+80 ความจุแบตเตอรี่", "battery", {"scrap": Game.SOLAR_COSTS.battery[mini(bl + 1, 4)]}, bl >= 4))
-	_ups.add_child(_up_row("tracking", "ระบบหมุนตามแสงแดด", "แผงหมุนตามดวงอาทิตย์ · ผลิตไฟดีขึ้นช่วงเช้า/เย็น", "tracking", {"scrap": Game.SOLAR_COSTS.tracking}, bool(sol.tracking)))
+	_ups.add_child(_up_row("battery", Loc.t("แบตเตอรี่สำรอง (Lv.%d)") % bl, Loc.t("+80 ความจุแบตเตอรี่"), "battery", {"scrap": Game.SOLAR_COSTS.battery[mini(bl + 1, 4)]}, bl >= 4))
+	_ups.add_child(_up_row("tracking", Loc.t("ระบบหมุนตามแสงแดด"), Loc.t("แผงหมุนตามดวงอาทิตย์ · ผลิตไฟดีขึ้นช่วงเช้า/เย็น"), "tracking", {"scrap": Game.SOLAR_COSTS.tracking}, bool(sol.tracking)))
 	_update()
 
 
@@ -76,7 +76,7 @@ func _up_row(_icon: String, title: String, desc: String, kind: String, cost: Dic
 	v.add_child(UIKit.wrap_label(title, UIKit.FS_SMALL, UIKit.C_TEXT))
 	v.add_child(UIKit.wrap_label(desc))
 	h.add_child(v)
-	var b := UIKit.button("MAX" if done and kind != "clean" else ("ล้าง" if kind == "clean" else "%d" % int(cost.get("scrap", 0))), "green", "wrench" if kind == "clean" else "scrap", 64)
+	var b := UIKit.button("MAX" if done and kind != "clean" else (Loc.t("ล้าง") if kind == "clean" else "%d" % int(cost.get("scrap", 0))), "green", "wrench" if kind == "clean" else "scrap", 64)
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b.disabled = done or not Game.can_afford(cost)
 	b.pressed.connect(func():
@@ -95,8 +95,8 @@ func _update() -> void:
 	var w := Game.weather_def()
 	_w_icon.texture = Atlas.icon(w.icon)
 	var sun := Game.sun_level()
-	_info.text = "%s · แสงแดด %d%%%s" % [w.th, int(sun * float(w.solar) * 100), " (กลางคืน)" if Game.is_night() else ""]
-	_gen.text = "ผลิต +%.1f ไฟ/นาที (สูงสุด %.0f ตอนเที่ยงฟ้าใส)" % [Game.solar_output_pm(), 20.0 * (1.0 + 0.25 * float(Game.s.solar.panels - 1))]
+	_info.text = Loc.t("%s · แสงแดด %d%%%s") % [w.th, int(sun * float(w.solar) * 100), Loc.t(" (กลางคืน)") if Game.is_night() else ""]
+	_gen.text = Loc.t("ผลิต +%.1f ไฟ/นาที (สูงสุด %.0f ตอนเที่ยงฟ้าใส)") % [Game.solar_output_pm(), 20.0 * (1.0 + 0.25 * float(Game.s.solar.panels - 1))]
 	var p: float = Game.s.res.power
 	var c := Game.cap("power")
 	_bat_bar.value = p / c
@@ -104,4 +104,4 @@ func _update() -> void:
 	for i in 4:
 		(_cells.get_child(i) as Control).modulate = Color.WHITE if p / c > i * 0.25 else Color(0.25, 0.25, 0.25)
 	var flow := Game.power_flow_pm()
-	_flow.text = "ไฟสุทธิ %+.1f/นาที · %s" % [flow, "กำลังชาร์จ" if flow > 0.1 else ("ไฟกำลังลดลง!" if flow < -0.1 else "คงที่")]
+	_flow.text = Loc.t("ไฟสุทธิ %+.1f/นาที · %s") % [flow, Loc.t("กำลังชาร์จ") if flow > 0.1 else (Loc.t("ไฟกำลังลดลง!") if flow < -0.1 else Loc.t("คงที่"))]

@@ -50,7 +50,7 @@ func refresh() -> void:
 	set_title("RADIO: %s / %s" % [ev.en, ev.th])
 	var v := media_layout(load("res://assets/events/%s.png" % ev.image), UIKit.C_GOLD)
 	var site_th: String = Expedition.site_def(str(Expedition.state().site)).th
-	v.add_child(UIKit.label("จุดพิเศษใน %s" % site_th, UIKit.FS_SMALL, UIKit.C_GOLD))
+	v.add_child(UIKit.label(Loc.t("จุดพิเศษใน %s") % site_th, UIKit.FS_SMALL, UIKit.C_GOLD))
 	v.add_child(UIKit.wrap_label(ev.desc, UIKit.FS, UIKit.C_TEXT))
 	var team := UIKit.flow(3)
 	for d in Expedition.team():
@@ -64,8 +64,8 @@ func refresh() -> void:
 	for i in choices.size():
 		v.add_child(_choice_button(choices[i], i))
 	var tl := Expedition.time_left()
-	v.add_child(UIKit.wrap_label("ถ้าไม่สั่งภายใน %d:%02d (ก่อนทีมกลับ) ทีมจะเลือก \"%s\" เอง" % [int(tl) / 60, int(tl) % 60, choices[-1].th], UIKit.FS_SMALL, UIKit.C_DIM))
-	var later := UIKit.button("ตัดสินใจทีหลัง", "gray")
+	v.add_child(UIKit.wrap_label(Loc.t("ถ้าไม่สั่งภายใน %d:%02d (ก่อนทีมกลับ) ทีมจะเลือก \"%s\" เอง") % [int(tl) / 60, int(tl) % 60, choices[-1].th], UIKit.FS_SMALL, UIKit.C_DIM))
+	var later := UIKit.button(Loc.t("ตัดสินใจทีหลัง"), "gray")
 	later.pressed.connect(close)
 	v.add_child(later)
 
@@ -112,16 +112,16 @@ func _changes(a: Dictionary, b: Dictionary) -> Dictionary:
 		if dv != 0:
 			rows.append({"icon": Data.item_icon(str(k)), "name": Data.item_name(str(k)), "n": dv})
 	if int(b.recruits) > int(a.recruits):
-		rows.append({"icon": "people", "name": "ผู้รอดชีวิตตามมา", "n": int(b.recruits) - int(a.recruits)})
+		rows.append({"icon": "people", "name": Loc.t("ผู้รอดชีวิตตามมา"), "n": int(b.recruits) - int(a.recruits)})
 	for k in a.sup:
 		var dv := int(b.sup.get(k, 0)) - int(a.sup[k])
 		if dv != 0:
-			rows.append({"icon": Data.item_icon(str(k)), "name": "เสบียงทีม: " + Data.item_name(str(k)), "n": dv})
+			rows.append({"icon": Data.item_icon(str(k)), "name": Loc.t("เสบียงทีม: ") + Data.item_name(str(k)), "n": dv})
 	var dl := int(round((float(b.lose) - float(a.lose)) * 100.0))
 	if dl > 0:
-		rows.append({"icon": "backpack", "name": "ของจากจุดสำรวจ", "n": -dl, "suffix": "%"})
+		rows.append({"icon": "backpack", "name": Loc.t("ของจากจุดสำรวจ"), "n": -dl, "suffix": "%"})
 	if float(b.dur) > float(a.dur) + 0.5:
-		rows.append({"icon": "pause", "name": "ทีมกลับช้าลง", "n": int(b.dur - a.dur), "suffix": " วิ", "neutral": true})
+		rows.append({"icon": "pause", "name": Loc.t("ทีมกลับช้าลง"), "n": int(b.dur - a.dur), "suffix": Loc.t(" วิ"), "neutral": true})
 	var crew := []
 	for d in Expedition.team():
 		var o: Dictionary = a.team.get(int(d.id), {})
@@ -140,7 +140,7 @@ func _changes(a: Dictionary, b: Dictionary) -> Dictionary:
 
 
 func _build_result() -> void:
-	set_title("RADIO / ผลการตัดสินใจ")
+	set_title(Loc.t("RADIO / ผลการตัดสินใจ"))
 	var ok: bool = _result.ok
 	var quiet: bool = ok and (_result.get("rows", []) as Array).is_empty() and (_result.get("crew", []) as Array).is_empty()
 	var col := UIKit.C_RED if not ok else (UIKit.C_GOLD if quiet else UIKit.C_GREEN)
@@ -148,14 +148,14 @@ func _build_result() -> void:
 	var ev := Encounter.def(str(_result.get("id", Encounter.current_id())))
 	var v := media_layout(load("res://assets/events/%s.png" % ev.image), col)
 	OutcomeKit.stamp(media, "MAYDAY" if not ok else ("ROGER" if quiet else "MISSION SUCCESS"),
-		"ทีมเจอปัญหา" if not ok else ("รับทราบ" if quiet else "ภารกิจสำเร็จ"), col, not ok)
+		Loc.t("ทีมเจอปัญหา") if not ok else (Loc.t("รับทราบ") if quiet else Loc.t("ภารกิจสำเร็จ")), col, not ok)
 	_static(media.get_child(0))
 	# the team's report comes in over the radio, typed out letter by letter
 	var rx := UIKit.hbox(4)
 	rx.alignment = BoxContainer.ALIGNMENT_CENTER
 	var dot := UIKit.label("RX", UIKit.FP, col, true)
 	rx.add_child(dot)
-	rx.add_child(UIKit.label("ทีมรายงานกลับมาทางวิทยุ", UIKit.FS_SMALL, Color(col, 0.8)))
+	rx.add_child(UIKit.label(Loc.t("ทีมรายงานกลับมาทางวิทยุ"), UIKit.FS_SMALL, Color(col, 0.8)))
 	v.add_child(rx)
 	var blink := dot.create_tween().set_loops(6)
 	blink.tween_property(dot, "modulate:a", 0.2, 0.18)
@@ -165,13 +165,13 @@ func _build_result() -> void:
 	l.visible_ratio = 0.0
 	v.add_child(l)
 	l.create_tween().tween_property(l, "visible_ratio", 1.0, clampf(str(_result.text).length() * 0.025, 0.4, 1.4))
-	var delay := OutcomeKit.lists(v, _result.get("rows", []), _result.get("crew", []), col, "ของที่ทีมจะขนกลับมา", 0.6)
+	var delay := OutcomeKit.lists(v, _result.get("rows", []), _result.get("crew", []), col, Loc.t("ของที่ทีมจะขนกลับมา"), 0.6)
 	var tl := Expedition.time_left()
-	var note := UIKit.wrap_label("ของที่ได้และผู้รอดชีวิตจะกลับมาพร้อมทีมสำรวจ · อีก %d:%02d" % [int(tl) / 60, int(tl) % 60], UIKit.FS_SMALL, UIKit.C_DIM)
+	var note := UIKit.wrap_label(Loc.t("ของที่ได้และผู้รอดชีวิตจะกลับมาพร้อมทีมสำรวจ · อีก %d:%02d") % [int(tl) / 60, int(tl) % 60], UIKit.FS_SMALL, UIKit.C_DIM)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(note)
 	OutcomeKit.fade_in(note, delay)
-	var btn := UIKit.button("ตกลง  CONTINUE", "red" if not ok else "green", "play")
+	var btn := UIKit.button(Loc.t("ตกลง  CONTINUE"), "red" if not ok else "green", "play")
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.custom_minimum_size.y = 32
 	btn.pressed.connect(close)

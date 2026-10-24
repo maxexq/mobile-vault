@@ -51,14 +51,14 @@ static func lists(v: VBoxContainer, rows: Array, crew: Array, col: Color, rows_t
 			grid.add_child(change_row(r, delay))
 			delay += 0.09
 	if not crew.is_empty():
-		v.add_child(UIKit.header("CREW", "ลูกเรือที่ได้รับผล", col))
+		v.add_child(UIKit.header("CREW", Loc.t("ลูกเรือที่ได้รับผล"), col))
 		var fl := UIKit.flow(4)
 		v.add_child(fl)
 		for c in crew.slice(0, 8):
 			fl.add_child(crew_chip(c.d, c.tags, delay))
 			delay += 0.07
 		if crew.size() > 8:
-			fl.add_child(UIKit.label("+%d คน" % (crew.size() - 8), UIKit.FS_SMALL, UIKit.C_DIM))
+			fl.add_child(UIKit.label(Loc.t("+%d คน") % (crew.size() - 8), UIKit.FS_SMALL, UIKit.C_DIM))
 	return delay
 
 

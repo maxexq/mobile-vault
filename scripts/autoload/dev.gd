@@ -994,6 +994,15 @@ func channel_preview(ch: String) -> void:
 	Features.changed.emit()
 
 
+## switch the language for testing (MV-151): English also turns the "english" switch on for this tester
+func lang_set(l: String) -> void:
+	Trace.rec("god", "language %s" % l)
+	if l == "en":
+		Features.set_override("features", "english", true)
+	Settings.set_value("lang", l)
+	Loc.apply()
+
+
 ## show another environment's badge (MV-112); the servers in use never change ("" = the real one)
 func env_preview(e: String) -> void:
 	Trace.rec("god", "env preview %s" % (e if e != "" else "off"))

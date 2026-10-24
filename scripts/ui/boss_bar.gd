@@ -54,7 +54,7 @@ func _process(delta: float) -> void:
 			var mech: Array = e.get("mech", [])
 			var tags := []
 			for m in mech:
-				tags.append(str(MECH_TH.get(m, m)))
+				tags.append(Loc.t(str(MECH_TH.get(m, m))))
 			_name_lbl.text = "%s  Lv.%d" % [str(e.name), int(e.lvl)]
 			_tag_lbl.text = (" · ".join(tags)).to_upper() if not tags.is_empty() else ""
 			_tag_lbl.add_theme_font_override("font", UIKit.font_main)

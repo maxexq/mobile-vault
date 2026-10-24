@@ -123,7 +123,7 @@ static func env_badge() -> String:
 
 
 static func env_note() -> String:
-	return str(ENVS.get(env_preview if env_preview != "" else env(), ENVS.dev)[1])
+	return Loc.t(str(ENVS.get(env_preview if env_preview != "" else env(), ENVS.dev)[1]))
 
 
 static func env_color() -> String:
@@ -190,7 +190,7 @@ static func channel_badge() -> String:
 
 
 static func channel_note() -> String:
-	return str(CHANNELS[release_channel()][1])
+	return Loc.t(str(CHANNELS[release_channel()][1]))
 
 
 static func channel_color() -> String:

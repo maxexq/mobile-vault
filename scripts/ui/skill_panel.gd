@@ -16,7 +16,7 @@ func _build() -> void:
 	_pts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(_pts)
-	var rs := UIKit.button("รีเซ็ต", "red", "close")
+	var rs := UIKit.button(Loc.t("รีเซ็ต"), "red", "close")
 	rs.pressed.connect(func():
 		var d := Game.dweller_by_id(did)
 		if not d.is_empty() and Skills.respec(d):
@@ -33,7 +33,7 @@ func _build() -> void:
 	_grid.add_theme_constant_override("v_separation", 0)
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(_grid)
-	_info = UIKit.wrap_label("แตะช่องสกิลเพื่ออัปเกรด (ต้องมีสกิลก่อนหน้าอย่างน้อย 1 ระดับ)", UIKit.FS_SMALL)
+	_info = UIKit.wrap_label(Loc.t("แตะช่องสกิลเพื่ออัปเกรด (ต้องมีสกิลก่อนหน้าอย่างน้อย 1 ระดับ)"), UIKit.FS_SMALL)
 	v.add_child(_info)
 
 

@@ -53,7 +53,7 @@ func refresh() -> void:
 	v.add_child(UIKit.wrap_label(ev.desc, UIKit.FS, UIKit.C_TEXT))
 	var dh := UIKit.hbox(3)
 	var danger := Game.event_danger(event_id)
-	var dtxt: String = ["ปลอดภัย", "ต่ำ", "ปานกลาง", "สูง", "สูงมาก", "อันตรายถึงชีวิต", "หายนะ"][clampi(danger, 0, 6)]
+	var dtxt: String = [Loc.t("ปลอดภัย"), Loc.t("ต่ำ"), Loc.t("ปานกลาง"), Loc.t("สูง"), Loc.t("สูงมาก"), Loc.t("อันตรายถึงชีวิต"), Loc.t("หายนะ")][clampi(danger, 0, 6)]
 	var dl := UIKit.label("DANGER", UIKit.FP, UIKit.C_RED, true)
 	dl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	dh.add_child(dl)
@@ -73,7 +73,7 @@ func refresh() -> void:
 func _choice_button(ch: Dictionary, i: int) -> ChoiceButton:
 	var b := ChoiceButton.new(ch.th, ch.en, ch.get("sub", ""), ch.get("color", "green"))
 	if ch.has("lore") and not Lore.is_unlocked(str(ch.lore)):
-		b.add_badge(Atlas.icon("book"), "ปลดล็อกบันทึกใหม่")
+		b.add_badge(Atlas.icon("book"), Loc.t("ปลดล็อกบันทึกใหม่"))
 	if ch.has("cost"):
 		b.disabled = not Game.can_afford(ch.cost)
 	b.pressed.connect(func():
@@ -86,7 +86,7 @@ func _choice_button(ch: Dictionary, i: int) -> ChoiceButton:
 
 
 func _build_defenders(v: VBoxContainer, _ch: Dictionary) -> void:
-	v.add_child(UIKit.header("DEFENDERS", "เลือกคนออกไปจัดการ (สูงสุด 2)"))
+	v.add_child(UIKit.header("DEFENDERS", Loc.t("เลือกคนออกไปจัดการ (สูงสุด 2)")))
 	var list: Array = []
 	for d in Game.s.dwellers:
 		if not Game.is_away(d):
@@ -101,12 +101,12 @@ func _build_defenders(v: VBoxContainer, _ch: Dictionary) -> void:
 		h.add_child(UIKit.portrait(d.variant))
 		var info := UIKit.vbox(1)
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		info.add_child(UIKit.label("%s Lv%d  พลัง %.0f" % [d.name, d.lvl, Game.dweller_power(d)], UIKit.FS_SMALL))
+		info.add_child(UIKit.label(Loc.t("%s Lv%d  พลัง %.0f") % [d.name, d.lvl, Game.dweller_power(d)], UIKit.FS_SMALL))
 		var hp := UIKit.progress(UIKit.C_RED, 3)
 		hp.value = float(d.hp) / float(d.max_hp)
 		info.add_child(hp)
 		h.add_child(info)
-		var b := UIKit.button("เลือก" if not sel else "ยกเลิก", "green" if not sel else "gray")
+		var b := UIKit.button(Loc.t("เลือก") if not sel else Loc.t("ยกเลิก"), "green" if not sel else "gray")
 		b.disabled = not sel and _selected.size() >= 2
 		b.pressed.connect(func():
 			if _selected.has(did):
@@ -120,14 +120,14 @@ func _build_defenders(v: VBoxContainer, _ch: Dictionary) -> void:
 	for did in _selected:
 		total += Game.dweller_power(Game.dweller_by_id(did))
 	var need := 8.0 + Game.event_danger(event_id) * 6.0
-	v.add_child(UIKit.wrap_label("พลังทีม %.0f vs อันตราย ~%.0f (ห้องอาวุธ +%.0f)" % [total, need, Game.armory_bonus()], UIKit.FS_SMALL, UIKit.C_GREEN if total >= need else UIKit.C_ORANGE))
+	v.add_child(UIKit.wrap_label(Loc.t("พลังทีม %.0f vs อันตราย ~%.0f (ห้องอาวุธ +%.0f)") % [total, need, Game.armory_bonus()], UIKit.FS_SMALL, UIKit.C_GREEN if total >= need else UIKit.C_ORANGE))
 	var hb := UIKit.hbox(4)
-	var back := UIKit.button("< กลับ", "gray")
+	var back := UIKit.button(Loc.t("< กลับ"), "gray")
 	back.pressed.connect(func():
 		_choice = -1
 		refresh())
 	hb.add_child(back)
-	var go := UIKit.button("ส่งทีมออกไปรบ!", "red", "skull")
+	var go := UIKit.button(Loc.t("ส่งทีมออกไปรบ!"), "red", "skull")
 	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	go.disabled = _selected.is_empty()
 	go.pressed.connect(func(): _resolve(_choice))
@@ -159,8 +159,8 @@ const STAMPS := {
 static func stamp_text(choice: Dictionary, ok: bool) -> Array:
 	if ok and choice.has("stamp"):
 		return choice.stamp
-	var st: Array = STAMPS.get(str(choice.get("action", "")), ["DONE", "เรียบร้อย"])
-	return [st[0], st[1]] if ok or st.size() < 4 else [st[2], st[3]]
+	var st: Array = STAMPS.get(str(choice.get("action", "")), ["DONE", Loc.t("เรียบร้อย")])
+	return [st[0], Loc.t(st[1])] if ok or st.size() < 4 else [st[2], Loc.t(st[3])]
 
 
 func _resolve(i: int) -> void:
@@ -196,12 +196,12 @@ func _changes(a: Dictionary, b: Dictionary) -> Dictionary:
 		if dv != 0:
 			rows.append({"icon": Data.item_icon(str(k)), "name": Data.item_name(str(k)), "n": dv})
 	if int(b.gear) > int(a.gear):
-		rows.append({"icon": "chest", "name": "อุปกรณ์ใหม่", "n": int(b.gear) - int(a.gear)})
+		rows.append({"icon": "chest", "name": Loc.t("อุปกรณ์ใหม่"), "n": int(b.gear) - int(a.gear)})
 	var hd := int(round(float(b.hull) - float(a.hull)))
 	if hd != 0:
-		rows.append({"icon": "hull", "name": "ตัวถัง", "n": hd, "suffix": "%"})
+		rows.append({"icon": "hull", "name": Loc.t("ตัวถัง"), "n": hd, "suffix": "%"})
 	if float(b.stall) > float(a.stall) + 0.5:
-		rows.append({"icon": "pause", "name": "จอดรอ", "n": int(b.stall), "suffix": " วิ", "neutral": true})
+		rows.append({"icon": "pause", "name": Loc.t("จอดรอ"), "n": int(b.stall), "suffix": Loc.t(" วิ"), "neutral": true})
 	var crew := []
 	for d in Game.s.dwellers:
 		var id := int(d.id)
@@ -231,7 +231,7 @@ func _changes(a: Dictionary, b: Dictionary) -> Dictionary:
 func _show_outcome(res: Dictionary, ch: Dictionary, choice: Dictionary) -> void:
 	_outcome_ok = 1 if res.ok else 0
 	clear_body()
-	set_title("OUTCOME / ผลลัพธ์")
+	set_title(Loc.t("OUTCOME / ผลลัพธ์"))
 	var col := UIKit.C_GREEN if res.ok else UIKit.C_RED
 	var ev: Dictionary = Data.EVENTS[event_id]
 	var v := media_layout(load("res://assets/events/%s.png" % ev.image), col)
@@ -240,8 +240,8 @@ func _show_outcome(res: Dictionary, ch: Dictionary, choice: Dictionary) -> void:
 	var l := UIKit.wrap_label(res.text, UIKit.FS_BIG, col)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(l)
-	var delay := OutcomeKit.lists(v, ch.rows, ch.crew, col, "ทรัพยากรที่เปลี่ยนไป", 0.35)
-	var ok := UIKit.button("ตกลง  CONTINUE", "green" if res.ok else "red", "play")
+	var delay := OutcomeKit.lists(v, ch.rows, ch.crew, col, Loc.t("ทรัพยากรที่เปลี่ยนไป"), 0.35)
+	var ok := UIKit.button(Loc.t("ตกลง  CONTINUE"), "green" if res.ok else "red", "play")
 	ok.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ok.custom_minimum_size.y = 32
 	ok.pressed.connect(close)

@@ -20,7 +20,7 @@ var _shown_conflict := false
 
 
 func _build() -> void:
-	set_title("SETTINGS / ตั้งค่า")
+	set_title(Loc.t("SETTINGS / ตั้งค่า"))
 	_tabs = UIKit.hbox(3)
 	body.add_child(_tabs)
 	_list = make_list(4)
@@ -132,11 +132,11 @@ func _choice(th: String, key: String, opts: Array, hint: String = "") -> void:
 
 ## difficulty of the account's vehicle: a setting, not a run rule (Account.set_diff)
 func _difficulty() -> void:
-	var h := _row("ความยาก", "เปลี่ยนได้ทุกเมื่อ มีผลทันที · ยากขึ้น = ศัตรูแรงขึ้น กินมากขึ้น ได้แต้มวิจัยพันธุกรรมมากขึ้น")
+	var h := _row(Loc.t("ความยาก"), Loc.t("เปลี่ยนได้ทุกเมื่อ มีผลทันที · ยากขึ้น = ศัตรูแรงขึ้น กินมากขึ้น ได้แต้มวิจัยพันธุกรรมมากขึ้น"))
 	var btns := []
 	for k in Modes.DIFFS:
 		var did: String = k
-		var b := UIKit.button(str(Modes.DIFFS[k].th), "gray")
+		var b := UIKit.button(Loc.t(str(Modes.DIFFS[k].th)), "gray")
 		b.custom_minimum_size = Vector2(34, 22)
 		b.add_theme_font_size_override("font_size", UIKit.FS_SMALL)
 		b.pressed.connect(func(): Account.set_diff(did))
@@ -148,7 +148,7 @@ func _difficulty() -> void:
 
 
 func _toggle(th: String, key: String, hint: String = "") -> void:
-	_choice(th, key, [[true, "เปิด"], [false, "ปิด"]], hint)
+	_choice(th, key, [[true, Loc.t("เปิด")], [false, Loc.t("ปิด")]], hint)
 
 
 ## 0..100% in 10% steps: [-] tappable meter [+] 70%
@@ -212,91 +212,91 @@ func _info(key: String, value: String) -> HBoxContainer:
 # ------------------------------------------------------------------ tabs
 func _tab_game() -> void:
 	if Game.started and not Game.s.is_empty():
-		_head("DIFFICULTY", "ความยาก")
+		_head("DIFFICULTY", Loc.t("ความยาก"))
 		_difficulty()
 
-	_head("AUDIO", "เสียง")
-	_volume("เสียงรวม", "master")
-	_volume("ดนตรี", "music")
-	_volume("เอฟเฟกต์", "sfx")
-	_toggle("ปิดเสียงทั้งหมด", "mute", "เกมยังไม่มีเสียงในเวอร์ชันนี้ ค่าที่ตั้งไว้จะใช้ทันทีเมื่อเพิ่มเสียงเข้ามา")
+	_head("AUDIO", Loc.t("เสียง"))
+	_volume(Loc.t("เสียงรวม"), "master")
+	_volume(Loc.t("ดนตรี"), "music")
+	_volume(Loc.t("เอฟเฟกต์"), "sfx")
+	_toggle(Loc.t("ปิดเสียงทั้งหมด"), "mute", Loc.t("เกมยังไม่มีเสียงในเวอร์ชันนี้ ค่าที่ตั้งไว้จะใช้ทันทีเมื่อเพิ่มเสียงเข้ามา"))
 
-	_head("LANGUAGE", "ภาษา")
+	_head("LANGUAGE", Loc.t("ภาษา"))
 	var langs := []
 	for l in Settings.LANGS:
-		langs.append([l[0], l[1], l[2]])
-	_choice("ภาษา", "lang", langs, "ตอนนี้มีภาษาไทยเท่านั้น ภาษาอังกฤษจะตามมา")
+		langs.append([l[0], l[1], l[0] == "th" or Features.on("english")])
+	_choice(Loc.t("ภาษา"), "lang", langs, Loc.t("ภาษาอังกฤษยังแปลไม่ครบ ส่วนที่ยังไม่แปลจะแสดงเป็นภาษาไทย"))
 
-	_head("DISPLAY", "การแสดงผล")
-	_choice("ขนาดพิกเซล", "ui_scale", [["auto", "ใหญ่"], ["small", "เล็ก"]], "เล็ก = ย่อลงหนึ่งขั้น เห็นพื้นที่มากขึ้น ภาพยังคมเต็มเม็ด")
-	_choice("มุมกล้อง", "zoom", [["auto", "AUTO"], ["wide", "กว้าง"], ["normal", "ปกติ"]], "AUTO จะถอยกล้องเองตอนสู้บอสหรือลากโบกี้")
-	_toggle("ฟิลเตอร์จอ CRT", "crt")
-	_choice("เอฟเฟกต์อนุภาค", "fx_gpu", [[true, "GPU"], [false, "CPU"]], "เลือก CPU ถ้าเครื่องช้าหรือเครื่องเก่า")
-	_choice("เฟรมเรต", "fps", [[60, "60"], [30, "30"]], "30 FPS ช่วยประหยัดแบตเตอรี่")
-	_toggle("เต็มจอ", "fullscreen", "บน iPhone (Safari) ให้ใช้ แชร์ > เพิ่มไปยังหน้าจอโฮม แทน")
+	_head("DISPLAY", Loc.t("การแสดงผล"))
+	_choice(Loc.t("ขนาดพิกเซล"), "ui_scale", [["auto", Loc.t("ใหญ่")], ["small", Loc.t("เล็ก")]], Loc.t("เล็ก = ย่อลงหนึ่งขั้น เห็นพื้นที่มากขึ้น ภาพยังคมเต็มเม็ด"))
+	_choice(Loc.t("มุมกล้อง"), "zoom", [["auto", "AUTO"], ["wide", Loc.t("กว้าง")], ["normal", Loc.t("ปกติ")]], Loc.t("AUTO จะถอยกล้องเองตอนสู้บอสหรือลากโบกี้"))
+	_toggle(Loc.t("ฟิลเตอร์จอ CRT"), "crt")
+	_choice(Loc.t("เอฟเฟกต์อนุภาค"), "fx_gpu", [[true, "GPU"], [false, "CPU"]], Loc.t("เลือก CPU ถ้าเครื่องช้าหรือเครื่องเก่า"))
+	_choice(Loc.t("เฟรมเรต"), "fps", [[60, "60"], [30, "30"]], Loc.t("30 FPS ช่วยประหยัดแบตเตอรี่"))
+	_toggle(Loc.t("เต็มจอ"), "fullscreen", Loc.t("บน iPhone (Safari) ให้ใช้ แชร์ > เพิ่มไปยังหน้าจอโฮม แทน"))
 
-	_head("FEEL", "ความรู้สึก")
-	_toggle("จอสั่น", "shake")
-	_toggle("เลือดและชิ้นส่วน", "gore", "ปิดแล้วศัตรูจะสลายไปโดยไม่มีเลือดกระเด็น")
-	_toggle("สั่นเครื่อง", "vibrate", "สั่นสั้นๆ ตอนโดนโจมตีหนัก (Safari ไม่รองรับ)")
+	_head("FEEL", Loc.t("ความรู้สึก"))
+	_toggle(Loc.t("จอสั่น"), "shake")
+	_toggle(Loc.t("เลือดและชิ้นส่วน"), "gore", Loc.t("ปิดแล้วศัตรูจะสลายไปโดยไม่มีเลือดกระเด็น"))
+	_toggle(Loc.t("สั่นเครื่อง"), "vibrate", Loc.t("สั่นสั้นๆ ตอนโดนโจมตีหนัก (Safari ไม่รองรับ)"))
 
-	_head("COMBAT", "การต่อสู้")
-	_choice("จังหวะศัตรู", "pacing", [["threat", "สมจริง"], ["classic", "คลาสสิก"]], "สมจริง = ศัตรูบุกเป็นครั้งตามเสียง แสง และความเร็วของรถ · คลาสสิก = ศัตรูมาเป็นเวฟต่อเนื่องแบบเดิม")
+	_head("COMBAT", Loc.t("การต่อสู้"))
+	_choice(Loc.t("จังหวะศัตรู"), "pacing", [["threat", Loc.t("สมจริง")], ["classic", Loc.t("คลาสสิก")]], Loc.t("สมจริง = ศัตรูบุกเป็นครั้งตามเสียง แสง และความเร็วของรถ · คลาสสิก = ศัตรูมาเป็นเวฟต่อเนื่องแบบเดิม"))
 
 	if Features.on("cloud_logs"):
-		_head("PRIVACY", "ความเป็นส่วนตัว")
-		_toggle("ส่งบันทึกการเล่นเพื่อพัฒนาเกม", "telemetry", "ส่งเหตุการณ์ในเกม ข้อผิดพลาด ทรัพยากร เวอร์ชันเกม และขนาดจอ พร้อมไอดีผู้เล่น ไปเก็บที่เซิร์ฟเวอร์ของเกม เพื่อแก้บั๊กและปรับสมดุล ไม่ส่งอีเมลหรือข้อมูลอื่นในเครื่อง ปิดแล้ว log จะอยู่ในเครื่องนี้อย่างเดียว")
+		_head("PRIVACY", Loc.t("ความเป็นส่วนตัว"))
+		_toggle(Loc.t("ส่งบันทึกการเล่นเพื่อพัฒนาเกม"), "telemetry", Loc.t("ส่งเหตุการณ์ในเกม ข้อผิดพลาด ทรัพยากร เวอร์ชันเกม และขนาดจอ พร้อมไอดีผู้เล่น ไปเก็บที่เซิร์ฟเวอร์ของเกม เพื่อแก้บั๊กและปรับสมดุล ไม่ส่งอีเมลหรือข้อมูลอื่นในเครื่อง ปิดแล้ว log จะอยู่ในเครื่องนี้อย่างเดียว"))
 
-	_head("TUTORIAL", "บทแนะนำ")
-	var tb := _action("ดูบทแนะนำอีกครั้ง", "blue", "book", func():
+	_head("TUTORIAL", Loc.t("บทแนะนำ"))
+	var tb := _action(Loc.t("ดูบทแนะนำอีกครั้ง"), "blue", "book", func():
 		close()
 		Tutorial.restart())
 	tb.disabled = not Game.started
 	if not Game.started:
-		_list.add_child(UIKit.wrap_label("เริ่มเกมก่อนแล้วค่อยเปิดบทแนะนำ", UIKit.FS_SMALL, UIKit.C_DIM))
-	_action("คืนค่าตั้งค่าเริ่มต้น", "gray", "cog", func():
+		_list.add_child(UIKit.wrap_label(Loc.t("เริ่มเกมก่อนแล้วค่อยเปิดบทแนะนำ"), UIKit.FS_SMALL, UIKit.C_DIM))
+	_action(Loc.t("คืนค่าตั้งค่าเริ่มต้น"), "gray", "cog", func():
 		Settings.reset_defaults()
-		_say("คืนค่าตั้งค่าทั้งหมดแล้ว"))
+		_say(Loc.t("คืนค่าตั้งค่าทั้งหมดแล้ว")))
 
 
 func _tab_data() -> void:
-	_head("SAVE", "ข้อมูลเซฟ")
+	_head("SAVE", Loc.t("ข้อมูลเซฟ"))
 	var d := Save.read()
 	if d.is_empty():
-		_list.add_child(UIKit.wrap_label("ยังไม่มีเซฟในเครื่องนี้", UIKit.FS, UIKit.C_TEXT))
+		_list.add_child(UIKit.wrap_label(Loc.t("ยังไม่มีเซฟในเครื่องนี้"), UIKit.FS, UIKit.C_TEXT))
 	else:
 		var at := int(float(Account.vehicle_of(d).get("saved_at", 0)))
 		var bias := int(Time.get_time_zone_from_system().get("bias", 0)) * 60
 		_info("SAVED", Time.get_datetime_string_from_unix_time(at + bias, true) if at > 0 else "-")
 		_info("SIZE", "%.1f KB" % (JSON.stringify(d).length() / 1024.0))
 		var veh := Account.vehicle_of(d)
-		_info("RUN", "รุ่นที่ %d · Vault %d · %.1f กม." % [int(Account.account_of(d).get("meta", {}).get("gen", 1)), int(veh.get("vault_level", 1)), float(veh.get("stats", {}).get("km_total", veh.get("km", 0.0)))])
-		_info("STORE", ("localStorage ของเบราว์เซอร์" if OS.has_feature("web") else ProjectSettings.globalize_path(Save.FILE_PATH)) + (" + Supabase" if Cloud.enabled() else ""))
+		_info("RUN", Loc.t("รุ่นที่ %d · Vault %d · %.1f กม.") % [int(Account.account_of(d).get("meta", {}).get("gen", 1)), int(veh.get("vault_level", 1)), float(veh.get("stats", {}).get("km_total", veh.get("km", 0.0)))])
+		_info("STORE", (Loc.t("localStorage ของเบราว์เซอร์") if OS.has_feature("web") else ProjectSettings.globalize_path(Save.FILE_PATH)) + (" + Supabase" if Cloud.enabled() else ""))
 	if Cloud.enabled():
-		_list.add_child(UIKit.wrap_label("เกมเซฟลงเครื่องทุก 15 วินาที และส่งขึ้นคลาวด์ทุกนาทีเมื่อออนไลน์ ถ้าออฟไลน์จะเก็บในเครื่องไว้ก่อนแล้วส่งตามทีหลัง", UIKit.FS_SMALL, UIKit.C_DIM))
+		_list.add_child(UIKit.wrap_label(Loc.t("เกมเซฟลงเครื่องทุก 15 วินาที และส่งขึ้นคลาวด์ทุกนาทีเมื่อออนไลน์ ถ้าออฟไลน์จะเก็บในเครื่องไว้ก่อนแล้วส่งตามทีหลัง"), UIKit.FS_SMALL, UIKit.C_DIM))
 	else:
-		_list.add_child(UIKit.wrap_label("เกมเซฟเองทุก 15 วินาที และตอนสลับแอป เซฟอยู่ในเบราว์เซอร์นี้เท่านั้น ถ้าล้างข้อมูลเว็บ เซฟจะหาย ควรส่งออกไฟล์เก็บไว้", UIKit.FS_SMALL, UIKit.C_DIM))
+		_list.add_child(UIKit.wrap_label(Loc.t("เกมเซฟเองทุก 15 วินาที และตอนสลับแอป เซฟอยู่ในเบราว์เซอร์นี้เท่านั้น ถ้าล้างข้อมูลเว็บ เซฟจะหาย ควรส่งออกไฟล์เก็บไว้"), UIKit.FS_SMALL, UIKit.C_DIM))
 	_cloud_rows()
-	var sb := _action("บันทึกตอนนี้", "green", "chest", func():
+	var sb := _action(Loc.t("บันทึกตอนนี้"), "green", "chest", func():
 		Game.save_game()
-		_say("บันทึกแล้ว"))
+		_say(Loc.t("บันทึกแล้ว")))
 	sb.disabled = not Game.started
-	var eb := _action("ส่งออกเซฟเป็นไฟล์", "blue", "up", func():
+	var eb := _action(Loc.t("ส่งออกเซฟเป็นไฟล์"), "blue", "up", func():
 		var where := Settings.export_save()
-		_say(("ส่งออกแล้ว: " + where) if where != "" else "ไม่มีเซฟให้ส่งออก", UIKit.C_GOLD if where != "" else UIKit.C_RED))
+		_say((Loc.t("ส่งออกแล้ว: ") + where) if where != "" else Loc.t("ไม่มีเซฟให้ส่งออก"), UIKit.C_GOLD if where != "" else UIKit.C_RED))
 	eb.disabled = d.is_empty() and not Game.started
-	_action("นำเข้าเซฟจากไฟล์", "blue", "book", func():
-		_say("เลือกไฟล์ .json ที่ส่งออกไว้ เซฟปัจจุบันจะถูกแทนที่")
+	_action(Loc.t("นำเข้าเซฟจากไฟล์"), "blue", "book", func():
+		_say(Loc.t("เลือกไฟล์ .json ที่ส่งออกไว้ เซฟปัจจุบันจะถูกแทนที่"))
 		Settings.begin_import())
 
-	_head("DANGER", "ล้างความคืบหน้า")
-	_list.add_child(UIKit.wrap_label("ลบไอดีนี้ทั้งหมด: รถ ลูกเรือ ของ ทุกรุ่น แต้มวิจัย และบันทึก แล้วกลับไปหน้าแรก ย้อนคืนไม่ได้ (ค่าตั้งค่ายังอยู่)", UIKit.FS_SMALL, UIKit.C_DIM))
-	_reset_btn = _action("รีเซ็ตความคืบหน้า", "red", "skull", _on_reset_pressed)
+	_head("DANGER", Loc.t("ล้างความคืบหน้า"))
+	_list.add_child(UIKit.wrap_label(Loc.t("ลบไอดีนี้ทั้งหมด: รถ ลูกเรือ ของ ทุกรุ่น แต้มวิจัย และบันทึก แล้วกลับไปหน้าแรก ย้อนคืนไม่ได้ (ค่าตั้งค่ายังอยู่)"), UIKit.FS_SMALL, UIKit.C_DIM))
+	_reset_btn = _action(Loc.t("รีเซ็ตความคืบหน้า"), "red", "skull", _on_reset_pressed)
 	_reset_btn.disabled = d.is_empty() and not Game.started
 
 
 func _cloud_rows() -> void:
-	_head("CLOUD", "คลาวด์")
+	_head("CLOUD", Loc.t("คลาวด์"))
 	if not Cloud.enabled():
 		_info("STATUS", Cloud.status_text())
 		return
@@ -309,31 +309,31 @@ func _cloud_rows() -> void:
 		(acc.get_child(1) as Label).text = Cloud.account_text()
 		if pid_row:
 			(pid_row.get_child(1) as Label).text = Cloud.player_id() if Cloud.player_id() != "" else "-"
-		(last.get_child(1) as Label).text = "rev %d · %s" % [int(Cloud.meta.rev), _when(Cloud.last_sync_at) if Cloud.last_sync_at > 0 else "ยังไม่ได้ซิงก์"])
+		(last.get_child(1) as Label).text = "rev %d · %s" % [int(Cloud.meta.rev), _when(Cloud.last_sync_at) if Cloud.last_sync_at > 0 else Loc.t("ยังไม่ได้ซิงก์")])
 	if pid_row and Cloud.player_id() != "":
-		_action("คัดลอกไอดีผู้เล่น", "gray", "book", func():
+		_action(Loc.t("คัดลอกไอดีผู้เล่น"), "gray", "book", func():
 			DisplayServer.clipboard_set(Cloud.player_id())
-			_say("คัดลอกไอดีแล้ว แนบไอดีนี้ตอนแจ้งปัญหาหรือติดต่อทีมงาน"))
+			_say(Loc.t("คัดลอกไอดีแล้ว แนบไอดีนี้ตอนแจ้งปัญหาหรือติดต่อทีมงาน")))
 	_account_rows()
 	if Cloud.state == Cloud.State.CONFLICT:
 		var r := Cloud.remote
 		var rd: Dictionary = r.get("data", {}) if r.get("data") is Dictionary else {}
 		var ld := Save.read()
-		_list.add_child(UIKit.wrap_label("คลาวด์มีเซฟจากอีกเครื่อง (%s) ที่เครื่องนี้ยังไม่เคยเห็น เลือกเซฟที่จะเก็บไว้ อีกอันจะถูกแทนที่" % _when(float(r.get("updated_at", 0))), UIKit.FS_SMALL, UIKit.C_RED))
+		_list.add_child(UIKit.wrap_label(Loc.t("คลาวด์มีเซฟจากอีกเครื่อง (%s) ที่เครื่องนี้ยังไม่เคยเห็น เลือกเซฟที่จะเก็บไว้ อีกอันจะถูกแทนที่") % _when(float(r.get("updated_at", 0))), UIKit.FS_SMALL, UIKit.C_RED))
 		_info("CLOUD", _run_text(rd))
 		_info("DEVICE", _run_text(ld))
-		_action("ใช้เซฟจากคลาวด์", "blue", "up", func():
-			_say("กำลังโหลดเซฟจากคลาวด์...")
+		_action(Loc.t("ใช้เซฟจากคลาวด์"), "blue", "up", func():
+			_say(Loc.t("กำลังโหลดเซฟจากคลาวด์..."))
 			Cloud.use_cloud())
-		_action("ใช้เซฟเครื่องนี้ (ทับคลาวด์)", "red", "chest", func():
-			_say("กำลังส่งเซฟเครื่องนี้ขึ้นคลาวด์...")
+		_action(Loc.t("ใช้เซฟเครื่องนี้ (ทับคลาวด์)"), "red", "chest", func():
+			_say(Loc.t("กำลังส่งเซฟเครื่องนี้ขึ้นคลาวด์..."))
 			await Cloud.use_local()
 			refresh())
 		return
-	_action("ซิงก์ตอนนี้", "green", "up", func():
+	_action(Loc.t("ซิงก์ตอนนี้"), "green", "up", func():
 		if Game.started:
 			Game.save_game()
-		_say("กำลังซิงก์...")
+		_say(Loc.t("กำลังซิงก์..."))
 		await Cloud.sync()
 		_say(Cloud.status_text(), UIKit.C_GOLD if Cloud.state == Cloud.State.OK else UIKit.C_RED))
 
@@ -343,24 +343,24 @@ func _account_rows() -> void:
 	if Cloud.auth_error != "":
 		_list.add_child(UIKit.wrap_label(Cloud.auth_error, UIKit.FS_SMALL, UIKit.C_RED))
 	if Cloud.is_guest():
-		_list.add_child(UIKit.wrap_label("ตอนนี้เล่นแบบ Guest เซฟผูกกับเบราว์เซอร์นี้ ล็อกอินด้วย Gmail เพื่อเก็บเซฟนี้ไว้ในบัญชี Google แล้วเล่นต่อจากเครื่องไหนก็ได้", UIKit.FS_SMALL, UIKit.C_DIM))
+		_list.add_child(UIKit.wrap_label(Loc.t("ตอนนี้เล่นแบบ Guest เซฟผูกกับเบราว์เซอร์นี้ ล็อกอินด้วย Gmail เพื่อเก็บเซฟนี้ไว้ในบัญชี Google แล้วเล่นต่อจากเครื่องไหนก็ได้"), UIKit.FS_SMALL, UIKit.C_DIM))
 		if Cloud.can_google():
-			_action("ผูกบัญชี Gmail (เก็บเซฟนี้ไว้)" if Save.has_save() else "ล็อกอินด้วย Gmail", "blue", "up", func():
-				_say("กำลังไปหน้า Google...")
+			_action(Loc.t("ผูกบัญชี Gmail (เก็บเซฟนี้ไว้)") if Save.has_save() else Loc.t("ล็อกอินด้วย Gmail"), "blue", "up", func():
+				_say(Loc.t("กำลังไปหน้า Google..."))
 				await Cloud.sign_in_google())
 			if Cloud.link_taken:
-				_action("สลับไปบัญชี Google นั้น", "yellow", "play", func():
-					_say("กำลังไปหน้า Google...")
+				_action(Loc.t("สลับไปบัญชี Google นั้น"), "yellow", "play", func():
+					_say(Loc.t("กำลังไปหน้า Google..."))
 					await Cloud.switch_to_google())
 		else:
-			_list.add_child(UIKit.wrap_label("Google ไม่ให้ล็อกอินในหน้าที่ฝังอยู่ เปิดเกมบนเว็บโดยตรงก่อน", UIKit.FS_SMALL, UIKit.C_GOLD))
+			_list.add_child(UIKit.wrap_label(Loc.t("Google ไม่ให้ล็อกอินในหน้าที่ฝังอยู่ เปิดเกมบนเว็บโดยตรงก่อน"), UIKit.FS_SMALL, UIKit.C_GOLD))
 			if Cloud.site_url != "":
-				_action("เปิดเกมในแท็บใหม่", "blue", "up", func(): OS.shell_open(Cloud.site_url))
+				_action(Loc.t("เปิดเกมในแท็บใหม่"), "blue", "up", func(): OS.shell_open(Cloud.site_url))
 	else:
-		_action("ออกจากระบบ (กลับไปเป็น Guest)", "gray", "skull", func():
-			_say("กำลังส่งเซฟขึ้นคลาวด์ก่อนออกจากระบบ...")
+		_action(Loc.t("ออกจากระบบ (กลับไปเป็น Guest)"), "gray", "skull", func():
+			_say(Loc.t("กำลังส่งเซฟขึ้นคลาวด์ก่อนออกจากระบบ..."))
 			if await Cloud.sign_out():
-				_say("ออกจากระบบแล้ว เซฟยังอยู่ในบัญชี Google")
+				_say(Loc.t("ออกจากระบบแล้ว เซฟยังอยู่ในบัญชี Google"))
 			else:
 				refresh())
 
@@ -372,15 +372,15 @@ func _when(unix: float) -> String:
 
 func _run_text(d: Dictionary) -> String:
 	if d.is_empty():
-		return "ไม่มีเซฟ"
+		return Loc.t("ไม่มีเซฟ")
 	var veh := Account.vehicle_of(d)
-	return "รุ่นที่ %d · Vault %d · %.1f กม. · %s" % [int(Account.account_of(d).get("meta", {}).get("gen", 1)), int(veh.get("vault_level", 1)), float(veh.get("stats", {}).get("km_total", veh.get("km", 0.0))), _when(float(veh.get("saved_at", 0)))]
+	return Loc.t("รุ่นที่ %d · Vault %d · %.1f กม. · %s") % [int(Account.account_of(d).get("meta", {}).get("gen", 1)), int(veh.get("vault_level", 1)), float(veh.get("stats", {}).get("km_total", veh.get("km", 0.0))), _when(float(veh.get("saved_at", 0)))]
 
 
 func _on_reset_pressed() -> void:
 	if _reset_t <= 0.0:
 		_reset_t = RESET_CONFIRM_SEC
-		_say("แตะปุ่มแดงอีกครั้งภายใน %d วินาทีเพื่อยืนยัน" % int(RESET_CONFIRM_SEC), UIKit.C_RED)
+		_say(Loc.t("แตะปุ่มแดงอีกครั้งภายใน %d วินาทีเพื่อยืนยัน") % int(RESET_CONFIRM_SEC), UIKit.C_RED)
 		return
 	_reset_t = 0.0
 	Settings.reset_progress()
@@ -391,10 +391,10 @@ func _process(delta: float) -> void:
 		return
 	_reset_t -= delta
 	if _reset_t <= 0.0:
-		_reset_btn.text = "รีเซ็ตความคืบหน้า"
+		_reset_btn.text = Loc.t("รีเซ็ตความคืบหน้า")
 		_say("")
 	else:
-		_reset_btn.text = "ยืนยันลบทั้งหมด (%d)" % int(ceilf(_reset_t))
+		_reset_btn.text = Loc.t("ยืนยันลบทั้งหมด (%d)") % int(ceilf(_reset_t))
 
 
 func _extra_rows() -> Array:
@@ -412,13 +412,13 @@ func _tab_about() -> void:
 	_list.add_child(UIKit.logo("v" + BuildInfo.GAME_VERSION))
 	_list.add_child(UIKit.channel_tag())
 	_list.add_child(UIKit.env_tag())
-	_head("VERSION", "ข้อมูลเวอร์ชัน")
+	_head("VERSION", Loc.t("ข้อมูลเวอร์ชัน"))
 	for r in BuildInfo.rows() + _extra_rows():
 		_info(str(r[0]), str(r[1]))
-	_action("คัดลอกข้อมูลสำหรับแจ้งบั๊ก", "blue", "book", func():
+	_action(Loc.t("คัดลอกข้อมูลสำหรับแจ้งบั๊ก"), "blue", "book", func():
 		DisplayServer.clipboard_set(BuildInfo.as_text(_extra_rows()))
-		_say("คัดลอกแล้ว วางในข้อความแจ้งบั๊กได้เลย"))
-	_action("ดาวน์โหลด log การเล่น", "gray", "chest", func():
-		_say("บันทึก log แล้ว: " + Trace.download()))
-	_head("CREDITS", "เครดิต")
-	_list.add_child(UIKit.wrap_label("สร้างด้วย Godot Engine (MIT License) · ฟอนต์ Chakra Petch และ Silkscreen (SIL Open Font License) · ภาพพิกเซลทั้งหมดวาดขึ้นเองสำหรับเกมนี้", UIKit.FS_SMALL, UIKit.C_DIM))
+		_say(Loc.t("คัดลอกแล้ว วางในข้อความแจ้งบั๊กได้เลย")))
+	_action(Loc.t("ดาวน์โหลด log การเล่น"), "gray", "chest", func():
+		_say(Loc.t("บันทึก log แล้ว: ") + Trace.download()))
+	_head("CREDITS", Loc.t("เครดิต"))
+	_list.add_child(UIKit.wrap_label(Loc.t("สร้างด้วย Godot Engine (MIT License) · ฟอนต์ Chakra Petch และ Silkscreen (SIL Open Font License) · ภาพพิกเซลทั้งหมดวาดขึ้นเองสำหรับเกมนี้"), UIKit.FS_SMALL, UIKit.C_DIM))

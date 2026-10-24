@@ -354,6 +354,10 @@ func _tab_sys() -> void:
 		eb.append(_b(eid, func(): Dev.env_preview(eid), "yellow" if BuildInfo.env_preview == eid else "gray"))
 	eb.append(_b("ของจริง", func(): Dev.env_preview(""), "green" if BuildInfo.env_preview == "" else "gray"))
 	_row(eb, "ดูป้าย env")
+	_note("ภาษา: %s · แปลอังกฤษแล้ว %d / %d ข้อความ (สวิตช์ english %s)" % [Loc.lang().to_upper(), Loc.translation.get_message_count(),
+		Loc.translation.get_message_count() + Loc.missing, "เปิด" if Features.on("english") else "ปิด"])
+	_row([_b("ไทย", func(): Dev.lang_set("th"), "yellow" if Loc.lang() == "th" else "gray"),
+		_b("English", func(): Dev.lang_set("en"), "yellow" if Loc.lang() == "en" else "gray")], "ภาษา")
 	var cp := UIKit.button("คัดลอกข้อมูลเวอร์ชัน", "gray")
 	cp.pressed.connect(func():
 		DisplayServer.clipboard_set(BuildInfo.as_text())

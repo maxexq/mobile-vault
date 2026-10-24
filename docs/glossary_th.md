@@ -4,6 +4,15 @@ The one list of in-game Thai terms. When you add or change Thai text, use these 
 terms here in the same PR. Autotest `--only=thai` checks the parts a script can check (unique names,
 no "Overseer" for the player, Thai-only event buttons, biome names match the logbook).
 
+## English (MV-151)
+
+English is in `i18n/en.json`, keyed by the Thai text (README "Languages"). Use the English column of the
+tables below and the "English labels" rules (US spelling, same meaning, unique names). Character voices
+carry over: Sergeant Mark is a polite soldier who calls the player **Commander**; keep each crew member's
+tone. Keep every placeholder (`%s`, `%d`, `%.1f`, `%%`) in the same order, and never write a bare `%`
+before a letter (`100% condition` reads as `%c`): reword instead. Window titles drop the Thai half
+(`CONSTRUCTION / สร้างและขยายฐาน` → `CONSTRUCTION`).
+
 ## Voice
 
 | Where | How it sounds |

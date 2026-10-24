@@ -96,11 +96,11 @@ func text() -> String:
 	var st := current()
 	if st.is_empty():
 		return ""
-	var t: String = st.text
+	var t: String = Loc.t(st.text)
 	if st.id == "construct":
 		var names := builder_names()
 		if not names.is_empty():
-			t += BUILDER_TEXT % ", ".join(names)
+			t += Loc.t(BUILDER_TEXT) % ", ".join(names)
 	return t
 
 

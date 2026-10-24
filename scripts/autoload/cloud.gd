@@ -135,11 +135,11 @@ func player_id() -> String:
 
 func status_text() -> String:
 	match state:
-		State.OFF: return "ปิดอยู่ (เซฟเฉพาะในเครื่อง)"
-		State.CONNECTING: return "กำลังเชื่อมต่อ..."
-		State.OK: return "ซิงก์แล้ว" if not meta.dirty else "รอส่งขึ้นคลาวด์"
-		State.OFFLINE: return "ออฟไลน์ เซฟในเครื่องไว้ก่อน" + ("" if last_error == "" else " (%s)" % last_error)
-		State.CONFLICT: return "เซฟในคลาวด์มาจากอีกเครื่อง เลือกว่าจะใช้อันไหน"
+		State.OFF: return Loc.t("ปิดอยู่ (เซฟเฉพาะในเครื่อง)")
+		State.CONNECTING: return Loc.t("กำลังเชื่อมต่อ...")
+		State.OK: return Loc.t("ซิงก์แล้ว") if not meta.dirty else Loc.t("รอส่งขึ้นคลาวด์")
+		State.OFFLINE: return Loc.t("ออฟไลน์ เซฟในเครื่องไว้ก่อน") + ("" if last_error == "" else " (%s)" % last_error)
+		State.CONFLICT: return Loc.t("เซฟในคลาวด์มาจากอีกเครื่อง เลือกว่าจะใช้อันไหน")
 	return ""
 
 
@@ -470,8 +470,8 @@ func _lose_google_session() -> void:
 	meta.chose = ""
 	_save_meta()
 	need_login = true
-	auth_error = "เซสชัน Google หมดอายุ ล็อกอินด้วย Gmail อีกครั้ง (เซฟในเครื่องยังอยู่)"
-	_set_state(State.OFFLINE, "ต้องล็อกอินใหม่")
+	auth_error = Loc.t("เซสชัน Google หมดอายุ ล็อกอินด้วย Gmail อีกครั้ง (เซฟในเครื่องยังอยู่)")
+	_set_state(State.OFFLINE, Loc.t("ต้องล็อกอินใหม่"))
 	account_changed.emit()
 
 
@@ -595,7 +595,7 @@ func sign_in_google(switch: bool = false) -> void:
 	if not can_google():
 		if site_url != "":
 			OS.shell_open(site_url)
-		auth_error = "เปิดเกมในแท็บใหม่ก่อนแล้วค่อยล็อกอิน Google"
+		auth_error = Loc.t("เปิดเกมในแท็บใหม่ก่อนแล้วค่อยล็อกอิน Google")
 		account_changed.emit()
 		return
 	if Game.started:
@@ -606,14 +606,14 @@ func sign_in_google(switch: bool = false) -> void:
 	# player gets their account's save instead of "this Google account is already used"
 	var link := is_guest() and user_id() != "" and not switch and not need_login and (Save.has_save() or int(meta.rev) > 0)
 	if link and not await _ensure_session():
-		auth_error = "ต่อคลาวด์ไม่ได้ ลองใหม่ตอนออนไลน์"
+		auth_error = Loc.t("ต่อคลาวด์ไม่ได้ ลองใหม่ตอนออนไลน์")
 		account_changed.emit()
 		return
 	if link:
 		# Supabase "manual linking": returns the Google URL for adding an identity to this user
 		var r := await _call(HTTPClient.METHOD_GET, "/auth/v1/user/identities/authorize?provider=google&skip_http_redirect=true&redirect_to=" + back, {}, true)
 		if r.code != 200 or not r.body is Dictionary or str(r.body.get("url", "")) == "":
-			auth_error = "ผูก Google ไม่สำเร็จ (%s)" % r_error(r)
+			auth_error = Loc.t("ผูก Google ไม่สำเร็จ (%s)") % r_error(r)
 			Trace.rec("cloud", "link failed", {"err": r_error(r)})
 			account_changed.emit()
 			return
@@ -656,8 +656,8 @@ func _take_oauth_return(params: String) -> void:
 	if not p.has("access_token"):
 		var code := str(p.get("error_code", p.get("error", "")))
 		link_taken = code == "identity_already_exists"
-		auth_error = ("บัญชี Google นี้มีเซฟของตัวเองอยู่แล้ว กด \"สลับไปบัญชี Google\" เพื่อใช้บัญชีนั้นแทน" if link_taken
-			else "ล็อกอิน Google ไม่สำเร็จ (%s)" % str(p.get("error_description", code)))
+		auth_error = (Loc.t("บัญชี Google นี้มีเซฟของตัวเองอยู่แล้ว กด \"สลับไปบัญชี Google\" เพื่อใช้บัญชีนั้นแทน") if link_taken
+			else Loc.t("ล็อกอิน Google ไม่สำเร็จ (%s)") % str(p.get("error_description", code)))
 		Trace.rec("cloud", "google failed", {"code": code})
 		account_changed.emit()
 		return
@@ -714,7 +714,7 @@ func sign_out() -> bool:
 	if meta.dirty:
 		await upload()
 		if meta.dirty:
-			auth_error = "ยังส่งเซฟขึ้นคลาวด์ไม่ได้ ลองใหม่ตอนออนไลน์"
+			auth_error = Loc.t("ยังส่งเซฟขึ้นคลาวด์ไม่ได้ ลองใหม่ตอนออนไลน์")
 			account_changed.emit()
 			return false
 	await _call(HTTPClient.METHOD_POST, "/auth/v1/logout?scope=local", {}, true)
@@ -788,12 +788,12 @@ func _call(method: int, path: String, body: Dictionary, auth: bool) -> Dictionar
 ## or refused batch must never mark the save sync OFFLINE. {ok, error}
 func post_logs(events: Array) -> Dictionary:
 	if state != State.OK or str(session.get("access_token", "")) == "":
-		return {"ok": false, "error": "ยังไม่ได้เชื่อมต่อ"}
+		return {"ok": false, "error": Loc.t("ยังไม่ได้เชื่อมต่อ")}
 	var r := await _call(HTTPClient.METHOD_POST, "/rest/v1/rpc/rpc_log", {"p_events": events, "p_version": BuildInfo.GAME_VERSION}, true)
 	if r.code == 200 and r.body is Dictionary and bool(r.body.get("ok", false)):
 		return {"ok": true}
 	if r.code == 200 and r.body is Dictionary:
-		return {"ok": false, "error": str(r.body.get("error", "ถูกปฏิเสธ"))}
+		return {"ok": false, "error": str(r.body.get("error", Loc.t("ถูกปฏิเสธ")))}
 	return {"ok": false, "error": r_error(r)}
 
 
