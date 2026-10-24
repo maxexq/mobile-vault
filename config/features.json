@@ -13,7 +13,8 @@
     "google_login": true,
     "modes": true,
     "channel_badge": true,
-    "room_ambience": true
+    "room_ambience": true,
+    "resume_on_reload": true
   },
   "events": {},
   "tune": {}

@@ -352,6 +352,7 @@ func _tab_sys() -> void:
 	if Cloud.enabled():
 		_row([_b("ซิงก์ตอนนี้", func(): Dev.cloud_sync(), "green"), _b("บังคับอัปโหลด", func(): Dev.cloud_force_upload(), "yellow"),
 			_b("ลืมการเชื่อมต่อ", func(): Dev.cloud_forget(), "red")])
+		_row([_b("รีเฟรชหน้าเว็บ", func(): Dev.reload_page(), "gray", true)], "รีเฟรช")
 		if Cloud.state == Cloud.State.CONFLICT:
 			_row([_b("ใช้เซฟคลาวด์", func(): Cloud.use_cloud(), "yellow", true), _b("ใช้เซฟเครื่องนี้", func(): Cloud.use_local())], "ชนกัน")
 	else:

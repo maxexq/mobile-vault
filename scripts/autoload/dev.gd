@@ -862,6 +862,16 @@ func cloud_forget() -> void:
 	Cloud.sync()
 
 
+## save, then reload the page like a player pressing refresh (checks resume_on_reload + staying logged in)
+func reload_page() -> void:
+	act("reload page")
+	Game.save_game()
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("location.reload()", true)
+	else:
+		Game.toast.emit("รีเฟรชหน้าได้เฉพาะบนเว็บ", "info")
+
+
 func settings_reset() -> void:
 	act("settings reset")
 	Settings.reset_defaults()
