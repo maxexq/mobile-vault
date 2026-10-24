@@ -19,7 +19,8 @@ extends Node
 ##   "events": {"raiders": {"on": false}, "trader": {"weight": 2.0}, "gas_station": {"biomes": ["*"], "from": "2026-11-14", "to": "2026-11-16 23:59"}},
 ##   "tune": {"threat.rate_scale": 1.5},
 ##   "announce": [{"id": "s1-open", "text": "ข้อความไทย", "text_en": "optional", "from": "2026-11-01", "to": "2026-11-03",
-##                 "loops": 3}]}            (MV-188: top-of-screen marquee, each id shows once per browser, see Announce)
+##                 "loops": 3, "repeat_hours": 6}]}   (MV-188: top-of-screen marquee, each id once per browser or
+##                 again every repeat_hours, see Announce)
 ## Event dates are local time at tz_hours (default 7 = Thailand); "to" without a time means the end of that day.
 
 signal changed
@@ -332,6 +333,8 @@ func _clean(d: Dictionary) -> Dictionary:
 					c[k] = a[k]
 			if a.get("loops") is float or a.get("loops") is int:
 				c.loops = clampi(int(a.loops), 1, 5)
+			if a.get("repeat_hours") is float or a.get("repeat_hours") is int:
+				c.repeat_hours = clampf(float(a.repeat_hours), 0.0, 720.0)
 			an.append(c)
 		out.announce = an
 	return out

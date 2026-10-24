@@ -1146,5 +1146,5 @@ func announce_poll() -> void:
 func announce_forget_seen() -> void:
 	Trace.rec("god", "announce forget seen")
 	Announce.seen.clear()
-	Save.write_key(Announce.SEEN_KEY, Announce.SEEN_PATH, "[]")
+	Save.write_key(Announce.SEEN_KEY, Announce.SEEN_PATH, "{}")
 	Announce.collect()
