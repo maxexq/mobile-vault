@@ -16,6 +16,12 @@ func _check(label: String, ok: bool) -> void:
 		_fails += 1
 
 
+## prints the summary CI looks for and exits non-zero when a check failed (MV-110)
+func _finish() -> void:
+	print("[autotest] DONE fails=%d" % _fails)
+	get_tree().quit(1 if _fails > 0 else 0)
+
+
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--out="):
@@ -52,19 +58,16 @@ func _run() -> void:
 	if "--only=touch" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _touch_test()
-		print("[autotest] DONE")
-		get_tree().quit()
+		_finish()
 		return
 	if "--only=large" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _large_room_test()
-		print("[autotest] DONE")
-		get_tree().quit()
+		_finish()
 		return
 	if "--only=thai" in OS.get_cmdline_user_args():
 		_thai_terms_test()
-		print("[autotest] DONE")
-		get_tree().quit()
+		_finish()
 		return
 	await _tutorial_test()
 	await shot("main_industrial_rain")
@@ -657,8 +660,7 @@ func _run() -> void:
 	await _features_test()
 	await _modes_test()
 	_thai_terms_test()
-	print("[autotest] DONE")
-	get_tree().quit()
+	_finish()
 
 
 ## god mode actions for the newer systems (tutorial, construction, builders, squad, forge, event deck,

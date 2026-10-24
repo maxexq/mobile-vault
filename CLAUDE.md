@@ -30,6 +30,8 @@ Parames's PC. Both follow this file. The game itself is described in `README.md`
    `godot --path . --rendering-driver opengl3 -- --autotest --out=<abs dir>`
    (on Linux CI/cloud run it under `xvfb-run -a`; `--headless` hangs on frame_post_draw).
    `--only=<name>` runs one group, e.g. `--only=touch`, `--only=large`.
+   CI (workflow **Autotest**) runs it on every PR and must be green before merge; on Linux
+   `bash tools/ci_autotest.sh` does exactly what CI does.
 4. Web export: `sh tools/stamp_build.sh` then
    `godot --headless --path . --export-release "Web" web/index.html`, commit `web/`.
    `cloud_config.json` must exist first or the build ships with cloud save OFF

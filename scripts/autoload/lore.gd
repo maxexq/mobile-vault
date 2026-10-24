@@ -288,6 +288,15 @@ func pick_line(d: Dictionary, rng: RandomNumberGenerator) -> String:
 				break
 		if line != "" and not _recent_lines.has(line):
 			break
+	# still the line said just before: take any other line from the same pools (MV-41)
+	if line != "" and not _recent_lines.is_empty() and line == _recent_lines[-1]:
+		for p in pools:
+			for l in p[0]:
+				if str(l) != line:
+					line = str(l)
+					break
+			if line != _recent_lines[-1]:
+				break
 	if line != "":
 		_recent_lines.append(line)
 		while _recent_lines.size() > RECENT_LINES:

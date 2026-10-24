@@ -1,0 +1,73 @@
+# Runs the Godot autotest on every PR into main and every push to main (MV-110).
+# The job is named "autotest": make it a required status check in the main branch ruleset
+# so a red run blocks the merge. Discord notify (MV-96) reports it through workflow_run,
+# which matches this workflow's `name:`, so keep it "Autotest".
+# Run the same thing locally on Linux: bash tools/ci_autotest.sh
+name: Autotest
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autotest-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Godot 4.7.2-stable only (CLAUDE.md). The hash is from the release's SHA512-SUMS.txt.
+  GODOT_VERSION: 4.7.2-stable
+  GODOT_ZIP: Godot_v4.7.2-stable_linux.x86_64.zip
+  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+
+jobs:
+  autotest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Download Godot ${{ env.GODOT_VERSION }}
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          curl -sSLf -o "$GODOT_ZIP" "https://github.com/godotengine/godot/releases/download/$GODOT_VERSION/$GODOT_ZIP"
+          echo "$GODOT_SHA512  $GODOT_ZIP" | sha512sum -c -
+          unzip -q "$GODOT_ZIP" && rm "$GODOT_ZIP"
+
+      - name: Install Godot
+        run: |
+          sudo ln -sf ~/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
+          godot --version
+          command -v xvfb-run || (sudo apt-get update -q && sudo apt-get install -yq xvfb)
+
+      - name: Import assets
+        run: godot --headless --path . --import
+
+      - name: Run autotest
+        env:
+          OUT: ${{ runner.temp }}/autotest
+          TIMEOUT: "1200"
+        run: bash tools/ci_autotest.sh
+
+      - name: Upload screenshots and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autotest-${{ github.run_number }}
+          path: ${{ runner.temp }}/autotest
+          retention-days: 7
