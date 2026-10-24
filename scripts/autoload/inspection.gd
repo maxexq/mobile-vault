@@ -419,7 +419,7 @@ func _go_off(d: Dictionary, offline: bool) -> void:
 			_remove(d)
 		"thief":
 			var stolen := []
-			for k in ["food", "water", "scrap", "fuel"]:
+			for k in ["food", "water", "scrap", "fuel", "meat"]:
 				var amt := floorf(float(Game.s.res.get(k, 0.0)) * rng.randf_range(0.2, 0.35))
 				if amt >= 1.0:
 					Game.s.res[k] = float(Game.s.res[k]) - amt

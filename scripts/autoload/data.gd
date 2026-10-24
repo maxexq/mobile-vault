@@ -63,19 +63,22 @@ const ROOMS := {
 	},
 	"kitchen": {
 		"th": "ห้องครัว & เสบียง", "en": "KITCHEN & PANTRY", "cost": 120, "unlock": 1, "stat": "agi",
-		"produce": {"food": 5.0}, "power": 0.5,
+		"produce": {"food": 5.0}, "power": 0.5, "cook": true,
 		"effect_th": "ผลิตอาหาร · เพิ่มความอิ่ม", "effect_en": "+FOOD",
+		"raw_effect_th": "ปรุงพืชผล/เนื้อ + น้ำ เป็นอาหาร", "raw_effect_en": "COOKS CROPS / MEAT + WATER INTO FOOD",
 		"recipes": [
-			{"id": "cook_meal", "th": "ปรุงอาหาร", "en": "COOK MEAL", "cost": {"scrap": 12}, "time": 60.0, "out": {"food": 30}},
-			{"id": "preserve", "th": "ถนอมอาหาร", "en": "PRESERVE FOOD", "cost": {"scrap": 18, "food": 10}, "time": 90.0, "out": {"dried_meat": 2}},
+			{"id": "cook_meal", "th": "ปรุงอาหาร", "en": "COOK MEAL", "cost": {"scrap": 12}, "raw_th": "ต้มผักหม้อใหญ่", "raw_en": "VEGETABLE STEW", "raw_cost": {"crops": 14, "water": 6}, "time": 60.0, "out": {"food": 30}},
+			{"id": "grill_meat", "th": "ย่างเนื้อ", "en": "GRILL MEAT", "raw": true, "cost": {"meat": 10, "water": 4}, "time": 60.0, "out": {"food": 30}},
+			{"id": "preserve", "th": "ถนอมอาหาร", "en": "PRESERVE FOOD", "cost": {"scrap": 18, "food": 10}, "raw_th": "รมควันเนื้อ", "raw_en": "SMOKE MEAT", "raw_cost": {"meat": 12, "fuel": 4}, "time": 90.0, "out": {"dried_meat": 2}},
 		],
 	},
 	"hydroponics": {
 		"th": "ห้องปลูกพืช", "en": "HYDROPONICS", "cost": 180, "unlock": 1, "stat": "agi",
-		"produce": {"food": 4.0}, "power": 0.6, "weather_crop": true,
+		"produce": {"food": 4.0}, "raw_produce": {"crops": 4.0}, "power": 0.6, "weather_crop": true,
 		"effect_th": "ปลูกผัก (ฝนตก = โตเร็วขึ้น)", "effect_en": "FOOD (RAIN BOOSTS GROWTH)",
+		"raw_effect_th": "ปลูกพืชผลด้วยน้ำ (ฝนตก = โตเร็วขึ้น)", "raw_effect_en": "GROWS CROPS FROM WATER (RAIN BOOSTS)",
 		"recipes": [
-			{"id": "seed_batch", "th": "เพาะต้นกล้า", "en": "PLANT SEEDS", "cost": {"scrap": 8, "water": 10}, "time": 120.0, "out": {"food": 45}},
+			{"id": "seed_batch", "th": "เพาะต้นกล้า", "en": "PLANT SEEDS", "cost": {"scrap": 8, "water": 10}, "raw_cost": {"water": 12, "power": 6}, "time": 120.0, "out": {"food": 45}, "raw_out": {"crops": 40}},
 		],
 	},
 	"water": {
@@ -91,9 +94,9 @@ const ROOMS := {
 		"produce": {}, "power": 0.5, "heal": 2.0,
 		"effect_th": "ฟื้นฟูเลือดทุกคน · กันรังสี", "effect_en": "+HEALTH / +RAD RESISTANCE",
 		"recipes": [
-			{"id": "stimpack", "th": "ผลิตสติมแพ็ก", "en": "CRAFT STIMPACK", "cost": {"scrap": 15}, "time": 90.0, "out": {"stimpack": 1}},
-			{"id": "radaway", "th": "ผลิตยาต้านรังสี", "en": "CRAFT RADAWAY", "cost": {"scrap": 20}, "time": 120.0, "out": {"radaway": 1}},
-			{"id": "antibiotics", "th": "ผลิตยาปฏิชีวนะ", "en": "CRAFT ANTIBIOTICS", "cost": {"scrap": 18, "water": 10}, "time": 110.0, "out": {"antibiotics": 1}},
+			{"id": "stimpack", "th": "ผลิตสติมแพ็ก", "en": "CRAFT STIMPACK", "cost": {"scrap": 15}, "raw_cost": {"components": 2, "water": 5}, "time": 90.0, "out": {"stimpack": 1}},
+			{"id": "radaway", "th": "ผลิตยาต้านรังสี", "en": "CRAFT RADAWAY", "cost": {"scrap": 20}, "raw_cost": {"components": 2, "crops": 8, "water": 8}, "time": 120.0, "out": {"radaway": 1}},
+			{"id": "antibiotics", "th": "ผลิตยาปฏิชีวนะ", "en": "CRAFT ANTIBIOTICS", "cost": {"scrap": 18, "water": 10}, "raw_th": "เพาะเชื้อยาปฏิชีวนะ", "raw_cost": {"crops": 10, "water": 10, "power": 6}, "time": 110.0, "out": {"antibiotics": 1}},
 		],
 	},
 	"armory": {
@@ -112,8 +115,9 @@ const ROOMS := {
 		"produce": {}, "power": 0.8, "boost": 0.06,
 		"effect_th": "ทุกห้องผลิต +6% ต่อเลเวล", "effect_en": "+PRODUCTION (ALL ROOMS)",
 		"recipes": [
-			{"id": "refine", "th": "รีไซเคิลเศษเหล็ก", "en": "REFINE SCRAP", "cost": {"power": 20}, "time": 90.0, "out": {"scrap": 18}},
-			{"id": "radaway_sci", "th": "สังเคราะห์ยาต้านรังสี", "en": "SYNTH RADAWAY", "cost": {"scrap": 14, "water": 10}, "time": 100.0, "out": {"radaway": 1}},
+			{"id": "refine", "th": "รีไซเคิลเศษเหล็ก", "en": "REFINE SCRAP", "raw": false, "cost": {"power": 20}, "time": 90.0, "out": {"scrap": 18}},
+			{"id": "lab_meat", "th": "เพาะเนื้อสังเคราะห์", "en": "GROW LAB MEAT", "raw": true, "cost": {"crops": 12, "water": 8, "power": 12}, "time": 90.0, "out": {"meat": 10}},
+			{"id": "radaway_sci", "th": "สังเคราะห์ยาต้านรังสี", "en": "SYNTH RADAWAY", "cost": {"scrap": 14, "water": 10}, "raw_cost": {"components": 2, "water": 10}, "time": 100.0, "out": {"radaway": 1}},
 		],
 	},
 	"radio": {
@@ -129,7 +133,7 @@ const ROOMS := {
 		"produce": {"fuel": 3.0}, "power": 0.6,
 		"effect_th": "ผลิตเชื้อเพลิง (ทำความร้อน/เครื่องปั่นไฟสำรอง)", "effect_en": "+FUEL FOR HEAT & GENERATOR",
 		"recipes": [
-			{"id": "biofuel", "th": "หมักไบโอดีเซล", "en": "BREW BIOFUEL", "cost": {"food": 20, "scrap": 10}, "time": 90.0, "out": {"fuel": 30}},
+			{"id": "biofuel", "th": "หมักไบโอดีเซล", "en": "BREW BIOFUEL", "cost": {"food": 20, "scrap": 10}, "raw_cost": {"crops": 20, "water": 8}, "time": 90.0, "out": {"fuel": 30}},
 			{"id": "crack_oil", "th": "กลั่นน้ำมันจากซาก", "en": "CRACK SCRAP OIL", "cost": {"scrap": 30, "power": 15}, "time": 120.0, "out": {"fuel": 40}},
 		],
 	},
@@ -475,6 +479,54 @@ func room_def(t: String) -> Dictionary:
 	return ROOMS.get(t, {})
 
 
+# ------------------------------------------------------------------ MV-247: raw food (crops + meat)
+## meat per kill (before level / elite / boss multipliers) for the mutated animals; people, zombies and
+## machines give none
+const MEAT_MOBS := {
+	"rad_rat": 0.5, "scorpion": 0.8, "vulture": 0.6, "rad_wolf": 1.0, "mutant_bug": 0.4,
+	"frost_wolf": 1.0, "yeti": 1.6, "toxic_toad": 0.6, "mosquito": 0.2, "mutant_ape": 1.4,
+}
+const MEAT_PER_KILL := 0.6       # x the table above (boss x12, elite x3)
+const RAW_KEYS := ["crops", "meat"]
+const COOK_YIELD := 1.5         # food per unit of crops / meat the kitchen cooks
+const COOK_WATER := 0.2         # water per unit of food the kitchen cooks
+const CROP_WATER := 0.25        # water per unit of crops hydroponics grows
+const START_RAW := {"crops": 40.0, "meat": 20.0}
+
+
+func raw_food() -> bool:
+	return Features.on("raw_food")
+
+
+## a room's recipes as the player sees them: with raw food on, each recipe uses its raw_* cost / output / name
+## and the raw-only ones appear; with it off, the old scrap recipes (MV-247)
+func recipes(room_type: String) -> Array:
+	var on := raw_food()
+	var out := []
+	for rec in room_def(room_type).get("recipes", []):
+		if rec.has("raw") and bool(rec.raw) != on:
+			continue
+		if not on:
+			out.append(rec)
+			continue
+		var r: Dictionary = rec.duplicate()
+		for k in ["cost", "out", "th", "en"]:
+			if rec.has("raw_" + k):
+				r[k] = rec["raw_" + k]
+		out.append(r)
+	return out
+
+
+func room_produce(t: String) -> Dictionary:
+	var def := room_def(t)
+	return def.get("raw_produce", def.get("produce", {})) if raw_food() else def.get("produce", {})
+
+
+func room_effect(t: String) -> String:
+	var def := room_def(t)
+	return str(def.get("raw_effect_th", def.get("effect_th", ""))) if raw_food() else str(def.get("effect_th", ""))
+
+
 func biome(i: int) -> Dictionary:
 	return BIOMES[clampi(i, 0, BIOMES.size() - 1)]
 
@@ -499,6 +551,8 @@ func item_name(id: String) -> String:
 		"power": return "ไฟ"
 		"scrap": return "เศษเหล็ก"
 		"fuel": return "เชื้อเพลิง"
+		"crops": return "พืชผล"
+		"meat": return "เนื้อสด"
 		"_weapon": return "อาวุธสุ่ม"
 		"_vanpart": return "ชิ้นส่วนรถสุ่ม"
 		"_gear": return "อุปกรณ์สุ่ม"
@@ -518,6 +572,8 @@ func item_icon(id: String) -> String:
 		"power": return "power"
 		"scrap": return "scrap"
 		"fuel": return "fuel"
+		"crops": return "seed"
+		"meat": return "meat"
 		"_weapon": return "rifle"
 		"_vanpart": return "engine"
 		"_gear", "_gear_rare": return "chest"

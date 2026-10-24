@@ -8,6 +8,8 @@ signal build_placement_requested(room_type: String)
 signal build_placement_cancelled
 signal layout_changed
 
+## MV-247: raw food chips, shown after food while the raw_food switch is on
+const RAW_RES := [["crops", "seed", Color("a6d16a")], ["meat", "meat", Color("e08a7a")]]
 const RES := [["power", "power", Color("ffdc8e")], ["water", "water", Color("8cfff6")], ["food", "food", Color("f0644a")], ["fuel", "fuel", Color("ff9a1a")], ["scrap", "scrap", Color("cad8d0")]]
 const TOOLS := [["Build", "hammer", "build", "yellow"], ["Squad", "sword", "squad", "red"], ["Map", "map", "map", "green"],
 	["Crew", "people", "dwellers", "green"], ["Loot", "chest", "inventory", "green"], ["Mods", "wrench", "garage", "blue"], ["Log", "book", "log", "blue"]]
@@ -244,6 +246,9 @@ func _build_top() -> void:
 	_top.add_child(_res_row)
 	for r in RES:
 		_res_row.add_child(_res_chip(r[0], r[1], r[2]))
+		if r[0] == "food" and Data.raw_food():
+			for rr in RAW_RES:
+				_res_row.add_child(_res_chip(rr[0], rr[1], rr[2]))
 	_info_row = UIKit.hbox(2)
 	_info_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_top.add_child(_info_row)
@@ -569,7 +574,8 @@ func _refresh_res() -> void:
 	for k in res_labels:
 		var v: float = Game.s.res[k]
 		var c: float = Game.cap(k)
-		res_labels[k].text = "%s/%s" % [UIKit.fmt(v), UIKit.fmt(c)]
+		# seven chips (raw food on) leave no room for "/cap": the bar under each one shows how full it is
+		res_labels[k].text = "%s/%s" % [UIKit.fmt(v), UIKit.fmt(c)] if res_labels.size() <= RES.size() else UIKit.fmt(v)
 		res_bars[k].value = v / c
 		res_labels[k].modulate = Color(1, 0.4, 0.4) if v < c * 0.1 else Color.WHITE
 	lvl_lbl.text = "VAULT %d" % int(Game.s.vault_level)

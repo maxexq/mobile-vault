@@ -23,13 +23,13 @@ const SITES := {
 	"sat_base": {"biome": "desert", "at": 0.8, "th": "สถานีจานดาวเทียม", "en": "SATELLITE ARRAY", "sprite": "lm_dish", "danger": 3, "min": 5.0,
 		"goal": "ถอดแผงโซลาร์และวงจรจากจานยักษ์", "loot": {"res": {"scrap": 120, "power": 60}, "items": {"components": 25}, "gear": 1, "rare": 1, "bp": ["bp_solar_covers"], "lore": "signal"}},
 	"ranger": {"biome": "forest", "at": 0.4, "th": "หอดูไฟป่า", "en": "RANGER TOWER", "sprite": "lm_tower", "danger": 3, "min": 4.0,
-		"goal": "ค้นวิทยุและแผนที่ของเจ้าหน้าที่ป่า", "loot": {"res": {"food": 60, "water": 40, "scrap": 80}, "gear": 2, "recruit": 0.5, "bp": ["bp_heater"]}},
+		"goal": "ค้นวิทยุและแผนที่ของเจ้าหน้าที่ป่า", "loot": {"res": {"food": 60, "water": 40, "scrap": 80, "meat": 50}, "gear": 2, "recruit": 0.5, "bp": ["bp_heater"]}},
 	"lab": {"biome": "forest", "at": 0.8, "th": "สถานีวิจัยใต้ร่มไม้", "en": "CANOPY LAB", "sprite": "lm_lab", "danger": 4, "min": 5.0,
-		"goal": "กู้ข้อมูลวิจัยพืชกลายพันธุ์", "loot": {"res": {"scrap": 140}, "items": {"radaway": 3, "components": 25}, "gear": 2, "rare": 2, "bp": ["bp_repair_bay"]}},
+		"goal": "กู้ข้อมูลวิจัยพืชกลายพันธุ์", "loot": {"res": {"scrap": 140, "crops": 60}, "items": {"radaway": 3, "components": 25}, "gear": 2, "rare": 2, "bp": ["bp_repair_bay"]}},
 	"chem_plant": {"biome": "swamp", "at": 0.4, "th": "โรงงานเคมีรั่ว", "en": "LEAKING CHEM PLANT", "sprite": "lm_chem", "danger": 5, "min": 5.0,
 		"goal": "ปิดวาล์วที่รั่วและเก็บแผ่นตะกั่ว", "loot": {"res": {"scrap": 160, "fuel": 60}, "items": {"radaway": 4, "components": 30}, "gear": 2, "rare": 2, "bp": ["bp_rig", "bp_rad_shield"]}},
 	"stilt_town": {"biome": "swamp", "at": 0.8, "th": "หมู่บ้านบนเสา", "en": "STILT VILLAGE", "sprite": "lm_stilt", "danger": 4, "min": 4.5,
-		"goal": "ค้นหาผู้รอดชีวิตที่ติดอยู่", "loot": {"res": {"food": 90, "water": 90}, "items": {"antibiotics": 2}, "gear": 1, "recruit": 0.9}},
+		"goal": "ค้นหาผู้รอดชีวิตที่ติดอยู่", "loot": {"res": {"food": 90, "water": 90, "crops": 50, "meat": 30}, "items": {"antibiotics": 2}, "gear": 1, "recruit": 0.9}},
 	"polar": {"biome": "tundra", "at": 0.4, "th": "สถานีวิจัยขั้วโลก", "en": "POLAR STATION", "sprite": "lm_polar", "danger": 6, "min": 6.0,
 		"goal": "ขุดรถลุยหิมะที่จมอยู่ในโรงจอด", "loot": {"res": {"fuel": 150, "scrap": 200}, "items": {"components": 40}, "gear": 2, "rare": 2, "bp": ["bp_tracks", "bp_trailer"]}},
 	"mine": {"biome": "tundra", "at": 0.8, "th": "เหมืองแร่ร้าง", "en": "FROZEN MINE", "sprite": "lm_mine", "danger": 6, "min": 6.0,
@@ -112,7 +112,7 @@ func skip_site() -> void:
 func scav_def() -> Dictionary:
 	var b: Dictionary = Data.biome(int(Game.s.biome))
 	return {"th": "สำรวจรอบๆ " + b.th, "en": "SCAVENGE AREA", "sprite": "", "danger": maxi(1, int(b.danger) - 1), "min": 2.5,
-		"goal": "ค้นซากรถและบ้านร้างข้างทาง", "loot": {"res": {"scrap": 30 + 15 * int(b.danger), "food": 15, "water": 15, "fuel": 10}, "gear": 1}}
+		"goal": "ค้นซากรถและบ้านร้างข้างทาง", "loot": {"res": {"scrap": 30 + 15 * int(b.danger), "food": 15, "water": 15, "fuel": 10, "crops": 8, "meat": 8}, "gear": 1}}
 
 
 func site_def(id: String) -> Dictionary:

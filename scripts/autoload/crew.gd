@@ -298,7 +298,7 @@ func flush_deserters() -> void:
 func desert(d: Dictionary) -> void:
 	Trace.rec("crew", "deserted: %s" % d.name, {"happy": snappedf(float(d.happy), 0.1)})
 	var stolen := []
-	for k in ["food", "water", "scrap"]:
+	for k in ["food", "water", "scrap", "meat"]:
 		var amt := floorf(float(Game.s.res[k]) * 0.12)
 		if amt >= 1.0:
 			Game.s.res[k] = float(Game.s.res[k]) - amt

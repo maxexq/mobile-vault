@@ -370,7 +370,7 @@ func _build_items() -> void:
 	grid.add_theme_constant_override("h_separation", 4)
 	grid.add_theme_constant_override("v_separation", 4)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for k in ["power", "water", "food", "scrap"]:
+	for k in ["power", "water", "food"] + (Data.RAW_KEYS if Data.raw_food() else []) + ["scrap"]:
 		grid.add_child(_card(Data.item_icon(k), Data.item_name(k), k, "", ""))
 	for id in Game.s.items:
 		var it: Dictionary = Data.ITEMS.get(id, {})
