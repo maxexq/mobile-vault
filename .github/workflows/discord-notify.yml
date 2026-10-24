@@ -11,7 +11,9 @@ on:
     types: [opened, reopened, ready_for_review, review_requested, closed]
   pull_request_review:
     types: [submitted]
-  # Vercel's GitHub integration reports every Preview/Production deploy here.
+  # Vercel reports each Preview/Production deploy as a commit status named "Vercel".
+  status:
+  # Kept for providers that create GitHub deployments instead.
   deployment_status:
   # CI workflows to report. None exist yet: put each new workflow's `name:` here.
   workflow_run:

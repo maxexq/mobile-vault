@@ -381,7 +381,7 @@ Fonts: Chakra Petch & Silkscreen — SIL Open Font License (see `assets/fonts/OF
 
 ### Discord notifications (PRs + CI/CD)
 
-`.github/workflows/discord-notify.yml` posts to a Discord channel when a PR is opened, reopened, ready for review, asked for review, reviewed (approve / changes requested / comment) or merged/closed, when Vercel finishes a Preview or Production deploy (success or failure, with the link), and when a CI workflow listed under `workflow_run` finishes. The message text is built by `.github/scripts/discord-notify.sh` (bash + jq + curl, test locally with `DRY_RUN=1`).
+`.github/workflows/discord-notify.yml` posts to a Discord channel when a PR is opened, reopened, ready for review, asked for review, reviewed (approve / changes requested / comment) or merged/closed, when Vercel finishes a Preview or Production deploy (success or failure, with the link; Vercel reports it as the `Vercel` commit status), and when a CI workflow listed under `workflow_run` finishes. The message text is built by `.github/scripts/discord-notify.sh` (bash + jq + curl, test locally with `DRY_RUN=1`).
 
 1. Discord: channel → ⚙️ **Edit Channel → Integrations → Webhooks → New Webhook** → **Copy Webhook URL**.
 2. GitHub: repo **Settings → Secrets and variables → Actions → New repository secret**, name `DISCORD_WEBHOOK_URL`, paste the URL. Never commit the URL.
