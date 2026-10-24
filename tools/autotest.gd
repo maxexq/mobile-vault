@@ -58,6 +58,11 @@ func _run() -> void:
 	await wait(0.3)
 	main.hud.title_screen._go(true)
 	await wait(2.5)
+	if "--only=icons" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _icon_art_test()
+		_finish()
+		return
 	if "--only=touch" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		# the full run reaches the touch test in this landscape window; at the default 405x720 the UI scale is 1,
@@ -741,6 +746,7 @@ func _run() -> void:
 	await _qte_test()
 	await _creatures_test()
 	await _engine_shake_test()
+	await _icon_art_test()
 	await _crew_roster_test()
 	await _announce_test()
 	_thai_terms_test()
@@ -3478,6 +3484,51 @@ func _engine_shake_test() -> void:
 
 
 ## MV-170: 20 named crew: atlas regions + palette-clean frames, gated recruit path, save/load, rooms, GOD preview
+func _icon_art_test() -> void:
+	var names: Array[String] = []
+	var sizes_ok := true
+	for key in Atlas.regions:
+		if str(key).begins_with("ic_"):
+			var id := str(key).trim_prefix("ic_")
+			names.append(id)
+			var texture := Atlas.icon(id)
+			sizes_ok = sizes_ok and texture.get_width() == 16 and texture.get_height() == 16
+	_check("icons: all 92 native atlas regions remain 16x16", names.size() == 92 and sizes_ok)
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "icons"
+	for scale in [1, 2, 3]:
+		Dev.icon_preview(scale)
+		god.refresh()
+		await wait(0.3)
+		var grid: Node = god._list.find_child("IconGrid", true, false)
+		var cells_ok: bool = grid != null and grid.get_child_count() == 92
+		if grid:
+			for cell in grid.get_children():
+				var texture: TextureRect = cell.get_node("Icon")
+				cells_ok = cells_ok and texture.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST and texture.custom_minimum_size == Vector2(scale * 16, scale * 16)
+		_check("icons: GOD gallery has 92 nearest-filtered entries at x%d" % scale, cells_ok)
+		var scroll := god._list.get_parent() as ScrollContainer
+		if scroll:
+			scroll.scroll_vertical = 0
+			await wait(0.2)
+		await shot("icons_gallery_x%d" % scale)
+		if scroll and scale == 2:
+			for page in [1, 2, 3, 4]:
+				scroll.scroll_vertical = page * 400
+				await wait(0.2)
+				await shot("icons_gallery_x2_page%d" % page)
+	Dev.icon_preview(2)
+	god.tab = "main"
+	god.close()
+	await wait(0.2)
+	main.hud.open_panel("inventory")
+	await wait(0.3)
+	await shot("icons_inventory")
+	main.hud.panels.inventory.close()
+	await shot("icons_hud")
+
+
 func _crew_roster_test() -> void:
 	get_window().size = Vector2i(1280, 640)
 	var ids: Array = Data.CREW_ROSTER.keys()
