@@ -258,6 +258,8 @@ NEW RUN opens a rules picker on the title screen: **mode**, **difficulty** and a
 | ปืนแก้ว `glass_cannon` | squad damage ×2, squad HP ×0.5, +15 % (not in peaceful) |
 | ฝูงคลั่ง `horde` | threat build-up ×1.6, enemy HP ×1.2, +25 % (not in peaceful) |
 
+**Being replaced (MV-114 / MV-159):** the picker goes away for a persistent account; modes become time-limited events played in a separate vehicle. Design: `docs/design/persistent_account.md`.
+
 Research multiplier = mode × difficulty × (1 + mutator bonuses). Multipliers stack by product (`Modes.mul(key)`), switches go into the Features "mode" layer (after remote, before tester overrides, so GOD can still flip them). `Modes.ranked()` = a ranked mode and `stats.cheated` never set; it is the flag the online leaderboards will read. Balance bot: `-- --balance --mode=peaceful,hard,fuel_scarce`. Autotest `_modes_test()`.
 
 ## 4c. True pixel art pipeline
