@@ -1914,6 +1914,7 @@ func _share_preview_test() -> void:
 	var shell := FileAccess.get_file_as_string(shell_path) if shell_path != "" else ""
 	for key in ["$GODOT_URL", "$GODOT_CONFIG", "$GODOT_HEAD_INCLUDE", "$GODOT_THREADS_ENABLED", "<!--BOOT_SHIM-->", "src=\"logo.png\""]:
 		_check("boot: shell has " + key, shell.contains(key))
+	_check("boot: patch-note tips stay hidden during the test phase", shell.contains("<ul class=\"tips\" hidden>"))
 	_check("boot: shell version matches BuildInfo", shell.contains(">v%s · GODOT 4.7.2<" % BuildInfo.GAME_VERSION))
 	var web_logo := Image.load_from_file(ProjectSettings.globalize_path("res://web/logo.png"))
 	_check("boot: web/logo.png is the 192x60 pixel logo", web_logo != null and web_logo.get_size() == Vector2i(192, 60))

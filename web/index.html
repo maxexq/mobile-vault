@@ -89,7 +89,7 @@ body {
 #bytes { font: 400 11px/1.6 var(--font-pixel); color: var(--dim); font-variant-numeric: tabular-nums; }
 .tips { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; color: var(--dim); font-size: 13px; line-height: 1.45; }
 .tips li::before { content: "> "; color: var(--line); font-family: var(--font-pixel); }
-#boot[hidden], #err[hidden] { display: none !important; }
+#boot[hidden], #err[hidden], .tips[hidden] { display: none !important; }
 #err { color: var(--warn); font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
 @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
 </style>
@@ -107,7 +107,9 @@ body {
     </div>
     <div class="row"><span id="stage">กำลังติดเครื่องยนต์รถบ้าน…</span><span id="bytes">0.0 MB</span></div>
     <div class="bar"><div class="fill" id="fill"></div></div>
-    <ul class="tips">
+    <!-- Patch-note tips: hidden while the notes are rewritten during the test phase (Parames 2026-10-24).
+         Remove `hidden` to show them again. -->
+    <ul class="tips" hidden>
       <li>ชื่อใหม่: Apocarlypse = Car + Apocalypse · รถป้อมเหล็กของเรายังชื่อ Mobile Vault เหมือนเดิม</li>
       <li>ออกแบบมาสำหรับจอแนวตั้ง (หมุนแนวนอนก็เล่นได้)</li>
       <li>เริ่มการเดินทางใหม่เลือกกฎได้: โหมดขบวนสงบ (ไม่มีศัตรูบุก), ความยาก ง่าย–ฝันร้าย และตัวแปรกฎอย่างน้ำมันขาดแคลนหรือปืนแก้ว · ยิ่งยากยิ่งได้แต้มวิจัยพันธุกรรมเพิ่ม</li>
