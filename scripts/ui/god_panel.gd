@@ -128,6 +128,8 @@ func _tab_main() -> void:
 		_row(sb, "จำลองจอ")
 	_head("SHAKE", "จอสั่น · แรง x%.2f (tune fx.shake) · %s" % [Features.num("fx.shake", 0.5), "เปิด" if bool(Settings.get_value("shake")) else "ปิดในตั้งค่า"])
 	_row([_b("สั่นเบา", func(): Dev.shake_test(2.0)), _b("สั่นแรงสุด", func(): Dev.shake_test(6.0), "red")], "ทดสอบ")
+	_note("รถสั่น x%.2f (tune fx.engine_shake) · %s" % [Features.num("fx.engine_shake", Vehicle.ENGINE_SHAKE), "เปิด" if bool(Settings.get_value("car_shake")) else "ปิดในตั้งค่า"])
+	_row([_b("รถสั่น x1 (แบบเดิม)", func(): Dev.engine_shake(1.0)), _b("x0.5", func(): Dev.engine_shake(0.5)), _b("ค่าเริ่มต้น", func(): Dev.engine_shake(-1.0), "gray")], "รถสั่น")
 	_head("OVERLAY", "ข้อมูลดีบักบนจอ")
 	_row([_b("FPS/ดีบัก: " + ("เปิด" if Dev.overlay else "ปิด"), func(): Dev.set_overlay(not Dev.overlay), "green" if Dev.overlay else "gray"),
 		_b("ซ่อนปุ่ม GOD", func(): Dev.lock(), "red", true)])

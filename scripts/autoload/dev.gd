@@ -123,6 +123,12 @@ func set_speed(x: float) -> void:
 	changed.emit()
 
 
+## vehicle body rumble strength (MV-176): sets the fx.engine_shake override, < 0 = back to the build's value
+func engine_shake(k: float) -> void:
+	Trace.rec("god", "engine shake %.2f" % k)
+	Features.set_override("tune", "fx.engine_shake", null if k < 0.0 else k)
+
+
 ## feel the screen shake at a given strength (MV-175): 6 = the biggest hit in the game (boss slam)
 func shake_test(amount: float = 6.0) -> void:
 	Trace.rec("god", "shake test %.1f" % amount)

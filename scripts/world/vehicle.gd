@@ -17,6 +17,8 @@ const TRAILER_W := 248.0
 const TRACKS_X := {"van": 200, "bus": 200, "rig": 202}
 const SOLAR_X := [79, 105]
 const TITLE_CRUISE := 0.35         # title-screen backdrop speed (matches the road scroll in background.gd)
+## body rumble + road bumps strength x (tune fx.engine_shake; 1.0 = before MV-176, players felt dizzy at full)
+const ENGINE_SHAKE := 0.5
 const SOLAR_Y := 14               # relative to a 4-floor roof (roof_dy() shifts it)
 const ANTENNA := Vector2(113, 1)
 const ROOF_Y := 36
@@ -61,6 +63,7 @@ var _bump_t := 0.0
 var _bump := 0.0
 var _rumble_t := 0.0
 var _rumble := 0.0
+var _rumble_on := false
 var _sparks: Node2D
 var _speed := 0.0
 var _t := 0.0
@@ -313,6 +316,20 @@ func top_y() -> float:
 	return roof_y() - 40.0 - deck_lift()
 
 
+## how hard the body shakes: tune fx.engine_shake, 0 when "car_shake" is off in settings (MV-176)
+static func shake_scale() -> float:
+	if not bool(Settings.get_value("car_shake")):
+		return 0.0
+	return Features.num("fx.engine_shake", ENGINE_SHAKE)
+
+
+## a strength below 1 px on the 1 px grid: the fraction is how often the extra pixel shows,
+## so 0.5 x a 1 px jolt = a 1 px jolt half as often (same total motion as half a pixel)
+static func px_amp(a: float) -> float:
+	var whole := floorf(a)
+	return whole + (1.0 if randf() < a - whole else 0.0)
+
+
 func refresh_rooms() -> void:
 	if Game.s.is_empty():
 		return
@@ -545,18 +562,21 @@ func _process(delta: float) -> void:
 	if smoke is GPUParticles2D:
 		(smoke as GPUParticles2D).speed_scale = 1.0 + _speed * 0.8
 	antenna_light.visible = fmod(_t, 1.6) < 0.25
+	var k := shake_scale()
 	_bump_t -= delta
 	if moving and _bump_t <= 0.0:
 		_bump_t = randf_range(0.18, 0.55) / maxf(_speed, 0.3)
-		_bump = -2.0 if randf() < 0.15 else -1.0
+		_bump = -px_amp((2.0 if randf() < 0.15 else 1.0) * k)
 		if Game.vehicle_def().get("rail", false):
-			_bump = -1.0 if randf() < 0.3 else 0.0     # rails are smoother
+			_bump = -px_amp(k) if randf() < 0.3 else 0.0     # rails are smoother
 	_bump = move_toward(_bump, 0.0, delta * 14.0)
-	# engine rumble: the body buzzes 1 px while the engine runs (driving, title backdrop), slower when idling
+	# engine rumble: the body buzzes 1 px while the engine runs (driving, title backdrop), slower when idling;
+	# every other beat is a buzz, and fx.engine_shake decides how many of those beats really move (MV-176)
 	_rumble_t -= delta
 	if _rumble_t <= 0.0:
 		var engine_on := moving or not Game.started or bool(Game.s.get("traveling", false))
-		_rumble = -1.0 if engine_on and _rumble == 0.0 else 0.0
+		_rumble_on = engine_on and not _rumble_on
+		_rumble = -px_amp(k) if _rumble_on else 0.0
 		_rumble_t = randf_range(0.06, 0.1) if moving else randf_range(0.1, 0.16)
 	body.position.y = round(minf(_bump, _rumble))
 	var sun := Game.sun_level()

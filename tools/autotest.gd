@@ -92,6 +92,12 @@ func _run() -> void:
 		await _env_test()
 		_finish()
 		return
+	if "--only=shake" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _shake_test()
+		await _engine_shake_test()
+		_finish()
+		return
 	if "--only=thai" in OS.get_cmdline_user_args():
 		_thai_terms_test()
 		_finish()
@@ -704,6 +710,7 @@ func _run() -> void:
 	await _env_test()
 	await _english_test()
 	await _shake_test()
+	await _engine_shake_test()
 	_thai_terms_test()
 	_finish()
 
@@ -3239,6 +3246,34 @@ func _title_backdrop_test() -> void:
 # ------------------------------------------------------------------ room ambience (MV-167)
 ## lamp light pools + micro animation: every room type has moving parts, the layer hides in a blackout,
 ## on building sites and wide rooms, follows its Features switch, and the GOD flicker reaches every lamp
+## MV-176: the vehicle body rumble / road bumps at half strength by default, tunable, off in settings
+func _engine_shake_test() -> void:
+	var was: bool = bool(Settings.get_value("car_shake"))
+	Settings.set_value("car_shake", true)
+	Features.set_override("tune", "fx.engine_shake", null)
+	_check("engine shake: half strength by default (%.2f)" % Vehicle.shake_scale(), is_equal_approx(Vehicle.shake_scale(), 0.5))
+	Dev.engine_shake(1.0)
+	_check("engine shake: tune fx.engine_shake 1.0 = the old strength", is_equal_approx(Vehicle.shake_scale(), 1.0))
+	Dev.engine_shake(-1.0)
+	_check("engine shake: Dev reset clears the override", Features.source("tune", "fx.engine_shake") != "dev")
+	# a half pixel on the 1 px grid = a whole pixel half of the time
+	var sum := 0.0
+	for i in 4000:
+		sum += Vehicle.px_amp(0.5)
+	_check("engine shake: 0.5 px = 1 px half the time (avg %.3f)" % (sum / 4000.0), absf(sum / 4000.0 - 0.5) < 0.05)
+	_check("engine shake: whole pixels stay whole", Vehicle.px_amp(1.0) == 1.0 and Vehicle.px_amp(2.0) == 2.0 and Vehicle.px_amp(0.0) == 0.0)
+	Settings.set_value("car_shake", false)
+	_check("engine shake: off in settings = 0", Vehicle.shake_scale() == 0.0)
+	await wait(0.4)
+	var moved := false
+	for i in 40:
+		await get_tree().process_frame
+		moved = moved or main.vehicle.body.position.y != 0.0
+	_check("engine shake: the body stays still when off in settings", not moved)
+	Settings.set_value("car_shake", was)
+	await wait(0.3)
+
+
 func _ambience_test() -> void:
 	get_window().size = Vector2i(1280, 640)
 	Features.set_override("features", "room_ambience", null)

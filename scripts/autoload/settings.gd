@@ -23,6 +23,7 @@ const DEFAULTS := {
 	"fps": 60,               # 60 | 30 (battery saver)
 	"fullscreen": false,
 	"shake": true,
+	"car_shake": true,       # the vehicle body rumbles with the engine and bumps on the road (MV-176)
 	"gore": true,
 	"vibrate": true,
 	"pacing": "threat",      # threat (enemies come in raids drawn by noise / light) | classic (back-to-back waves)
