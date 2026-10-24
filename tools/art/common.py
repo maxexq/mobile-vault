@@ -309,6 +309,20 @@ atlas_items = {}
 
 
 OVERRIDES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pixellab", "overrides")
+# approved V2 scene art, cleaned to native size by tools/art/v2_native.py (MV-189): events, encounters,
+# expedition interiors and landmarks use these committed files instead of the old procedural scenes
+V2_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "v2")
+
+
+def v2_art(key, size):
+    """the committed V2 image for `key` (event_<name> / exp_<name> / lm_<name>), or None"""
+    p = os.path.join(V2_DIR, key + ".png")
+    if not os.path.exists(p):
+        return None
+    img = Image.open(p).convert("RGBA")
+    if img.size != tuple(size):
+        raise ValueError(f"V2 art {key}.png is {img.size}, the slot is {tuple(size)}")
+    return img
 
 
 def add(name, img, q=True):
@@ -321,6 +335,9 @@ def add(name, img, q=True):
             img = o
         else:
             print(f"pixellab override {name}.png is {o.size}, sprite is {img.size}: ignored")
+    if name.startswith("lm_"):
+        v2 = v2_art(name, img.size)
+        img = img if v2 is None else v2
     atlas_items[name] = quantize(img) if q else img
 
 
@@ -354,4 +371,10 @@ def pack_atlas(max_w=2048):
 
 
 def save(img, path, q=True):
+    folder = os.path.basename(os.path.dirname(path))
+    stem = os.path.splitext(os.path.basename(path))[0]
+    key = {"events": "event_" + stem, "exp": stem}.get(folder)
+    if key:
+        v2 = v2_art(key, img.size)
+        img = img if v2 is None else v2
     (quantize(img) if q else img).save(path, optimize=True)
