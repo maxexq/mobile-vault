@@ -5,8 +5,8 @@ extends Node
 ##  * engine errors / warnings / script errors are captured with a Logger (OS.add_logger, Godot 4.5+)
 ##  * the last KEEP entries survive reloads (browser localStorage on web, user:// on desktop)
 ##  * export: JSON download on web (JavaScriptBridge.download_buffer) / file in user:// / clipboard
-## Remote monitoring is NOT enabled: `sink_url` is the hook for a future opt-in endpoint
-## (e.g. a Vercel function / PostHog / Sentry) and stays empty until the owner picks one.
+## Remote: Telemetry (MV-116) uploads these entries to Supabase public.logs while the player allows it
+## (Settings "telemetry"). `sink_url` is an unused older hook for a third-party endpoint.
 
 const KEY := "mobile_vault_trace_v1"
 const FILE_PATH := "user://trace.json"

@@ -364,6 +364,15 @@ func _tab_sys() -> void:
 			_row([_b("ใช้เซฟคลาวด์", func(): Cloud.use_cloud(), "yellow", true), _b("ใช้เซฟเครื่องนี้", func(): Cloud.use_local())], "ชนกัน")
 	else:
 		_note("บิลด์นี้ไม่มี cloud_config.json จึงเซฟเฉพาะในเครื่อง")
+	_head("CLOUD LOGS", "log บนเซิร์ฟเวอร์")
+	var why := "" if Telemetry.active() else (" · ไม่ทำงาน: " + ("สวิตช์ cloud_logs ปิด" if not Features.on("cloud_logs")
+		else ("ผู้เล่นปิดในตั้งค่า" if not bool(Settings.get_value("telemetry")) else "คลาวด์ยังไม่ได้เชื่อมต่อ")))
+	_note("ค้างส่ง %d · ส่งแล้ว %d%s%s%s" % [Telemetry.pending().size(), Telemetry.sent_total,
+		" · ล่าสุด " + Time.get_datetime_string_from_unix_time(int(Telemetry.last_sent_at + 7 * 3600), true) if Telemetry.last_sent_at > 0.0 else "",
+		"" if bool(Cloud.meta.get("log_notice", false)) else " · ยังไม่แสดงประกาศ", why])
+	if Telemetry.last_error != "":
+		_note("ผิดพลาดล่าสุด: " + Telemetry.last_error)
+	_row([_b("ส่ง log ตอนนี้", func(): Dev.logs_flush(), "green"), _b("ส่ง error ทดสอบ", func(): Dev.logs_test_error(), "yellow")])
 	_head("SETTINGS", "การตั้งค่า")
 	_note("ขนาดเซฟ %.1f KB · FPS %s · ภาษา %s" % [Settings.save_size_bytes() / 1024.0, str(Settings.get_value("fps")), str(Settings.get_value("lang"))])
 	_row([_b("คืนค่าเริ่มต้น", Dev.settings_reset)])

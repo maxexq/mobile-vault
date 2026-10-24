@@ -55,6 +55,8 @@ var navigate_hook := Callable()
 ## (an empty save is uploaded on purpose); device_id = random per browser
 ## oauth = {mode: "link"|"signin", from: user id} while the page is away at Google
 ## chose = "" until the player picks Guest or Google on the title screen ("guest" / "google")
+## log_t / log_k / log_notice = Telemetry's upload cursor (time + entries already sent at that time) and
+## "privacy notice shown" (MV-116)
 var meta := {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}, "chose": ""}
 ## the Google session ended (refresh refused): wait for the player to log in again or pick Guest,
 ## instead of quietly turning this browser into a new guest
@@ -181,6 +183,11 @@ func _load_meta() -> void:
 		meta.device_id = str(d.get("device_id", ""))
 		meta.oauth = d.get("oauth", {}) if d.get("oauth") is Dictionary else {}
 		meta.chose = str(d.get("chose", ""))
+		# player logs (Telemetry, MV-116): last uploaded entry time, privacy notice shown
+		if d.has("log_t"):
+			meta.log_t = float(d.log_t)
+			meta.log_k = int(d.get("log_k", 0))
+		meta.log_notice = bool(d.get("log_notice", false))
 
 
 func _save_meta() -> void:
@@ -749,6 +756,19 @@ func _call(method: int, path: String, body: Dictionary, auth: bool) -> Dictionar
 	var raw: PackedByteArray = res[3]
 	var parsed = JSON.parse_string(raw.get_string_from_utf8()) if raw.size() > 0 else null
 	return {"code": int(res[1]), "body": parsed, "error": ""}
+
+
+## MV-116: one batch of Trace entries into public.logs (rpc_log, 0004_logs.sql). Uses _call, not _rpc: a failed
+## or refused batch must never mark the save sync OFFLINE. {ok, error}
+func post_logs(events: Array) -> Dictionary:
+	if state != State.OK or str(session.get("access_token", "")) == "":
+		return {"ok": false, "error": "ยังไม่ได้เชื่อมต่อ"}
+	var r := await _call(HTTPClient.METHOD_POST, "/rest/v1/rpc/rpc_log", {"p_events": events, "p_version": BuildInfo.GAME_VERSION}, true)
+	if r.code == 200 and r.body is Dictionary and bool(r.body.get("ok", false)):
+		return {"ok": true}
+	if r.code == 200 and r.body is Dictionary:
+		return {"ok": false, "error": str(r.body.get("error", "ถูกปฏิเสธ"))}
+	return {"ok": false, "error": r_error(r)}
 
 
 # ------------------------------------------------------------------ tests

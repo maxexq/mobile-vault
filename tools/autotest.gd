@@ -665,6 +665,7 @@ func _run() -> void:
 	_event_variety_test()
 	await _cloud_test()
 	await _cloud_account_test()
+	await _logs_test()
 	await _account_test()
 	await _resume_test()
 	await _large_room_test()
@@ -2346,6 +2347,98 @@ func _cloud_account_test() -> void:
 	fake.online = true
 	main.hud.settings_panel.close()
 	Cloud.navigate_hook = Callable()
+	Save.wipe()
+	Cloud.transport = null
+	Cloud.state = Cloud.State.OFF
+	Cloud.url = ""
+	Cloud.session = {}
+	Cloud.status_changed.emit()
+
+
+## flush until the queue is empty (the full run has hundreds of trace entries by now); false if a batch fails
+func _drain_logs() -> bool:
+	for i in 50:
+		if Telemetry.pending().is_empty():
+			return true
+		if not await Telemetry.flush():
+			return false
+	return Telemetry.pending().is_empty()
+
+
+## MV-116: player logs go up in batches after the privacy notice, wait while offline, respect the opt-out and the
+## switch, and a server without rpc_log never breaks the save sync
+func _logs_test() -> void:
+	var fake = load("res://tools/cloud_fake.gd").new()
+	Cloud.session = {}
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}, "chose": "guest"}
+	Cloud._save_session()
+	Cloud._save_meta()
+	Settings.set_value("telemetry", true)
+	await Cloud.start_for_test(fake)
+	var uid := Cloud.user_id()
+	_check("logs: cloud up and logging allowed", Cloud.state == Cloud.State.OK and Telemetry.active())
+	Trace.rec("meta", "logs test first")
+	Cloud.meta.log_notice = false     # _process shows it by itself when a run is open; start from "not shown"
+	_check("logs: nothing sent before the privacy notice", not await Telemetry.flush() and fake.log_calls == 0)
+	var was_started := Game.started
+	Game.started = true
+	Telemetry._notice()
+	Game.started = was_started
+	_check("logs: privacy notice shown once and remembered", bool(Cloud.meta.log_notice))
+	_check("logs: first batch sent", await Telemetry.flush() and fake.log_calls == 1)
+	_check("logs: the whole queue drains in batches", await _drain_logs())
+	var first := func(e): return str(e.msg) == "logs test first" and str(e.sid) == Trace.session and str(e.version) == BuildInfo.GAME_VERSION
+	_check("logs: entries arrive with session, category and version", fake.logs.get(uid, []).any(first))
+	_check("logs: entries from before this session stay local", fake.logs[uid].all(func(e): return float(e.t) > Trace._t0))
+	_check("logs: queue empty after sending", Telemetry.pending().is_empty())
+	var calls: int = fake.log_calls
+	_check("logs: nothing new = no request", await Telemetry.flush() and fake.log_calls == calls)
+	# offline: the entries wait in the trace and go up when the network is back
+	fake.online = false
+	for i in 3:
+		Trace.rec("meta", "logs offline %d" % i)
+	_check("logs: offline batch fails, entries kept, save sync untouched", not await Telemetry.flush() and Telemetry.pending().size() >= 3
+		and Telemetry.last_error != "" and Cloud.state == Cloud.State.OK)
+	fake.online = true
+	var offl := func(e): return str(e.msg).begins_with("logs offline")
+	_check("logs: back online, the queue goes up", await _drain_logs() and fake.logs[uid].filter(offl).size() == 3)
+	# batches of 10: 25 entries need 3 requests, in order, none lost or doubled
+	Features.set_override("tune", "logs.batch", 10.0)
+	for i in 25:
+		Trace.rec("meta", "logs batch %d" % i)
+	calls = fake.log_calls
+	await _drain_logs()
+	var bat: Array = fake.logs[uid].filter(func(e): return str(e.msg).begins_with("logs batch"))
+	var in_order := bat.size() == 25
+	for i in bat.size():
+		in_order = in_order and str(bat[i].msg) == "logs batch %d" % i
+	_check("logs: batch size from tune, all 25 in order", fake.log_calls - calls >= 3 and in_order)
+	Features.set_override("tune", "logs.batch", null)
+	# a server without rpc_log (0004 not run): logs fail quietly, the save still syncs
+	fake.no_rpc_log = true
+	Trace.rec("meta", "logs no server")
+	_check("logs: missing rpc_log keeps the cloud save OK", not await Telemetry.flush() and Cloud.state == Cloud.State.OK)
+	fake.no_rpc_log = false
+	_check("logs: sent once rpc_log exists", await _drain_logs() and fake.logs[uid].any(func(e): return str(e.msg) == "logs no server"))
+	# opt-out and kill switch: nothing leaves the device
+	Settings.set_value("telemetry", false)
+	Trace.rec("meta", "logs opted out")
+	calls = fake.log_calls
+	_check("logs: player opt-out sends nothing", not Telemetry.active() and not await Telemetry.flush() and fake.log_calls == calls)
+	Settings.set_value("telemetry", true)
+	Features.set_override("features", "cloud_logs", false)
+	_check("logs: switch off sends nothing", not Telemetry.active() and not await Telemetry.flush() and fake.log_calls == calls)
+	Features.set_override("features", "cloud_logs", null)
+	# GOD: a test error reaches the logs
+	_check("logs: GOD test error is sent", await Dev.logs_test_error() and fake.logs[uid].any(func(e): return str(e.cat) == "error" and str(e.msg).contains("GOD test error")))
+	# Settings > ตั้งค่า: the privacy toggle with its notice
+	main.hud.settings_panel.open_tab("game")
+	await wait(0.2)
+	var priv: Array = main.hud.settings_panel._list.find_children("*", "Label", true, false)
+	_check("logs: Settings has the privacy toggle and notice", priv.any(func(l): return l.text.contains("ส่งบันทึกการเล่น"))
+		and priv.any(func(l): return l.text.contains("ไอดีผู้เล่น")))
+	await shot("logs_privacy_settings")
+	main.hud.settings_panel.close()
 	Save.wipe()
 	Cloud.transport = null
 	Cloud.state = Cloud.State.OFF

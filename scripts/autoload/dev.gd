@@ -879,6 +879,20 @@ func cloud_forget() -> void:
 	Cloud.sync()
 
 
+## player logs (MV-116): send the queued trace entries now; read-only for the save (not cheated)
+func logs_flush() -> bool:
+	Trace.rec("god", "logs flush", {"queued": Telemetry.pending().size()})
+	var ok: bool = await Telemetry.flush()
+	Game.toast.emit("ส่ง log แล้ว" if ok else "ส่ง log ไม่ได้: " + (Telemetry.last_error if Telemetry.last_error != "" else "ยังไม่พร้อม"), "info" if ok else "warn")
+	return ok
+
+
+## a fake error entry, sent straight away: checks that errors reach the logs table and the dashboard views
+func logs_test_error() -> bool:
+	Trace.rec("error", "GOD test error (ignore)", {"kind": "test"})
+	return await logs_flush()
+
+
 ## copy "player id · full auth user id" for support lookups (MV-115); read-only, so the save stays ranked
 func player_id_copy() -> String:
 	var t := "%s · %s" % [Cloud.player_id() if Cloud.player_id() != "" else "-", Cloud.user_id() if Cloud.user_id() != "" else "-"]

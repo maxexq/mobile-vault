@@ -41,6 +41,7 @@ Dev="*res://scripts/autoload/dev.gd"
 Tutorial="*res://scripts/autoload/tutorial.gd"
 Settings="*res://scripts/autoload/settings.gd"
 Cloud="*res://scripts/autoload/cloud.gd"
+Telemetry="*res://scripts/autoload/telemetry.gd"
 
 [display]
 

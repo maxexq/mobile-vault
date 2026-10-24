@@ -2,7 +2,7 @@ extends RefCounted
 ## In-memory stand-in for the Supabase endpoints Cloud uses (dev only, excluded from exports):
 ## anonymous sign-up, refresh, user, Google sign-in / manual identity linking (redirect flow),
 ## logout (refresh tokens rotate like Supabase's), and rpc_load / rpc_save with the same rev rules as supabase/migrations/0001_cloud_save.sql
-## and the schema guard of 0002_schema_guard.sql.
+## and the schema guard of 0002_schema_guard.sql, plus rpc_log of 0004_logs.sql (player logs).
 ## `clock` is the fake server time.
 
 const GOOGLE := "https://accounts.google.test/o/oauth2"
@@ -14,6 +14,9 @@ var accounts := {}    # user id -> {email, anon}
 var rows := {}        # user id -> {rev, data, settings, device_id, updated_at}
 var calls: Array = []
 var refreshes := 0
+var logs := {}        # user id -> rows sent through rpc_log (MV-116)
+var log_calls := 0
+var no_rpc_log := false   # a server where 0004_logs.sql was not run yet
 var _n := 0
 
 
@@ -76,6 +79,19 @@ func handle(method: int, path: String, headers: PackedStringArray, body: String)
 		rows[uid] = {"rev": rev + 1, "data": b.p_data, "settings": b.p_settings, "device_id": b.p_device_id, "updated_at": clock,
 			"schema": int(b.get("p_schema", 1))}
 		return {"code": 200, "body": {"ok": true, "rev": rev + 1, "server_time": clock}}
+	if path == "/rest/v1/rpc/rpc_log":
+		if no_rpc_log:
+			return {"code": 404, "body": {"message": "Could not find the function public.rpc_log"}}
+		log_calls += 1
+		var ev: Array = b.get("p_events", [])
+		if ev.size() > 500:
+			return {"code": 200, "body": {"ok": false, "error": "batch too big"}}
+		if not logs.has(uid):
+			logs[uid] = []
+		for e in ev:
+			logs[uid].append({"t": e.get("t"), "sid": e.get("sid"), "cat": e.get("cat"), "msg": e.get("msg"), "data": e.get("data"),
+				"version": b.get("p_version", "")})
+		return {"code": 200, "body": {"ok": true, "n": ev.size()}}
 	return {"code": 404, "body": null}
 
 
