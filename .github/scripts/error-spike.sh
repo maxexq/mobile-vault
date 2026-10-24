@@ -69,8 +69,11 @@ if [ "$MODE" = "test" ]; then
 elif [ -n "${CHECK_JSON:-}" ]; then
   check=$(cat "$CHECK_JSON")
 else
-  if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_KEY:-}" ]; then
-    echo "::notice::SUPABASE_URL variable or SUPABASE_SERVICE_KEY secret is not set, nothing checked"; exit 0
+  missing=()
+  [ -z "${SUPABASE_URL:-}" ] && missing+=("SUPABASE_URL (variable)")
+  [ -z "${SUPABASE_SERVICE_KEY:-}" ] && missing+=("SUPABASE_SERVICE_KEY (secret)")
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo "::notice::not set: ${missing[*]}, nothing checked"; exit 0
   fi
   body=$(jq -n --argjson w "$WINDOW" --argjson e "$MIN_ERRORS" --argjson p "$MIN_PLAYERS" \
     --argjson r "$RATIO" --argjson b "$BASELINE" --argjson c "$COOLDOWN" --argjson d "$NEW_DAYS" \
@@ -120,7 +123,11 @@ payload=$(jq -n --argjson embeds "$embeds" --arg mention "$MENTION" '{
 } + (if $mention != "" then {content: ($mention + " ดู log: select * from public.log_errors_recent;")} else {} end)')
 
 post "$payload"
-echo "Posted to $CHANNEL: spike=$spike new=$(jq length <<<"$new")"
+if [ "${DRY_RUN:-}" = "1" ]; then
+  echo "Dry run: not sent (would go to $CHANNEL): spike=$spike new=$(jq length <<<"$new")"
+else
+  echo "Posted to $CHANNEL: spike=$spike new=$(jq length <<<"$new")"
+fi
 
 # record it, so the next run doesn't post the same spike (cooldown) or the same new error again
 if [ "$MODE" = "test" ] || [ -n "${CHECK_JSON:-}" ] || [ "${DRY_RUN:-}" = "1" ]; then exit 0; fi

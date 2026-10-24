@@ -120,9 +120,10 @@ case "$EVENT_NAME" in
 
   workflow_run)
     conclusion=$(ev .workflow_run.conclusion); name=$(ev .workflow_run.name)
-    # scheduled jobs (Error spike, every 15 min) would flood the feed: only their failures are news
-    if [ "$(ev .workflow_run.event)" = "schedule" ] && [ "$conclusion" = "success" ]; then
-      echo "Scheduled run '$name' succeeded, not notified"; exit 0
+    # scheduled jobs and Error spike (every 15 min, its alerts go to their own channel) would flood
+    # the feed: only their failures are news
+    if [ "$conclusion" = "success" ] && { [ "$(ev .workflow_run.event)" = "schedule" ] || [ "$name" = "Error spike" ]; }; then
+      echo "'$name' succeeded, not notified (only failures)"; exit 0
     fi
     case "$conclusion" in
       success)               title="✅ CI ผ่าน: $name"; color=$GREEN ;;

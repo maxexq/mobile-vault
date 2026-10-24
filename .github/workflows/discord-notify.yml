@@ -15,8 +15,8 @@ on:
   status:
   # Kept for providers that create GitHub deployments instead.
   deployment_status:
-  # CI workflows to report: put each new workflow's `name:` here. Scheduled runs are reported
-  # only when they fail (Error spike runs every 15 min).
+  # CI workflows to report: put each new workflow's `name:` here. Scheduled runs and Error spike
+  # are reported only when they fail (Error spike runs every 15 min and posts to its own channel).
   workflow_run:
     workflows: [Autotest, Web export, Release, Error spike]
     types: [completed]

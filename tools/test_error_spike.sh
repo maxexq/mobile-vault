@@ -21,9 +21,9 @@ check "spike embed" "$out" '"title": "🚨 Error พุ่ง: 26 ครั้�
 check "new embed" "$out" '"title": "🆕 Error ใหม่ 2 แบบ (ไม่เคยเจอใน 7 วันก่อน)"'
 check "dashboard link" "$out" 'https://supabase.com/dashboard/project/abcd1234/sql/new'
 check "no pings by default" "$out" '"parse": []'
-check "fallback channel" "$out" 'Posted to dev-feed'
+check "fallback channel" "$out" 'would go to dev-feed'
 out=$(run CHECK_JSON=$FIX DISCORD_ALERTS_WEBHOOK_URL=https://example.invalid/x ERROR_SPIKE_MENTION='<@&123>' ERROR_SPIKE_NEW_DAYS=3)
-check "alerts channel" "$out" 'Posted to alerts'
+check "alerts channel" "$out" 'would go to alerts'
 check "mention" "$out" '"content": "<@&123> ดู log'
 check "new_days in title" "$out" 'ไม่เคยเจอใน 3 วันก่อน'
 out=$(run CHECK_JSON=$FIX ERROR_SPIKE_NEW_ALERTS=false)
@@ -34,7 +34,9 @@ check "quiet" "$out" 'No alert'
 out=$(run MODE=test)
 check "test message" "$out" '🧪 ทดสอบ'
 out=$(run SUPABASE_URL=)
-check "no secrets = no-op" "$out" 'nothing checked'
+check "no secrets = no-op" "$out" 'not set: SUPABASE_URL (variable) SUPABASE_SERVICE_KEY (secret), nothing checked'
+out=$(run SUPABASE_URL=https://abcd1234.supabase.co)
+check "names the missing one" "$out" 'not set: SUPABASE_SERVICE_KEY (secret), nothing checked'
 
 PG_BIN="${PG_BIN:-$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -n1)}"
 if [ -z "$PG_BIN" ] || [ ! -x "$PG_BIN/initdb" ]; then
