@@ -507,7 +507,10 @@ func _on_tap(screen_pos: Vector2) -> void:
 		_exit_placement()
 		return
 	if slot == Data.CAB_SLOT:
-		hud.open_panel("engine")
+		if EngineBay.on():
+			hud.open_panel("engine")
+		else:
+			Game.toast.emit(Loc.t("ห้องเครื่องปิดใช้งานชั่วคราว รถใช้เครื่องดีเซลเดิม"), "info")
 	elif slot >= 0:
 		open_closeup(slot)
 	elif vehicle.solar_global_rect().has_point(world_pos):

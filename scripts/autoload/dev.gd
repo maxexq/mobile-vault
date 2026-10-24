@@ -322,6 +322,12 @@ func set_hull(frac: float) -> void:
 
 
 # ------------------------------------------------------------------ engine bay (v4.6)
+## the engine_bay Features switch for this tester (MV-40): off = stock diesel, no heat / wear / rests / jobs
+func engine_bay_switch(v: bool) -> void:
+	feature_set("engine_bay", v)
+	EngineBay._changed()
+
+
 func engine_set(key: String, v: float) -> void:
 	var e := EngineBay.st()
 	e[key] = v

@@ -178,6 +178,8 @@ func _tab_vehicle() -> void:
 	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
 	_head("ENGINE BAY", "ห้องเครื่อง · %s %d°C สภาพ %d%%" % [EngineBay.t().th, int(EngineBay.heat()), int(EngineBay.cond())])
+	_row([_b("ระบบห้องเครื่อง: " + ("เปิด" if EngineBay.on() else "ปิด (ดีเซลเดิม)"), func(): Dev.engine_bay_switch(not EngineBay.on()),
+		"green" if EngineBay.on() else "red", true)], "สวิตช์")
 	_row([_b("40°C", func(): Dev.engine_set("heat", 40.0), "green"), _b("100°C", func(): Dev.engine_set("heat", 100.0)), _b("115°C", func(): Dev.engine_set("heat", 115.0), "red")], "ความร้อน")
 	_row([_b("100%", func(): Dev.engine_set("cond", 100.0), "green"), _b("30%", func(): Dev.engine_set("cond", 30.0)), _b("0", func(): Dev.engine_set("cond", 0.0), "red")], "สภาพ")
 	_row([_b("น้ำมัน 100", func(): Dev.engine_set("oil", 100.0), "green"), _b("น้ำมัน 10", func(): Dev.engine_set("oil", 10.0)),

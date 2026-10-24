@@ -84,6 +84,14 @@ func _ready() -> void:
 
 
 # ------------------------------------------------------------------ state
+## Features switch engine_bay (MV-40). Off = the game before v4.6: the stock diesel I4's numbers whatever engine is
+## fitted, no heat / wear / oil / coolant, no breakdowns, rests or jobs, and the engine menu stays shut. Everything
+## that reads the engine goes through the functions below, so speed, tow, noise -> threat, fuel burn, weight and
+## the alternator all fall back on their own. The saved state (Game.s.engine, the fitted engine) is kept.
+func on() -> bool:
+	return Features.on("engine_bay")
+
+
 func st() -> Dictionary:
 	if Game.s.is_empty():
 		return {}
@@ -99,7 +107,7 @@ static func default_state() -> Dictionary:
 
 ## the installed engine's type key
 func type_id() -> String:
-	if Game.s.is_empty():
+	if Game.s.is_empty() or not on():
 		return "diesel4"
 	return type_of(Loot.van_equipped("engine"))
 
@@ -137,6 +145,8 @@ func describe_type(id: String) -> Array:
 
 
 func mode() -> String:
+	if not on():
+		return "normal"
 	var m := str(st().get("mode", "normal"))
 	if m == "silent" and not t().get("silent", false):
 		return "normal"
@@ -151,11 +161,11 @@ func set_mode(m: String) -> void:
 
 
 func heat() -> float:
-	return float(st().get("heat", 40.0))
+	return float(st().get("heat", 40.0)) if on() else 40.0
 
 
 func cond() -> float:
-	return float(st().get("cond", 100.0))
+	return float(st().get("cond", 100.0)) if on() else 100.0
 
 
 func level() -> int:
@@ -168,11 +178,13 @@ func crew() -> Array:
 
 ## the vault is parked to let the engine cool down
 func resting() -> bool:
-	return bool(st().get("resting", false))
+	return on() and bool(st().get("resting", false))
 
 
 ## a parked job (oil change, overhaul) holds the vault
 func job_holds() -> bool:
+	if not on():
+		return false
 	var j: Dictionary = st().get("job", {})
 	return not j.is_empty() and bool(JOBS.get(str(j.id), {}).get("park", false))
 
@@ -269,7 +281,8 @@ func smoke_pm() -> float:
 func power_pm() -> float:
 	if not Game.is_moving():
 		return 0.0
-	return float(t().alt) * (1.0 + 0.25 * float(level() - 1)) * (0.6 + 0.4 * cond() / 100.0)
+	var lv := level() if on() else 1     # switch off: no engine room upgrades
+	return float(t().alt) * (1.0 + 0.25 * float(lv - 1)) * (0.6 + 0.4 * cond() / 100.0)
 
 
 ## what the engine burns per minute while driving: {"fuel": x} / {"scrap": x} / {"power": x}
@@ -313,7 +326,7 @@ func blocked_reason() -> String:
 ## called every sim step from Game._simulate (dt seconds, m = dt / 60). `running` = the vault is driving.
 func tick(dt: float, m: float, running: bool, offline: bool) -> void:
 	var e := st()
-	if e.is_empty():
+	if e.is_empty() or not on():
 		return
 	var amb := ambient()
 	var h := heat()
