@@ -1,7 +1,8 @@
 extends RefCounted
 ## In-memory stand-in for the Supabase endpoints Cloud uses (dev only, excluded from exports):
 ## anonymous sign-up, refresh, user, Google sign-in / manual identity linking (redirect flow),
-## logout (refresh tokens rotate like Supabase's), and rpc_load / rpc_save with the same rev rules as supabase/migrations/0001_cloud_save.sql.
+## logout (refresh tokens rotate like Supabase's), and rpc_load / rpc_save with the same rev rules as supabase/migrations/0001_cloud_save.sql
+## and the schema guard of 0002_schema_guard.sql.
 ## `clock` is the fake server time.
 
 const GOOGLE := "https://accounts.google.test/o/oauth2"
@@ -63,9 +64,12 @@ func handle(method: int, path: String, headers: PackedStringArray, body: String)
 	if path == "/rest/v1/rpc/rpc_save":
 		var cur = rows.get(uid)
 		var rev := 0 if cur == null else int(cur.rev)
+		if cur != null and int(b.get("p_schema", 1)) < int(cur.get("schema", 1)):
+			return {"code": 200, "body": {"ok": false, "old_client": true, "rev": rev, "server_time": clock}}
 		if cur != null and not b.p_force and rev != int(b.p_base_rev):
 			return {"code": 200, "body": {"ok": false, "conflict": true, "rev": rev, "server_time": clock}}
-		rows[uid] = {"rev": rev + 1, "data": b.p_data, "settings": b.p_settings, "device_id": b.p_device_id, "updated_at": clock}
+		rows[uid] = {"rev": rev + 1, "data": b.p_data, "settings": b.p_settings, "device_id": b.p_device_id, "updated_at": clock,
+			"schema": int(b.get("p_schema", 1))}
 		return {"code": 200, "body": {"ok": true, "rev": rev + 1, "server_time": clock}}
 	return {"code": 404, "body": null}
 

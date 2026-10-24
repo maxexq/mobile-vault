@@ -184,6 +184,7 @@ func story_key() -> String:
 ## build the next vehicle. carry_ids = survivors who escape, tier_id = vehicle to build ("" = best unlocked)
 func next_generation(carry_ids: Array, tier_id: String = "") -> void:
 	var old := Game.s
+	Account.collect(old)
 	var meta: Dictionary = (old.meta as Dictionary).duplicate(true)
 	meta.gen = int(meta.gen) + 1
 	var carried := []
@@ -193,14 +194,14 @@ func next_generation(carry_ids: Array, tier_id: String = "") -> void:
 				carried.append((d as Dictionary).duplicate(true))
 	var res_scrap := float(old.res.scrap) * carry_res_ratio()
 	var comps := int(float(old.items.get("components", 0)) * carry_res_ratio())
-	var memorial: Array = old.get("memorial", [])
 	# --- fresh state with the meta carried over
 	var tid := tier_id if tier_id != "" and tier_unlocked(tier_id) else best_tier()
 	Game.s = {"meta": meta, "tier": tid}
 	Game.setup_default_state(true)
-	Game.s.meta = meta
-	Game.s.memorial = memorial
-	Game.s.mode = (old.get("mode", Modes.DEFAULT) as Dictionary).duplicate(true)    # the run's rules carry on
+	# the account (research, perks, blueprints, logbook, memorial, tutorial) carries on as it is
+	Account.a.meta = meta
+	Account.attach(Game.s)
+	Game.s.mode = Account.main_mode()
 	var hs := perk("head_start")
 	Game.s.res.scrap = minf(Game.cap("scrap"), float(Game.s.res.scrap) + res_scrap + 250.0 * hs)
 	Game.s.items["components"] = int(Game.s.items.get("components", 0)) + comps + 20 * hs

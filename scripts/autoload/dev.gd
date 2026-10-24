@@ -613,12 +613,29 @@ func force_wreck() -> void:
 func export_save() -> String:
 	act("export save")
 	Game.save_game()
-	return JSON.stringify(Game.s)
+	return JSON.stringify(Account.envelope(Game.s))
+
+
+## turn the running account back into an old one-run save (v1, peaceful / hard / fuel_scarce) and load it,
+## so testers can watch the account migration and its one-time notice
+func account_v1_reload() -> void:
+	act("account v1 reload")
+	Game.save_game()
+	var v1: Dictionary = Account.envelope(Game.s).main.duplicate(true)
+	for k in Account.SHARED:
+		var val = Account.a.get(k)
+		if val is Dictionary or val is Array:
+			v1[k] = val.duplicate(true)
+	v1.mode = {"id": "peaceful", "diff": "hard", "mut": ["fuel_scarce"], "started_at": float(Account.a.get("created_at", 0.0))}
+	Game.started = false
+	Save.write(v1)
+	if Game.load_game():
+		_vehicle_changed()
 
 
 func import_save(text: String) -> bool:
 	var parsed = JSON.parse_string(text)
-	if not (parsed is Dictionary) or not (parsed as Dictionary).has("rooms"):
+	if not (parsed is Dictionary) or not Account.vehicle_of(parsed).has("rooms"):
 		return false
 	Save.write(parsed)
 	act("import save")

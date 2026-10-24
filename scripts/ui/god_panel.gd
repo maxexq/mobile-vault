@@ -304,7 +304,11 @@ func _tab_world() -> void:
 
 
 func _tab_sys() -> void:
-	_head("GAME MODE", "โหมดเกม (เปลี่ยนกลางทาง = ไม่นับอันดับ)")
+	_head("ACCOUNT", "ไอดีถาวร")
+	_note("รุ่นที่ %d · ความยาก %s · บันทึก %d · อนุสรณ์ %d%s" % [Meta.generation(), str(Modes.DIFFS.get(Account.diff(), {}).get("th", Account.diff())),
+		Account.a.get("lore", []).size(), Account.a.get("memorial", []).size(), " · มาจากเซฟเก่า" if Account.a.has("legacy_mode") else ""])
+	_row([_b("จำลองเซฟเก่า v1 แล้วย้ายเข้าไอดี", Dev.account_v1_reload, "yellow", true)])
+	_head("GAME MODE", "กฎของรถคันนี้ (ไว้ทดสอบอีเว้นท์ · เปลี่ยน = ไม่นับอันดับ)")
 	_note("ตอนนี้: %s · แต้มวิจัย ×%.2f · %s" % [Modes.label(), Modes.legacy_mult(), "นับอันดับได้" if Modes.ranked() else "ไม่นับอันดับ"])
 	var mb := []
 	for k in Modes.MODES:

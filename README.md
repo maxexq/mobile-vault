@@ -207,7 +207,7 @@ Local-first: the game still reads and writes localStorage / `user://`; `scripts/
   - a Google user can **ออกจากระบบ**: the save is uploaded first (refused when offline), the local copy is removed and a fresh guest starts.
   - Google uses the redirect (implicit) flow: the page goes to Google and comes back with the session in the URL fragment, read and cleared on boot. Google refuses to sign in inside a frame (the artifact view), so there the game offers to open `site_url` in a new tab.
   - Setup: Google Cloud OAuth client (Web) with redirect URI `https://<ref>.supabase.co/auth/v1/callback`; Supabase → Google provider on + **Allow manual linking**; URL Configuration → Site URL + Redirect URLs for the Vercel production and preview domains. Step-by-step (Thai): `supabase/google-login-setup.md`.
-- **Migration:** a browser that already has a save uploads it as revision 1 on the first online start.
+- **Migration:** a browser that already has a save uploads it as revision 1 on the first online start. Schema 2 (account envelope, 4o) needs `supabase/migrations/0002_schema_guard.sql` run once so older builds can't overwrite it.
 - **Sync:** upload at most once a minute while playing and on tab hide; offline keeps saving locally and retries every 30 s. Writes go through `rpc_save`, which rejects a stale revision, so when two devices both moved on the Settings → เซฟ tab asks which save to keep. Sync state lives in localStorage `mobile_vault_cloud_v1`.
 - **Clock:** every reply carries `server_time`; `Cloud.now()` stamps `saved_at` and measures offline time, so moving the phone clock no longer grants offline progress once the cloud has answered.
 - **Tests:** the autotest runs the cloud against `tools/cloud_fake.gd` (same revision rules as the SQL, plus fake Google sign-in / linking / logout). Test runners never use `cloud_config.json`.
@@ -224,7 +224,7 @@ Autoload `Features` (`scripts/autoload/features.gd`, right after `Save`) is the 
 | 4 | mode | the run's game mode / mutators (`Game.s.mode`, set by `Modes`, see §4m) | per save |
 | 5 | tester | GOD MODE tab **ฟีเจอร์** (kept in `user://dev.cfg`, cleared by "ซ่อนปุ่ม GOD") or the URL `?ff=raids:off,event.raiders:off,tune.threat.rate_scale:1.5` (this session only) | testers |
 
-**Switches** (`Features.on(key)`): `road_events`, `raids` (no raids; the checkpoint warlord still blocks the road), `encounters`, `strangers` (recruits join directly), `expeditions`, `roof_deck`, `large_rooms`, `tutorial` (new games only), `cloud_save` (read at boot, so a remote kill switch bites on the next launch), `modes` (off = NEW RUN skips the rules picker and starts a standard run), `channel_badge` (the ALPHA / BETA / RC tag under the logo, §9 Versioning), `resume_on_reload` (a web page reload with a save goes straight back into the game once the cloud has answered; the title stays when a Guest/Gmail choice, a new login or a save conflict needs the player), `room_ambience` (room lamp light + micro animation, §4n). Switching one off hides it from play; save data is never deleted.
+**Switches** (`Features.on(key)`): `road_events`, `raids` (no raids; the checkpoint warlord still blocks the road), `encounters`, `strangers` (recruits join directly), `expeditions`, `roof_deck`, `large_rooms`, `tutorial` (new games only), `cloud_save` (read at boot, so a remote kill switch bites on the next launch), `persistent_account` (off = the title shows NEW RUN again, which erases the account and starts over), `channel_badge` (the ALPHA / BETA / RC tag under the logo, §9 Versioning), `resume_on_reload` (a web page reload with a save goes straight back into the game once the cloud has answered; the title stays when a Guest/Gmail choice, a new login or a save conflict needs the player), `room_ambience` (room lamp light + micro animation, §4n). Switching one off hides it from play; save data is never deleted.
 
 **Road events** (`events.<id>`): `on`, `weight` (2 = two cards per shuffle-bag round, 0.5 = a card in about half the rounds, 0 = never), `biomes` (`["*"]` or biome ids, adds the event to roads it is not normally on), `from` / `to` (`"2026-11-14"` or `"2026-11-14 18:00"`, local time at `tz_hours`, default 7 = Thailand; a date-only `to` covers the whole day). Clock = `Cloud.now()` (server time when the cloud is on). This is the hook for festival events: put the event in `Data.EVENTS` without a biome and open it with a window.
 
@@ -243,9 +243,20 @@ The remote file can only switch off / re-time / re-weight / re-tune what the bui
 
 Edit `web/features.json`, push, and Vercel serves it; players pick it up the next time the page loads (no re-export). The active switches go into every trace export (`features`) and a `features` trace entry at boot and after each remote load. Autotest `_features_test()` covers every gate.
 
+## 4o. Persistent account (ไอดีถาวร, MV-159)
+
+One account per player that keeps growing (decision MV-114). Design: `docs/design/persistent_account.md`.
+
+- **Save = envelope v2** `{v: 2, account, main}` (same localStorage key / file). `Account.a` is the account: `meta` (generation, research points, perks, blueprints), `lore`, `memorial`, `tutorial`, `settings.diff`, plus empty `events` / `tree` / `places` / `life` for live-service features. `Game.s` is still the active vehicle; the account keys in `Account.SHARED` are put into `Game.s` as references to the same objects, so `Game.s.meta` / `Game.s.lore` keep working and are stored once.
+- **Next Generation** only replaces the vehicle; logbook, memorial and tutorial now survive it (they were lost before).
+- **No rules picker.** Title: CONTINUE with a save, START on a browser without one. Erasing the account is Settings → เซฟ → รีเซ็ตความคืบหน้า. The main vehicle always plays `standard`; **difficulty** is a setting (Settings → ตั้งค่า → ความยาก, `Account.set_diff`), changeable any time.
+- **Migration v1 → v2** (`Account.migrate_v1`, on load): the old run becomes the main vehicle; peaceful / mutators turn into standard, the picked difficulty becomes the setting, the old rules stay in `account.legacy_mode` and the player gets a one-time toast.
+- **Cloud:** `Cloud.SCHEMA = 2`; run `supabase/migrations/0002_schema_guard.sql` once: `rpc_save` refuses a write from an older build (`{ok:false, old_client:true}`) so a stale tab can't overwrite the account.
+- Switch `persistent_account` (off = NEW RUN is back and starts over from nothing). GOD → ระบบ → ไอดีถาวร: account summary, "จำลองเซฟเก่า v1" (turns the running account into an old save and loads it). Autotest `_account_test()`.
+
 ## 4m. Game modes (โหมดเกม)
 
-NEW RUN opens a rules picker on the title screen: **mode**, **difficulty** and any number of **mutators**. The choice is locked into the save as `Game.s.mode = {id, diff, mut, started_at}`, carried over to the next generation, and shown in Settings → ตั้งค่า → RUN. Saves from before modes migrate to `standard / normal`. Design page: https://claude.ai/artifact/E6psTiH3QsaiejYK8foN2C (phase 1 of it).
+Modes are no longer picked by players (see 4o): they stay as **rule sets for a vehicle**, read from `Game.s.mode = {id, diff, mut, started_at}`, for the coming time-limited events (separate event vehicle), the balance bot and GOD MODE. The main vehicle is always `standard` at the account's difficulty. Original design page: https://claude.ai/artifact/E6psTiH3QsaiejYK8foN2C.
 
 | Choice | Effect |
 |---|---|
@@ -257,8 +268,6 @@ NEW RUN opens a rules picker on the title screen: **mode**, **difficulty** and a
 | ถนนเปลี่ยว `lone_road` | `expeditions`, `encounters`, `strangers` off, +20 % |
 | ปืนแก้ว `glass_cannon` | squad damage ×2, squad HP ×0.5, +15 % (not in peaceful) |
 | ฝูงคลั่ง `horde` | threat build-up ×1.6, enemy HP ×1.2, +25 % (not in peaceful) |
-
-**Being replaced (MV-114 / MV-159):** the picker goes away for a persistent account; modes become time-limited events played in a separate vehicle. Design: `docs/design/persistent_account.md`.
 
 Research multiplier = mode × difficulty × (1 + mutator bonuses). Multipliers stack by product (`Modes.mul(key)`), switches go into the Features "mode" layer (after remote, before tester overrides, so GOD can still flip them). `Modes.ranked()` = a ranked mode and `stats.cheated` never set; it is the flag the online leaderboards will read. Balance bot: `-- --balance --mode=peaceful,hard,fuel_scarce`. Autotest `_modes_test()`.
 
@@ -299,7 +308,7 @@ Positions are pixels of the PixelLab room art (`tools/art/pixellab/overrides`). 
 | ต่อสู้ | set wave, kill all enemies, heal squad · force a raid (warning first), set threat 0 / 90 · defence squad: auto-fill with the strongest idle crew, auto-equip best gear, clear · spawn the biome warlord or any mutant boss, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
 | ฟีเจอร์ | every Features switch with where its value comes from (ค่าเริ่มต้น / บิลด์ / รีโมต / ผู้ทดสอบ), tap to flip · every road event on/off (biome's own marked *, weight and date window shown) · tune numbers ÷2 / ×2 / back to code · reload remote, clear tester overrides |
 | โลก | jump to any biome, go to checkpoint, mark warlord beaten, lap +1 · road events: trigger any, draw the next card from the shuffle bag, reshuffle (bag size + last 3 shown) · expedition: force any special encounter (sends a free scavenging team when none is out), clear the no-repeat history, arrive at any site, finish the trip · open the next-generation screen, wreck the vehicle in 3 s |
-| ระบบ | game mode: switch mode / difficulty / mutators of the running save (marks it cheated = unranked), peaceful "go to checkpoint + toll money" · version rows (game / channel / build / engine) + copy, preview the alpha / beta / rc / stable badge (ของจริง = the real one) · tutorial: replay from the start, skip, jump to any step · cloud save: status/rev, sync now, force upload, forget the link, resolve a conflict · settings: save size, reset to defaults |
+| ระบบ | account: generation / difficulty / logbook / memorial summary, "จำลองเซฟเก่า v1" to test the migration · game mode: switch mode / difficulty / mutators of the running save (marks it cheated = unranked), peaceful "go to checkpoint + toll money" · version rows (game / channel / build / engine) + copy, preview the alpha / beta / rc / stable badge (ของจริง = the real one) · tutorial: replay from the start, skip, jump to any step · cloud save: status/rev, sync now, force upload, forget the link, resolve a conflict · settings: save size, reset to defaults |
 | LOG/เซฟ | trace viewer with category filter, download JSON / copy / clear; export the save as JSON (copied to the clipboard) and load a pasted save — testers can hand each other exact situations |
 
 Cheat switches are never saved; any god action marks the save `stats.cheated = true` and is written to the trace.

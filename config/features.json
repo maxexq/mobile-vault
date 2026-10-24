@@ -11,7 +11,7 @@
     "tutorial": true,
     "cloud_save": true,
     "google_login": true,
-    "modes": true,
+    "persistent_account": true,
     "channel_badge": true,
     "room_ambience": true,
     "resume_on_reload": true

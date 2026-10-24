@@ -16,7 +16,7 @@ extends Node
 ## Config: res://cloud_config.json {"url": "https://<ref>.supabase.co", "anon_key": "<anon/publishable key>",
 ##   "site_url": "<public game URL, used when the game runs inside a frame where Google refuses to sign in>"}.
 ## The file is git-ignored; without it the cloud is OFF and the game behaves exactly as before.
-## Schema: supabase/migrations/0001_cloud_save.sql
+## Schema: supabase/migrations/0001_cloud_save.sql, 0002_schema_guard.sql
 
 signal status_changed
 signal pulled      # a newer cloud save was written locally (title screen re-checks CONTINUE)
@@ -30,7 +30,7 @@ const AUTH_KEY := "mobile_vault_auth_v1"
 const AUTH_PATH := "user://cloud_auth.json"
 const META_KEY := "mobile_vault_cloud_v1"
 const META_PATH := "user://cloud_meta.json"
-const SCHEMA := 1
+const SCHEMA := 2     # 2 = account envelope (Account); the server refuses writes from older clients
 const UPLOAD_SEC := 60.0     # while playing, upload at most once a minute (local autosave stays at 15 s)
 const RETRY_SEC := 30.0      # offline: try again this often
 const TIMEOUT_SEC := 15.0
