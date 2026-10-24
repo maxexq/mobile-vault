@@ -256,6 +256,12 @@ def ascii_sprite(rows, pal):
     return img
 
 
+def rows_sprite(rows, key):
+    """a sprite drawn as text rows at native size: each character maps to a master-palette name in `key`
+    ("." = empty), materials only; the one-pixel ol0 exterior outline is added around them (MV-178)"""
+    return outline_alpha(ascii_sprite(rows, {k: c(v) for k, v in key.items()}))
+
+
 def flip(img):
     return img.transpose(Image.FLIP_LEFT_RIGHT)
 

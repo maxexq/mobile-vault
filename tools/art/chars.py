@@ -966,74 +966,193 @@ def gen_crew_roster():
     return names
 
 # ================================================================== PETS (walk0, walk1, sit, sleep)
+# MV-179 (MV-178 creature redesign): Khao Tang, scruffy tan dog: long muzzle, floppy ear, hooked tail. walk 0 / walk 1 / sit / sleep, faces right.
+# Drawn as text rows at native size, one character per pixel (".", empty); rows_sprite() adds the ol0 outline.
+_PET_DOG_KEY = {'k': 'wood0', 'd': 'wood1', 'm': 'wood2', 't': 'wood3', 'l': 'wood4', 'c': 'cream1', 'n': 'gray1', 'O': 'ol0'}
+_PET_DOG = (
+    (
+        "...l............",
+        "..l.......lll...",
+        "..l......dllll..",
+        "..t......dtOtln.",
+        "...tllllldttmm..",
+        "...ttttttkmmc...",
+        "...mtttttmcc....",
+        "....mmmmmmm.....",
+        "...d.m...d.m....",
+        "...d.m...d.m....",
+        "...k.d...k.d....",
+    ),
+    (
+        "..l.............",
+        "..l.......lll...",
+        "..l......dllll..",
+        "..t......dtOtln.",
+        "...tllllldttmm..",
+        "...ttttttkmmc...",
+        "...mtttttmcc....",
+        "....mmmmmmm.....",
+        "....md....md....",
+        "....md....md....",
+        "....dk....dk....",
+    ),
+    (
+        "................",
+        "..........lll...",
+        ".........dllll..",
+        ".........dtOtln.",
+        ".....lll.dttmm..",
+        "....tttttkmmc...",
+        "...ltttttmcc....",
+        "...ttttttmcm....",
+        "..lmttttm.dm....",
+        ".ll.mmmm..dm....",
+        "....kddk..kd....",
+    ),
+    (
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "......llll......",
+        "....llttttl..ll.",
+        "...lttttttttdll.",
+        "..ltttttttdtkln.",
+        "..mttttttmmmmmm.",
+        "..lmmmmmmmmmmm..",
+    ),
+)
+
+
 def _pet_dog(f):
-    i = new(16, 11)
-    body_y = 4 if f != 3 else 6
-    if f == 3:   # curled up asleep
-        ellipse(i, 3, 5, 11, 6, c("wood3"))
-        ellipse(i, 2, 5, 5, 5, c("wood3"))
-        px(i, 3, 7, OL)
-        line(i, 12, 9, 14, 8, c("wood2"))
-        return outline_alpha(auto_shade(i, 0.15, 0.3))
-    rect(i, 4, body_y, 9, 4, c("wood3"))
-    ellipse(i, 10, body_y - 3, 6, 6, c("wood3"))       # head (faces right)
-    px(i, 11, body_y - 4, c("wood1"))
-    px(i, 14, body_y - 4, c("wood1"))
-    px(i, 13, body_y - 1, OL)
-    px(i, 15, body_y, OL)
-    px(i, 14, body_y + 1, c("red3"))
-    line(i, 4, body_y, 1, body_y - 3 + (f % 2), c("wood2"))
-    if f == 2:
-        rect(i, 4, body_y + 3, 3, 3, c("wood2"))
-        rect(i, 10, body_y + 4, 2, 3, c("wood2"))
-    else:
-        for k, x in enumerate((5, 7, 10, 12)):
-            vline(i, x + ((f + k) % 2), body_y + 4, 3, c("wood2"))
-    return outline_alpha(auto_shade(i, 0.15, 0.3))
+    return rows_sprite(_PET_DOG[f], _PET_DOG_KEY)
+
+
+# MV-180 (MV-178 creature redesign): Som Jeed, skinny orange tabby: pointed ears, stripes, raised tail. walk 0 / walk 1 / sit / sleep, faces right.
+# Drawn as text rows at native size, one character per pixel (".", empty); rows_sprite() adds the ol0 outline.
+_PET_CAT_KEY = {'k': 'orange0', 's': 'orange1', 'r': 'orange2', 'R': 'orange3', 'w': 'wood1', 'e': 'gray1', 'c': 'cream1'}
+_PET_CAT = (
+    (
+        ".R........R.R.",
+        ".r........RRR.",
+        ".r.......RReR.",
+        ".r.......rrrc.",
+        "..sRRRRRRRrs..",
+        "...rkrrkrrs...",
+        "...swrrwrrc...",
+        "....ssssss....",
+        "...k.r..k.r...",
+        "...k.r..k.r...",
+        "...k.s..k.s...",
+    ),
+    (
+        "R.........R.R.",
+        ".r........RRR.",
+        ".r.......RReR.",
+        ".r.......rrrc.",
+        "..sRRRRRRRrs..",
+        "...rkrrkrrs...",
+        "...swrrwrrc...",
+        "....ssssss....",
+        "....kr...kr...",
+        "....kr...kr...",
+        "....ks...ks...",
+    ),
+    (
+        "..........R.R.",
+        "..........RRR.",
+        ".........RReR.",
+        ".........rrrc.",
+        "......RRRrrs..",
+        ".....RrkrrRc..",
+        ".....rrwrrr...",
+        ".R..srkrr.r...",
+        ".r.ssrrrs.r...",
+        "..rssssss.k...",
+        "....ksk...s...",
+    ),
+    (
+        "..............",
+        "..............",
+        "..............",
+        "..............",
+        "..............",
+        ".........R.R..",
+        ".....RRRRRRRR.",
+        "...RRrkrrRkRc.",
+        "..rrrwrrrrrrr.",
+        ".RrkrrrwrsssR.",
+        "..RRssssssss..",
+    ),
+)
 
 
 def _pet_cat(f):
-    i = new(14, 11)
-    if f == 3:
-        ellipse(i, 2, 5, 10, 6, c("orange2"))
-        ellipse(i, 8, 4, 5, 5, c("orange2"))
-        line(i, 2, 9, 6, 10, c("orange1"))
-        return outline_alpha(auto_shade(i, 0.15, 0.3))
-    y = 5 if f != 2 else 6
-    rect(i, 3, y, 7, 3, c("orange2"))
-    for x in (4, 7):
-        px(i, x, y + 1, c("orange1"))
-    ellipse(i, 8, y - 4, 5, 5, c("orange2"))
-    px(i, 8, y - 5, c("orange2"))
-    px(i, 12, y - 5, c("orange2"))
-    px(i, 11, y - 2, c("toxic3"))
-    line(i, 3, y, 1, y - 4 + (f % 2), c("orange2"))
-    if f == 2:
-        rect(i, 3, y + 2, 3, 2, c("orange1"))
-    else:
-        for k, x in enumerate((4, 6, 8, 9)):
-            vline(i, x, y + 3, 2 + ((f + k) % 2), c("orange1"))
-    return outline_alpha(auto_shade(i, 0.15, 0.3))
+    return rows_sprite(_PET_CAT[f], _PET_CAT_KEY)
+
+
+# MV-181 (MV-178 creature redesign): Khai Dao, two-headed hen: two heads on separate necks, each with eye, beak and comb. walk 0 / walk 1 / sit / sleep, faces right.
+# Drawn as text rows at native size, one character per pixel (".", empty); rows_sprite() adds the ol0 outline.
+_PET_HEN_KEY = {'D': 'cream0', 'd': 'cream1', 'b': 'cream2', 'B': 'cream3', 'c': 'red1', 'C': 'red2', 'y': 'yellow1', 'Y': 'yellow2', 'O': 'ol0'}
+_PET_HEN = (
+    (
+        ".......CC..",
+        ".......BBB.",
+        "..CC...BOBY",
+        "..BBB..bbc.",
+        ".YOBb..b...",
+        "...cbBBbb..",
+        ".BbBBBBBb..",
+        ".dbbbbbbd..",
+        "..dDdddD...",
+        "...y..y....",
+        "..yy.yy....",
+    ),
+    (
+        "........CC.",
+        "........BBB",
+        ".CC.....BOB",
+        ".BBB....bbY",
+        "YOBb....bc.",
+        "..cbbBBbb..",
+        ".BbBBBBBb..",
+        ".dbbbbbbd..",
+        "..dDdddD...",
+        "....y.y....",
+        "...yy.yy...",
+    ),
+    (
+        "...........",
+        ".......CC..",
+        ".......BBB.",
+        "..CC...BOBY",
+        "..BBB..bbc.",
+        ".YOBb..b...",
+        "...cbBBbb..",
+        ".BbBBBBBb..",
+        ".dbbbbbbd..",
+        ".DdDddddD..",
+        "..yy..yy...",
+    ),
+    (
+        "...........",
+        "...........",
+        "...........",
+        "...........",
+        ".......CC..",
+        "..CC..BBBB.",
+        ".BBBb.bDbBY",
+        "YDBBbBBbbb.",
+        ".BbBBBBBbd.",
+        ".dbbbbbbd..",
+        "..DdddddD..",
+    ),
+)
 
 
 def _pet_hen(f):
-    i = new(11, 11)
-    y = 3 if f != 3 else 4
-    ellipse(i, 1, y + 1, 8, 6, c("cream3"))
-    ellipse(i, 6, y - 2, 4, 4, c("cream3"))
-    ellipse(i, 3, y - 3, 4, 4, c("cream3"))          # second head
-    px(i, 5, y - 4, c("red3"))
-    px(i, 8, y - 3, c("red3"))
-    px(i, 9, y - 1, c("yellow2"))
-    px(i, 6, y - 2, c("yellow2"))
-    px(i, 8, y - 1, OL)
-    px(i, 4, y - 2, OL)
-    if f == 3:
-        rect(i, 2, y + 6, 6, 1, c("cream2"))
-    else:
-        for k, x in enumerate((3, 6)):
-            vline(i, x + ((f + k) % 2 if f < 2 else 0), y + 7, 2, c("yellow1"))
-    return outline_alpha(auto_shade(i, 0.15, 0.3))
+    return rows_sprite(_PET_HEN[f], _PET_HEN_KEY)
 
 
 def gen_pets():
@@ -1102,19 +1221,45 @@ def en_vulture(f):
     return _fin(i)
 
 
+# MV-182 (MV-178 creature redesign): Rad-Wolf: angular snout, tall ears, tucked belly, skin patch, rib bars, one toxic eye. Two walk frames, faces left.
+# Drawn as text rows at native size, one character per pixel (".", empty); rows_sprite() adds the ol0 outline.
+_EN_WOLF_KEY = {'A': 'gray1', 'b': 'gray2', 'd': 'gray3', 'e': 'gray4', 'f': 'gray5', 'r': 'cream1', 'R': 'cream2', 's': 'skin0', 'S': 'skin1', 'x': 'toxic3'}
+_EN_WOLF = (
+    (
+        "....e.e.............",
+        "....dbd.............",
+        "...edddd............",
+        "..edxddde.e.e.......",
+        ".eddddddeedede....e.",
+        "fddddbdddddddddd.dd.",
+        ".Abbbddddssdrdbddd..",
+        "......bddsSRdbdd....",
+        "......bdd...bbdd....",
+        ".....d..b...b..d....",
+        ".....d..b..b...d....",
+        "....d...b..b....d...",
+        "....A...A..A....A...",
+    ),
+    (
+        "....e.e.............",
+        "....dbd.............",
+        "...edddd............",
+        "..edxddde.e.e.......",
+        ".eddddddeedede.....e",
+        "fddddbdddddddddd.dd.",
+        ".Abbbddddssdrdbddd..",
+        "......bddsSRdbdd....",
+        "......bdd...bbdd....",
+        "......db....bd.d....",
+        "......db...b..d.....",
+        "......db..b...d.....",
+        "......AA..A...A.....",
+    ),
+)
+
+
 def en_wolf(f):
-    i = new(20, 13)
-    ellipse(i, 4, 3, 14, 7, c("gray3"))
-    ellipse(i, 0, 1, 8, 7, c("gray3"))
-    poly(i, [(2, 2), (3, -1), (5, 2)], c("gray3"))
-    poly(i, [(5, 2), (6, -1), (8, 2)], c("gray2"))
-    rect(i, 0, 5, 3, 2, c("gray4"))
-    px(i, 3, 3, c("red2"))
-    px(i, 0, 5, OL)
-    poly(i, [(17, 4), (20, 1 + f), (19, 6)], c("gray3"))
-    for k, x in enumerate((5, 8, 13, 16)):
-        vline(i, x + (f if k % 2 else -f), 9, 3, c("gray2"))
-    return _fin(i)
+    return rows_sprite(_EN_WOLF[f], _EN_WOLF_KEY)
 
 
 def en_bug(f):
@@ -1243,67 +1388,243 @@ def _legs(img, xs, y, h, col, step):
         rect(img, x + dx - 1, y + h - 2, 7, 2, OL)
 
 
+# MV-186 (MV-178 creature redesign): Junk Golem: sunken head, wrecking-hammer arm, claw arm, rust panels, furnace core behind a grille (no glow).
+# Drawn as text rows at native size, one character per pixel (".", empty); rows_sprite() adds the ol0 outline.
+_BOSS_GOLEM_KEY = {'A': 'gray1', 'c': 'gray3', 'd': 'gray4', 'e': 'gray5', 'r': 'orange0', 'R': 'orange1', 'Q': 'orange2', 'B': 'blue2', 'L': 'lamp0', 'M': 'lamp1'}
+_BOSS_GOLEM = (
+    (
+        "........................................",
+        ".....................eee................",
+        "....................eeeee...ddddd.......",
+        "...................eeeeeee.dQQQddd......",
+        "...................eAeAAAedQQQQQddd.....",
+        ".............ddddd.eeeeeeeddQQQddddd....",
+        "............QQQdddd.eeeeeddddddddddd....",
+        "...........QQQQQdddd.eeeeddddddddddd....",
+        "..........ddQQQddddddceecddddddddddd....",
+        "..........dddddddddddRccAeddddddddd.....",
+        "..........dddddRRRQRRRcccceddddddd......",
+        "..........ddddddRQRRRRccccceddddBdd.....",
+        "...........ddeddRRRRRccccccceQRRBdd.....",
+        "............dcddRRRRRcccccRRQRRRRdd.....",
+        "............edddRRRrRcccccRRRRRRR.dd....",
+        "...........dcdeeRRRR.cccccRRRRRRRedd....",
+        "...........dcdcceeeeecccccRRRRRRecdd....",
+        "..........BBd.ccccccAAAAAAcRRRRRccdd....",
+        "..........ded.ccccccALLALAcRRRrRccdd....",
+        "..........edd.ccccccALMALAcRRRR.cc.dd...",
+        ".........dcd..ccAcccAAAAAAccceeecc.dd...",
+        ".........dcd..ccccccALMALAcccccccA.BB...",
+        "........ded....cccAcALLALAccccccc..ee...",
+        "..eeeeeeeeee...cccccAAAAAAccccccc..cc...",
+        "..eeeeeeeeeee..cccccccccccccAcccA..cc...",
+        "..deeeeeecccc...cAcAcAcAcAcAcAcc...Ac...",
+        "..dcccccccccc...AcAcAcAcAcAcAcA.....ce..",
+        "..dcRRRRRRccc...cBcccccccccccBc.....cc..",
+        "..dcRQQQQRccc...ABAAAAAAAAAAABA.....cc..",
+        "..dcRRRRRRccc..dccccccAAAcccccc.....cc..",
+        "..dcRRRRRRccc..dccccc.....dcccc.....AA..",
+        "..dcRRRRRRccc..dccccc.....dcccc...d.d.d.",
+        "..dcRRRRRRccc..dccccc.....dcccc...d.d.d.",
+        "..dcRRRRRRccc..dccBBc.....dcBBc...d.d..d",
+        "..dcccccccccc..dccBBc.....dcBBc..d..d..d",
+        "..dAAAAAAAAAc..dccccc.....dcccc..d..d..A",
+        "..AAAAAAAAAAA..dccccc.....dcccc..A..d...",
+        "...............dccccc.....dcccc.....A...",
+        "...............dccccc.....dcccc.........",
+        "...............dccccc.....dcccc.........",
+        "............AAAAAAAAAA....dcccc.........",
+        "............AAAAAAAAAA...AAAAAAA........",
+        "............AAAAAAAAAA...AAAAAAA........",
+        "............AAAAAAAAAA...AAAAAAA........",
+    ),
+    (
+        "........................................",
+        ".....................eee................",
+        "....................eeeee...ddddd.......",
+        "...................eeeeeee.dQQQddd......",
+        "...................eAeAAAedQQQQQddd.....",
+        "...............ddd.eeeeeeeddQQQddddd....",
+        ".............dddddd.eeeeeddddddddddd....",
+        "............QQQQdddd.eeeeddddddddddd....",
+        "...........QQQQddddddceecddddddddddd....",
+        "..........ddQQQddddddRccAeddddddddd.....",
+        "..........dddddRRRQRRRcccceddddddd......",
+        "..........ddddddRQRRRRccccceddddBdd.....",
+        "..........ddddddRRRRRccccccceQRRBdd.....",
+        "...........ddeddRRRRRcccccRRQRRRRdd.....",
+        "............dcddRRRrRcccccRRRRRRR.dd....",
+        "............eddeRRRR.cccccRRRRRRRedd....",
+        "...........dcdeceeeeecccccRRRRRRecdd....",
+        "...........dcdccccccAAAAAAcRRRRRccdd....",
+        "..........BBd.ccccccALLALAcRRRrRccdd....",
+        "..........ded.ccccccALMALAcRRRR.cc.dd...",
+        "..........edd.ccAcccAAAAAAccceeecc.dd...",
+        ".........dcd..ccccccALMALAcccccccA.BB...",
+        ".........dcd..ccccAcALLALAccccccc..ee...",
+        "........ded....cccccAAAAAAccccccc..cc...",
+        "..eeeeeeeeee...cccccccccccccAcccA..cc...",
+        "..eeeeeeeeeee...cAcAcAcAcAcAcAcc...Ac...",
+        "..deeeeeecccc...AcAcAcAcAcAcAcA.....ce..",
+        "..dcccccccccc...cBcccccccccccBc.....cc..",
+        "..dcRRRRRRccc...ABAAAAAAAAAAABA.....cc..",
+        "..dcRQQQQRccc..dccccccAAAcccccc.....cc..",
+        "..dcRRRRRRccc..dccccc.....dcccc.....AA..",
+        "..dcRRRRRRccc..dccccc.....dcccc...d.d.d.",
+        "..dcRRRRRRccc..dccccc.....dcccc...d.d.d.",
+        "..dcRRRRRRccc..dccBBc.....dcBBc...d.d..d",
+        "..dcRRRRRRccc..dccBBc.....dcBBc..d..d..d",
+        "..dcccccccccc..dccccc.....dcccc..d..d..A",
+        "..dAAAAAAAAAc..dccccc.....dcccc..A..d...",
+        "..AAAAAAAAAAA..dccccc.....dcccc.....A...",
+        "...............dccccc.....dcccc.........",
+        "...............dccccc.....dcccc.........",
+        "............AAAAAAAAAA....dcccc.........",
+        "............AAAAAAAAAA...AAAAAAA........",
+        "............AAAAAAAAAA...AAAAAAA........",
+        "............AAAAAAAAAA...AAAAAAA........",
+    ),
+)
+
+
 def boss_golem(f):
-    img = new(40, 44)
-    s = f
-    _legs(img, [10, 24], 32, 11, c("gray3"), s)
-    ellipse(img, 4, 8, 32, 28, c("orange1"))
-    rect(img, 9, 12, 8, 7, c("gray4"))
-    rect(img, 22, 18, 9, 8, c("blue3"))
-    rect(img, 12, 24, 7, 7, c("yellow2"))
-    ellipse(img, 26, 2 - s, 12, 12, c("gray1"))
-    ellipse(img, 29, 5 - s, 6, 6, c("yellow2"))
-    ellipse(img, 13, 0 + s, 14, 12, c("gray4"))
-    rect(img, 16, 4 + s, 3, 3, OL)
-    rect(img, 22, 4 + s, 3, 3, OL)
-    px(img, 17, 4 + s, c("red3"))
-    px(img, 23, 4 + s, c("red3"))
-    ellipse(img, 0, 14 + s, 8, 16, c("orange1"))
-    ellipse(img, 0, 27 + s, 9, 8, c("gray3"))
-    ellipse(img, 32, 14 - s, 8, 14, c("orange1"))
-    for (x, y) in ((8, 20), (30, 12), (20, 30)):
-        px(img, x, y, c("wood0"))
-    return outline_alpha(auto_shade(img, 0.2, 0.35))
+    return rows_sprite(_BOSS_GOLEM[f], _BOSS_GOLEM_KEY)
+
+
+# MV-187 (MV-178 creature redesign): Scorpion King: open serrated pincers of unequal size, curled tail with hooked stinger, three bone growths.
+# Drawn as text rows at native size, one character per pixel (".", empty); rows_sprite() adds the ol0 outline.
+_BOSS_SCORPION_KEY = {'k': 'red0', 'r': 'red1', 'R': 'red2', 'o': 'orange2', 'b': 'cream0', 'p': 'cream1', 'P': 'cream2', 'A': 'gray1', 't': 'toxic1', 'x': 'toxic3'}
+_BOSS_SCORPION = (
+    (
+        "................................................",
+        "....................................oooooooo....",
+        ".................................oooRRr...Rro...",
+        "................................oRRR.......RRo..",
+        "...............................oRRR.........RRo.",
+        "..............................oRRR..........RRR.",
+        "Ro...........................AA.............RrR.",
+        ".RR............................tx...........RRR.",
+        "..oRRRRR.............P......................RRR.",
+        "...RRoRRR............PP.........P...........RRr.",
+        "...RRRRRR............pP....P....PP.........rRR..",
+        "...RRRRRRR..........PPP....PP...pP.........RRr..",
+        "..orrrRRRRR.........PPPP..PpP..PPPP.......RRR...",
+        "..rrRRRR..RR........PPbPPoPPboRPPbP.......RRr...",
+        "rrr........RRR.....ooooRRRRRRRRRRRRRRRR..RRR....",
+        ".............RRooooRrRRRRrRRRRrRRRRrRRRRrRR.....",
+        "............AARRRRRRrRRRRrRRRRrRRRRrRRRRrRR.....",
+        "............oRRRRRRRrRRRRrRRRRrRRRRrRRRRrRRR....",
+        "............RRRRRRRRrRRRRrRRRRrRRRRrRRRRrRRR....",
+        ".RR.........rRRRRRRRrRRRRrRRRRrRRRRrRRRRrRRr....",
+        "..RRRRrr.....rrrRRRRrRRRRrRRRRrRRRRrRRRRrRr.....",
+        "....roRrr..rrrrrrrrRrRRRRrRRRRrRRRRrRRRrrr......",
+        "....rrrrrrrr.....rrrrrrRRrRRRRrRRRRrrrr.r.......",
+        ".....rrr........rr..k.rrrkrrrrkrrrrk....k.......",
+        "..rrrr.........rr....rr....rr....rr.............",
+        ".rr............r.....r.....r.....r..............",
+        "..............r.....r.....r.....r...............",
+        "..............k.....k.....k.....k...............",
+    ),
+    (
+        "................................................",
+        "....................................oooooooo....",
+        "..................................ooRRr...Rro...",
+        ".................................oRR.......RRo..",
+        "................................oRRR........RRo.",
+        "Ro.............................oRRR.........RRR.",
+        ".RR...........................oRRR..........RrR.",
+        "..oRRRRR.....................AA.............RRR.",
+        "...RRoRRR............P.........tx...........RRR.",
+        "...RRRRRR............PP.........P...........RRr.",
+        "...RRRRRR............pP....P....PP.........rRR..",
+        "..orrrRRRR..........PPP....PP...pP.........RRr..",
+        "..rrRRRR.RR.........PPPP..PpP..PPPP.......RRR...",
+        "rrr.......RR........PPbPPoPPboRPPbP.......RRr...",
+        "...........RRR.....ooooRRRRRRRRRRRRRRRR..RRR....",
+        ".............RRooooRrRRRRrRRRRrRRRRrRRRRrRR.....",
+        "............AARRRRRRrRRRRrRRRRrRRRRrRRRRrRR.....",
+        "............oRRRRRRRrRRRRrRRRRrRRRRrRRRRrRRR....",
+        ".RRR........RRRRRRRRrRRRRrRRRRrRRRRrRRRRrRRR....",
+        "...RR.......rRRRRRRRrRRRRrRRRRrRRRRrRRRRrRRr....",
+        "....RRRr.....rrrRRRRrRRRRrRRRRrRRRRrRRRRrRr.....",
+        "....rorrr..rrrrrrrrRrRRRRrRRRRrRRRRrRRRrrr......",
+        "....rrrrrrrr.....rrrrrrRRrRRRRrRRRRrrrr.r.......",
+        ".....rrr.........rr.krrrrkrrrrkrrrrk....k.......",
+        "...rrr..........rr..rr......rr..rr..............",
+        "..rr............r...r.......r...r...............",
+        ".rr............r...r.......r...r................",
+        "...............k...k.......k...k................",
+    ),
+)
 
 
 def boss_scorpion(f):
-    img = new(48, 28)
-    s = f
-    for i, x in enumerate(range(10, 38, 5)):
-        dx = s if i % 2 else -s
-        line(img, x, 18, x - 3 + dx, 26, c("red1"), 2)
-    ellipse(img, 8, 9, 32, 13, c("red2"))
-    for x in range(14, 38, 6):
-        vline(img, x, 11, 9, c("red1"))
-    pts = [(38, 14), (44, 8), (44, 2), (38, 0), (30, 2 + s)]
-    for a, b in zip(pts, pts[1:]):
-        line(img, a[0], a[1], b[0], b[1], c("red2"), 3)
-    poly(img, [(30, 0 + s), (25, 3 + s), (31, 6 + s)], c("yellow2"))
-    ellipse(img, 0, 7 - s, 10, 7, c("red3"))
-    ellipse(img, 0, 15 + s, 10, 7, c("red3"))
-    rect(img, 12, 12, 3, 3, OL)
-    px(img, 12, 12, c("gray6"))
-    poly(img, [(18, 9), (20, 4), (22, 8), (24, 3), (26, 8), (28, 4), (30, 9)], c("yellow2"))
-    return outline_alpha(auto_shade(img, 0.2, 0.35))
+    return rows_sprite(_BOSS_SCORPION[f], _BOSS_SCORPION_KEY)
+
+
+_BOSS_WOLF_KEY = {'A': 'gray1', 'b': 'gray2', 'd': 'gray3', 'e': 'gray4', 'r': 'cream1', 'R': 'cream2', 'W': 'cream3', 's': 'skin0', 'S': 'skin1', 't': 'toxic1', 'x': 'toxic3'}
+_BOSS_WOLF = (
+    (
+        ".............e..........................",
+        ".............d..e.......................",
+        "..........e.ede.e.......................",
+        "..........e.dddeee.e....................",
+        "........beeedddeee.d....................",
+        ".........eeedddeeeede.e.................",
+        "........bbeedddeeedddeee...............e",
+        ".......bbbbeddeeeedddeee.e............ed",
+        ".......bbbbddddeeddbdee.....eeeee....ed.",
+        ".....eeeeeeddddtxddddddee.eeddbddee.edd.",
+        "...eeddddddbdddtddddddddbddddddddddeddd.",
+        "..edddxddddddbdddddddrrrdddSsddtxdddddd.",
+        "AbddddddddddddddddddRddddddssdddtdbddbbb",
+        "eWbbbbdddbdddssddddddrrrddddddddddddb...",
+        "bW..W.ddddddddddddddbbbbbbdddddddddb....",
+        "bbbbWbbbbbbbbdddddbb......bbdddddbb.....",
+        "bbbbbb.....bbbbbbbb.........bbbbb.bb....",
+        "...........bb....bb..........bb...bb....",
+        "...........bb....bb...........bb...bb...",
+        "..........bb....bb...........bb....bb...",
+        "..........bb....bb...........bb...bb....",
+        "..........bb....bb..........bb....bb....",
+        ".........bb.....bb..........bb...bb.....",
+        ".........bb.....bb.........bb....bb.....",
+        "........AAAA...AAAA.......AAAA..AAAA....",
+        "........A.A....A.A........A.A...A.A.....",
+    ),
+    (
+        "........................................",
+        ".............e..........................",
+        ".............d..e.......................",
+        "..........e.ede.e.......................",
+        "..........e.dddeee.e....................",
+        "........beeedddeee.d....................",
+        ".........eeedddeeeede.e................e",
+        ".......bbbeedddeeedddeee..............ed",
+        ".......bbbbeddeeeedddeee.e..eeeee....ed.",
+        ".....eeebbbddddeeddbdeeee.eeddbddee.edd.",
+        "...eeddddddbdddtddddddddbddddddddddeddd.",
+        "..edddxddddddbdddddddrrrdddSsddtxdddddd.",
+        "AbddddddddddddddddddRddddddssdddtdbddbbb",
+        "eWbbbbdddbdddssddddddrrrddddddddddddb...",
+        "bW..W.ddddddddddddddbbbbbbdddddddddb....",
+        "bbbbWbbbbbbbbdddddbb......bbdddddbb.....",
+        "bbbbbb......bbbbbb..........bbbbb.bb....",
+        "............bb..bb...........bb...bb....",
+        "............bb..bb............bb...bb...",
+        "...........bb..bb.............bb..bb....",
+        "...........bb..bb............bb...bb....",
+        "...........bb..bb............bb..bb.....",
+        "...........bb.bb............bb...bb.....",
+        "...........bb.bb............bb..bb......",
+        "..........AAAAAAA..........AAAAAAAA.....",
+        "..........A.AA.A...........A.A.A.A......",
+    ),
+)
 
 
 def boss_wolf(f):
-    img = new(40, 26)
-    s = f
-    ellipse(img, 8, 6, 28, 14, c("gray3"))
-    ellipse(img, 1, 2 - s, 13, 12, c("gray3"))
-    poly(img, [(3, 4 - s), (5, -1), (8, 4 - s)], c("gray2"))
-    poly(img, [(8, 4 - s), (10, -1), (13, 4 - s)], c("gray2"))
-    rect(img, 0, 8 - s, 4, 3, c("gray5"))
-    px(img, 5, 6 - s, c("red3"))
-    px(img, 6, 6 - s, c("red3"))
-    for i, x in enumerate((10, 15, 26, 31)):
-        dx = s if i % 2 else -s
-        rect(img, x + dx, 18, 4, 7, c("gray2"))
-    poly(img, [(34, 9), (40, 4 + s), (38, 12)], c("gray3"))
-    for k in range(4):
-        px(img, 15 + k * 5, 9 + (k % 2), c("toxic3"))
-    return outline_alpha(auto_shade(img, 0.2, 0.35))
+    return rows_sprite(_BOSS_WOLF[f], _BOSS_WOLF_KEY)
 
 
 def boss_bogqueen(f):

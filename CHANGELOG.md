@@ -8,8 +8,42 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Changed
+- New artwork for every road event, expedition encounter, expedition interior and landmark (49 images), in the same dark 16-bit style with the crew and the truck as you know them (MV-189)
+
+## [4.7.0-alpha.2] - 2026-10-24
+
+### Merged pull requests
+- MV-164: web reload goes straight back into the game ([#46](https://github.com/maxexq/mobile-vault/pull/46))
+- MV-166: redraw all other rooms with PixelLab ([#47](https://github.com/maxexq/mobile-vault/pull/47))
+- MV-159: persistent account (save v2), no rules picker, difficulty setting ([#48](https://github.com/maxexq/mobile-vault/pull/48))
+- MV-167: room lighting + micro animation ([#49](https://github.com/maxexq/mobile-vault/pull/49))
+- MV-168: Codex art analyst writes micro-asset tickets for Claude ([#50](https://github.com/maxexq/mobile-vault/pull/50))
+- MV-146: ladder shaft no longer cuts through merged rooms ([#51](https://github.com/maxexq/mobile-vault/pull/51))
+- MV-115: short public player id (Settings, save, trace, SQL lookup) ([#52](https://github.com/maxexq/mobile-vault/pull/52))
+- MV-116: player logs to Supabase (batched, offline queue, privacy opt-out) ([#53](https://github.com/maxexq/mobile-vault/pull/53))
+- MV-171: post player error spikes from cloud logs to Discord #alerts ([#54](https://github.com/maxexq/mobile-vault/pull/54))
+- MV-171: keep manual Error spike runs out of the dev feed, clearer dry run ([#55](https://github.com/maxexq/mobile-vault/pull/55))
+- MV-148: portrait phones zoom the vehicle to fill the screen ([#56](https://github.com/maxexq/mobile-vault/pull/56))
+- MV-173: skip the Godot autotest run on docs-only PRs ([#57](https://github.com/maxexq/mobile-vault/pull/57))
+- MV-148: pinch / mouse wheel can zoom back to auto ([#58](https://github.com/maxexq/mobile-vault/pull/58))
+- MV-174: anti-cheat F0 + F1 (server time cap, rate limit, shadow flags) ([#59](https://github.com/maxexq/mobile-vault/pull/59))
+- MV-112: staging / UAT / production environments (one build, env from host) ([#60](https://github.com/maxexq/mobile-vault/pull/60))
+- MV-151 (1/3): English for menus, settings and tutorial + i18n system ([#61](https://github.com/maxexq/mobile-vault/pull/61))
+- MV-172: make the flaky autotest checks deterministic ([#62](https://github.com/maxexq/mobile-vault/pull/62))
+- MV-40: Features switch engine_bay (off = stock diesel, nothing simulated) ([#63](https://github.com/maxexq/mobile-vault/pull/63))
+- MV-175: half-strength screen shake, same size on phone and PC ([#64](https://github.com/maxexq/mobile-vault/pull/64))
+- MV-176: halve engine rumble + Vehicle shake setting ([#65](https://github.com/maxexq/mobile-vault/pull/65))
+- MV-150: Sgt. Mark explains each system the first time it opens ([#66](https://github.com/maxexq/mobile-vault/pull/66))
+- MV-134: quick-time road events (clock by danger, crew decides on time-out, idle-safe) ([#67](https://github.com/maxexq/mobile-vault/pull/67))
+- MV-170: 20 named crew variants + matching portraits (crew_roster_20) ([#68](https://github.com/maxexq/mobile-vault/pull/68))
+- MV-178: approved creature redesigns (3 pets, 3 enemies, 3 bosses, 24 frames) ([#69](https://github.com/maxexq/mobile-vault/pull/69))
+- MV-188: Announcement marquee strip + new-version notice ([#70](https://github.com/maxexq/mobile-vault/pull/70))
+- MV-188: first announcement in web/features.json ([#71](https://github.com/maxexq/mobile-vault/pull/71))
+- MV-188: announcements can repeat every repeat_hours ([#72](https://github.com/maxexq/mobile-vault/pull/72))
+
 ### Added
-- News strip at the top of the screen: announcements scroll across 3 times, and players already in the game are told when a new version is live (tap the strip to save and reload) (MV-188)
+- News strip at the top of the screen: announcements scroll across 3 times, and players already in the game are told when a new version is live (tap the strip to save and reload); a message can come back every few hours (MV-188)
 - 20 new named survivors can join the crew, each with their own look, animations and portrait: 15 originals and 5 guest cameos (MV-170)
 - Sgt. Mark explains each system the first time you open it (map, squad, solar, loot, garage, skills, expeditions, strangers, engine bay and more); turn tips off or see them again in Settings (MV-150)
 - Road events have a clock (about 5–30 seconds by danger); if you don't choose in time the crew takes the safe option. The clock waits while you're away; Settings can double it or turn it off (MV-134)
@@ -19,18 +53,21 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Play logs are sent to the game's server with your player ID to help fix bugs and balance the game; a one-time notice explains it and Settings → Privacy turns it off (MV-116)
 
 ### Changed
-- New artwork for every road event, expedition encounter, expedition interior and landmark (49 images), in the same dark 16-bit style with the crew and the truck as you know them (MV-189)
+- Redrawn creatures: the pets Khao Tang, Som Jeed and two-headed Khai Dao, the Rad-Wolf, Acid Spitter and Bone Brute, and the Alpha Rad-Wolf, Junk Golem and Scorpion King warlords (MV-178)
 - Screen shake is half as strong, the same size on phones as on PC, and the boss bar now follows the screen-shake setting (MV-175)
 - The vehicle's engine rumble and road bumps are half as strong (they made some players dizzy), and Settings → Feel has a new Vehicle shake switch to turn them off (MV-176)
 - Test servers (staging / UAT) keep their own saves and logs, apart from the real game, and show a STAGING / UAT SERVER tag on the title screen (MV-112)
 - Medical room redrawn with PixelLab (first AI-assisted sprite, snapped to the 16-bit palette) (MV-162)
 - All other rooms redrawn with PixelLab: quarters, kitchen, hydroponics, water, armory, science, radio, engine, refinery, workshop, empty (MV-166)
+- One persistent survivor per account (save v2): no rules picker at the start any more, a Difficulty setting in Settings instead (MV-159)
+- Reloading the web page goes straight back into your game instead of the title screen (MV-164)
 - Portrait phones: the auto camera zooms the vehicle in to fill the screen width instead of showing the whole convoy small under a big sky; swipe to see the trailers, boss fights still pull back. Swiping follows your finger at every zoom (MV-148)
 
 ### Security
 - Offline progress can no longer be stretched by editing the save time: once the game reaches the server it counts only the time since the server last received your save; the server also flags impossible progress for later leaderboards (MV-174)
 
 ### Fixed
+- Adopting several pets at once no longer drops one of them from the vehicle (MV-178)
 - The ladder shaft no longer cuts through a knocked-through large room; a steel post marks the old wall instead (MV-146)
 
 ## [4.7.0-alpha.1] - 2026-10-24

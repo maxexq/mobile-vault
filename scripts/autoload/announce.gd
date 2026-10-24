@@ -3,7 +3,8 @@ extends Node
 ## (scripts/ui/marquee.gd) at the top of the screen. Each message scrolls across announce.loops times (default 3)
 ## and then hides. Two sources:
 ##  1. the "announce" list of features.json (Features.announcements()): the remote file, so a message needs no
-##     redeploy; from/to windows work like events. Each id shows once per browser (seen ids in localStorage).
+##     redeploy; from/to windows work like events. Each id shows once per browser (seen ids + when, in
+##     localStorage), or again every "repeat_hours" hours when the message sets it.
 ##  2. web/version.json, written by tools/stamp_build.sh at every web export: a newer "built" than this build's
 ##     own stamp means a new deploy is live -> the "new version" notice; tapping the strip saves and reloads.
 ## While playing on the web both files are fetched again every announce.poll_min minutes and when the tab gets the
@@ -23,7 +24,7 @@ const TIMEOUT_SEC := 10.0
 
 var queue: Array = []          # [{id, text, loops, kind: "info" | "update"}]
 var current: Dictionary = {}   # the message on the strip now ({} = none)
-var seen: Array = []           # ids already shown in this browser
+var seen: Dictionary = {}      # id -> unix time it was last shown in this browser
 var latest: Dictionary = {}    # last version.json read: {version, built, commit}
 var reload_hook: Callable      # tests replace the page reload
 var _last_poll := 0.0
@@ -35,8 +36,11 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if not _test_run():
 		var d = JSON.parse_string(Save.read_key(SEEN_KEY, SEEN_PATH)) if Save.read_key(SEEN_KEY, SEEN_PATH) != "" else null
-		if d is Array:
+		if d is Dictionary:
 			seen = d
+		elif d is Array:      # the first build stored ids only
+			for id in d:
+				seen[str(id)] = 0.0
 	_timer = Timer.new()
 	_timer.one_shot = false
 	_timer.timeout.connect(poll)
@@ -65,10 +69,18 @@ func collect() -> void:
 	if not Features.on("announce"):
 		return
 	for a in Features.announcements():
-		if seen.has(a.id) or has_id(a.id):
+		if has_id(a.id) or not due(a):
 			continue
 		var txt: String = a.text_en if Loc.lang() == "en" and a.has("text_en") else a.text
 		push(txt, a.id, int(a.get("loops", -1)))
+
+
+## not shown yet, or shown at least repeat_hours ago
+func due(a: Dictionary) -> bool:
+	if not seen.has(a.id):
+		return true
+	var h := float(a.get("repeat_hours", 0.0))
+	return h > 0.0 and Time.get_unix_time_from_system() - float(seen[a.id]) >= h * 3600.0
 
 
 ## add a message (also used by GOD MODE and the tests); id "" = never remembered as seen
@@ -96,10 +108,10 @@ func take() -> Dictionary:
 			i = j
 			break
 	current = queue.pop_at(i)
-	if str(current.id) != "" and not seen.has(current.id):
-		seen.append(current.id)
-		if seen.size() > SEEN_MAX:
-			seen = seen.slice(seen.size() - SEEN_MAX)
+	if str(current.id) != "":
+		seen[current.id] = Time.get_unix_time_from_system()
+		while seen.size() > SEEN_MAX:
+			seen.erase(seen.keys()[0])
 		if not _test_run():
 			Save.write_key(SEEN_KEY, SEEN_PATH, JSON.stringify(seen))
 	Trace.rec("announce", "show %s" % (current.id if str(current.id) != "" else current.text.left(40)))

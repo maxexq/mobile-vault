@@ -100,6 +100,11 @@ func _run() -> void:
 		await _qte_test()
 		_finish()
 		return
+	if "--only=creatures" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _creatures_test()
+		_finish()
+		return
 	if "--only=english" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _english_test()
@@ -739,6 +744,7 @@ func _run() -> void:
 	await _shake_test()
 	await _tips_test()
 	await _qte_test()
+	await _creatures_test()
 	await _engine_shake_test()
 	await _crew_roster_test()
 	await _announce_test()
@@ -3053,6 +3059,65 @@ func _qte_test() -> void:
 	await wait(0.2)
 
 
+## MV-178: the nine redesigned creatures keep their exact atlas sizes / frame sets and show up in game (2x shots)
+func _creatures_test() -> void:
+	var sizes := {"pet_dog": [16, 11, 4], "pet_cat": [14, 11, 4], "pet_hen": [11, 11, 4], "en_wolf": [20, 13, 2],
+		"en_spitter": [16, 20, 2], "en_brute": [20, 24, 2], "boss_wolf": [40, 26, 2], "boss_golem": [40, 44, 2],
+		"boss_scorpion": [48, 28, 2]}
+	var ok := true
+	for id in sizes:
+		for f in int(sizes[id][2]):
+			var key := "%s_%d" % [id, f]
+			var r = Atlas.regions.get(key)
+			if r == null or int(r[2]) != int(sizes[id][0]) or int(r[3]) != int(sizes[id][1]):
+				ok = false
+				print("[autotest] creature frame wrong: %s %s" % [key, str(r)])
+	_check("creatures: 24 redesigned frames at their exact native sizes", ok)
+	var was_win := get_window().size
+	var was_vault := int(Game.s.vault_level)
+	# landscape at UI scale 2 (one art pixel = 2 screen pixels): the fight behind the vehicle is on screen
+	get_window().size = Vector2i(1280, 640)
+	Game.s.vault_level = maxi(was_vault, 3)          # the desert and forest warlords need their areas open
+	_no_events()
+	Dev.kill_enemies()
+	Dev.clear_pets()
+	await wait(0.3)
+	for k in ["dog", "cat", "hen"]:
+		Dev.add_pet(k)
+	await wait(1.5)
+	var npets: int = main.vehicle.pets_root.get_children().filter(func(n): return not n.is_queued_for_deletion()).size()
+	_check("creatures: the three pets roam the vehicle (%d in the save, %d on screen)" % [Game.s.pets.size(), npets],
+		Game.s.pets.size() == 3 and npets == 3)
+	await shot("creatures_pets_2x")
+	Combat.reset_wave(40)                              # tough enough that the squad doesn't drop them before the shot
+	# one queue: Combat.debug_spawn replaces whatever was queued, so three Dev.spawn_mob calls leave only the last
+	var q := []
+	for i in 3:
+		q.append({"t": 0.2 + i * 0.4, "mob": ["rad_wolf", "spitter", "brute"][i], "lvl": Combat.enemy_level(), "no_mutate": true})
+	Combat.debug_spawn(q, false)
+	await wait(1.8)
+	var sprites := Combat.enemies.map(func(e): return str(e.sprite))
+	_check("creatures: wolf, spitter and brute spawn (%s)" % ", ".join(sprites),
+		sprites.has("en_wolf") and sprites.has("en_spitter") and sprites.has("en_brute"))
+	await shot("creatures_enemies_2x")
+	for b in [[0, "boss_golem"], [1, "boss_scorpion"], [2, "boss_wolf"]]:
+		Dev.kill_enemies()
+		Dev.goto_biome(int(b[0]))
+		await wait(0.5)
+		Dev.spawn_boss("warlord")
+		await wait(2.5)
+		_check("creatures: %s is the warlord of area %d (active %s, enemies %s)" % [b[1], int(b[0]) + 1, Combat.active(),
+			str(Combat.enemies.map(func(e): return str(e.sprite)))], str(Combat.current_boss().get("sprite", "")) == b[1])
+		await shot("creatures_%s_2x" % b[1])
+	Dev.kill_enemies()
+	Dev.clear_pets()
+	Dev.goto_biome(0)
+	Combat.reset_wave(1)
+	Game.s.vault_level = was_vault
+	get_window().size = was_win
+	await wait(0.6)
+
+
 ## MV-175: screen shake at half strength by default, tunable, off in settings, same size on screen at any zoom
 func _shake_test() -> void:
 	var was: bool = bool(Settings.get_value("shake"))
@@ -3810,6 +3875,15 @@ func _announce_test() -> void:
 	await get_tree().process_frame
 	Announce.collect()
 	_check("announce: a seen message is not shown again", not Announce.has_id("t-hello") and Announce.queue.is_empty())
+	# repeat_hours: shown again once that much time has passed since it was last shown
+	var now_t := Time.get_unix_time_from_system()
+	Announce.seen["t-rep"] = now_t - 2.0 * 3600.0
+	_check("announce: repeat_hours cleaned + clamped", Features._clean({"announce": [{"id": "a", "text": "x", "repeat_hours": 9999}]}).announce[0].repeat_hours == 720.0)
+	_check("announce: repeat_hours 6 not due after 2 h", not Announce.due({"id": "t-rep", "repeat_hours": 6.0}))
+	_check("announce: repeat_hours 1 due after 2 h", Announce.due({"id": "t-rep", "repeat_hours": 1.0}))
+	_check("announce: no repeat_hours = once", not Announce.due({"id": "t-rep"}) and Announce.due({"id": "never-seen"}))
+	Announce.seen.erase("t-rep")
+	_check("announce: shown time is remembered", float(Announce.seen.get("t-hello", 0.0)) > now_t - 60.0)
 	# new deploy detection
 	var stamp: Dictionary = BuildInfo.stamp().duplicate()
 	BuildInfo._stamp["built"] = "2026-10-24T10:00:00Z"
@@ -3852,7 +3926,7 @@ func _announce_test() -> void:
 	Dev.announce_test()
 	Dev.announce_update_test()
 	_check("announce: GOD test message + update notice queued", (m.visible and Announce.queue.size() == 1) or Announce.queue.size() == 2)
-	Announce.seen.append("t-hello")
+	Announce.seen["t-hello"] = 1.0
 	Dev.announce_forget_seen()
 	_check("announce: GOD forget seen", not Announce.seen.has("t-hello"))
 	m._stop()

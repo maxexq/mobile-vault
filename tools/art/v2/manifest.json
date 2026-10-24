@@ -225,7 +225,10 @@
    "night1",
    "night2"
   ],
-  "sprite_colours": []
+  "sprite_colours": [
+   "orange3",
+   "wood1"
+  ]
  },
  {
   "id": "event_cult",
@@ -797,7 +800,13 @@
    "sand2",
    "snow0"
   ],
-  "sprite_colours": []
+  "sprite_colours": [
+   "cream0",
+   "cream1",
+   "cream2",
+   "red1",
+   "red2"
+  ]
  },
  {
   "id": "event_plane",
@@ -1271,7 +1280,11 @@
    "dusk3",
    "night2"
   ],
-  "sprite_colours": []
+  "sprite_colours": [
+   "gray5",
+   "skin0",
+   "toxic3"
+  ]
  },
  {
   "id": "exp_bunker",
