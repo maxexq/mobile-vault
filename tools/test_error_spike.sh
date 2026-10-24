@@ -34,7 +34,9 @@ check "quiet" "$out" 'No alert'
 out=$(run MODE=test)
 check "test message" "$out" '🧪 ทดสอบ'
 out=$(run SUPABASE_URL=)
-check "no secrets = no-op" "$out" 'nothing checked'
+check "no secrets = no-op" "$out" 'not set: SUPABASE_URL (variable) SUPABASE_SERVICE_KEY (secret), nothing checked'
+out=$(run SUPABASE_URL=https://abcd1234.supabase.co)
+check "names the missing one" "$out" 'not set: SUPABASE_SERVICE_KEY (secret), nothing checked'
 
 PG_BIN="${PG_BIN:-$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -n1)}"
 if [ -z "$PG_BIN" ] || [ ! -x "$PG_BIN/initdb" ]; then

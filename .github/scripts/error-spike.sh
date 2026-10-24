@@ -69,8 +69,11 @@ if [ "$MODE" = "test" ]; then
 elif [ -n "${CHECK_JSON:-}" ]; then
   check=$(cat "$CHECK_JSON")
 else
-  if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_KEY:-}" ]; then
-    echo "::notice::SUPABASE_URL variable or SUPABASE_SERVICE_KEY secret is not set, nothing checked"; exit 0
+  missing=()
+  [ -z "${SUPABASE_URL:-}" ] && missing+=("SUPABASE_URL (variable)")
+  [ -z "${SUPABASE_SERVICE_KEY:-}" ] && missing+=("SUPABASE_SERVICE_KEY (secret)")
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo "::notice::not set: ${missing[*]}, nothing checked"; exit 0
   fi
   body=$(jq -n --argjson w "$WINDOW" --argjson e "$MIN_ERRORS" --argjson p "$MIN_PLAYERS" \
     --argjson r "$RATIO" --argjson b "$BASELINE" --argjson c "$COOLDOWN" --argjson d "$NEW_DAYS" \

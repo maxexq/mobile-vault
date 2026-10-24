@@ -46,7 +46,8 @@ jobs:
           persist-credentials: false
       - name: Check player errors
         env:
-          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          # a variable, but a secret of the same name works too
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           DISCORD_ALERTS_WEBHOOK_URL: ${{ secrets.DISCORD_ALERTS_WEBHOOK_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
