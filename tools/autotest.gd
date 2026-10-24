@@ -79,6 +79,11 @@ func _run() -> void:
 		await _anticheat_test()
 		_finish()
 		return
+	if "--only=english" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _english_test()
+		_finish()
+		return
 	if "--only=env" in OS.get_cmdline_user_args():
 		await _env_test()
 		_finish()
@@ -688,6 +693,7 @@ func _run() -> void:
 	await _anticheat_test()
 	await _version_test()
 	await _env_test()
+	await _english_test()
 	_thai_terms_test()
 	_finish()
 
@@ -2533,9 +2539,11 @@ func _logs_test() -> void:
 	_check("logs: the whole queue drains in batches", await _drain_logs())
 	var first := func(e): return str(e.msg) == "logs test first" and str(e.sid) == Trace.session and str(e.version) == BuildInfo.GAME_VERSION
 	_check("logs: entries arrive with session, category and version", fake.logs.get(uid, []).any(first))
-	var older: Array = fake.logs[uid].filter(func(e): return float(e.t) <= Trace._t0)
+	# by session id, not by time: this session's own "session start" entry is stamped to 0.01 s and can equal the
+	# cursor start (Trace._t0 after a JSON round trip), which made a time comparison fail now and then (MV-172)
+	var older: Array = fake.logs[uid].filter(func(e): return str(e.sid) != Trace.session)
 	for e in older.slice(0, 5):
-		print("[autotest] sent but older than this session (t0 %.3f): %.3f %s %s" % [Trace._t0, float(e.t), str(e.cat), str(e.msg)])
+		print("[autotest] sent from another session (%s): %.3f %s %s" % [str(e.sid), float(e.t), str(e.cat), str(e.msg)])
 	_check("logs: entries from before this session stay local", older.is_empty())
 	_check("logs: queue empty after sending", Telemetry.pending().is_empty())
 	var calls: int = fake.log_calls
@@ -2602,10 +2610,12 @@ func _features_test() -> void:
 		Tutorial.skip()
 	Features.clear_overrides()
 	Features.layers.remote = {}
+	# switches that ship off on purpose: english until all three MV-151 PRs are in
+	var ships_off := ["english"]
 	var all_on := true
 	for k in Features.FEATURES:
-		all_on = all_on and Features.on(k)
-	_check("features: every switch on by default", all_on)
+		all_on = all_on and (Features.on(k) != (k in ships_off))
+	_check("features: every switch on by default (except %s, off)" % ", ".join(ships_off), all_on)
 	_check("features: tune falls back to the code constant", Features.num("threat.rate_scale", Threat.RATE_SCALE) == Threat.RATE_SCALE)
 	var base: Array = Data.biome(0).events
 	_check("features: default event pool = the biome list", Features.event_pool(0, base) == base)
@@ -2858,6 +2868,62 @@ func _engine_bay_test() -> void:
 
 
 ## MV-111: semver + release channel badge + changelog / release tooling
+## visible Label / Button texts under a node that still contain Thai
+func _thai_left(root: Node) -> Array:
+	var out := []
+	for c in root.find_children("*", "Control", true, false):
+		if not (c as Control).is_visible_in_tree():
+			continue
+		var t := ""
+		if c is Label:
+			t = (c as Label).text
+		elif c is Button:
+			t = (c as Button).text
+		t = (c as Control).atr(t)      # what is drawn: .text keeps the key, auto_translate translates the drawing
+		if t != "" and RegEx.create_from_string("[\\x{0E00}-\\x{0E7F}]").search(t) != null:
+			out.append(t.replace("\n", " ").left(70))
+	return out
+
+
+## MV-151: English through TranslationServer; Thai stays the key and the fallback
+func _english_test() -> void:
+	# Thai is the source: with English loaded, Thai mode must stay Thai (the fallback locale must not be "en")
+	_check("english: Thai mode shows Thai", TranslationServer.get_locale() == "th" and Loc.t("ตั้งค่า") == "ตั้งค่า"
+		and str(ProjectSettings.get_setting("internationalization/locale/fallback")) == "th")
+	Features.set_override("features", "english", true)
+	Settings.set_value("lang", "en")
+	await wait(0.2)
+	_check("english: locale follows the setting", TranslationServer.get_locale() == "en" and Loc.lang() == "en")
+	_check("english: Loc.t translates, with context", Loc.t("ตั้งค่า") == "Settings" and Loc.t("ว่าง", "slot") == "Empty" and Loc.t("ว่าง") == "Idle")
+	_check("english: format templates keep their placeholders", Loc.t("รุ่นที่ %d · Vault %d · %.1f กม.") % [3, 4, 12.5] == "Generation 3 · Vault 4 · 12.5 km")
+	_check("english: untranslated text stays Thai", Loc.t("ข้อความทดสอบที่ไม่มีคำแปล") == "ข้อความทดสอบที่ไม่มีคำแปล")
+	var sp = main.hud.settings_panel
+	for tab in ["game", "data", "about"]:
+		sp.open_tab(tab)
+		await wait(0.3)
+		var left := _thai_left(sp)
+		for t in left:
+			print("[autotest] english: Thai left in settings/%s: %s" % [tab, t])
+		_check("english: settings %s tab has no Thai left (%d)" % [tab, left.size()], left.is_empty())
+		await shot("english_settings_" + tab)
+	sp.close()
+	await wait(0.2)
+	var hud_left := _thai_left(main.hud)
+	for t in hud_left:
+		print("[autotest] english: Thai left in the HUD: %s" % t)
+	await shot("english_hud")
+	Features.set_override("features", "english", false)
+	await wait(0.1)
+	_check("english: switch off -> Thai even with English picked", TranslationServer.get_locale() == "th" and Loc.t("ตั้งค่า") == "ตั้งค่า")
+	Features.set_override("features", "english", null)
+	Dev.lang_set("en")
+	_check("english: GOD language button turns English on", Loc.lang() == "en" and TranslationServer.get_locale() == "en")
+	Dev.lang_set("th")
+	Features.set_override("features", "english", null)
+	_check("english: GOD back to Thai", Loc.lang() == "th" and TranslationServer.get_locale() == "th")
+	await wait(0.1)
+
+
 ## MV-112: one build, the environment from the host name; only production hosts reach the production project
 func _env_test() -> void:
 	_check("env: production host is prod", BuildInfo.env_for_host("apocarlypse-mobile-vault.vercel.app") == "prod")

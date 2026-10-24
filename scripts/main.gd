@@ -313,8 +313,8 @@ func set_zoom_mode(m: String) -> void:
 	zoom_mode = m
 	Settings.set_value("zoom", m)
 	_apply_world_scale()
-	var auto_txt := "มุมกล้อง: อัตโนมัติ (รถเต็มจอ ปัดดูโบกี้ ถอยกว้างตอนสู้บอส)" if _fit_ws() > 0.0 else "มุมกล้อง: อัตโนมัติ (กว้างตอนสู้บอส/ลากพ่วง)"
-	Game.toast.emit({"normal": "มุมกล้อง: ปกติ", "wide": "มุมกล้อง: มุมกว้าง", "auto": auto_txt}[m], "info")
+	var auto_txt := Loc.t("มุมกล้อง: อัตโนมัติ (รถเต็มจอ ปัดดูโบกี้ ถอยกว้างตอนสู้บอส)") if _fit_ws() > 0.0 else Loc.t("มุมกล้อง: อัตโนมัติ (กว้างตอนสู้บอส/ลากพ่วง)")
+	Game.toast.emit({"normal": Loc.t("มุมกล้อง: ปกติ"), "wide": Loc.t("มุมกล้อง: มุมกว้าง"), "auto": auto_txt}[m], "info")
 
 
 func cycle_zoom() -> void:
@@ -601,10 +601,10 @@ func _enter_placement(room_type: String) -> void:
 		if Game.s.rooms[s].type == "empty":
 			any = true
 	if not any:
-		Game.toast.emit("ไม่มีช่องว่าง! อัปเกรด Mobile Vault เพื่อปลดล็อกชั้นเพิ่ม", "warn")
+		Game.toast.emit(Loc.t("ไม่มีช่องว่าง! อัปเกรด Mobile Vault เพื่อปลดล็อกชั้นเพิ่ม"), "warn")
 		_exit_placement()
 		return
-	hud.show_banner("แตะห้องว่างเพื่อสร้าง %s (%d เศษเหล็ก · %s)" % [Data.room_def(room_type).th, Game.build_cost(room_type), Game.fmt_time(Game.build_time(room_type))])
+	hud.show_banner(Loc.t("แตะห้องว่างเพื่อสร้าง %s (%d เศษเหล็ก · %s)") % [Data.room_def(room_type).th, Game.build_cost(room_type), Game.fmt_time(Game.build_time(room_type))])
 
 
 func _exit_placement() -> void:

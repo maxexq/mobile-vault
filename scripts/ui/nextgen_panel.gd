@@ -61,7 +61,7 @@ func _build_story() -> void:
 	body_l.visible_ratio = 0.0
 	var tw := body_l.create_tween()
 	tw.tween_property(body_l, "visible_ratio", 1.0, 3.0)
-	var nx := UIKit.button("ต่อไป", "yellow", "play")
+	var nx := UIKit.button(Loc.t("ต่อไป"), "yellow", "play")
 	nx.pressed.connect(func():
 		step = "summary"
 		refresh())
@@ -69,22 +69,22 @@ func _build_story() -> void:
 
 
 func _build_summary() -> void:
-	set_title("NEXT GENERATION / ส่งต่อรุ่นถัดไป")
+	set_title(Loc.t("NEXT GENERATION / ส่งต่อรุ่นถัดไป"))
 	var s := Game.s
 	if forced:
-		_list.add_child(UIKit.label("%s พังทลายแล้ว..." % Meta.vehicle_name(), UIKit.FS_HUGE, UIKit.C_RED))
-		_list.add_child(UIKit.wrap_label("ผู้รอดชีวิตบางส่วนหนีออกมาได้ พร้อมพิมพ์เขียวและเสบียงที่ขนมาได้", UIKit.FS_SMALL, UIKit.C_TEXT))
+		_list.add_child(UIKit.label(Loc.t("%s พังทลายแล้ว...") % Meta.vehicle_name(), UIKit.FS_HUGE, UIKit.C_RED))
+		_list.add_child(UIKit.wrap_label(Loc.t("ผู้รอดชีวิตบางส่วนหนีออกมาได้ พร้อมพิมพ์เขียวและเสบียงที่ขนมาได้"), UIKit.FS_SMALL, UIKit.C_TEXT))
 	else:
-		_list.add_child(UIKit.label("ปลดระวาง %s" % Meta.vehicle_name(), UIKit.FS_HUGE, UIKit.C_GOLD))
-		_list.add_child(UIKit.wrap_label("รถคันนี้พาทุกคนมาได้ไกลแล้ว ถึงเวลาสร้างพาหนะที่ใหญ่กว่าเดิมเพื่อไปให้ไกลกว่านี้", UIKit.FS_SMALL, UIKit.C_TEXT))
+		_list.add_child(UIKit.label(Loc.t("ปลดระวาง %s") % Meta.vehicle_name(), UIKit.FS_HUGE, UIKit.C_GOLD))
+		_list.add_child(UIKit.wrap_label(Loc.t("รถคันนี้พาทุกคนมาได้ไกลแล้ว ถึงเวลาสร้างพาหนะที่ใหญ่กว่าเดิมเพื่อไปให้ไกลกว่านี้"), UIKit.FS_SMALL, UIKit.C_TEXT))
 	var bosses := (s.combat.get("boss_beaten", {}) as Dictionary).size()
 	var rows := [
-		["ระยะทางรวม", "%.1f กม." % float(s.stats.km_total)],
-		["บอสด่านตรวจ", str(bosses)],
-		["รอบเส้นทาง", str(int(s.get("lap", 0)) + 1)],
+		[Loc.t("ระยะทางรวม"), Loc.t("%.1f กม.") % float(s.stats.km_total)],
+		[Loc.t("บอสด่านตรวจ"), str(bosses)],
+		[Loc.t("รอบเส้นทาง"), str(int(s.get("lap", 0)) + 1)],
 		["Vault Lv.", str(int(s.vault_level))],
-		["การสำรวจ", str(int(s.stats.get("expeditions", 0)))],
-		["พิมพ์เขียว", str((Meta.m().blueprints as Array).size())],
+		[Loc.t("การสำรวจ"), str(int(s.stats.get("expeditions", 0)))],
+		[Loc.t("พิมพ์เขียว"), str((Meta.m().blueprints as Array).size())],
 	]
 	for r in rows:
 		var h := UIKit.hbox(4)
@@ -92,13 +92,13 @@ func _build_summary() -> void:
 		h.add_child(UIKit.spacer())
 		h.add_child(UIKit.label(r[1], UIKit.FP, UIKit.C_TEXT, true))
 		_list.add_child(h)
-	_list.add_child(UIKit.label("RESEARCH +%d (รวม %d)" % [Meta.legacy_earned(), int(Meta.m().legacy) + (0 if s.get("legacy_banked", false) else Meta.legacy_earned())], UIKit.FP, UIKit.C_GOLD, true))
+	_list.add_child(UIKit.label(Loc.t("RESEARCH +%d (รวม %d)") % [Meta.legacy_earned(), int(Meta.m().legacy) + (0 if s.get("legacy_banked", false) else Meta.legacy_earned())], UIKit.FP, UIKit.C_GOLD, true))
 	var hb := UIKit.hbox(4)
 	if not forced:
-		var cancel := UIKit.button("ยังไม่ใช่ตอนนี้", "gray")
+		var cancel := UIKit.button(Loc.t("ยังไม่ใช่ตอนนี้"), "gray")
 		cancel.pressed.connect(close)
 		hb.add_child(cancel)
-	var nx := UIKit.button("ถัดไป: งานวิจัย", "yellow", "up")
+	var nx := UIKit.button(Loc.t("ถัดไป: งานวิจัย"), "yellow", "up")
 	nx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nx.pressed.connect(func():
 		earned = Meta.bank_legacy()
@@ -110,7 +110,7 @@ func _build_summary() -> void:
 
 func _build_perks() -> void:
 	set_title("RESEARCH %d / %s" % [int(Meta.m().legacy), Meta.RESEARCH_TH])
-	_list.add_child(UIKit.wrap_label("ใช้%sซื้อความสามารถถาวรให้ทุกรุ่นถัดไป · พาหนะใหม่ต้องมีพิมพ์เขียวด้วย" % Meta.RESEARCH_TH, UIKit.FS_SMALL))
+	_list.add_child(UIKit.wrap_label(Loc.t("ใช้%sซื้อความสามารถถาวรให้ทุกรุ่นถัดไป · พาหนะใหม่ต้องมีพิมพ์เขียวด้วย") % Meta.RESEARCH_TH, UIKit.FS_SMALL))
 	for id in Meta.PERKS:
 		var p: Dictionary = Meta.PERKS[id]
 		var lv := Meta.perk(id)
@@ -123,7 +123,7 @@ func _build_perks() -> void:
 		v.add_child(UIKit.label("%s  %d/%d" % [p.th, lv, int(p.max)], UIKit.FS_SMALL, UIKit.C_TEXT))
 		v.add_child(UIKit.wrap_label(p.desc, UIKit.FS_SMALL))
 		if p.has("bp") and not Meta.has_blueprint(p.bp):
-			v.add_child(UIKit.label("ต้องมี " + Mods.BLUEPRINT_TH.get(p.bp, p.bp), UIKit.FS_SMALL, UIKit.C_ORANGE))
+			v.add_child(UIKit.label(Loc.t("ต้องมี ") + Mods.BLUEPRINT_TH.get(p.bp, p.bp), UIKit.FS_SMALL, UIKit.C_ORANGE))
 		h.add_child(v)
 		if lv < int(p.max):
 			var b := UIKit.button("%d" % Meta.perk_cost(id), "yellow", "xp")
@@ -135,7 +135,7 @@ func _build_perks() -> void:
 					refresh())
 			h.add_child(b)
 		_list.add_child(card)
-	var nx := UIKit.button("ถัดไป: เลือกผู้รอดชีวิต", "yellow", "people")
+	var nx := UIKit.button(Loc.t("ถัดไป: เลือกผู้รอดชีวิต"), "yellow", "people")
 	nx.pressed.connect(func():
 		step = "crew"
 		refresh())
@@ -143,8 +143,8 @@ func _build_perks() -> void:
 
 
 func _build_crew() -> void:
-	set_title("ESCAPE %d/%d / ใครจะไปกับรถคันใหม่" % [carry.size(), Meta.carry_slots()])
-	_list.add_child(UIKit.wrap_label("คนที่เลือกจะเก็บนิสัย อาวุธ และ %d%% ของเลเวลไว้ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด" % [int(Meta.carry_level_keep() * 100), int(Meta.carry_res_ratio() * 100)], UIKit.FS_SMALL))
+	set_title(Loc.t("ESCAPE %d/%d / ใครจะไปกับรถคันใหม่") % [carry.size(), Meta.carry_slots()])
+	_list.add_child(UIKit.wrap_label(Loc.t("คนที่เลือกจะเก็บนิสัย อาวุธ และ %d%% ของเลเวลไว้ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด") % [int(Meta.carry_level_keep() * 100), int(Meta.carry_res_ratio() * 100)], UIKit.FS_SMALL))
 	var arr: Array = Game.s.dwellers.duplicate()
 	arr.sort_custom(func(a, b): return int(a.lvl) > int(b.lvl))
 	for d in arr:
@@ -175,7 +175,7 @@ func _build_crew() -> void:
 				carry.append(did)
 			refresh())
 		_list.add_child(b)
-	_list.add_child(UIKit.header("VEHICLE", "พาหนะคันใหม่"))
+	_list.add_child(UIKit.header("VEHICLE", Loc.t("พาหนะคันใหม่")))
 	if tier_pick == "":
 		tier_pick = Meta.best_tier()
 	var vh := UIKit.flow(3)
@@ -183,14 +183,14 @@ func _build_crew() -> void:
 		if not Meta.tier_unlocked(t):
 			continue
 		var vd: Dictionary = Data.VEHICLES[t]
-		var tb := UIKit.button("%s (%d ห้อง)" % [vd.th, int(vd.floors) * 3], "yellow" if t == tier_pick else "gray")
+		var tb := UIKit.button(Loc.t("%s (%d ห้อง)") % [vd.th, int(vd.floors) * 3], "yellow" if t == tier_pick else "gray")
 		var tid: String = t
 		tb.pressed.connect(func():
 			tier_pick = tid
 			refresh())
 		vh.add_child(tb)
 	_list.add_child(vh)
-	var go := UIKit.button("สร้างพาหนะคันใหม่!", "red", "hammer")
+	var go := UIKit.button(Loc.t("สร้างพาหนะคันใหม่!"), "red", "hammer")
 	go.pressed.connect(func():
 		var picks := carry.duplicate()
 		forced = false

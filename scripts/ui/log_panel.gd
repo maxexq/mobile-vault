@@ -11,11 +11,11 @@ var _reader: Label
 
 
 func _build() -> void:
-	set_title("LOGBOOK / สมุดบันทึก MAMMOTH-7")
+	set_title(Loc.t("LOGBOOK / สมุดบันทึก MAMMOTH-7"))
 	_tabs = UIKit.hbox(3)
 	body.add_child(_tabs)
 	_list = make_list(3)
-	var tb := UIKit.button("ดูบทแนะนำอีกครั้ง  TUTORIAL", "blue", "book")
+	var tb := UIKit.button(Loc.t("ดูบทแนะนำอีกครั้ง  TUTORIAL"), "blue", "book")
 	tb.pressed.connect(func():
 		close()
 		Tutorial.restart())
@@ -83,7 +83,7 @@ func _build_entries() -> void:
 
 func _build_reader() -> void:
 	var e: Dictionary = Lore.ENTRIES.get(open_id, {})
-	var back := UIKit.button("< กลับ", "gray")
+	var back := UIKit.button(Loc.t("< กลับ"), "gray")
 	back.pressed.connect(func():
 		open_id = ""
 		refresh())
@@ -100,10 +100,10 @@ func _build_reader() -> void:
 func _build_crew() -> void:
 	var mem: Array = Game.s.get("memorial", [])
 	if not mem.is_empty():
-		_list.add_child(UIKit.header("MEMORIAL", "กำแพงอนุสรณ์"))
+		_list.add_child(UIKit.header("MEMORIAL", Loc.t("กำแพงอนุสรณ์")))
 		for e in mem:
-			_list.add_child(UIKit.label("† %s Lv%d — %s (รุ่นที่ %d, กม. %.1f)" % [e.name, int(e.lvl), e.cause, int(e.get("gen", 1)), float(e.km)], UIKit.FS_SMALL, UIKit.C_DIM))
-		_list.add_child(UIKit.header("CREW", "ลูกเรือปัจจุบัน"))
+			_list.add_child(UIKit.label(Loc.t("† %s Lv%d — %s (รุ่นที่ %d, กม. %.1f)") % [e.name, int(e.lvl), e.cause, int(e.get("gen", 1)), float(e.km)], UIKit.FS_SMALL, UIKit.C_DIM))
+		_list.add_child(UIKit.header("CREW", Loc.t("ลูกเรือปัจจุบัน")))
 	for d in Game.s.dwellers:
 		var bio := Lore.bio(d)
 		var p := UIKit.panel()

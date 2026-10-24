@@ -89,22 +89,22 @@ func _ready() -> void:
 	_view_box = UIKit.hbox(2)
 	_xray_btn = UIKit.button("", "gray", "eye")
 	_xray_btn.custom_minimum_size = Vector2(26, 22)
-	_xray_btn.tooltip_text = "สลับมุมมอง ผ่าซีก (X-RAY) / เปลือกนอก"
+	_xray_btn.tooltip_text = Loc.t("สลับมุมมอง ผ่าซีก (X-RAY) / เปลือกนอก")
 	_xray_btn.toggle_mode = true
 	_xray_btn.button_pressed = true
 	_xray_btn.toggled.connect(func(on: bool):
 		UIKit.style_button(_xray_btn, "gray" if on else "yellow")
 		xray_toggled.emit(on)
-		show_toast("มุมมอง: ผ่าซีก X-RAY" if on else "มุมมอง: เปลือกนอก (แตะตัวรถเพื่อส่องข้างใน)", "info"))
+		show_toast(Loc.t("มุมมอง: ผ่าซีก X-RAY") if on else Loc.t("มุมมอง: เปลือกนอก (แตะตัวรถเพื่อส่องข้างใน)"), "info"))
 	_view_box.add_child(_xray_btn)
 	_zoom_btn = UIKit.button("", "gray", "zoom")
 	_zoom_btn.custom_minimum_size = Vector2(26, 22)
-	_zoom_btn.tooltip_text = "ซูม: อัตโนมัติ / กว้าง / ปกติ"
+	_zoom_btn.tooltip_text = Loc.t("ซูม: อัตโนมัติ / กว้าง / ปกติ")
 	_zoom_btn.pressed.connect(func(): zoom_pressed.emit())
 	_view_box.add_child(_zoom_btn)
 	_settings_btn = UIKit.button("", "gray", "gear")
 	_settings_btn.custom_minimum_size = Vector2(26, 22)
-	_settings_btn.tooltip_text = "ตั้งค่า / ข้อมูลเวอร์ชัน"
+	_settings_btn.tooltip_text = Loc.t("ตั้งค่า / ข้อมูลเวอร์ชัน")
 	_settings_btn.pressed.connect(func(): open_settings())
 	_view_box.add_child(_settings_btn)
 	# tester console: only exists once Dev is unlocked (debug build, ?god=1, or 7 taps on the VAULT chip)
@@ -320,7 +320,7 @@ func _build_bottom() -> void:
 	th.add_child(go_btn)
 	_scav_btn = UIKit.button("", "yellow", "explore")
 	_scav_btn.custom_minimum_size = Vector2(26, 22)
-	_scav_btn.tooltip_text = "ส่งทีมสำรวจรอบๆ"
+	_scav_btn.tooltip_text = Loc.t("ส่งทีมสำรวจรอบๆ")
 	_scav_btn.pressed.connect(func(): open_expedition("scav"))
 	th.add_child(_scav_btn)
 	var tv := UIKit.vbox(1)
@@ -348,7 +348,7 @@ func _build_bottom() -> void:
 	_exp_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_exp_lbl.clip_text = true
 	eh.add_child(_exp_lbl)
-	_exp_btn = UIKit.button("เปิด", "yellow")
+	_exp_btn = UIKit.button(Loc.t("เปิด", "open"), "yellow")
 	_exp_btn.custom_minimum_size = Vector2(40, 20)
 	_exp_btn.pressed.connect(func():
 		if Encounter.pending():
@@ -369,7 +369,7 @@ func _build_bottom() -> void:
 	_door_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_door_lbl.clip_text = true
 	dh.add_child(_door_lbl)
-	var door_btn := UIKit.button("ตรวจ", "red", "eye")
+	var door_btn := UIKit.button(Loc.t("ตรวจ"), "red", "eye")
 	door_btn.custom_minimum_size = Vector2(48, 20)
 	door_btn.pressed.connect(open_door)
 	dh.add_child(door_btn)
@@ -417,7 +417,7 @@ func _build_combat_chip() -> void:
 	h.add_child(_push_btn)
 	_boss_btn = UIKit.button("", "red", "crown")
 	_boss_btn.custom_minimum_size = Vector2(24, 20)
-	_boss_btn.tooltip_text = "ท้าบอสด่านตรวจ"
+	_boss_btn.tooltip_text = Loc.t("ท้าบอสด่านตรวจ")
 	_boss_btn.pressed.connect(Combat.challenge_warlord)
 	_boss_btn.visible = false
 	h.add_child(_boss_btn)
@@ -435,7 +435,7 @@ func _build_banner() -> void:
 	banner_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	banner_lbl.custom_minimum_size.x = 200
 	h.add_child(banner_lbl)
-	var cancel := UIKit.button("ยกเลิก", "gray", "close")
+	var cancel := UIKit.button(Loc.t("ยกเลิก"), "gray", "close")
 	cancel.pressed.connect(func(): build_placement_cancelled.emit())
 	h.add_child(cancel)
 	banner.visible = false
@@ -578,7 +578,7 @@ func _refresh_travel() -> void:
 	if Game.s.is_empty():
 		return
 	var b := Data.biome(Game.s.biome)
-	biome_lbl.text = b.th + ((" ·รอบ%d" % (int(Game.s.lap) + 1)) if int(Game.s.lap) > 0 else "")
+	biome_lbl.text = b.th + ((Loc.t(" ·รอบ%d") % (int(Game.s.lap) + 1)) if int(Game.s.lap) > 0 else "")
 	hull_bar.value = float(Game.s.hull) / Game.hull_max()
 	var fill := StyleBoxFlat.new()
 	var hp := hull_bar.value
@@ -634,14 +634,14 @@ func _refresh_expedition() -> void:
 	_scav_btn.disabled = Expedition.active() or Game.s.get("wrecked", false)
 	if Expedition.active():
 		var tl := Expedition.time_left()
-		_exp_lbl.text = "ทีมสำรวจ %s · %d:%02d" % [Expedition.site_def(str(Expedition.state().site)).th, int(tl) / 60, int(tl) % 60]
-		_exp_btn.text = "ดู"
+		_exp_lbl.text = Loc.t("ทีมสำรวจ %s · %d:%02d") % [Expedition.site_def(str(Expedition.state().site)).th, int(tl) / 60, int(tl) % 60]
+		_exp_btn.text = Loc.t("ดู")
 		if Encounter.pending():
-			_exp_lbl.text = "จุดพิเศษ! ทีมรอคำสั่ง · %d:%02d" % [int(tl) / 60, int(tl) % 60]
-			_exp_btn.text = "สั่งการ"
+			_exp_lbl.text = Loc.t("จุดพิเศษ! ทีมรอคำสั่ง · %d:%02d") % [int(tl) / 60, int(tl) % 60]
+			_exp_btn.text = Loc.t("สั่งการ")
 	elif Expedition.at_site() != "":
-		_exp_lbl.text = "พบ %s!" % Expedition.site_def(Expedition.at_site()).th
-		_exp_btn.text = "สำรวจ"
+		_exp_lbl.text = Loc.t("พบ %s!") % Expedition.site_def(Expedition.at_site()).th
+		_exp_btn.text = Loc.t("สำรวจ")
 	if float(Game.s.get("wreck_t", 0.0)) > 0.0 and float(Game.s.hull) <= 0.0:
 		status_lbl.text = "WRECK %d" % int(Meta.wreck_time_left())
 		status_lbl.add_theme_color_override("font_color", UIKit.C_RED)
@@ -654,7 +654,7 @@ func _refresh_door() -> void:
 		_apply_layout.call_deferred()
 	if show:
 		var c := Inspection.current()
-		_door_lbl.text = "มีคนเคาะประตู! %s [%s] · %s" % [c.name, Inspection.GRADES[c.grade].th, Game.fmt_time(float(c.wait))]
+		_door_lbl.text = Loc.t("มีคนเคาะประตู! %s [%s] · %s") % [c.name, Inspection.GRADES[c.grade].th, Game.fmt_time(float(c.wait))]
 		_door_box.modulate.a = 1.0 if int(Time.get_ticks_msec() / 500) % 2 == 0 else 0.75
 
 
@@ -763,7 +763,7 @@ func _refresh_combat() -> void:
 	var push := bool(Game.s.combat.push)
 	_push_btn.text = "PUSH" if push else "FARM"
 	UIKit.style_button(_push_btn, "yellow" if push else "blue")
-	_push_btn.tooltip_text = "PUSH = ชนะแล้วขึ้นเวฟถัดไป · FARM = วนเวฟเดิมเก็บของ"
+	_push_btn.tooltip_text = Loc.t("PUSH = ชนะแล้วขึ้นเวฟถัดไป · FARM = วนเวฟเดิมเก็บของ")
 	var show_boss := Game.at_checkpoint() and not Combat.boss_beaten(int(Game.s.biome)) and not Combat.wave_is_warlord and not Modes.peaceful()
 	if _boss_btn.visible != show_boss:
 		_boss_btn.visible = show_boss
@@ -794,14 +794,14 @@ func _refresh_threat(boss: bool) -> void:
 				_wave_lbl.add_theme_color_override("font_color", UIKit.C_GREEN)
 		_wave_sub.text = "THREAT %d%% +%d/M" % [int(t), int(round(Threat.rate_pm()))]
 	var p := Threat.rate_parts()
-	var names := {"biome": "พื้นที่", "engine": "เสียงเครื่องยนต์", "parked": "จอดนิ่ง (กลิ่น)", "night": "กลางคืน",
-		"rooms": "เสียง/แสงจากห้อง", "cargo": "ของบรรทุกเต็ม", "blood": "กลิ่นเลือด"}
-	var lines := ["ภัยคุกคาม %d%% · %s" % [int(t), Threat.PHASE_TH.get(Threat.phase, "")]]
+	var names := {"biome": Loc.t("พื้นที่"), "engine": Loc.t("เสียงเครื่องยนต์"), "parked": Loc.t("จอดนิ่ง (กลิ่น)"), "night": Loc.t("กลางคืน"),
+		"rooms": Loc.t("เสียง/แสงจากห้อง"), "cargo": Loc.t("ของบรรทุกเต็ม"), "blood": Loc.t("กลิ่นเลือด")}
+	var lines := [Loc.t("ภัยคุกคาม %d%% · %s") % [int(t), Threat.PHASE_TH.get(Threat.phase, "")]]
 	for k in names:
 		if float(p[k]) >= 0.05:
-			lines.append("+%.1f/นาที %s" % [float(p[k]), names[k]])
+			lines.append(Loc.t("+%.1f/นาที %s") % [float(p[k]), names[k]])
 	if float(p.mask) < 1.0:
-		lines.append("×%.2f สภาพอากาศช่วยพรางตัว" % float(p.mask))
+		lines.append(Loc.t("×%.2f สภาพอากาศช่วยพรางตัว") % float(p.mask))
 	_combat_box.tooltip_text = "\n".join(lines)
 
 

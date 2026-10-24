@@ -62,13 +62,13 @@ func _ready() -> void:
 	v.add_child(_log)
 	_menu = UIKit.vbox(4)
 	v.add_child(_menu)
-	var t1 := UIKit.wrap_label("รถบ้านหุ้มเกราะคันสุดท้ายกำลังรอคำสั่ง", UIKit.FS, UIKit.C_TEXT)
+	var t1 := UIKit.wrap_label(Loc.t("รถบ้านหุ้มเกราะคันสุดท้ายกำลังรอคำสั่ง"), UIKit.FS, UIKit.C_TEXT)
 	t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu.add_child(t1)
-	_continue = UIKit.button("เดินทางต่อ  CONTINUE", "green", "play")
+	_continue = UIKit.button(Loc.t("เดินทางต่อ  CONTINUE"), "green", "play")
 	_continue.pressed.connect(func(): _go(false))
 	_menu.add_child(_continue)
-	_new_btn = UIKit.button("เริ่มการเดินทาง  START", "yellow", "up")
+	_new_btn = UIKit.button(Loc.t("เริ่มการเดินทาง  START"), "yellow", "up")
 	_new_btn.pressed.connect(_new_run)
 	_menu.add_child(_new_btn)
 	_account_btn = UIKit.button("", "blue", "book")
@@ -76,13 +76,13 @@ func _ready() -> void:
 	_menu.add_child(_account_btn)
 	Cloud.account_changed.connect(_refresh_account)
 	Cloud.status_changed.connect(_refresh_account)
-	_settings_btn = UIKit.button("ตั้งค่า  SETTINGS", "gray", "gear")
+	_settings_btn = UIKit.button(Loc.t("ตั้งค่า  SETTINGS"), "gray", "gear")
 	_settings_btn.pressed.connect(func(): settings_requested.emit("game"))
 	_menu.add_child(_settings_btn)
 	var note := UIKit.label(BuildInfo.short_line(), UIKit.FP, UIKit.C_LINE_DIM, true)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.mouse_filter = Control.MOUSE_FILTER_STOP
-	note.tooltip_text = "แตะเพื่อดูข้อมูลเวอร์ชัน"
+	note.tooltip_text = Loc.t("แตะเพื่อดูข้อมูลเวอร์ชัน")
 	note.gui_input.connect(func(e: InputEvent):
 		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 			settings_requested.emit("about"))
@@ -109,21 +109,21 @@ func _build_gate(v: VBoxContainer) -> void:
 	_gate = UIKit.vbox(4)
 	_gate.visible = false
 	v.add_child(_gate)
-	var t := UIKit.label("เลือกวิธีเล่น", UIKit.FS, UIKit.C_TEXT)
+	var t := UIKit.label(Loc.t("เลือกวิธีเล่น"), UIKit.FS, UIKit.C_TEXT)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_gate.add_child(t)
 	_gate_err = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_RED)
 	_gate.add_child(_gate_err)
-	var guest := UIKit.button("เล่นเลยแบบ Guest", "green", "play")
+	var guest := UIKit.button(Loc.t("เล่นเลยแบบ Guest"), "green", "play")
 	guest.pressed.connect(func(): Cloud.play_as_guest())
 	_gate.add_child(guest)
-	var gmail := UIKit.button("ล็อกอินด้วย Gmail", "blue", "book")
+	var gmail := UIKit.button(Loc.t("ล็อกอินด้วย Gmail"), "blue", "book")
 	gmail.pressed.connect(func(): Cloud.sign_in_google())
 	_gate.add_child(gmail)
-	_gate_switch = UIKit.button("สลับไปบัญชี Google นั้น", "yellow", "play")
+	_gate_switch = UIKit.button(Loc.t("สลับไปบัญชี Google นั้น"), "yellow", "play")
 	_gate_switch.pressed.connect(func(): Cloud.switch_to_google())
 	_gate.add_child(_gate_switch)
-	_gate.add_child(UIKit.wrap_label("Guest เล่นได้ทันที เซฟอยู่ในเบราว์เซอร์นี้ ผูก Gmail ทีหลังได้ที่ ตั้งค่า > เซฟ · Gmail เก็บเซฟไว้ในบัญชี เล่นต่อจากเครื่องไหนก็ได้", UIKit.FS_SMALL, UIKit.C_DIM))
+	_gate.add_child(UIKit.wrap_label(Loc.t("Guest เล่นได้ทันที เซฟอยู่ในเบราว์เซอร์นี้ ผูก Gmail ทีหลังได้ที่ ตั้งค่า > เซฟ · Gmail เก็บเซฟไว้ในบัญชี เล่นต่อจากเครื่องไหนก็ได้"), UIKit.FS_SMALL, UIKit.C_DIM))
 
 
 ## cloud on: who is playing (Guest / Google) and the way to the account section
@@ -138,9 +138,9 @@ func _refresh_account() -> void:
 	_gate_switch.visible = Cloud.link_taken
 	_account_btn.visible = Cloud.enabled()
 	if Cloud.is_guest():
-		_account_btn.text = "Guest · ผูกบัญชี Gmail"
+		_account_btn.text = Loc.t("Guest · ผูกบัญชี Gmail")
 	else:
-		_account_btn.text = "บัญชี: " + str(Cloud.session.get("email", "Google"))
+		_account_btn.text = Loc.t("บัญชี: ") + str(Cloud.session.get("email", "Google"))
 	_panel.custom_minimum_size.y = 0
 	_layout.call_deferred()
 	try_auto_continue()
@@ -151,7 +151,7 @@ func refresh_buttons() -> void:
 	_continue.visible = has
 	# a persistent account never starts over from the title; Settings > เซฟ can still erase it
 	_new_btn.visible = not has or not Features.on("persistent_account")
-	_new_btn.text = "เริ่มการเดินทางใหม่  NEW RUN" if has else "เริ่มการเดินทาง  START"
+	_new_btn.text = Loc.t("เริ่มการเดินทางใหม่  NEW RUN") if has else Loc.t("เริ่มการเดินทาง  START")
 	_panel.custom_minimum_size.y = 0
 	_layout.call_deferred()
 	try_auto_continue()

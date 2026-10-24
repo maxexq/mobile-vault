@@ -77,7 +77,7 @@ func _build_planner() -> void:
 	var def := Expedition.site_def(site)
 	set_title("%s / %s" % [def.en, def.th])
 	if not Features.on("expeditions"):
-		_list.add_child(UIKit.wrap_label("การส่งทีมสำรวจปิดใช้งานชั่วคราว", UIKit.FS, UIKit.C_RED))
+		_list.add_child(UIKit.wrap_label(Loc.t("การส่งทีมสำรวจปิดใช้งานชั่วคราว"), UIKit.FS, UIKit.C_RED))
 	var card := UIKit.panel(UIKit.C_BG2, UIKit.C_GOLD)
 	var h := UIKit.hbox(6)
 	card.add_child(h)
@@ -85,12 +85,12 @@ func _build_planner() -> void:
 		h.add_child(UIKit.tex_rect(Atlas.tex(def.sprite), Vector2(64, 64)))
 	var v := UIKit.vbox(1)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(UIKit.wrap_label("ภารกิจ: " + def.goal, UIKit.FS_SMALL, UIKit.C_TEXT))
+	v.add_child(UIKit.wrap_label(Loc.t("ภารกิจ: ") + def.goal, UIKit.FS_SMALL, UIKit.C_TEXT))
 	var dh := UIKit.hbox(2)
 	dh.add_child(UIKit.label("DANGER", UIKit.FP, UIKit.C_RED, true))
 	dh.add_child(UIKit.skulls(int(def.danger)))
 	v.add_child(dh)
-	v.add_child(UIKit.label("ใช้เวลา %d นาที · รถจะจอดรอ" % int(Expedition.duration_sec(site) / 60.0), UIKit.FS_SMALL, UIKit.C_DIM))
+	v.add_child(UIKit.label(Loc.t("ใช้เวลา %d นาที · รถจะจอดรอ") % int(Expedition.duration_sec(site) / 60.0), UIKit.FS_SMALL, UIKit.C_DIM))
 	var bps: Array = def.loot.get("bp", [])
 	var new_bp := ""
 	for b in bps:
@@ -98,11 +98,11 @@ func _build_planner() -> void:
 			new_bp = Mods.BLUEPRINT_TH.get(b, b)
 			break
 	if new_bp != "":
-		v.add_child(UIKit.label("รางวัลพิเศษ: " + new_bp, UIKit.FS_SMALL, UIKit.C_GOLD))
+		v.add_child(UIKit.label(Loc.t("รางวัลพิเศษ: ") + new_bp, UIKit.FS_SMALL, UIKit.C_GOLD))
 	h.add_child(v)
 	_list.add_child(card)
 	# team
-	_list.add_child(UIKit.header("TEAM %d/%d" % [picked.size(), Expedition.MAX_TEAM], "เลือกทีมสำรวจ"))
+	_list.add_child(UIKit.header("TEAM %d/%d" % [picked.size(), Expedition.MAX_TEAM], Loc.t("เลือกทีมสำรวจ")))
 	var cands := []
 	for d in Game.s.dwellers:
 		if not Game.is_away(d):
@@ -128,14 +128,14 @@ func _build_planner() -> void:
 		var tags := []
 		for t in Crew.traits(d):
 			tags.append(Crew.TRAITS[t].th)
-		tv.add_child(UIKit.label("%s Lv%d  พลัง %d" % [d.name, d.lvl, int(Combat.hero_power(d))], UIKit.FS_SMALL))
+		tv.add_child(UIKit.label(Loc.t("%s Lv%d  พลัง %d") % [d.name, d.lvl, int(Combat.hero_power(d))], UIKit.FS_SMALL))
 		var role := Game.squad_role(d)
 		if role >= 0:
 			# defence squad members can go, but their slot is freed for someone else
 			var rh := UIKit.hbox(2)
 			rh.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			rh.add_child(UIKit.icon_rect("sword", 10))
-			rh.add_child(UIKit.label("อยู่ในทีมป้องกันรถ · %s" % Combat.ROLES[role].th, UIKit.FS_SMALL, UIKit.C_ORANGE))
+			rh.add_child(UIKit.label(Loc.t("อยู่ในทีมป้องกันรถ · %s") % Combat.ROLES[role].th, UIKit.FS_SMALL, UIKit.C_ORANGE))
 			tv.add_child(rh)
 		tv.add_child(UIKit.label(" · ".join(tags), UIKit.FS_SMALL, UIKit.C_DIM))
 		bh.add_child(tv)
@@ -159,10 +159,10 @@ func _build_planner() -> void:
 		if pr >= 0:
 			leaving.append(Combat.ROLES[pr].th)
 	if not leaving.is_empty():
-		_list.add_child(UIKit.wrap_label("ช่องทีมป้องกันรถ (%s) จะว่างทันทีที่ออกเดินทาง — เลือกคนใหม่ได้ที่เมนู Squad" % ", ".join(leaving), UIKit.FS_SMALL, UIKit.C_ORANGE))
+		_list.add_child(UIKit.wrap_label(Loc.t("ช่องทีมป้องกันรถ (%s) จะว่างทันทีที่ออกเดินทาง — เลือกคนใหม่ได้ที่เมนู Squad") % ", ".join(leaving), UIKit.FS_SMALL, UIKit.C_ORANGE))
 	# supplies
 	var need := Expedition.need_supplies(site, maxi(1, picked.size()))
-	_list.add_child(UIKit.header("SUPPLIES", "เสบียงที่พกไป (แนะนำ อาหาร %d น้ำ %d)" % [int(need.food), int(need.water)]))
+	_list.add_child(UIKit.header("SUPPLIES", Loc.t("เสบียงที่พกไป (แนะนำ อาหาร %d น้ำ %d)") % [int(need.food), int(need.water)]))
 	for k in Expedition.SUPPLY_KEYS:
 		_list.add_child(_stepper(k))
 	# odds + actions
@@ -171,20 +171,20 @@ func _build_planner() -> void:
 		members.append(Game.dweller_by_id(int(id)))
 	var ch := Expedition.success_chance(site, members, sup)
 	var col := UIKit.C_GREEN if ch >= 0.7 else (UIKit.C_GOLD if ch >= 0.45 else UIKit.C_RED)
-	_list.add_child(UIKit.label("โอกาสสำเร็จ ~%d%%  (พลังทีม %d vs อันตราย %d)" % [int(ch * 100), int(Expedition.team_power(members, sup)), int(Expedition.danger_need(site))], UIKit.FS, col))
-	_list.add_child(UIKit.wrap_label("ล้มเหลว = ได้ของน้อย บาดเจ็บ ติดเชื้อ หรือมีคนไม่กลับมา · สติมแพ็กลดการบาดเจ็บ ยาปฏิชีวนะลดการติดเชื้อ", UIKit.FS_SMALL))
+	_list.add_child(UIKit.label(Loc.t("โอกาสสำเร็จ ~%d%%  (พลังทีม %d vs อันตราย %d)") % [int(ch * 100), int(Expedition.team_power(members, sup)), int(Expedition.danger_need(site))], UIKit.FS, col))
+	_list.add_child(UIKit.wrap_label(Loc.t("ล้มเหลว = ได้ของน้อย บาดเจ็บ ติดเชื้อ หรือมีคนไม่กลับมา · สติมแพ็กลดการบาดเจ็บ ยาปฏิชีวนะลดการติดเชื้อ"), UIKit.FS_SMALL))
 	var hb := UIKit.hbox(4)
 	if Expedition.SITES.has(site):
-		var skip := UIKit.button("ขับผ่าน", "gray", "play")
+		var skip := UIKit.button(Loc.t("ขับผ่าน"), "gray", "play")
 		skip.pressed.connect(func():
 			Expedition.skip_site()
 			close())
 		hb.add_child(skip)
-	var go := UIKit.button("ส่งทีมสำรวจ!", "red", "explore")
+	var go := UIKit.button(Loc.t("ส่งทีมสำรวจ!"), "red", "explore")
 	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	go.disabled = picked.size() < Expedition.min_team()
 	if go.disabled:
-		go.text = "ต้องการทีม %d-%d คน" % [Expedition.min_team(), Expedition.MAX_TEAM]
+		go.text = Loc.t("ต้องการทีม %d-%d คน") % [Expedition.min_team(), Expedition.MAX_TEAM]
 	go.pressed.connect(func():
 		if Expedition.start(site, picked, sup):
 			close())
@@ -196,7 +196,7 @@ func _stepper(k: String) -> Control:
 	var h := UIKit.hbox(4)
 	h.add_child(UIKit.icon_rect(Data.item_icon(k), 16))
 	var have := int(Game.s.res[k]) if Game.s.res.has(k) else int(Game.s.items.get(k, 0))
-	var l := UIKit.label("%s %d (มี %d)" % [Data.item_name(k), int(sup[k]), have], UIKit.FS_SMALL)
+	var l := UIKit.label(Loc.t("%s %d (มี %d)") % [Data.item_name(k), int(sup[k]), have], UIKit.FS_SMALL)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(l)
 	var step := 5 if k in ["food", "water", "ammo"] else 1
@@ -218,11 +218,11 @@ func _stepper(k: String) -> Control:
 func _build_active() -> void:
 	var e := Expedition.state()
 	var def := Expedition.site_def(str(e.site))
-	set_title("EXPEDITION / ทีมกำลังสำรวจ %s" % def.th)
+	set_title(Loc.t("EXPEDITION / ทีมกำลังสำรวจ %s") % def.th)
 	_feed = ExpeditionFeed.new()
 	_feed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_child(_feed)
-	_enc_btn = UIKit.button("วิทยุจากทีม: เจอจุดพิเศษ! แตะเพื่อสั่งการ", "yellow", "explore")
+	_enc_btn = UIKit.button(Loc.t("วิทยุจากทีม: เจอจุดพิเศษ! แตะเพื่อสั่งการ"), "yellow", "explore")
 	_enc_btn.pressed.connect(func():
 		var hud := get_parent()
 		if hud.has_method("open_encounter"):
@@ -232,8 +232,8 @@ func _build_active() -> void:
 	_list.add_child(_pr)
 	_time_lbl = UIKit.label("", UIKit.FS, UIKit.C_TEXT)
 	_list.add_child(_time_lbl)
-	_list.add_child(UIKit.wrap_label("ภารกิจ: " + def.goal, UIKit.FS_SMALL))
-	_list.add_child(UIKit.header("SQUAD", "ใครไปบ้าง · กำลังทำอะไร"))
+	_list.add_child(UIKit.wrap_label(Loc.t("ภารกิจ: ") + def.goal, UIKit.FS_SMALL))
+	_list.add_child(UIKit.header("SQUAD", Loc.t("ใครไปบ้าง · กำลังทำอะไร")))
 	_status_lbls = []
 	var team := Expedition.team()
 	for i in team.size():
@@ -254,14 +254,14 @@ func _build_active() -> void:
 		_status_lbls.append(st)
 		h.add_child(v)
 		_list.add_child(h)
-	_list.add_child(UIKit.header("FIELD LOG", "บันทึกภาคสนาม"))
+	_list.add_child(UIKit.header("FIELD LOG", Loc.t("บันทึกภาคสนาม")))
 	_log_lbls = []
 	for k in 3:
 		var l := UIKit.label("", UIKit.FS_SMALL, UIKit.C_DIM)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_list.add_child(l)
 		_log_lbls.append(l)
-	_list.add_child(UIKit.label("โอกาสสำเร็จ ~%d%%" % int(Expedition.success_chance(str(e.site), team, e.sup) * 100), UIKit.FS_SMALL, UIKit.C_GOLD))
+	_list.add_child(UIKit.label(Loc.t("โอกาสสำเร็จ ~%d%%") % int(Expedition.success_chance(str(e.site), team, e.sup) * 100), UIKit.FS_SMALL, UIKit.C_GOLD))
 	_update_active()
 
 
@@ -271,7 +271,7 @@ func _update_active() -> void:
 	_pr.value = Expedition.progress()
 	_enc_btn.visible = Encounter.pending()
 	var tl := Expedition.time_left()
-	_time_lbl.text = "เหลืออีก %d:%02d · รถจอดรอทีมอยู่" % [int(tl) / 60, int(tl) % 60]
+	_time_lbl.text = Loc.t("เหลืออีก %d:%02d · รถจอดรอทีมอยู่") % [int(tl) / 60, int(tl) % 60]
 	for i in _status_lbls.size():
 		var s := _feed.member_status(i)
 		(_status_lbls[i] as Label).text = ("> " + s) if s != "" else ""
@@ -288,7 +288,7 @@ func _update_active() -> void:
 
 func _build_report() -> void:
 	var def := Expedition.site_def(str(report.site))
-	set_title("REPORT / ผลการสำรวจ %s" % def.th)
+	set_title(Loc.t("REPORT / ผลการสำรวจ %s") % def.th)
 	var ok: bool = report.ok
 	var col := UIKit.C_GREEN if ok else UIKit.C_RED
 	var kind: String = ExpeditionFeed.KIND.get(str(report.site), "ruins")
@@ -298,8 +298,8 @@ func _build_report() -> void:
 	_list.add_child(frame)
 	var dead := (report.dead as Array).size()
 	OutcomeKit.stamp(frame, "MISSION SUCCESS" if ok else ("LOST" if dead > 0 else "FAILED"),
-		"ภารกิจสำเร็จ!" if ok else ("เสียคนไป..." if dead > 0 else "ภารกิจล้มเหลว..."), col, not ok)
-	var odds := UIKit.label("โอกาสสำเร็จตอนออกเดินทาง %d%%" % int(float(report.get("chance", 0.0)) * 100.0), UIKit.FS_SMALL, UIKit.C_DIM)
+		Loc.t("ภารกิจสำเร็จ!") if ok else (Loc.t("เสียคนไป...") if dead > 0 else Loc.t("ภารกิจล้มเหลว...")), col, not ok)
+	var odds := UIKit.label(Loc.t("โอกาสสำเร็จตอนออกเดินทาง %d%%") % int(float(report.get("chance", 0.0)) * 100.0), UIKit.FS_SMALL, UIKit.C_DIM)
 	odds.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_list.add_child(odds)
 	var rows := []
@@ -317,10 +317,10 @@ func _build_report() -> void:
 		var kept := int(gain.get(k, 0))
 		var nm := Data.item_name(str(k))
 		if kept < n:
-			nm += " (คลังเต็ม เก็บได้ %d)" % kept
+			nm += Loc.t(" (คลังเต็ม เก็บได้ %d)") % kept
 		rows.append({"icon": Data.item_icon(str(k)), "name": nm, "n": n})
 	if int(report.get("gear", 0)) > 0:
-		rows.append({"icon": "chest", "name": "อุปกรณ์", "n": int(report.gear)})
+		rows.append({"icon": "chest", "name": Loc.t("อุปกรณ์"), "n": int(report.gear)})
 	var crew := []
 	for c in report.get("crew", []):
 		var tags := []
@@ -334,9 +334,9 @@ func _build_report() -> void:
 			if tags.is_empty():
 				tags.append(["OK", UIKit.C_GREEN])
 		crew.append({"d": c, "tags": tags})
-	var delay := OutcomeKit.lists(_list, rows, crew, col, "ของที่ขนกลับมา", 0.35)
+	var delay := OutcomeKit.lists(_list, rows, crew, col, Loc.t("ของที่ขนกลับมา"), 0.35)
 	# gear names, blueprints, recruits only live in the text line
-	_list.add_child(UIKit.wrap_label("ได้รับ: " + str(report.loot).trim_prefix(", "), UIKit.FS_SMALL, UIKit.C_DIM))
+	_list.add_child(UIKit.wrap_label(Loc.t("ได้รับ: ") + str(report.loot).trim_prefix(", "), UIKit.FS_SMALL, UIKit.C_DIM))
 	var enc: Dictionary = report.get("enc", {})
 	if not enc.is_empty():
 		var rp := UIKit.panel(Color("14100a"), UIKit.C_GOLD)
@@ -344,7 +344,7 @@ func _build_report() -> void:
 		rp.add_child(rv)
 		var eh := UIKit.hbox(4)
 		eh.add_child(UIKit.icon_rect("signal", 16))
-		eh.add_child(UIKit.header("RADIO", "จุดพิเศษ: " + str(Encounter.def(str(enc.id)).th), UIKit.C_GOLD))
+		eh.add_child(UIKit.header("RADIO", Loc.t("จุดพิเศษ: ") + str(Encounter.def(str(enc.id)).th), UIKit.C_GOLD))
 		rv.add_child(eh)
 		rv.add_child(UIKit.wrap_label("\"%s\"" % str(enc.text), UIKit.FS_SMALL, UIKit.C_TEXT))
 		_list.add_child(rp)
@@ -357,8 +357,8 @@ func _build_report() -> void:
 			continue   # shown on the crew chips
 		_list.add_child(UIKit.wrap_label("• " + str(line), UIKit.FS_SMALL, UIKit.C_ORANGE))
 	if dead > 0:
-		_list.add_child(UIKit.wrap_label("ชื่อของพวกเขาถูกสลักไว้บนกำแพงอนุสรณ์ในสมุดบันทึก", UIKit.FS_SMALL, UIKit.C_DIM))
-	var ok_b := UIKit.button("ตกลง", "green" if ok else "red", "play")
+		_list.add_child(UIKit.wrap_label(Loc.t("ชื่อของพวกเขาถูกสลักไว้บนกำแพงอนุสรณ์ในสมุดบันทึก"), UIKit.FS_SMALL, UIKit.C_DIM))
+	var ok_b := UIKit.button(Loc.t("ตกลง"), "green" if ok else "red", "play")
 	ok_b.custom_minimum_size.y = 32
 	ok_b.pressed.connect(func():
 		report = {}

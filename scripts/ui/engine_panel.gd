@@ -17,7 +17,7 @@ var _job_btns := {}    # job id -> Button
 
 
 func _build() -> void:
-	set_title("ENGINE BAY / ห้องเครื่องยนต์")
+	set_title(Loc.t("ENGINE BAY / ห้องเครื่องยนต์"))
 	_tabs = UIKit.hbox(3)
 	body.add_child(_tabs)
 	_list = make_list(4)
@@ -49,7 +49,7 @@ func refresh() -> void:
 			refresh())
 		_tabs.add_child(b)
 	var et := EngineBay.t()
-	set_title("%s / ห้องเครื่อง Lv.%d · %s" % [et.en, EngineBay.level(), et.th])
+	set_title(Loc.t("%s / ห้องเครื่อง Lv.%d · %s") % [et.en, EngineBay.level(), et.th])
 	match tab:
 		"status": _build_status()
 		"engines": _build_engines()
@@ -71,7 +71,7 @@ func _build_status() -> void:
 	top.add_child(v)
 	_list.add_child(top)
 	for g in [["heat", "ความร้อน", UIKit.C_ORANGE], ["cond", "สภาพเครื่อง", UIKit.C_GREEN], ["oil", "น้ำมันเครื่อง", UIKit.C_GOLD],
-			["coolant", "น้ำหล่อเย็น", UIKit.C_BLUE], ["db", "เสียง", UIKit.C_RED]]:
+			["coolant", Loc.t("น้ำหล่อเย็น"), UIKit.C_BLUE], ["db", Loc.t("เสียง", "noise"), UIKit.C_RED]]:
 		var row := UIKit.vbox(0)
 		var lbl := UIKit.label("", UIKit.FS_SMALL, UIKit.C_TEXT)
 		row.add_child(lbl)
@@ -80,7 +80,7 @@ func _build_status() -> void:
 		_list.add_child(row)
 		_bars[g[0]] = [bar, lbl, g[1]]
 	# drive mode
-	_list.add_child(UIKit.header("DRIVE MODE", "โหมดขับ"))
+	_list.add_child(UIKit.header("DRIVE MODE", Loc.t("โหมดขับ")))
 	var modes := UIKit.hbox(3)
 	for m in EngineBay.MODE_ORDER:
 		if m == "silent" and not EngineBay.t().get("silent", false):
@@ -93,11 +93,11 @@ func _build_status() -> void:
 		modes.add_child(b)
 	_list.add_child(modes)
 	var mdd: Dictionary = EngineBay.MODES[EngineBay.mode()]
-	_list.add_child(UIKit.wrap_label("ความเร็ว x%.2f · เชื้อเพลิง x%.1f · เสียง %+d dB · ความร้อน x%.1f" % [mdd.speed, mdd.fuel, int(mdd.db), mdd.heat]))
+	_list.add_child(UIKit.wrap_label(Loc.t("ความเร็ว x%.2f · เชื้อเพลิง x%.1f · เสียง %+d dB · ความร้อน x%.1f") % [mdd.speed, mdd.fuel, int(mdd.db), mdd.heat]))
 	# auto-rest
 	var e := EngineBay.st()
 	var ar := UIKit.hbox(3)
-	var tog := UIKit.button("พักเครื่องอัตโนมัติ: %s" % ("เปิด" if bool(e.auto_rest) else "ปิด"), "green" if bool(e.auto_rest) else "red")
+	var tog := UIKit.button(Loc.t("พักเครื่องอัตโนมัติ: %s") % (Loc.t("เปิด") if bool(e.auto_rest) else Loc.t("ปิด")), "green" if bool(e.auto_rest) else "red")
 	tog.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tog.pressed.connect(func():
 		e.auto_rest = not bool(e.auto_rest)
@@ -111,26 +111,26 @@ func _build_status() -> void:
 			refresh())
 		ar.add_child(bt)
 	_list.add_child(ar)
-	var rest := UIKit.button("จอดพักเครื่องตอนนี้" if not EngineBay.resting() else "กำลังพักเครื่อง…", "orange", "pause")
+	var rest := UIKit.button(Loc.t("จอดพักเครื่องตอนนี้") if not EngineBay.resting() else Loc.t("กำลังพักเครื่อง…"), "orange", "pause")
 	rest.disabled = EngineBay.resting()
 	rest.pressed.connect(func():
 		e.resting = true
 		EngineBay._changed())
 	_list.add_child(rest)
-	_list.add_child(UIKit.wrap_label("ปิดพักอัตโนมัติ = ขับต่อได้จนถึง %d°C แล้วเครื่องดับเอง (เสียสภาพ -5%%) · ตอนออฟไลน์จะพักเสมอ" % int(EngineBay.STALL_AT)))
+	_list.add_child(UIKit.wrap_label(Loc.t("ปิดพักอัตโนมัติ = ขับต่อได้จนถึง %d°C แล้วเครื่องดับเอง (เสียสภาพ -5%%) · ตอนออฟไลน์จะพักเสมอ") % int(EngineBay.STALL_AT)))
 	# crew
 	var cw := EngineBay.crew()
-	_list.add_child(UIKit.header("MECHANICS", "ช่างในห้องเครื่อง %d/%d" % [Game.room_occupants(Data.CAB_SLOT).size(), Data.CAB_WORKERS]))
+	_list.add_child(UIKit.header("MECHANICS", Loc.t("ช่างในห้องเครื่อง %d/%d") % [Game.room_occupants(Data.CAB_SLOT).size(), Data.CAB_WORKERS]))
 	if cw.is_empty():
-		_list.add_child(UIKit.wrap_label("ยังไม่มีช่าง: ส่งลูกเรือ STR สูงหรือช่างเครื่องมาประจำ (หน้าลูกเรือ > ย้ายห้อง) ช่วยระบายร้อน เติมน้ำหล่อเย็น และซ่อมเครื่อง", UIKit.FS_SMALL, UIKit.C_GOLD))
+		_list.add_child(UIKit.wrap_label(Loc.t("ยังไม่มีช่าง: ส่งลูกเรือ STR สูงหรือช่างเครื่องมาประจำ (หน้าลูกเรือ > ย้ายห้อง) ช่วยระบายร้อน เติมน้ำหล่อเย็น และซ่อมเครื่อง"), UIKit.FS_SMALL, UIKit.C_GOLD))
 	for d in cw:
-		_list.add_child(UIKit.label("• %s  STR %d%s" % [d.name, int(d.str), "  (ช่างเครื่อง)" if Crew.has(d, "mechanic") else ""], UIKit.FS_SMALL, UIKit.C_TEXT))
+		_list.add_child(UIKit.label("• %s  STR %d%s" % [d.name, int(d.str), Loc.t("  (ช่างเครื่อง)") if Crew.has(d, "mechanic") else ""], UIKit.FS_SMALL, UIKit.C_TEXT))
 
 
 # ------------------------------------------------------------------ engines
 func _build_engines() -> void:
 	var cap := int(EngineBay.MAX_SIZE.get(Game.tier(), 3))
-	_list.add_child(UIKit.wrap_label("ห้องเครื่องของ%s รับเครื่องได้ถึงขนาด %s · เครื่องหาได้จากของดรอป/สำรวจ" % [Game.vehicle_def().th, EngineBay.SIZE_TH[cap]], UIKit.FS_SMALL, UIKit.C_TEXT))
+	_list.add_child(UIKit.wrap_label(Loc.t("ห้องเครื่องของ%s รับเครื่องได้ถึงขนาด %s · เครื่องหาได้จากของดรอป/สำรวจ") % [Game.vehicle_def().th, EngineBay.SIZE_TH[cap]], UIKit.FS_SMALL, UIKit.C_TEXT))
 	var cur := Loot.van_equipped("engine")
 	_list.add_child(_engine_card({}, "diesel4", cur.is_empty()))
 	for it in EngineBay.owned_engines():
@@ -154,18 +154,18 @@ func _engine_card(item: Dictionary, id: String, installed: bool) -> Control:
 	var parts := []
 	for kv in EngineBay.describe_type(id).slice(1):
 		parts.append("%s %s" % kv)
-	v.add_child(UIKit.wrap_label("ขนาด %s · %s" % [EngineBay.SIZE_TH[int(d.size)], " · ".join(parts)]))
+	v.add_child(UIKit.wrap_label(Loc.t("ขนาด %s · %s") % [EngineBay.SIZE_TH[int(d.size)], " · ".join(parts)]))
 	v.add_child(UIKit.wrap_label(str(d.desc), UIKit.FS_SMALL, UIKit.C_DIM))
 	h.add_child(v)
 	var b: Button
 	if installed:
-		b = UIKit.button("ใช้อยู่", "yellow", "", 64)
+		b = UIKit.button(Loc.t("ใช้อยู่"), "yellow", "", 64)
 		b.disabled = true
 	elif not fits:
-		b = UIKit.button("ใหญ่เกิน", "gray", "", 64)
+		b = UIKit.button(Loc.t("ใหญ่เกิน"), "gray", "", 64)
 		b.disabled = true
 	else:
-		b = UIKit.button("ติดตั้ง", "green", "wrench", 64)
+		b = UIKit.button(Loc.t("ติดตั้ง"), "green", "wrench", 64)
 		if item.is_empty():
 			b.pressed.connect(func(): EngineBay.uninstall())
 		else:
@@ -182,7 +182,7 @@ func _build_jobs() -> void:
 	_list.add_child(_job_lbl)
 	_job_bar = UIKit.progress(UIKit.C_GOLD, 5)
 	_list.add_child(_job_bar)
-	_list.add_child(UIKit.wrap_label("ช่างในห้องเครื่องทำงานเร็วขึ้น (STR / ช่างเครื่อง) · งานที่มี [จอด] จะหยุดรถจนเสร็จ"))
+	_list.add_child(UIKit.wrap_label(Loc.t("ช่างในห้องเครื่องทำงานเร็วขึ้น (STR / ช่างเครื่อง) · งานที่มี [จอด] จะหยุดรถจนเสร็จ")))
 	for id in ["coolant", "oil", "tune", "overhaul", "bay"]:
 		var jd: Dictionary = EngineBay.JOBS[id]
 		var p := UIKit.panel()
@@ -190,12 +190,12 @@ func _build_jobs() -> void:
 		p.add_child(h)
 		var v := UIKit.vbox(0)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var title := str(jd.th) + (" Lv.%d" % (EngineBay.level() + 1) if id == "bay" else "") + (" [จอด]" if bool(jd.park) else "")
+		var title := str(jd.th) + (" Lv.%d" % (EngineBay.level() + 1) if id == "bay" else "") + (Loc.t(" [จอด]") if bool(jd.park) else "")
 		v.add_child(UIKit.wrap_label(title, UIKit.FS_SMALL, UIKit.C_TEXT))
-		v.add_child(UIKit.wrap_label("%s · %d วินาที" % [_cost_text(EngineBay.job_cost(id)), int(EngineBay.job_time(id))]))
+		v.add_child(UIKit.wrap_label(Loc.t("%s · %d วินาที") % [_cost_text(EngineBay.job_cost(id)), int(EngineBay.job_time(id))]))
 		v.add_child(UIKit.wrap_label(_job_desc(id), UIKit.FS_SMALL, UIKit.C_DIM))
 		h.add_child(v)
-		var b := UIKit.button("เริ่ม", "green", "wrench", 64)
+		var b := UIKit.button(Loc.t("เริ่ม"), "green", "wrench", 64)
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var jid: String = id
 		b.pressed.connect(func(): EngineBay.start_job(jid))
@@ -206,16 +206,16 @@ func _build_jobs() -> void:
 
 func _job_desc(id: String) -> String:
 	match id:
-		"coolant": return "หม้อน้ำเต็ม: ระบายร้อนได้ปกติ (หมด = ระบายร้อนได้ครึ่งเดียว)"
-		"oil": return "น้ำมันเครื่องเต็ม (ต่ำกว่า 20% เครื่องสึกเร็ว x2)"
-		"tune": return "+20% สภาพเครื่อง ทำได้ระหว่างขับ"
-		"overhaul": return "สภาพ 100% + น้ำมันเครื่องเต็ม"
-		"bay": return "ไฟจากไดชาร์จ +25% ต่อเลเวล · เครื่องเสียงดังขึ้นเล็กน้อย"
+		"coolant": return Loc.t("หม้อน้ำเต็ม: ระบายร้อนได้ปกติ (หมด = ระบายร้อนได้ครึ่งเดียว)")
+		"oil": return Loc.t("น้ำมันเครื่องเต็ม (ต่ำกว่า 20% เครื่องสึกเร็ว x2)")
+		"tune": return Loc.t("+20% สภาพเครื่อง ทำได้ระหว่างขับ")
+		"overhaul": return Loc.t("สภาพ 100% + น้ำมันเครื่องเต็ม")
+		"bay": return Loc.t("ไฟจากไดชาร์จ +25% ต่อเลเวล · เครื่องเสียงดังขึ้นเล็กน้อย")
 	return ""
 
 
 func _cost_text(c: Dictionary) -> String:
-	return "ฟรี" if c.is_empty() else Game.cost_text(c)
+	return Loc.t("ฟรี") if c.is_empty() else Game.cost_text(c)
 
 
 # ------------------------------------------------------------------ live update
@@ -232,23 +232,23 @@ func _update() -> void:
 		var burn := EngineBay.burn_pm()
 		var bt := []
 		for k in burn:
-			bt.append("%s %.1f/นาที" % [Data.item_name(k), float(burn[k])])
-		_info.text = "อากาศ %d°C · ขับต่อจะนิ่งที่ %d°C\nความเร็ว x%.2f · แรงลาก x%.2f\nไฟให้ห้อง +%.1f/นาที · กิน %s\nเสียงเพิ่ม Threat %.2f/นาที" % [
+			bt.append(Loc.t("%s %.1f/นาที") % [Data.item_name(k), float(burn[k])])
+		_info.text = Loc.t("อากาศ %d°C · ขับต่อจะนิ่งที่ %d°C\nความเร็ว x%.2f · แรงลาก x%.2f\nไฟให้ห้อง +%.1f/นาที · กิน %s\nเสียงเพิ่ม Threat %.2f/นาที") % [
 			int(EngineBay.ambient()), int(EngineBay.settle_temp()), EngineBay.speed_mult(), EngineBay.tow_mult(),
 			EngineBay.power_pm(), ", ".join(bt) if not bt.is_empty() else "-", 0.12 * Game.speed_kmh() * EngineBay.noise_mult() + EngineBay.smoke_pm()]
 		var w := []
 		if EngineBay.resting():
-			w.append("จอดพักเครื่อง รอเย็นถึง %d°C" % int(EngineBay.RESUME_AT))
+			w.append(Loc.t("จอดพักเครื่อง รอเย็นถึง %d°C") % int(EngineBay.RESUME_AT))
 		if EngineBay.heat() >= EngineBay.HOT:
-			w.append("เครื่องร้อน!")
+			w.append(Loc.t("เครื่องร้อน!"))
 		if EngineBay.cond() < EngineBay.BREAK_BELOW:
-			w.append("สภาพต่ำ เสี่ยงดับกลางทาง")
+			w.append(Loc.t("สภาพต่ำ เสี่ยงดับกลางทาง"))
 		if float(e.oil) < 20.0:
-			w.append("น้ำมันเครื่องใกล้หมด")
+			w.append(Loc.t("น้ำมันเครื่องใกล้หมด"))
 		if float(e.coolant) <= 0.0:
-			w.append("น้ำหล่อเย็นหมด")
+			w.append(Loc.t("น้ำหล่อเย็นหมด"))
 		if EngineBay.starved():
-			w.append("เชื้อเพลิงหมด!")
+			w.append(Loc.t("เชื้อเพลิงหมด!"))
 		_warn.text = " · ".join(w)
 	for k in _bars:
 		var bar: ProgressBar = _bars[k][0]
@@ -257,7 +257,7 @@ func _update() -> void:
 		match k:
 			"heat":
 				bar.value = clampf((EngineBay.heat() - 0.0) / EngineBay.STALL_AT, 0.0, 1.0)
-				lbl.text = "%s %d°C (พักที่ %d · ดับที่ %d)" % [name, int(EngineBay.heat()), int(e.rest_at), int(EngineBay.STALL_AT)]
+				lbl.text = Loc.t("%s %d°C (พักที่ %d · ดับที่ %d)") % [name, int(EngineBay.heat()), int(e.rest_at), int(EngineBay.STALL_AT)]
 				lbl.modulate = UIKit.C_RED if EngineBay.heat() >= EngineBay.HOT else Color.WHITE
 			"db":
 				bar.value = clampf((EngineBay.db() - 30.0) / 90.0, 0.0, 1.0)
@@ -268,10 +268,10 @@ func _update() -> void:
 	if _job_lbl:
 		var j: Dictionary = e.get("job", {})
 		if j.is_empty():
-			_job_lbl.text = "ไม่มีงานค้าง"
+			_job_lbl.text = Loc.t("ไม่มีงานค้าง")
 			_job_bar.value = 0.0
 		else:
-			_job_lbl.text = "กำลัง%s… เหลือ %d วินาที" % [str(EngineBay.JOBS[str(j.id)].th), int(ceil(EngineBay.job_left_sec()))]
+			_job_lbl.text = Loc.t("กำลัง%s… เหลือ %d วินาที") % [str(EngineBay.JOBS[str(j.id)].th), int(ceil(EngineBay.job_left_sec()))]
 			_job_bar.value = 1.0 - float(j.left) / maxf(float(j.total), 0.01)
 		for id in _job_btns:
 			var why := EngineBay.job_block(id)

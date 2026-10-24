@@ -203,21 +203,21 @@ func plan(beat: int) -> Dictionary:
 				a = "rest" if not p.fight else "guard"
 		p.acts.append(a)
 		p.jit.append(rng.randf_range(-6.0, 6.0))
-		p["txt_%d" % i] = SEARCH[rng.randi() % SEARCH.size()]
+		p["txt_%d" % i] = Loc.t(SEARCH[rng.randi() % SEARCH.size()])
 		p["loot_%d" % i] = _loot_keys[rng.randi() % _loot_keys.size()]
 	_plans[beat] = p
 	return p
 
 
 func _mob_def(id: String) -> Dictionary:
-	return Combat.MOBS.get(id, {"th": "ซอมบี้", "sprite": "en_walker"})
+	return Combat.MOBS.get(id, {"th": Loc.t("ซอมบี้"), "sprite": "en_walker"})
 
 
 ## activity log up to now: [{t, text, col}]
 func log_lines(max_lines: int = 3) -> Array:
 	var out := []
 	var el := elapsed()
-	out.append({"t": 0.0, "text": "ทีมเข้าไปใน %s" % Expedition.site_def(site).th, "col": UIKit.C_DIM})
+	out.append({"t": 0.0, "text": Loc.t("ทีมเข้าไปใน %s") % Expedition.site_def(site).th, "col": UIKit.C_DIM})
 	var wi := _walk_in()
 	var last_beat := int((minf(el, _walk_out_at()) - wi) / BEAT)
 	for b in range(0, last_beat + 1):
@@ -230,18 +230,18 @@ func log_lines(max_lines: int = 3) -> Array:
 				var te := t0 + BEAT - 1.5
 				if te <= el and te < _walk_out_at():
 					var what := Data.item_name(str(p["loot_%d" % i]))
-					out.append({"t": te, "text": "%s เจอ %s" % [nm, what], "col": UIKit.C_TEXT})
+					out.append({"t": te, "text": Loc.t("%s เจอ %s") % [nm, what], "col": UIKit.C_TEXT})
 		if p.fight:
 			var nm2: String = _team[int(p.fighter)].name
 			var mob := _mob_def(str(p.mob))
 			if t0 + float(p.spawn) <= el:
-				out.append({"t": t0 + float(p.spawn), "text": "%s โผล่มา!" % mob.th, "col": UIKit.C_ORANGE})
+				out.append({"t": t0 + float(p.spawn), "text": Loc.t("%s โผล่มา!") % mob.th, "col": UIKit.C_ORANGE})
 			if bool(p.hurt) and t0 + float(p.die) - 1.0 <= el:
-				out.append({"t": t0 + float(p.die) - 1.0, "text": "%s โดนข่วน!" % nm2, "col": UIKit.C_RED})
+				out.append({"t": t0 + float(p.die) - 1.0, "text": Loc.t("%s โดนข่วน!") % nm2, "col": UIKit.C_RED})
 			if t0 + float(p.die) <= el:
-				out.append({"t": t0 + float(p.die), "text": "%s จัดการ%sได้" % [nm2, mob.th], "col": UIKit.C_GREEN})
+				out.append({"t": t0 + float(p.die), "text": Loc.t("%s จัดการ%sได้") % [nm2, mob.th], "col": UIKit.C_GREEN})
 	if el >= _walk_out_at():
-		out.append({"t": _walk_out_at(), "text": "ทีมแบกของออกมา กำลังกลับรถ", "col": UIKit.C_GOLD})
+		out.append({"t": _walk_out_at(), "text": Loc.t("ทีมแบกของออกมา กำลังกลับรถ"), "col": UIKit.C_GOLD})
 	out.sort_custom(func(a, b): return float(a.t) < float(b.t))
 	return out.slice(maxi(0, out.size() - max_lines))
 
@@ -265,7 +265,7 @@ func _process(delta: float) -> void:
 		var k := el / wi
 		cam_x = _anchor(0) - _lead()
 		for i in _actors.size():
-			_pose(i, lerpf(cam_x - 20.0 - i * GAP, _anchor(0) - i * GAP, k), "walk", false, "เดินเข้าไปใน " + site_th)
+			_pose(i, lerpf(cam_x - 20.0 - i * GAP, _anchor(0) - i * GAP, k), "walk", false, Loc.t("เดินเข้าไปใน ") + site_th)
 		_hide_zombie()
 	elif el >= wo:
 		# hauling the loot back out
@@ -275,7 +275,7 @@ func _process(delta: float) -> void:
 		cam_x = ax - _lead()
 		for i in _actors.size():
 			var x := lerpf(ax - i * GAP, cam_x - 30.0 - i * GAP, k)
-			_pose(i, x, "walk", true, "แบกของกลับรถ")
+			_pose(i, x, "walk", true, Loc.t("แบกของกลับรถ"))
 			(_crates[i] as Sprite2D).visible = true
 		_hide_zombie()
 	else:
@@ -290,7 +290,7 @@ func _process(delta: float) -> void:
 		for i in _actors.size():
 			var bx: float = ax - i * GAP + float(p.jit[i])
 			if moving:
-				_pose(i, ax - i * GAP, "walk", false, "บุกลึกเข้าไป")
+				_pose(i, ax - i * GAP, "walk", false, Loc.t("บุกลึกเข้าไป"))
 				continue
 			_act(i, p, bx, lt)
 		_update_zombie(beat, p, lt, ax)
@@ -324,31 +324,31 @@ func _act(i: int, p: Dictionary, bx: float, lt: float) -> void:
 		"search":
 			_pose(i, bx, "work", i % 2 == 1, str(p["txt_%d" % i]))
 		"special":
-			_pose(i, bx, "work", false, SPECIAL.get(site, SPECIAL[""]))
+			_pose(i, bx, "work", false, Loc.t(SPECIAL.get(site, SPECIAL[""])))
 		"guard":
-			_pose(i, bx, "idle", false, "คุ้มกันทีม ส่องไฟระวังหลัง")
+			_pose(i, bx, "idle", false, Loc.t("คุ้มกันทีม ส่องไฟระวังหลัง"))
 		"carry":
-			_pose(i, bx, "idle", true, "แบกลังของไปกองรวม")
+			_pose(i, bx, "idle", true, Loc.t("แบกลังของไปกองรวม"))
 			(_crates[i] as Sprite2D).visible = true
 		"rest":
-			_pose(i, bx, "sit", false, "นั่งพักหายใจ")
+			_pose(i, bx, "sit", false, Loc.t("นั่งพักหายใจ"))
 		"fight":
 			var mob := _mob_def(str(p.mob))
 			var fx := _fighter_x(p, lt, bx)
 			var zx := _zombie_x(p, lt, bx)
 			if lt < float(p.spawn):
-				_pose(i, fx, "idle", false, "ได้ยินเสียงอะไรบางอย่าง...")
+				_pose(i, fx, "idle", false, Loc.t("ได้ยินเสียงอะไรบางอย่าง..."))
 			elif lt < float(p.die):
 				if bool(p.melee):
 					if zx - fx > 15.0:
-						_pose(i, fx, "walk", false, "พุ่งเข้าตะลุมบอน " + mob.th)
+						_pose(i, fx, "walk", false, Loc.t("พุ่งเข้าตะลุมบอน ") + mob.th)
 					else:
-						_pose(i, fx, "work", false, "ตะลุมบอน " + mob.th)
+						_pose(i, fx, "work", false, Loc.t("ตะลุมบอน ") + mob.th)
 				else:
 					var reload: bool = (_actors[i] as AnimatedSprite2D).sprite_frames.has_animation("clean") and fmod(lt, 2.4) > 2.0
-					_pose(i, fx, "clean" if reload else "idle", false, ("บรรจุกระสุน" if reload else "ยิงสู้ ") + ("" if reload else mob.th))
+					_pose(i, fx, "clean" if reload else "idle", false, (Loc.t("บรรจุกระสุน") if reload else Loc.t("ยิงสู้ ")) + ("" if reload else mob.th))
 			else:
-				_pose(i, fx, "idle", false, "เคลียร์พื้นที่แล้ว")
+				_pose(i, fx, "idle", false, Loc.t("เคลียร์พื้นที่แล้ว"))
 
 
 ## a brawler closes the gap to meet the creature (and stays there once it drops)

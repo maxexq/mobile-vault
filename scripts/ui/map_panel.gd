@@ -8,7 +8,7 @@ var _go: Button
 
 
 func _build() -> void:
-	set_title("WASTELAND ROUTE / แผนที่เส้นทาง")
+	set_title(Loc.t("WASTELAND ROUTE / แผนที่เส้นทาง"))
 	var top := UIKit.hbox(4)
 	_summary = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_TEXT)
 	top.add_child(_summary)
@@ -27,14 +27,14 @@ func refresh() -> void:
 		_list.remove_child(c)
 		c.queue_free()
 	var w := Game.weather_def()
-	_summary.text = "รอบที่ %d · ระยะรวม %.1f กม. · ความเร็ว %d km/h · อากาศ: %s (อีก ~%ds)\n%s" % [
+	_summary.text = Loc.t("รอบที่ %d · ระยะรวม %.1f กม. · ความเร็ว %d km/h · อากาศ: %s (อีก ~%ds)\n%s") % [
 		int(Game.s.lap) + 1, float(Game.s.stats.km_total), int(Game.speed_kmh()), w.th, int(Game.s.weather_t),
-		("สถานะ: " + Game.blocked_reason()) if Game.blocked_reason() != "" else "ทางโล่ง รถกำลังวิ่ง"]
-	_go.text = "จอด" if Game.s.traveling else "ออกรถ"
+		(Loc.t("สถานะ: ") + Game.blocked_reason()) if Game.blocked_reason() != "" else Loc.t("ทางโล่ง รถกำลังวิ่ง")]
+	_go.text = Loc.t("จอด") if Game.s.traveling else Loc.t("ออกรถ")
 	_go.icon = Atlas.icon("pause" if Game.s.traveling else "play")
 	# hazards now
 	var rep := Env.report()
-	_list.add_child(UIKit.header("HAZARDS", "ภัยตอนนี้" if not rep.is_empty() else "ไม่มีภัยพิเศษตอนนี้"))
+	_list.add_child(UIKit.header("HAZARDS", Loc.t("ภัยตอนนี้") if not rep.is_empty() else Loc.t("ไม่มีภัยพิเศษตอนนี้")))
 	for hz in rep:
 		var hp := UIKit.panel(UIKit.C_BG2, Color(hz.col).darkened(0.4))
 		var hh := UIKit.hbox(4)
@@ -44,12 +44,12 @@ func refresh() -> void:
 		hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hv.add_child(UIKit.label("%s Lv%d" % [hz.th, int(hz.lvl)], UIKit.FS_SMALL, Color(hz.col)))
 		hv.add_child(UIKit.wrap_label(hz.tip, UIKit.FS_SMALL, UIKit.C_TEXT))
-		hv.add_child(UIKit.wrap_label("รับมือ: " + hz.fix, UIKit.FS_SMALL))
+		hv.add_child(UIKit.wrap_label(Loc.t("รับมือ: ") + hz.fix, UIKit.FS_SMALL))
 		hh.add_child(hv)
 		_list.add_child(hp)
 	if Env.level("cold") > 0:
-		_list.add_child(UIKit.label("ใช้เชื้อเพลิงทำความร้อน %.1f/นาที" % Env.heating_fuel_pm(), UIKit.FS_SMALL, UIKit.C_ORANGE))
-	_list.add_child(UIKit.header("ROUTE", "เส้นทาง · จุดสำรวจ"))
+		_list.add_child(UIKit.label(Loc.t("ใช้เชื้อเพลิงทำความร้อน %.1f/นาที") % Env.heating_fuel_pm(), UIKit.FS_SMALL, UIKit.C_ORANGE))
+	_list.add_child(UIKit.header("ROUTE", Loc.t("เส้นทาง · จุดสำรวจ")))
 	for i in Data.BIOMES.size():
 		var b: Dictionary = Data.BIOMES[i]
 		var cur := i == int(Game.s.biome)
@@ -73,7 +73,7 @@ func refresh() -> void:
 		var wnames := []
 		for k in b.weather:
 			wnames.append(Data.WEATHER[k].th)
-		v.add_child(UIKit.wrap_label("%.0f กม. · เศษเหล็ก +%.1f/นาที · อันตราย %d · %s" % [b.length, b.scrap_pm, int(b.danger) + int(Game.s.lap), ", ".join(wnames)], UIKit.FS_SMALL, UIKit.C_DIM))
+		v.add_child(UIKit.wrap_label(Loc.t("%.0f กม. · เศษเหล็ก +%.1f/นาที · อันตราย %d · %s") % [b.length, b.scrap_pm, int(b.danger) + int(Game.s.lap), ", ".join(wnames)], UIKit.FS_SMALL, UIKit.C_DIM))
 		if cur:
 			var pr := UIKit.progress(UIKit.C_GOLD, 4)
 			pr.value = (float(Game.s.km) - Data.biome_start_km(i)) / float(b.length)
@@ -89,16 +89,16 @@ func refresh() -> void:
 			hz_names.append(Env.HAZARDS[k].th)
 		var sites := []
 		for sid in Expedition.biome_sites(i):
-			sites.append(Expedition.SITES[sid].th + (" (สำรวจแล้ว)" if Expedition.is_done(sid) else ""))
-		v.add_child(UIKit.wrap_label(("ภัย: %s · " % ", ".join(hz_names) if not hz_names.is_empty() else "") + "จุดสำรวจ: " + ", ".join(sites), UIKit.FS_SMALL, UIKit.C_GOLD))
+			sites.append(Expedition.SITES[sid].th + (Loc.t(" (สำรวจแล้ว)") if Expedition.is_done(sid) else ""))
+		v.add_child(UIKit.wrap_label((Loc.t("ภัย: %s · ") % ", ".join(hz_names) if not hz_names.is_empty() else "") + Loc.t("จุดสำรวจ: ") + ", ".join(sites), UIKit.FS_SMALL, UIKit.C_GOLD))
 		_list.add_child(p)
-	_list.add_child(UIKit.wrap_label("เมื่อผ่านมหานครแห่งสัญญาณ รถบ้านจะวนกลับซากนิคมอุตสาหกรรมในรอบใหม่ — ศัตรูอันตรายขึ้นแต่รางวัลมากขึ้น"))
-	_list.add_child(UIKit.header("NEXT GENERATION", "รุ่นที่ %d · %s · แต้มวิจัย %d" % [Meta.generation(), Meta.vehicle_name(), int(Meta.m().get("legacy", 0))]))
-	var rb := UIKit.button("ปลดระวางรถ → สร้างรุ่นถัดไป", "red", "hammer")
+	_list.add_child(UIKit.wrap_label(Loc.t("เมื่อผ่านมหานครแห่งสัญญาณ รถบ้านจะวนกลับซากนิคมอุตสาหกรรมในรอบใหม่ — ศัตรูอันตรายขึ้นแต่รางวัลมากขึ้น")))
+	_list.add_child(UIKit.header("NEXT GENERATION", Loc.t("รุ่นที่ %d · %s · แต้มวิจัย %d") % [Meta.generation(), Meta.vehicle_name(), int(Meta.m().get("legacy", 0))]))
+	var rb := UIKit.button(Loc.t("ปลดระวางรถ → สร้างรุ่นถัดไป"), "red", "hammer")
 	rb.disabled = not Meta.can_retire()
 	rb.pressed.connect(func():
 		close()
 		(get_parent() as HUD).open_nextgen(false))
 	_list.add_child(rb)
 	if not Meta.can_retire():
-		_list.add_child(UIKit.wrap_label("ปลดล็อกหลังปราบบอสด่านตรวจแรก · ถ้ารถพังถาวร (ตัวถัง 0% เกิน 2 นาที) จะเข้าสู่รุ่นถัดไปอัตโนมัติ"))
+		_list.add_child(UIKit.wrap_label(Loc.t("ปลดล็อกหลังปราบบอสด่านตรวจแรก · ถ้ารถพังถาวร (ตัวถัง 0% เกิน 2 นาที) จะเข้าสู่รุ่นถัดไปอัตโนมัติ")))

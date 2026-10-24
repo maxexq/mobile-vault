@@ -95,9 +95,17 @@ func set_title(t: String) -> void:
 		else:
 			title_lbl.text = "> " + b.to_upper()
 			sub_lbl.text = a
+	elif _is_latin(t):
+		# an English title (MV-151) usually drops the Thai half: it is the pixel line, nothing below it
+		title_lbl.text = "> " + t.to_upper()
+		sub_lbl.text = ""
 	else:
 		title_lbl.text = "> TERMINAL"
 		sub_lbl.text = t
+	# "> SETTINGS" over "Settings" says the same thing twice in English
+	if sub_lbl.text.to_upper() == title_lbl.text.trim_prefix("> "):
+		sub_lbl.text = ""
+	sub_lbl.visible = sub_lbl.text != ""
 
 
 static func _is_latin(s: String) -> bool:

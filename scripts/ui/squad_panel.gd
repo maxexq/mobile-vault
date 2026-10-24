@@ -43,10 +43,10 @@ func refresh() -> void:
 		_tabs.add_child(b)
 	_tabs.add_child(UIKit.spacer())
 	var auto := UIKit.button("AUTO", "green", "up")
-	auto.tooltip_text = "สวมของดีที่สุดให้ทั้งทีมอัตโนมัติ"
+	auto.tooltip_text = Loc.t("สวมของดีที่สุดให้ทั้งทีมอัตโนมัติ")
 	auto.pressed.connect(func():
 		var n := Loot.auto_equip_squad()
-		Game.toast.emit("เปลี่ยนอุปกรณ์ %d ชิ้น" % n if n > 0 else "ใส่ของดีที่สุดอยู่แล้ว", "good"))
+		Game.toast.emit(Loc.t("เปลี่ยนอุปกรณ์ %d ชิ้น") % n if n > 0 else Loc.t("ใส่ของดีที่สุดอยู่แล้ว"), "good"))
 	_tabs.add_child(auto)
 	if tab == "vault":
 		_build_vault()
@@ -57,11 +57,11 @@ func refresh() -> void:
 
 
 func _build_squad() -> void:
-	set_title("SQUAD W%d DPS%d / ทีมป้องกันรถบ้าน" % [Combat.wave(), int(Combat.squad_dps())])
+	set_title(Loc.t("SQUAD W%d DPS%d / ทีมป้องกันรถบ้าน") % [Combat.wave(), int(Combat.squad_dps())])
 	for i in Combat.ROLES.size():
 		_list.add_child(_role_card(i))
 	_list.add_child(_deck_card())
-	_list.add_child(UIKit.wrap_label("ศัตรูไล่ตามจากท้ายรถเป็นเวฟ · ทุก 10 เวฟมีบอส · ท้ายแต่ละพื้นที่มีบอสด่านตรวจ · ของดรอปเข้าคลังอัตโนมัติ · กระเป๋าดี = ศัตรูดรอปเสบียง", UIKit.FS_SMALL))
+	_list.add_child(UIKit.wrap_label(Loc.t("ศัตรูไล่ตามจากท้ายรถเป็นเวฟ · ทุก 10 เวฟมีบอส · ท้ายแต่ละพื้นที่มีบอสด่านตรวจ · ของดรอปเข้าคลังอัตโนมัติ · กระเป๋าดี = ศัตรูดรอปเสบียง"), UIKit.FS_SMALL))
 
 
 func _role_card(i: int) -> Control:
@@ -78,15 +78,15 @@ func _role_card(i: int) -> Control:
 	hh.add_child(UIKit.label("%s · %s" % [role.th, role.stat.to_upper()], UIKit.FS_SMALL, UIKit.C_DIM))
 	v.add_child(hh)
 	if locked:
-		v.add_child(UIKit.wrap_label("ปลดล็อกเมื่อ Mobile Vault Lv.%d" % role.unlock, UIKit.FS_SMALL, UIKit.C_ORANGE))
+		v.add_child(UIKit.wrap_label(Loc.t("ปลดล็อกเมื่อ Mobile Vault Lv.%d") % role.unlock, UIKit.FS_SMALL, UIKit.C_ORANGE))
 		return p
 	if d.is_empty():
-		var add := UIKit.button("+ เลือกคน", "green", "people")
+		var add := UIKit.button(Loc.t("+ เลือกคน"), "green", "people")
 		add.pressed.connect(func():
 			choosing = i
 			refresh())
 		v.add_child(add)
-		v.add_child(UIKit.wrap_label("สกิล: %s — %s" % [role.skill, role.skill_desc], UIKit.FS_SMALL))
+		v.add_child(UIKit.wrap_label(Loc.t("สกิล: %s — %s") % [role.skill, role.skill_desc], UIKit.FS_SMALL))
 		return p
 	var st := Combat.hero_stats(d, i)
 	var dh := UIKit.hbox(4)
@@ -98,7 +98,7 @@ func _role_card(i: int) -> Control:
 	xp.value = float(d.xp) / Game.xp_needed(int(d.lvl))
 	info.add_child(xp)
 	dh.add_child(info)
-	var sw := UIKit.button("เปลี่ยน", "blue")
+	var sw := UIKit.button(Loc.t("เปลี่ยน"), "blue")
 	sw.pressed.connect(func():
 		choosing = i
 		refresh())
@@ -142,15 +142,15 @@ func _deck_card() -> Control:
 	var hh := UIKit.hbox(4)
 	hh.add_child(UIKit.icon_rect("moon", 16))
 	hh.add_child(UIKit.label("ROOF DECK RESERVE", UIKit.FP, UIKit.C_GOLD, true))
-	hh.add_child(UIKit.label("ตัวสำรองบนดาดฟ้า%s" % (" Lv.%d" % lv if lv > 0 else ""), UIKit.FS_SMALL, UIKit.C_DIM))
+	hh.add_child(UIKit.label(Loc.t("ตัวสำรองบนดาดฟ้า%s") % (" Lv.%d" % lv if lv > 0 else ""), UIKit.FS_SMALL, UIKit.C_DIM))
 	v.add_child(hh)
 	if lv <= 0:
-		v.add_child(UIKit.wrap_label("สร้าง \"ดาดฟ้าพักทีมป้องกัน\" ที่เมนู MODS ก่อน: ที่พักบนหลังคาให้ตัวสำรอง 1 คน", UIKit.FS_SMALL, UIKit.C_ORANGE))
+		v.add_child(UIKit.wrap_label(Loc.t("สร้าง \"ดาดฟ้าพักทีมป้องกัน\" ที่เมนู MODS ก่อน: ที่พักบนหลังคาให้ตัวสำรอง 1 คน"), UIKit.FS_SMALL, UIKit.C_ORANGE))
 		return p
-	var tag := "ลงไปแทนคนที่ล้มในเวฟภายใน %.1f วิ (HP %d%%) · ระหว่างรอ: ฟื้น HP, ความสุข +, ได้ XP %d%%" % [
+	var tag := Loc.t("ลงไปแทนคนที่ล้มในเวฟภายใน %.1f วิ (HP %d%%) · ระหว่างรอ: ฟื้น HP, ความสุข +, ได้ XP %d%%") % [
 		Combat.DECK_TAG_DELAY[mini(lv, 3)], int(Combat.DECK_TAG_HP[mini(lv, 3)] * 100.0), int(Combat.DECK_RESERVE_XP * 100.0)]
 	if d.is_empty():
-		var add := UIKit.button("+ เลือกตัวสำรอง", "green", "people")
+		var add := UIKit.button(Loc.t("+ เลือกตัวสำรอง"), "green", "people")
 		add.pressed.connect(func():
 			choosing = DECK
 			refresh())
@@ -161,13 +161,13 @@ func _deck_card() -> Control:
 	dh.add_child(UIKit.portrait(d.variant))
 	var info := UIKit.vbox(1)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var state := "กำลังสู้แทน!" if not Combat.sub.is_empty() else "นอนพักบนเปล"
+	var state := Loc.t("กำลังสู้แทน!") if not Combat.sub.is_empty() else Loc.t("นอนพักบนเปล")
 	info.add_child(UIKit.label("%s  Lv.%d · %s" % [d.name, d.lvl, state], UIKit.FS_SMALL))
 	var hp := UIKit.progress(UIKit.C_GREEN, 3)
 	hp.value = float(d.hp) / maxf(1.0, float(d.max_hp))
 	info.add_child(hp)
 	dh.add_child(info)
-	var sw := UIKit.button("เปลี่ยน", "blue")
+	var sw := UIKit.button(Loc.t("เปลี่ยน"), "blue")
 	sw.pressed.connect(func():
 		choosing = DECK
 		refresh())
@@ -185,13 +185,13 @@ func _build_chooser() -> void:
 		_build_deck_chooser()
 		return
 	var role: Dictionary = Combat.ROLES[choosing]
-	set_title("SELECT %s / เลือก%s" % [role.stat.to_upper(), role.th])
-	var back := UIKit.button("< กลับ", "gray")
+	set_title(Loc.t("SELECT %s / เลือก%s") % [role.stat.to_upper(), role.th])
+	var back := UIKit.button(Loc.t("< กลับ"), "gray")
 	back.pressed.connect(func():
 		choosing = -1
 		refresh())
 	_list.add_child(back)
-	_list.add_child(UIKit.wrap_label("คนในทีมจะออกจากห้องที่ทำงานอยู่ (ห้องจะผลิตช้าลง)", UIKit.FS_SMALL, UIKit.C_ORANGE))
+	_list.add_child(UIKit.wrap_label(Loc.t("คนในทีมจะออกจากห้องที่ทำงานอยู่ (ห้องจะผลิตช้าลง)"), UIKit.FS_SMALL, UIKit.C_ORANGE))
 	var arr: Array = []
 	for d in Game.s.dwellers:
 		if not Game.is_away(d):
@@ -210,7 +210,7 @@ func _build_chooser() -> void:
 		h.offset_top = 3
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		h.add_child(UIKit.tex_rect(Atlas.tex("pt_" + d.variant), Vector2(20, 20)))
-		var where := "ว่าง"
+		var where := Loc.t("ว่าง")
 		if cur >= 0:
 			where = Combat.ROLES[cur].th
 		elif int(d.room) >= 0:
@@ -230,7 +230,7 @@ func _build_chooser() -> void:
 
 func _build_vault() -> void:
 	var vs := Combat.van_stats()
-	set_title("VAULT PARTS / ชิ้นส่วนรถบ้าน")
+	set_title(Loc.t("VAULT PARTS / ชิ้นส่วนรถบ้าน"))
 	var sp := UIKit.panel()
 	var sl := UIKit.label("HULL %d/%d DEF%.0f TURRET-DPS%d THORNS%.0f SPD+%d%% PWR+%.1f" % [
 		Game.s.hull, Game.hull_max(), vs.def, int(vs.turret_dps), vs.thorns, int(vs.speed), vs.power], UIKit.FP, UIKit.C_TEXT, true)
@@ -238,7 +238,7 @@ func _build_vault() -> void:
 	sl.custom_minimum_size.x = 100
 	sp.add_child(sl)
 	_list.add_child(sp)
-	var desc := {"turret": "ยิงศัตรูอัตโนมัติจากผนังท้ายรถ", "plating": "เพิ่มตัวถังสูงสุด ลดความเสียหาย", "engine": "เครื่องยนต์ในห้องเครื่องหน้ารถ (แตะห้องเครื่องเพื่อดูรายละเอียด)", "spikes": "ทำดาเมจศัตรูที่ประชิดท้ายรถ"}
+	var desc := {"turret": Loc.t("ยิงศัตรูอัตโนมัติจากผนังท้ายรถ"), "plating": Loc.t("เพิ่มตัวถังสูงสุด ลดความเสียหาย"), "engine": Loc.t("เครื่องยนต์ในห้องเครื่องหน้ารถ (แตะห้องเครื่องเพื่อดูรายละเอียด)"), "spikes": Loc.t("ทำดาเมจศัตรูที่ประชิดท้ายรถ")}
 	for slot in Loot.VAN_SLOTS:
 		var it := Loot.van_equipped(slot)
 		var p := UIKit.panel(UIKit.C_BG2, Loot.rar_color(it).darkened(0.3) if not it.is_empty() else UIKit.C_LINE_DARK)
@@ -255,20 +255,20 @@ func _build_vault() -> void:
 		var v := UIKit.vbox(0)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_child(UIKit.label(Loot.SLOT_TH[slot], UIKit.FS_SMALL, UIKit.C_GOLD))
-		v.add_child(UIKit.label(Loot.item_name(it) if not it.is_empty() else "ว่าง", UIKit.FS_SMALL, Loot.rar_color(it) if not it.is_empty() else UIKit.C_DIM))
+		v.add_child(UIKit.label(Loot.item_name(it) if not it.is_empty() else Loc.t("ว่าง", "slot"), UIKit.FS_SMALL, Loot.rar_color(it) if not it.is_empty() else UIKit.C_DIM))
 		v.add_child(UIKit.wrap_label(desc[slot], UIKit.FS_SMALL))
 		h.add_child(v)
 		_list.add_child(p)
 
 
 func _build_deck_chooser() -> void:
-	set_title("SELECT RESERVE / เลือกตัวสำรองบนดาดฟ้า")
-	var back := UIKit.button("< กลับ", "gray")
+	set_title(Loc.t("SELECT RESERVE / เลือกตัวสำรองบนดาดฟ้า"))
+	var back := UIKit.button(Loc.t("< กลับ"), "gray")
 	back.pressed.connect(func():
 		choosing = -1
 		refresh())
 	_list.add_child(back)
-	_list.add_child(UIKit.wrap_label("ตัวสำรองไม่ทำงานในห้อง · จะลงไปแทนตำแหน่งของคนที่ล้มก่อน ใช้ค่าสเตตัสของตำแหน่งนั้น", UIKit.FS_SMALL, UIKit.C_ORANGE))
+	_list.add_child(UIKit.wrap_label(Loc.t("ตัวสำรองไม่ทำงานในห้อง · จะลงไปแทนตำแหน่งของคนที่ล้มก่อน ใช้ค่าสเตตัสของตำแหน่งนั้น"), UIKit.FS_SMALL, UIKit.C_ORANGE))
 	var cur := Game.deck_dweller()
 	var arr: Array = []
 	for d in Game.s.dwellers:
@@ -288,9 +288,9 @@ func _build_deck_chooser() -> void:
 		h.offset_top = 3
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		h.add_child(UIKit.tex_rect(Atlas.tex("pt_" + d.variant), Vector2(20, 20)))
-		var where := "ว่าง"
+		var where := Loc.t("ว่าง")
 		if on:
-			where = "บนดาดฟ้า"
+			where = Loc.t("บนดาดฟ้า")
 		elif role >= 0:
 			where = Combat.ROLES[role].th
 		elif int(d.room) >= 0:

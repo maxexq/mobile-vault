@@ -261,7 +261,8 @@ static func refresh_env_tag(l: Label) -> void:
 static func header(en: String, th: String = "", color: Color = C_GOLD) -> HBoxContainer:
 	var h := hbox(4)
 	h.add_child(label(">" + en, FP, color, true))
-	if th != "":
+	# in English the second label would repeat the tag (">AUDIO Sound" stays, ">DIFFICULTY Difficulty" doesn't)
+	if th != "" and Loc.t(th).to_upper() != en.to_upper():
 		h.add_child(label(th, FS_SMALL, Color(color, 0.8)))
 	return h
 

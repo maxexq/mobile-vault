@@ -57,9 +57,9 @@ func refresh() -> void:
 		return
 	managing = -1
 	_top.visible = true
-	set_title("CREW %d/%d / รายชื่อลูกเรือ" % [Game.s.dwellers.size(), Game.pop_cap()])
-	_sort_btn.text = "เรียง: %s" % sort_key.to_upper()
-	_filter_btn.text = FILTER_TH[filter]
+	set_title(Loc.t("CREW %d/%d / รายชื่อลูกเรือ") % [Game.s.dwellers.size(), Game.pop_cap()])
+	_sort_btn.text = Loc.t("เรียง: %s") % sort_key.to_upper()
+	_filter_btn.text = Loc.t(FILTER_TH[filter])
 	var arr: Array = []
 	for d in Game.s.dwellers:
 		var away := Game.is_away(d)
@@ -76,7 +76,7 @@ func refresh() -> void:
 	for d in arr:
 		_list.add_child(_row(d))
 	if arr.is_empty():
-		_list.add_child(UIKit.wrap_label("ไม่มีลูกเรือในหมวดนี้"))
+		_list.add_child(UIKit.wrap_label(Loc.t("ไม่มีลูกเรือในหมวดนี้")))
 
 
 func _where(d: Dictionary) -> Array:
@@ -139,7 +139,7 @@ func _pick_gear(did: int, slot: String) -> void:
 
 func _build_manage(d: Dictionary) -> void:
 	set_title("%s / %s" % ["DOSSIER LV%d" % d.lvl, d.name])
-	var back := UIKit.button("< กลับ", "gray")
+	var back := UIKit.button(Loc.t("< กลับ"), "gray")
 	back.pressed.connect(func():
 		managing = -1
 		refresh())
@@ -164,18 +164,18 @@ func _build_manage(d: Dictionary) -> void:
 	bc.add_child(bv)
 	bv.add_child(UIKit.wrap_label(bio.text, UIKit.FS_SMALL, UIKit.C_DIM))
 	if str(bio.likes) != "-":
-		bv.add_child(UIKit.wrap_label("ชอบ: %s · กลัว: %s" % [bio.likes, bio.fear], UIKit.FS_SMALL, UIKit.C_LINE_DIM))
+		bv.add_child(UIKit.wrap_label(Loc.t("ชอบ: %s · กลัว: %s") % [bio.likes, bio.fear], UIKit.FS_SMALL, UIKit.C_LINE_DIM))
 	_list.add_child(bc)
 	# --- traits, status, skills
-	_list.add_child(UIKit.header("TRAITS", "นิสัย/ความถนัด"))
+	_list.add_child(UIKit.header("TRAITS", Loc.t("นิสัย/ความถนัด")))
 	var tf := UIKit.flow(3)
 	var chips: Array = []
 	if Crew.ROLES.has(Crew.role(d)):
 		var rd: Dictionary = Crew.ROLES[Crew.role(d)]
-		chips.append({"icon": rd.icon, "th": "อาชีพ: " + str(rd.th), "desc": rd.desc})
+		chips.append({"icon": rd.icon, "th": Loc.t("อาชีพ: ") + str(rd.th), "desc": rd.desc})
 	for t in Crew.traits(d):
 		chips.append(Crew.TRAITS[t])
-	chips.append({"icon": "hammer", "th": "ความเร็วก่อสร้าง x%.2f" % (Crew.build_speed(d) / 0.6), "desc": "เทียบกับคนทั่วไป (STR ช่วยแบกคาน)"})
+	chips.append({"icon": "hammer", "th": Loc.t("ความเร็วก่อสร้าง x%.2f") % (Crew.build_speed(d) / 0.6), "desc": Loc.t("เทียบกับคนทั่วไป (STR ช่วยแบกคาน)")})
 	for td in chips:
 		var chip := UIKit.panel(UIKit.C_BG2, UIKit.C_RED if td.get("bad", false) else UIKit.C_LINE_DIM)
 		var ch := UIKit.hbox(2)
@@ -192,29 +192,29 @@ func _build_manage(d: Dictionary) -> void:
 	_list.add_child(tf)
 	if Crew.is_infected(d):
 		var ib := UIKit.hbox(4)
-		ib.add_child(UIKit.label("ติดเชื้อ %d%% — เสียเลือดเรื่อยๆ ผลิตลดลง" % int(d.infection), UIKit.FS_SMALL, UIKit.C_RED))
+		ib.add_child(UIKit.label(Loc.t("ติดเชื้อ %d%% — เสียเลือดเรื่อยๆ ผลิตลดลง") % int(d.infection), UIKit.FS_SMALL, UIKit.C_RED))
 		if Game.has_item("antibiotics"):
-			var cure := UIKit.button("ให้ยาปฏิชีวนะ", "green", "medkit")
+			var cure := UIKit.button(Loc.t("ให้ยาปฏิชีวนะ"), "green", "medkit")
 			cure.pressed.connect(func(): Game.use_item_on(d, "antibiotics"))
 			ib.add_child(cure)
 		_list.add_child(ib)
 	if float(d.rads) > 5.0:
-		_list.add_child(UIKit.label("รังสีสะสม %d" % int(d.rads), UIKit.FS_SMALL, UIKit.C_ORANGE))
+		_list.add_child(UIKit.label(Loc.t("รังสีสะสม %d") % int(d.rads), UIKit.FS_SMALL, UIKit.C_ORANGE))
 	var sk := UIKit.hbox(4)
-	var skl := UIKit.label("SKILLS %s" % ("(%d แต้มว่าง)" % Skills.points_free(d) if Skills.points_free(d) > 0 else ""), UIKit.FP, UIKit.C_GOLD, true)
+	var skl := UIKit.label("SKILLS %s" % (Loc.t("(%d แต้มว่าง)") % Skills.points_free(d) if Skills.points_free(d) > 0 else ""), UIKit.FP, UIKit.C_GOLD, true)
 	skl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sk.add_child(skl)
 	var bl := UIKit.label(Skills.build_label(d), UIKit.FS_SMALL, UIKit.C_DIM)
 	bl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sk.add_child(bl)
-	var skb := UIKit.button("ผังสกิล", "yellow" if Skills.points_free(d) > 0 else "blue", "xp")
+	var skb := UIKit.button(Loc.t("ผังสกิล"), "yellow" if Skills.points_free(d) > 0 else "blue", "xp")
 	var sdid: int = d.id
 	skb.pressed.connect(func(): (get_parent() as HUD).open_skills(sdid))
 	sk.add_child(skb)
 	_list.add_child(sk)
 	# --- gear: 6 slots, 2 rows of 3
-	_list.add_child(UIKit.header("GEAR", "อุปกรณ์ 6 ชิ้น (แตะเพื่อเปลี่ยน)"))
+	_list.add_child(UIKit.header("GEAR", Loc.t("อุปกรณ์ 6 ชิ้น (แตะเพื่อเปลี่ยน)")))
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 4)
@@ -239,7 +239,7 @@ func _build_manage(d: Dictionary) -> void:
 	var hs := Combat.hero_stats(d, maxi(0, Game.squad_role(d)))
 	_list.add_child(UIKit.label("DODGE %d%%  LOOT +%d%%  SUPPLY +%d%%" % [int(hs.get("dodge", 0)), int(hs.loot), int(hs.get("supply", 0))], UIKit.FP, UIKit.C_BLUE, true))
 	# --- squad role
-	_list.add_child(UIKit.header("DEFENSE SQUAD", "ทีมป้องกัน"))
+	_list.add_child(UIKit.header("DEFENSE SQUAD", Loc.t("ทีมป้องกัน")))
 	var sq := UIKit.flow(3)
 	var cur_role := Game.squad_role(d)
 	for i in Combat.ROLES.size():
@@ -253,22 +253,22 @@ func _build_manage(d: Dictionary) -> void:
 		sq.add_child(b)
 	if Mods.level("roof_deck") > 0:
 		var on_deck := Game.is_deck(d)
-		var db := UIKit.button("ตัวสำรองดาดฟ้า", "yellow" if on_deck else "green")
+		var db := UIKit.button(Loc.t("ตัวสำรองดาดฟ้า"), "yellow" if on_deck else "green")
 		db.disabled = on_deck
 		var did3: int = d.id
 		db.pressed.connect(func(): Game.set_deck(did3))
 		sq.add_child(db)
 		if on_deck:
-			var off := UIKit.button("ลงจากดาดฟ้า", "gray")
+			var off := UIKit.button(Loc.t("ลงจากดาดฟ้า"), "gray")
 			off.pressed.connect(func(): Game.set_deck(-1))
 			sq.add_child(off)
 	if cur_role >= 0:
-		var out := UIKit.button("ออกจากทีม", "gray")
+		var out := UIKit.button(Loc.t("ออกจากทีม"), "gray")
 		out.pressed.connect(func(): Game.set_squad(cur_role, -1))
 		sq.add_child(out)
 	_list.add_child(sq)
 	# --- consumables
-	_list.add_child(UIKit.header("USE", "ใช้ไอเทม"))
+	_list.add_child(UIKit.header("USE", Loc.t("ใช้ไอเทม")))
 	var fl := UIKit.flow(3)
 	var any := false
 	for id in ["stimpack", "radaway"]:
@@ -280,14 +280,14 @@ func _build_manage(d: Dictionary) -> void:
 			b2.pressed.connect(func(): Game.use_item_on(d, iid))
 			fl.add_child(b2)
 	if not any:
-		fl.add_child(UIKit.label("ไม่มียา — ผลิตได้ที่ห้องพยาบาล", UIKit.FS_SMALL, UIKit.C_DIM))
+		fl.add_child(UIKit.label(Loc.t("ไม่มียา — ผลิตได้ที่ห้องพยาบาล"), UIKit.FS_SMALL, UIKit.C_DIM))
 	_list.add_child(fl)
 	# --- room assignment
-	_list.add_child(UIKit.header("ASSIGN ROOM", "ย้ายห้อง (* = เหมาะ)"))
+	_list.add_child(UIKit.header("ASSIGN ROOM", Loc.t("ย้ายห้อง (* = เหมาะ)")))
 	var rooms := UIKit.flow(3)
 	var nc := Game.room_workers(Data.CAB_SLOT).size()
 	var in_cab: bool = int(d.room) == Data.CAB_SLOT
-	var cb := UIKit.button("ห้องเครื่อง %d/%d%s" % [nc, Data.CAB_WORKERS, "*" if Game._best_stat(d) == "str" else ""], "yellow" if in_cab else ("green" if Game._best_stat(d) == "str" else "gray"))
+	var cb := UIKit.button(Loc.t("ห้องเครื่อง %d/%d%s") % [nc, Data.CAB_WORKERS, "*" if Game._best_stat(d) == "str" else ""], "yellow" if in_cab else ("green" if Game._best_stat(d) == "str" else "gray"))
 	cb.disabled = in_cab or nc >= Data.CAB_WORKERS
 	cb.pressed.connect(func(): Game.assign(d, Data.CAB_SLOT))
 	rooms.add_child(cb)
@@ -305,14 +305,14 @@ func _build_manage(d: Dictionary) -> void:
 		var slot: int = i
 		b.pressed.connect(func(): Game.assign(d, slot))
 		rooms.add_child(b)
-	var idle := UIKit.button("พักงาน", "gray")
+	var idle := UIKit.button(Loc.t("พักงาน"), "gray")
 	idle.disabled = int(d.room) < 0
 	idle.pressed.connect(func(): Game.assign(d, -1))
 	rooms.add_child(idle)
 	_list.add_child(rooms)
 	# --- expeditions
-	_list.add_child(UIKit.header("EXPEDITION", "ส่งทีมสำรวจ (รถจะจอดรอ)"))
-	var ex := UIKit.button("วางแผนทีมสำรวจ", "orange", "explore")
+	_list.add_child(UIKit.header("EXPEDITION", Loc.t("ส่งทีมสำรวจ (รถจะจอดรอ)")))
+	var ex := UIKit.button(Loc.t("วางแผนทีมสำรวจ"), "orange", "explore")
 	ex.disabled = Expedition.active()
 	ex.pressed.connect(func():
 		var site := Expedition.at_site() if Expedition.at_site() != "" else "scav"
