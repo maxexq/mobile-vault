@@ -46,21 +46,59 @@ def en_runner(f):
     return _fin(i)
 
 
+# MV-183 (MV-178 creature redesign): Acid Spitter: lopsided head, throat sac (toxic only on its highlight and a 1 px droplet), hunched in ragged clothes.
+# Drawn as text rows at native size, one character per pixel (".", empty); rows_sprite() adds the ol0 outline.
+_EN_SPITTER_KEY = {'k': 'green0', 'g': 'green1', 'G': 'green2', 'h': 'green3', 'A': 'gray1', 'c': 'gray3', 'w': 'cream1', 't': 'toxic1', 'T': 'toxic3', 'y': 'yellow2'}
+_EN_SPITTER = (
+    (
+        "................",
+        "....kggk........",
+        "...gGGGGg.......",
+        "..gGyGGGhg..wwc.",
+        ".gGGGGGGgcccwcc.",
+        ".kGGkkGgcAccccc.",
+        "T.ttTtkgccAcccc.",
+        "..tttk.GcccAccA.",
+        "...kk.G.ccAcccc.",
+        "......G.cAcccAG.",
+        ".....gG.cAcAccG.",
+        ".....g..AcA.A.G.",
+        ".....k.gG..gG.g.",
+        ".......gG..gG...",
+        ".......Gg..Gg...",
+        ".......Gg..Gg...",
+        ".......gk..gk...",
+        ".......gk..gk...",
+        "......kgk.kgk...",
+        "......kk..kk....",
+    ),
+    (
+        "................",
+        "....kggk........",
+        "...gGGGGg.......",
+        "..gGyGGGhg..wwc.",
+        ".gGGGGGGgcccwcc.",
+        "..GGkkGgcAccccc.",
+        ".kkttTkgccAcccc.",
+        "T.ttk..GcccAccA.",
+        "..ttk.G.ccAcccc.",
+        "...k..G.cAcccAG.",
+        ".....gG.cAcAccG.",
+        ".....g..AcA.A.G.",
+        ".....k..gG.gG.g.",
+        "........gG.gG...",
+        "........Gg.Gg...",
+        ".......Gg..Gg...",
+        ".......gk...gk..",
+        ".......gk...gk..",
+        "......kgk..kgk..",
+        "......kk...kk...",
+    ),
+)
+
+
 def en_spitter(f):
-    i = new(16, 20)
-    ellipse(i, 3, 0, 9, 9, c("toxic1"))
-    ellipse(i, 1, 4 - f, 6, 6, c("toxic2"))          # bulging acid sac in the jaw
-    px(i, 2, 5 - f, c("toxic3"))
-    px(i, 6, 3, c("red3"))
-    rect(i, 4, 8, 7, 7, c("gray3"))
-    for k in range(3):
-        px(i, 5 + k * 2, 10 + k % 2, c("toxic2"))
-    rect(i, 4, 15, 2, 5, c("gray1"))
-    rect(i, 8, 15, 2, 5, c("gray1"))
-    if f:
-        px(i, 0, 6, c("toxic3"))
-        px(i, 0, 8, c("toxic2"))
-    return _fin(i)
+    return rows_sprite(_EN_SPITTER[f], _EN_SPITTER_KEY)
 
 
 def en_bloater(f):
@@ -89,18 +127,67 @@ def en_screecher(f):
     return _fin(i)
 
 
+# MV-184 (MV-178 creature redesign): Bone Brute: small sunken head, uneven bone-plated shoulders, one huge hanging fist, short legs.
+# Drawn as text rows at native size, one character per pixel (".", empty); rows_sprite() adds the ol0 outline.
+_EN_BRUTE_KEY = {'k': 'green0', 'g': 'green1', 'G': 'green2', 'h': 'green3', 'b': 'cream0', 'B': 'cream1', 'p': 'cream2', 'P': 'cream3', 'A': 'gray1', 'a': 'gray3', 'e': 'red2'}
+_EN_BRUTE = (
+    (
+        "....................",
+        "...PPPp.............",
+        "..PPPPppb...........",
+        "..PPpppBbkkk.pPPp...",
+        ".hPpBBbbkhhGkPPpPpb.",
+        ".hGpBbGGkehGkpPpBpG.",
+        ".hGGbgGGkkGkGpBpBGG.",
+        "hGGGgkGPPpPpGPpGGGg.",
+        "hGGg.kGPpBbPPpBGkGg.",
+        "hGGg.kGpPBpPpBbG.Gg.",
+        "GGGg.kGGPpbBpPGg.Gg.",
+        "hGGg.kGGGbPpBGGg.gG.",
+        "GGGg..kGGGBpGGg..gG.",
+        "GGGg..kAaaaaaaA..gg.",
+        "hGGgg.AaaAaaAaaA....",
+        "GGGGg..AaA..AaA.....",
+        "hGGGg..GGg..GGg.....",
+        "PPGGGg.GGg..GGg.....",
+        "PpPGGg.GGg..GGg.....",
+        "pPpGGg.GgG..GgG.....",
+        "hGGGGg.Ggg..Ggg.....",
+        "gGGGg..GGg..GGg.....",
+        ".ggg..kGGg.kGGg.....",
+        "......kkkk.kkkk.....",
+    ),
+    (
+        "....................",
+        "...............pPP..",
+        "...PPPp......pPPpPp.",
+        "..PPPPppbkkk.PPpBpb.",
+        "..PPpppBbhhGkpPpBpG.",
+        ".hPpBBbbkehGkGpBpGG.",
+        ".hGpBbGGkkGkGPpGGGg.",
+        ".hGGbgGPPpPpGPpGGGg.",
+        "hGGGgkGPpBbPPpBGkGg.",
+        "hGGg.kGpPBpPpBbG.Gg.",
+        "hGGg.kGGPpbBpPGg.Gg.",
+        "GGGg.kGGGbPpBGGg.gG.",
+        "hGGg..kGGGBpGGg..gG.",
+        "GGGg..kAaaaaaaA..gg.",
+        "GGGgg.AaaAaaAaaA....",
+        "hGGGg..AaA..AaA.....",
+        "GGGGg..GGg..GGg.....",
+        "hGGGg..GGg..GGg.....",
+        "PPGGGg.GGg..GGg.....",
+        "PpPGGg.GgG..GgG.....",
+        "pPpGGg.Ggg..Ggg.....",
+        "hGGGg..GGg..GGg.....",
+        ".gggg.kGGg.kGGg.....",
+        "......kkkk.kkkk.....",
+    ),
+)
+
+
 def en_brute(f):
-    i = new(20, 24)
-    ellipse(i, 2, 5, 16, 14, c("green2"))
-    for (x, y, w) in ((3, 6, 7), (11, 5, 6), (5, 13, 9)):       # bone armour plates
-        rect(i, x, y, w, 3, c("cream3"))
-        hline(i, x, y + 2, w, c("cream1"))
-    _zombie_head(i, 5, 0, "green2", "red3")
-    rect(i, 0, 9 + f, 4, 9, c("green2"))
-    rect(i, 16, 9 - f, 4, 9, c("green2"))
-    rect(i, 4 - f, 18, 4, 6, c("gray2"))
-    rect(i, 12 + f, 18, 4, 6, c("gray2"))
-    return _fin(i)
+    return rows_sprite(_EN_BRUTE[f], _EN_BRUTE_KEY)
 
 
 ENEMIES = {"walker": en_walker, "runner": en_runner, "spitter": en_spitter, "bloater": en_bloater,

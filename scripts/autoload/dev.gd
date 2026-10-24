@@ -554,7 +554,10 @@ func threat_set(v: float) -> void:
 
 
 func spawn_boss(id: String) -> void:
-	Combat.debug_spawn([{"t": 0.3, "boss": "warlord" if id == "warlord" else "boss", "boss_id": id, "lvl": Combat.warlord_level() if id == "warlord" else Combat.enemy_level()}], true)
+	var q := {"t": 0.3, "boss": "warlord" if id == "warlord" else "boss", "lvl": Combat.warlord_level() if id == "warlord" else Combat.enemy_level()}
+	if id != "warlord":
+		q["boss_id"] = id      # "warlord" has no boss_id: _spawn then takes this area's warlord (it used to fall back to the golem)
+	Combat.debug_spawn([q], true)
 	act("spawn boss " + id)
 
 

@@ -436,6 +436,9 @@ func _sync_pets() -> void:
 	if pets_root.get_child_count() == want.size():
 		return
 	for ch in pets_root.get_children():
+		# detach first: a node waiting for queue_free still counts as a child, so two pets adopted in one frame
+		# made the count look right and the last one never appeared (MV-178)
+		pets_root.remove_child(ch)
 		ch.queue_free()
 	for p in want:
 		var a := PetActor.new()

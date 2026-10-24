@@ -17,6 +17,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Play logs are sent to the game's server with your player ID to help fix bugs and balance the game; a one-time notice explains it and Settings → Privacy turns it off (MV-116)
 
 ### Changed
+- Redrawn creatures: the pets Khao Tang, Som Jeed and two-headed Khai Dao, the Rad-Wolf, Acid Spitter and Bone Brute, and the Alpha Rad-Wolf, Junk Golem and Scorpion King warlords (MV-178)
 - Screen shake is half as strong, the same size on phones as on PC, and the boss bar now follows the screen-shake setting (MV-175)
 - The vehicle's engine rumble and road bumps are half as strong (they made some players dizzy), and Settings → Feel has a new Vehicle shake switch to turn them off (MV-176)
 - Test servers (staging / UAT) keep their own saves and logs, apart from the real game, and show a STAGING / UAT SERVER tag on the title screen (MV-112)
@@ -28,6 +29,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Offline progress can no longer be stretched by editing the save time: once the game reaches the server it counts only the time since the server last received your save; the server also flags impossible progress for later leaderboards (MV-174)
 
 ### Fixed
+- Adopting several pets at once no longer drops one of them from the vehicle (MV-178)
 - The ladder shaft no longer cuts through a knocked-through large room; a steel post marks the old wall instead (MV-146)
 
 ## [4.7.0-alpha.1] - 2026-10-24
