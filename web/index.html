@@ -1,220 +1,178 @@
 <!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<title>Apocarlypse: Mobile Vault</title>
-		<style>
-html, body, #canvas {
-	margin: 0;
-	padding: 0;
-	border: 0;
-}
-
-body {
-	color: white;
-	background-color: black;
-	overflow: hidden;
-	touch-action: none;
-}
-
-#canvas {
-	display: block;
-}
-
-#canvas:focus {
-	outline: none;
-}
-
-#status, #status-splash, #status-progress {
-	position: absolute;
-	left: 0;
-	right: 0;
-}
-
-#status, #status-splash {
-	top: 0;
-	bottom: 0;
-}
-
-#status {
-	background-color: #242424;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	visibility: hidden;
-}
-
-#status-splash {
-	max-height: 100%;
-	max-width: 100%;
-	margin: auto;
-}
-
-#status-splash.show-image--false {
-	display: none;
-}
-
-#status-splash.fullsize--true {
-	height: 100%;
-	width: 100%;
-	object-fit: contain;
-}
-
-#status-splash.use-filter--false {
-	image-rendering: pixelated;
-}
-
-#status-progress, #status-notice {
-	display: none;
-}
-
-#status-progress {
-	bottom: 10%;
-	width: 50%;
-	margin: 0 auto;
-}
-
-#status-notice {
-	background-color: #5b3943;
-	border-radius: 0.5rem;
-	border: 1px solid #9b3943;
-	color: #e0e0e0;
-	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
-	line-height: 1.3;
-	margin: 0 2rem;
-	overflow: hidden;
-	padding: 1rem;
-	text-align: center;
-	z-index: 1;
-}
-		</style>
-		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Apocarlypse: Mobile Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Silkscreen&display=swap">
+<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#101814"><meta name="description" content="เกม idle survival พิกเซล 16-bit โลกล่มสลาย สร้างห้องบนรถ จ้างผู้รอดชีวิต ยิงซอมบี้ แล้วขับฝ่าดินแดนรกร้าง เล่นฟรีบนเว็บ | Pixel-art idle survival: build rooms on your armoured bus, recruit survivors and outlast the wasteland. Free in your browser."><link rel="canonical" href="https://apocarlypse-mobile-vault.vercel.app/"><meta property="og:type" content="website"><meta property="og:site_name" content="Apocarlypse: Mobile Vault"><meta property="og:locale" content="th_TH"><meta property="og:locale:alternate" content="en_US"><meta property="og:url" content="https://apocarlypse-mobile-vault.vercel.app/"><meta property="og:title" content="Apocarlypse: Mobile Vault – เอาชีวิตรอดบนรถป้อมเหล็ก"><meta property="og:description" content="เกม idle survival พิกเซล 16-bit โลกล่มสลาย สร้างห้องบนรถ จ้างผู้รอดชีวิต ยิงซอมบี้ แล้วขับฝ่าดินแดนรกร้าง เล่นฟรีบนเว็บ | Pixel-art idle survival: build rooms on your armoured bus, recruit survivors and outlast the wasteland. Free in your browser."><meta property="og:image" content="https://apocarlypse-mobile-vault.vercel.app/og-image.png"><meta property="og:image:secure_url" content="https://apocarlypse-mobile-vault.vercel.app/og-image.png"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Apocarlypse: Mobile Vault – รถบัสหุ้มเหล็ก 3 ชั้นขับฝ่าทะเลทรายยามโพล้เพล้ โดยมีซอมบี้ไล่ตาม"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Apocarlypse: Mobile Vault – เอาชีวิตรอดบนรถป้อมเหล็ก"><meta name="twitter:description" content="เกม idle survival พิกเซล 16-bit โลกล่มสลาย สร้างห้องบนรถ จ้างผู้รอดชีวิต ยิงซอมบี้ แล้วขับฝ่าดินแดนรกร้าง เล่นฟรีบนเว็บ | Pixel-art idle survival: build rooms on your armoured bus, recruit survivors and outlast the wasteland. Free in your browser."><meta name="twitter:image" content="https://apocarlypse-mobile-vault.vercel.app/og-image.png"><meta name="twitter:image:alt" content="Apocarlypse: Mobile Vault – รถบัสหุ้มเหล็ก 3 ชั้นขับฝ่าทะเลทรายยามโพล้เพล้ โดยมีซอมบี้ไล่ตาม"><style>html,body{overscroll-behavior:none;touch-action:none;background:#17161c}</style>
-	</head>
-	<body>
-		<canvas id="canvas">
-			Your browser does not support the canvas tag.
-		</canvas>
+<style>
+/* Apocarlypse boot card: the Web preset's custom HTML shell (html/custom_html_shell), used by the
+   Vercel build and, through tools/artifact_html.py, by the claude.ai playable artifact.
+   One full-screen canvas; a rusted-steel card floats over it while the engine streams in. */
+:root {
+  --bg: #0a0a0c;
+  --panel: #141416;
+  --line: #b0702e;
+  --line-dim: #5c4e40;
+  --text: #d4ccb2;
+  --dim: #8e8670;
+  --gold: #e0b048;
+  --warn: #d4523c;
+  --font-pixel: "Silkscreen", "Courier New", monospace;
+  --font-body: "Chakra Petch", "Noto Sans Thai", "Leelawadee UI", "Thonburi", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#canvas {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  bottom: env(safe-area-inset-bottom, 0px);
+  left: env(safe-area-inset-left, 0px);
+  right: env(safe-area-inset-right, 0px);
+  width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  height: calc(100% - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  display: block;
+  touch-action: none;
+  outline: none;
+  image-rendering: pixelated;
+  background: var(--bg);
+}
+#boot {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: radial-gradient(120% 90% at 50% 100%, #3a1c14 0%, var(--bg) 70%);
+  overflow-y: auto;
+  z-index: 5;
+}
+.card {
+  margin: auto;  /* centred, but scrolls from the top when taller than the screen */
+  width: min(440px, 100%);
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 3px solid var(--line);
+  box-shadow: 4px 4px 0 rgba(0,0,0,.5);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+.brand { display: grid; justify-items: center; gap: 6px; }
+.logo { display: block; width: 384px; max-width: 100%; height: auto; aspect-ratio: 384 / 120; image-rendering: pixelated; }
+.sub { font: 400 11px/1.2 var(--font-pixel); color: var(--gold); letter-spacing: .14em; margin-top: 4px; }
+.bar { height: 18px; border: 2px solid var(--line-dim); background: #0c0c0e; padding: 2px; }
+.fill {
+  height: 100%;
+  width: 0%;
+  background: repeating-linear-gradient(90deg, var(--line) 0 10px, transparent 10px 12px);
+  transition: width .2s steps(4);
+}
+.row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#stage { font: 700 15px/1.4 var(--font-body); }
+#bytes { font: 400 11px/1.6 var(--font-pixel); color: var(--dim); font-variant-numeric: tabular-nums; }
+.tips { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; color: var(--dim); font-size: 13px; line-height: 1.45; }
+.tips li::before { content: "> "; color: var(--line); font-family: var(--font-pixel); }
+#boot[hidden], #err[hidden] { display: none !important; }
+#err { color: var(--warn); font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+@media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
+</style>
+</head>
+<body>
 
-		<noscript>
-			Your browser does not support JavaScript.
-		</noscript>
+<canvas id="canvas" tabindex="0">เบราว์เซอร์นี้ไม่รองรับ HTML5 canvas</canvas>
+<noscript>ต้องเปิด JavaScript เพื่อเล่นเกมนี้</noscript>
 
-		<div id="status">
-			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="index.png" alt="">
-			<progress id="status-progress"></progress>
-			<div id="status-notice"></div>
-		</div>
+<div id="boot" role="status" aria-live="polite">
+  <div class="card">
+    <div class="brand">
+      <img class="logo" src="logo.png" width="384" height="120" alt="Apocarlypse: Mobile Vault">
+      <div class="sub">v4.6 · GODOT 4.7.2</div>
+    </div>
+    <div class="row"><span id="stage">กำลังติดเครื่องยนต์รถบ้าน…</span><span id="bytes">0.0 MB</span></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <ul class="tips">
+      <li>ชื่อใหม่: Apocarlypse = Car + Apocalypse · รถป้อมเหล็กของเรายังชื่อ Mobile Vault เหมือนเดิม</li>
+      <li>ออกแบบมาสำหรับจอแนวตั้ง (หมุนแนวนอนก็เล่นได้)</li>
+      <li>เริ่มการเดินทางใหม่เลือกกฎได้: โหมดขบวนสงบ (ไม่มีศัตรูบุก), ความยาก ง่าย–ฝันร้าย และตัวแปรกฎอย่างน้ำมันขาดแคลนหรือปืนแก้ว · ยิ่งยากยิ่งได้แต้มวิจัยพันธุกรรมเพิ่ม</li>
+      <li>แตะห้องเพื่อซูมเข้าไปจัดการ · ปัดซ้าย-ขวาเพื่อดูถนน · จีบสองนิ้วเข้า = มุมกว้าง, ถ่างออก = ปกติ</li>
+      <li>ลากนิ้วบนรายการในเมนูเพื่อเลื่อนขึ้นลงได้เลย (แตะบนปุ่มแล้วลากก็เลื่อน ปุ่มจะไม่ทำงาน)</li>
+      <li>เริ่มเกมใหม่จะมีจ่ามาร์คสอนเล่นทีละขั้น (ดูซ้ำได้ที่ Log)</li>
+      <li>สร้างห้องต้องใช้เวลา · ส่งช่างก่อสร้างไปช่วยจะเสร็จเร็วขึ้น</li>
+      <li>ห้องชนิดเดียวกัน เลเวลเท่ากัน ที่อยู่ติดกันบนชั้นเดียวกัน ทุบผนังรวมเป็นห้องใหญ่ 2–3 ช่องได้ (แตะห้อง &gt; ขยายห้อง) · คนทำงานเพิ่มเป็น 4/6 ที่ ผลงาน +10% / +25%</li>
+      <li>สร้าง "ดาดฟ้าพักทีมป้องกัน" ที่เมนู MODS แล้วเลือกตัวสำรอง 1 คนไปนอนพักบนหลังคา · ถ้าใครในทีมล้มระหว่างเวฟ ตัวสำรองจะกระโดดลงไปแทนทันที</li>
+      <li>ห้องเครื่องอยู่ที่หัวรถแล้ว · แตะเพื่อเปิดเมนูเครื่องยนต์: เปลี่ยนเครื่อง เลือกโหมดขับ ดูความร้อน สั่งเปลี่ยนน้ำมันหรือซ่อม · เครื่องร้อนเกินจะจอดพักเอง ส่งช่าง 2 คนไปประจำช่วยระบายร้อนและซ่อม</li>
+      <li>ส่งคนจากทีมป้องกันไปสำรวจได้ · ช่องป้องกันจะว่างให้เติมคนใหม่ทันที</li>
+      <li>บางครั้งทีมสำรวจจะวิทยุกลับมาว่าเจอจุดพิเศษ (คนรอดชีวิต ของมีค่าแต่เสี่ยง) · ถ้าไม่สั่งก่อนทีมกลับ ทีมจะเลือกทางปลอดภัยเอง</li>
+      <li>นานๆ ครั้งจะมีคนแปลกหน้าฝีมือดีมาเคาะประตู · ตรวจตา ฟัน มือ แขน กระเป๋า ไข้ หรือซักประวัติก่อนรับขึ้นรถ เพราะอาจเป็นผู้ติดเชื้อ ร่างเลียนแบบ หัวขโมย หรือสายลับโจร</li>
+      <li>เกมเซฟในเครื่องทุก 15 วินาที และสำรองขึ้นคลาวด์ทุกนาทีเมื่อออนไลน์ · เล่นแบบ Guest ได้ทันที หรือล็อกอินด้วย Gmail เพื่อเล่นต่อข้ามเครื่อง (ปุ่มบนหน้าแรก / ตั้งค่า &gt; เซฟ)</li>
+      <li>ศัตรูไม่ได้มาตลอดเวลาแล้ว · ยิ่งขับเร็ว ยิ่งเปิดไฟตอนกลางคืน ภัยคุกคามยิ่งขึ้นเร็ว · พายุกับหมอกช่วยพรางตัว · ชอบแบบเวฟต่อเนื่องเดิม เปลี่ยนได้ที่ ตั้งค่า &gt; การต่อสู้</li>
+      <li>เหตุการณ์ระหว่างทางจะวนครบทุกแบบของโซนก่อนจะเจอซ้ำ (สุ่มลำดับใหม่ทุกรอบ)</li>
+      <li>ผู้ทดสอบ: แท็บ "ฟีเจอร์" ใน GOD MODE เปิด/ปิดระบบ อีเว้นต์บนถนนรายตัว และปรับตัวเลขบาลานซ์ได้ · หรือใส่ ?ff=raids:off ต่อท้ายลิงก์</li>
+      <li>ปุ่มเฟืองใต้แถบเสบียง: เสียง กล้อง เฟรมเรต และข้อมูลเวอร์ชัน</li>
+    </ul>
+    <div id="err" hidden></div>
+  </div>
+</div>
 
-		<script src="index.js"></script>
-		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":6046356,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
-const GODOT_THREADS_ENABLED = false;
-const engine = new Engine(GODOT_CONFIG);
-
+<!--BOOT_SHIM-->
+<script src="index.js"></script>
+<script>
 (function () {
-	const statusOverlay = document.getElementById('status');
-	const statusProgress = document.getElementById('status-progress');
-	const statusNotice = document.getElementById('status-notice');
+  const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":6043636,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+  const GODOT_THREADS_ENABLED = false;
+  const boot = document.getElementById("boot");
+  const stage = document.getElementById("stage");
+  const fill = document.getElementById("fill");
+  const bytes = document.getElementById("bytes");
+  const err = document.getElementById("err");
+  const MB = 1048576;
 
-	let initializing = true;
-	let statusMode = '';
+  function fail(e) {
+    console.error(e);
+    stage.textContent = "เปิดเกมไม่สำเร็จ";
+    err.textContent = (e && e.message) ? e.message : String(e);
+    err.hidden = false;
+  }
 
-	function setStatusMode(mode) {
-		if (statusMode === mode || !initializing) {
-			return;
-		}
-		if (mode === 'hidden') {
-			statusOverlay.remove();
-			initializing = false;
-			return;
-		}
-		statusOverlay.style.visibility = 'visible';
-		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
-		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-		statusMode = mode;
-	}
+  // The artifact shim (tools/artifact_html.py) streams gzipped files and reports its own progress.
+  const shimProgress = typeof window.bootShimProgress === "function";
 
-	function setStatusNotice(text) {
-		while (statusNotice.lastChild) {
-			statusNotice.removeChild(statusNotice.lastChild);
-		}
-		const lines = text.split('\n');
-		lines.forEach((line) => {
-			statusNotice.appendChild(document.createTextNode(line));
-			statusNotice.appendChild(document.createElement('br'));
-		});
-	}
+  if (typeof Engine === "undefined") { fail(new Error("โหลดสคริปต์เอนจิน (index.js) ไม่สำเร็จ")); return; }
+  const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
+  if (missing.length) { fail(new Error("เบราว์เซอร์นี้ขาดฟีเจอร์ที่ Godot ต้องใช้:\n" + missing.join("\n"))); return; }
 
-	function displayFailureNotice(err) {
-		console.error(err);
-		if (err instanceof Error) {
-			setStatusNotice(err.message);
-		} else if (typeof err === 'string') {
-			setStatusNotice(err);
-		} else {
-			setStatusNotice('An unknown error occurred.');
-		}
-		setStatusMode('notice');
-		initializing = false;
-	}
-
-	const missing = Engine.getMissingFeatures({
-		threads: GODOT_THREADS_ENABLED,
-	});
-
-	if (missing.length !== 0) {
-		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
-			let serviceWorkerRegistrationPromise;
-			try {
-				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
-			} catch (err) {
-				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
-			}
-			// There's a chance that installing the service worker would fix the issue
-			Promise.race([
-				serviceWorkerRegistrationPromise.then((registration) => {
-					if (registration != null) {
-						return Promise.reject(new Error('Service worker already exists.'));
-					}
-					return registration;
-				}).then(() => engine.installServiceWorker()),
-				// For some reason, `getRegistration()` can stall
-				new Promise((resolve) => {
-					setTimeout(() => resolve(), 2000);
-				}),
-			]).then(() => {
-				// Reload if there was no error.
-				window.location.reload();
-			}).catch((err) => {
-				console.error('Error while registering service worker:', err);
-			});
-		} else {
-			// Display the message as usual
-			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
-			displayFailureNotice(missingMsg + missing.join('\n'));
-		}
-	} else {
-		setStatusMode('progress');
-		engine.startGame({
-			'onProgress': function (current, total) {
-				if (current > 0 && total > 0) {
-					statusProgress.value = current;
-					statusProgress.max = total;
-				} else {
-					statusProgress.removeAttribute('value');
-					statusProgress.removeAttribute('max');
-				}
-			},
-		}).then(() => {
-			setStatusMode('hidden');
-		}, displayFailureNotice);
-	}
-}());
-		</script>
-	</body>
+  const engine = new Engine(GODOT_CONFIG);
+  engine.startGame({
+    onProgress: function (current, total) {
+      if (!shimProgress && total > 0) {
+        fill.style.width = Math.min(100, current / total * 100).toFixed(1) + "%";
+        bytes.textContent = (current / MB).toFixed(1) + " / " + (total / MB).toFixed(1) + " MB";
+      }
+      if (total > 0 && current >= total) stage.textContent = "กำลังสตาร์ทเกม…";
+    },
+  }).then(function () {
+    boot.hidden = true;
+    document.getElementById("canvas").focus();
+  }, fail);
+})();
+</script>
+</body>
 </html>
 
