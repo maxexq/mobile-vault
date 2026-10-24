@@ -98,11 +98,12 @@ case "$EVENT_NAME" in
     # Vercel reports deploys as a commit status (context "Vercel"), not as GitHub deployments.
     context=$(ev .context); state=$(ev .state)
     [[ "$context" == Vercel* ]] || { echo "status '$context' not notified"; exit 0; }
-    branch=$(jq -r '[.branches[].name] | if index("main") then "main" else (.[0] // "") end' "$EVENT_PATH")
-    env_name=Preview; [ "$branch" = "main" ] && env_name=Production
+    # a promoted commit sits on several branches: name the most public one (MV-112: main > uat > staging)
+    branch=$(jq -r '[.branches[].name] | if index("main") then "main" elif index("uat") then "uat" elif index("staging") then "staging" else (.[0] // "") end' "$EVENT_PATH")
+    case "$branch" in main) env_name=Production ;; uat) env_name=UAT ;; staging) env_name=Staging ;; *) env_name=Preview ;; esac
     case "$state" in
       success)
-        if [ "${SKIP_PREVIEW_SUCCESS:-}" = "true" ] && [ "$env_name" != "Production" ]; then
+        if [ "${SKIP_PREVIEW_SUCCESS:-}" = "true" ] && [ "$env_name" = "Preview" ]; then
           echo "Preview success skipped (SKIP_PREVIEW_SUCCESS)"; exit 0
         fi
         title="🚀 Deploy สำเร็จ ($env_name)"; color=$GREEN ;;

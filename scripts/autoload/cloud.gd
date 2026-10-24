@@ -151,8 +151,22 @@ func _load_config() -> bool:
 	if not d is Dictionary:
 		push_warning("cloud_config.json is not a JSON object")
 		return false
-	site_url = str(d.get("site_url", "")).strip_edges()
-	return configure(str(d.get("url", "")), str(d.get("anon_key", "")))
+	var c := pick_config(d, BuildInfo.cloud_project())
+	if c.is_empty():
+		push_warning("cloud_config.json has no keys for the \"%s\" project: cloud off in %s" % [BuildInfo.cloud_project(), BuildInfo.env()])
+		return false
+	site_url = str(c.get("site_url", "")).strip_edges()
+	return configure(str(c.get("url", "")), str(c.get("anon_key", "")))
+
+
+## MV-112: {"projects": {"prod": {url, anon_key, site_url}, "test": {...}}} -> the section for this environment's
+## project. The old flat file holds only the production keys, so it counts for "prod" only: staging / uat / PR
+## previews / desktop then run without a cloud instead of writing test saves into the players' project. {} = none
+static func pick_config(d: Dictionary, project: String) -> Dictionary:
+	if d.get("projects") is Dictionary:
+		var p = d.projects.get(project)
+		return p if p is Dictionary else {}
+	return d if project == "prod" else {}
 
 
 func configure(project_url: String, key: String) -> bool:

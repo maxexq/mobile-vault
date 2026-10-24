@@ -994,6 +994,13 @@ func channel_preview(ch: String) -> void:
 	Features.changed.emit()
 
 
+## show another environment's badge (MV-112); the servers in use never change ("" = the real one)
+func env_preview(e: String) -> void:
+	Trace.rec("god", "env preview %s" % (e if e != "" else "off"))
+	BuildInfo.env_preview = e if BuildInfo.ENVS.has(e) else ""
+	Features.changed.emit()
+
+
 # ---- feature switches (Features layer "dev": kept in user://dev.cfg until reset or GOD is hidden)
 func feature_set(key: String, v: Variant) -> void:
 	act("feature %s = %s" % [key, v])

@@ -240,6 +240,23 @@ static func refresh_channel_tag(l: Label) -> void:
 	l.add_theme_color_override("font_color", {"red": C_RED, "yellow": C_GOLD, "blue": C_BLUE}.get(BuildInfo.channel_color(), C_GREEN))
 
 
+## "STAGING SERVER" / "UAT SERVER" / "DEV SERVER" under the logo outside production (MV-112, switch env_badge)
+static func env_tag() -> Label:
+	var l := label("", FP, C_GOLD, true)
+	l.name = "EnvTag"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	refresh_env_tag(l)
+	return l
+
+
+static func refresh_env_tag(l: Label) -> void:
+	var badge := BuildInfo.env_badge()
+	l.visible = badge != "" and Features.on("env_badge")
+	l.text = badge + " SERVER"
+	l.tooltip_text = BuildInfo.env_note()
+	l.add_theme_color_override("font_color", {"red": C_RED, "yellow": C_GOLD, "blue": C_BLUE}.get(BuildInfo.env_color(), C_GREEN))
+
+
 ## bold Thai heading line with a pixel EN tag, e.g. "> CRAFTING  การผลิต"
 static func header(en: String, th: String = "", color: Color = C_GOLD) -> HBoxContainer:
 	var h := hbox(4)

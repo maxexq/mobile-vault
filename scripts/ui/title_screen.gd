@@ -31,6 +31,7 @@ var _settings_btn: Button
 var _chars := 0.0
 var _boot_text := ""
 var _channel: Label
+var _env_tag: Label
 ## set at start on a web reload; cleared once the game was entered (or by the player tapping anything)
 var auto_continue := false
 
@@ -47,8 +48,14 @@ func _ready() -> void:
 	v.add_child(UIKit.logo())
 	_channel = UIKit.channel_tag()
 	v.add_child(_channel)
-	Features.changed.connect(func(): UIKit.refresh_channel_tag(_channel))
-	visibility_changed.connect(func(): UIKit.refresh_channel_tag(_channel))
+	_env_tag = UIKit.env_tag()
+	v.add_child(_env_tag)
+	Features.changed.connect(func():
+		UIKit.refresh_channel_tag(_channel)
+		UIKit.refresh_env_tag(_env_tag))
+	visibility_changed.connect(func():
+		UIKit.refresh_channel_tag(_channel)
+		UIKit.refresh_env_tag(_env_tag))
 	v.add_child(UIKit.divider(UIKit.C_LINE_DIM))
 	_log = UIKit.label("", UIKit.FP, UIKit.C_DIM, true)
 	_log.custom_minimum_size.y = 52

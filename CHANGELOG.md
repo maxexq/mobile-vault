@@ -14,6 +14,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Play logs are sent to the game's server with your player ID to help fix bugs and balance the game; a one-time notice explains it and Settings → Privacy turns it off (MV-116)
 
 ### Changed
+- Test servers (staging / UAT) keep their own saves and logs, apart from the real game, and show a STAGING / UAT SERVER tag on the title screen (MV-112)
 - Medical room redrawn with PixelLab (first AI-assisted sprite, snapped to the 16-bit palette) (MV-162)
 - All other rooms redrawn with PixelLab: quarters, kitchen, hydroponics, water, armory, science, radio, engine, refinery, workshop, empty (MV-166)
 - Portrait phones: the auto camera zooms the vehicle in to fill the screen width instead of showing the whole convoy small under a big sky; swipe to see the trailers, boss fights still pull back. Swiping follows your finger at every zoom (MV-148)

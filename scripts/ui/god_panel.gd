@@ -346,6 +346,14 @@ func _tab_sys() -> void:
 		chb.append(_b(cid, func(): Dev.channel_preview(cid), "yellow" if BuildInfo.channel_preview == cid else "gray"))
 	chb.append(_b("ของจริง", func(): Dev.channel_preview(""), "green" if BuildInfo.channel_preview == "" else "gray"))
 	_row(chb, "ดูป้ายช่อง")
+	_note("สภาพแวดล้อม: %s · เซิร์ฟเวอร์ %s · ไฟล์ตั้งค่ารีโมต %s%s" % [BuildInfo.env().to_upper(), BuildInfo.cloud_project(),
+		Features.remote_files(BuildInfo.env())[0], (" · " + BuildInfo.page_host()) if BuildInfo.page_host() != "" else ""])
+	var eb := []
+	for e in BuildInfo.ENVS:
+		var eid: String = e
+		eb.append(_b(eid, func(): Dev.env_preview(eid), "yellow" if BuildInfo.env_preview == eid else "gray"))
+	eb.append(_b("ของจริง", func(): Dev.env_preview(""), "green" if BuildInfo.env_preview == "" else "gray"))
+	_row(eb, "ดูป้าย env")
 	var cp := UIKit.button("คัดลอกข้อมูลเวอร์ชัน", "gray")
 	cp.pressed.connect(func():
 		DisplayServer.clipboard_set(BuildInfo.as_text())
