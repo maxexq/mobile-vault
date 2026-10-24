@@ -1,0 +1,28 @@
+{
+  "spec": "micro-asset/1",
+  "id": "prop_med_iv_drip",
+  "title": "IV drip stand with a slow drip",
+  "why": "The medical room reads as a storage closet at 1x; a drip stand beside the cot says 'clinic' in one glance and adds a tiny idle motion.",
+  "parent": "room_medical",
+  "kind": "anim",
+  "size": [7, 20],
+  "frames": {"count": 3, "fps": 3, "loop": true},
+  "palette": ["ol0", "gray3", "gray5", "cream2", "cream3", "red3", "lamp1"],
+  "outline": "ol0",
+  "light": "lamp",
+  "dither": false,
+  "layer": "on_parent",
+  "anchor": {"x": 29, "y": 46, "pivot": "bottom-center"},
+  "generator": {"method": "drawn", "module": "tools/art/rooms.py", "function": "prop_iv_drip"},
+  "feature": null,
+  "refs": ["tools/art/micro/sheets/room_medical_x8.png"],
+  "acceptance": [
+    "1 px steel pole (gray3/gray5) on a 5 px tripod foot standing on the floor line y=46, right of the cot",
+    "bag 3x5 px cream2/cream3 with a 1 px red3 label, top-left rim lit by the room lamp (lamp1, max 2 px)",
+    "3 frames: one drip pixel moves down the 1 px tube 0 -> 2 -> 4 px, then loops; nothing else changes",
+    "only the listed palette names; ol0 outline on the bag and foot, none on the 1 px tube",
+    "still readable at 1x next to room_medical and does not cover the cot or the wall cross sign"
+  ],
+  "notes": "Example spec for docs/micro-assets.md. Room interiors are 64x52; the floor line is about y=46.",
+  "author": "Claude (example)"
+}

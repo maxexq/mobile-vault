@@ -3,6 +3,8 @@
     "allow": [
       "Bash(python tools/plane.py:*)",
       "Bash(python3 tools/plane.py:*)",
+      "Bash(python tools/micro_asset.py:*)",
+      "Bash(python3 tools/micro_asset.py:*)",
       "Bash(gh pr create:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr list:*)",
