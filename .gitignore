@@ -16,3 +16,6 @@ __pycache__/
 # PixelLab (tools/pixellab.py): token and generated candidates stay local; accepted overrides are committed
 .pixellab-api-key
 tools/art/pixellab/candidates/
+
+# micro-asset specs (tools/micro_asset.py): local drafts and grid sheets
+tools/art/micro/

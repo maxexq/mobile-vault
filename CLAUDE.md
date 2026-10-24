@@ -2,7 +2,8 @@
 
 Idle survival game on an armoured vehicle after the apocalypse, for mobile web.
 Two Claudes work on this repo: the claude.ai project (cloud threads) and Claude Code CLI on
-Parames's PC. Both follow this file. The game itself is described in `README.md` and
+Parames's PC. Both follow this file. Codex CLI (`AGENTS.md`) is the art analyst: it only writes
+micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset tickets" below). The game itself is described in `README.md` and
 `docs/PROJECT_CONTEXT.md`; read the relevant README section before touching a system.
 
 ## Hard rules
@@ -96,9 +97,25 @@ python tools/plane.py comment MV-12 "waiting for Parames to pick option B"
 - Waiting on a decision: **Needs Decision**. PR open: **In Review** + PR link.
   Merged but needs a real-device/web check: **Awaiting Verify**. Delivered: **Done** + links.
 - States: Backlog, Needs Decision, Todo, In Progress, In Review, Awaiting Verify, Done, Cancelled.
-  Labels: feature, bug, design, art, infra, balance, ui, marketing, tooling, v4.3–v4.7.
+  Labels: feature, bug, design, art, infra, balance, ui, marketing, tooling, micro-asset, v4.3–v4.7.
 - API key: env `PLANE_API_KEY` or one line in `.plane-api-key` at the repo root (git-ignored).
   In claude.ai cloud sessions the proxy adds the key, so none is needed there.
+
+## Micro-asset tickets (from Codex)
+
+Tickets titled `[micro] <id>: ...` with label `micro-asset` carry a JSON spec (size, frames,
+palette names, parent, layer, anchor, generator, acceptance). Format and loop: `docs/micro-assets.md`.
+
+```
+python tools/micro_asset.py queue            # Todo micro-asset tickets
+python tools/micro_asset.py pull MV-<n>      # spec -> tools/art/micro/drafts/<id>.json
+python tools/micro_asset.py verify MV-<n>    # after generate_pixel_art.py: size, frames, palette
+```
+
+- Build exactly the spec: only its palette names, its size, its anchor. If it cannot work as
+  written, comment on the ticket and move it to **Needs Decision**; don't silently change it.
+- The normal definition of done still applies when the asset is placed in game (Features gate if
+  `feature` is set, autotest, web export, PR). `"method": "pixellab"` needs Parames's OK first.
 
 ## Gotchas that already cost bugs
 

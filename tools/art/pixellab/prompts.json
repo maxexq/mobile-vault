@@ -1,7 +1,12 @@
 {
  "style": "dark post-apocalyptic, gritty grime and rust, soot black outlines, muted colours with warm lamp light, 16-bit SNES era pixel art, crisp pixels",
  "negative": "blurry, smooth gradients, anti-aliasing, bright cheerful colours, text, watermark, frame",
- "defaults": {"outline": "single color black outline", "shading": "medium shading", "detail": "medium detail", "view": "side"},
+ "defaults": {
+  "outline": "single color black outline",
+  "shading": "medium shading",
+  "detail": "medium detail",
+  "view": "side"
+ },
  "prefixes": {
   "room_": "flat side-view cross-section of one room inside an armoured survival truck: {subject} room, metal walls, floor plate at the bottom, orthographic",
   "en_": "side-view enemy sprite facing west, mutated wasteland {subject}, full body",
@@ -16,7 +21,16 @@
  },
  "sprites": {
   "room_medical": "flat side-view cross-section of a field hospital room inside an armoured survival truck: one bed with stained sheets, IV drip stand, medicine cabinet with red cross, flickering ceiling lamp, metal walls, orthographic",
-  "room_kitchen": "flat side-view cross-section of a scrap kitchen inside an armoured survival truck: rusty stove with a pot, canned food shelves, hanging pans, metal walls, orthographic",
-  "room_hydroponics": "flat side-view cross-section of a hydroponics room inside an armoured survival truck: green plants in trays under grow lamps, water pipes, metal walls, orthographic"
+  "room_kitchen": "flat side-view cross-section of a scrap kitchen inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: rusty stove with a steaming pot, cracked tile wall, canned food shelf, old fridge, cutting board counter",
+  "room_hydroponics": "flat side-view cross-section of a hydroponics room inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: rows of green plants in trays under purple grow lamps, water pipes and drip lines",
+  "room_quarters": "flat side-view cross-section of a crew sleeping quarters inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: rusty bunk bed with blankets, boarded window, faded family photo, small locker",
+  "room_water": "flat side-view cross-section of a water purification room inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: big blue filter tank, two white treatment cylinders with gauges, pipes and valves",
+  "room_armory": "flat side-view cross-section of a armory inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: wall rack of rifles, ammo crates stacked, shooting target on brick wall, workbench",
+  "room_science": "flat side-view cross-section of a science lab inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: chalkboard with formulas, glowing green flasks, microscope, cluttered lab bench",
+  "room_radio": "flat side-view cross-section of a radio room inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: big radio console with dials and blinking lights, wasteland map pinned on the wall, desk with headset",
+  "room_engine": "flat side-view cross-section of a generator room inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: big red diesel generator with gauges, exhaust pipes, hazard stripes on the floor, fuel can",
+  "room_refinery": "flat side-view cross-section of a fuel refinery inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: copper distillation still, pressure gauges, small fire under a boiler, fuel barrels",
+  "room_workshop": "flat side-view cross-section of a scrap workshop inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: pegboard of tools, circular saw blade, workbench with vice, parts bins",
+  "room_empty": "flat side-view cross-section of a empty storage room inside an armoured survival truck, metal walls, floor plate at the bottom, one caged ceiling lamp, orthographic: bare walls with stains, a few cardboard boxes and a crate"
  }
 }
