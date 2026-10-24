@@ -13,6 +13,7 @@
     "google_login": true,
     "player_id": true,
     "cloud_logs": true,
+    "portrait_fit": true,
     "persistent_account": true,
     "channel_badge": true,
     "room_ambience": true,

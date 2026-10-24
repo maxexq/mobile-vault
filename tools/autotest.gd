@@ -626,8 +626,11 @@ func _run() -> void:
 	_share_preview_test()
 	# portrait phone
 	get_window().size = Vector2i(780, 1688)
+	var zm0: String = main.zoom_mode
+	main.set_zoom_mode("auto")
 	await wait(1.5)
 	await shot("portrait")
+	await _portrait_fit_test()
 	main.open_closeup(2)
 	await wait(1.0)
 	await shot("portrait_closeup")
@@ -644,6 +647,7 @@ func _run() -> void:
 	main.hud.event_popup._resolve(1)
 	main.hud.event_popup.close()
 	# back to a wide tablet/phone landscape
+	main.set_zoom_mode(zm0)
 	get_window().size = Vector2i(1280, 640)
 	await wait(1.2)
 	main.hud.open_panel("solar")
@@ -2353,6 +2357,40 @@ func _cloud_account_test() -> void:
 	Cloud.url = ""
 	Cloud.session = {}
 	Cloud.status_changed.emit()
+
+
+## MV-148: a portrait phone's AUTO camera fills the screen with the main body (whole-number scale, crisp pixels),
+## trailers stay a swipe away, landscape and the switch keep the old framing. Window is 780x1688 (S = 2).
+func _portrait_fit_test() -> void:
+	var win := Vector2(DisplayServer.window_get_size())
+	var trailers := Game.trailers()
+	_check("view: portrait AUTO is not the wide convoy view (S %d, world %d, trailers %d)" % [main.pixel_scale, main.world_scale, trailers],
+		main.world_scale >= main.pixel_scale and is_equal_approx(main.world_scale, main.target_ws()))
+	_check("view: the main body fits the screen width", Vehicle.MAIN_W * main.world_scale <= win.x)
+	if trailers > 0:
+		_check("view: a swipe reaches the end of the convoy (pan %.0f)" % main.pan_right, main.pan_right > main.PAN_LIMIT)
+	# smaller UI pixels (S - 1): now the world zooms in past S, through the rounded-up viewport
+	Settings.set_value("ui_scale", "small")
+	await wait(0.8)
+	var ws: float = main.world_scale
+	_check("view: zoomed in past the UI scale (S %d, world %d)" % [main.pixel_scale, ws], ws > main.pixel_scale)
+	_check("view: every art pixel is exactly %d screen px" % int(ws),
+		is_equal_approx(main.world_tex.size.x * main.pixel_scale, main.world_vp.size.x * ws)
+		and is_equal_approx(main.world_tex.size.y * main.pixel_scale, main.world_vp.size.y * ws)
+		and main.world_tex.size.x * main.pixel_scale >= win.x - 0.5)
+	_check("view: still fits the main body", Vehicle.MAIN_W * ws <= win.x)
+	var mid: Vector2 = Vector2(win.x * 0.5, win.y * 0.6) / main.pixel_scale
+	_check("view: tap mapping round-trips at this zoom", main.world_to_screen(main.screen_to_world(mid)).distance_to(mid) < 0.6)
+	await shot("portrait_fit_small_ui")
+	Settings.set_value("ui_scale", "auto")
+	await wait(0.6)
+	# switch off: the old framing (wide when there are trailers)
+	Features.set_override("features", "portrait_fit", false)
+	await wait(0.6)
+	_check("view: switch off -> old framing", main.world_scale == (main.pixel_scale - 1.0 if trailers > 0 else main.pixel_scale))
+	Features.set_override("features", "portrait_fit", null)
+	await wait(0.6)
+	_check("view: GOD readout names the scales", Dev.view_info().contains("UI x%d" % int(main.pixel_scale)))
 
 
 ## flush until the queue is empty (the full run has hundreds of trace entries by now); false if a batch fails
