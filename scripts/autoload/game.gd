@@ -68,7 +68,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 	s = {
 		"version": 1, "route_v": 2, "slots_v": 5, "tier": tier_id, "trailers": 0, "pets": [], "outage": {},
 		"vault_level": 1,
-		"res": {"power": 60.0, "water": 50.0, "food": 50.0, "scrap": 150.0, "fuel": 30.0},
+		"res": {"power": 60.0, "water": 50.0, "food": 50.0, "scrap": 150.0, "fuel": 30.0, "crops": Data.START_RAW.crops, "meat": Data.START_RAW.meat},
 		"items": {"stimpack": 2, "radaway": 1, "ammo": 5},
 		"km": 0.0, "biome": 0, "lap": 0,
 		"traveling": true, "hull": 100.0, "stall": 0.0,
@@ -203,6 +203,8 @@ func _migrate() -> void:
 	# v3: fuel, exterior/interior mods, expeditions, prestige; three rooms per floor
 	s.merge({"mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true}, false)
 	(s.res as Dictionary).merge({"fuel": 30.0}, false)
+	# MV-247: raw food (crops + meat) for the kitchen; old saves get the same starting stock as a new game
+	(s.res as Dictionary).merge(Data.START_RAW, false)
 	_migrate_v4()
 	while s.rooms.size() < slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
@@ -347,7 +349,7 @@ func _offline_progress(sec: float) -> void:
 		_simulate(step, true)
 		t += step
 	var parts := []
-	for k in ["food", "water", "power", "scrap"]:
+	for k in ["food", "water", "power", "scrap"] + (Data.RAW_KEYS if Data.raw_food() else []):
 		var dv: float = s.res[k] - before[k]
 		if absf(dv) >= 1.0:
 			parts.append("%s %+d" % [Data.item_name(k), int(dv)])
@@ -765,9 +767,56 @@ func room_rate_pm(slot: int) -> Dictionary:
 		mult *= float(weather_def().crop)
 	if def.power > 0.0 and s.res.power <= 0.5:
 		mult *= 0.15
-	for k in def.produce:
-		out[k] = float(def.produce[k]) * mult
+	var prod := Data.room_produce(r.type)
+	for k in prod:
+		out[k] = float(prod[k]) * mult
 	return out
+
+
+## MV-247: what a room uses up per minute to make `rate` (raw food on): the kitchen cooks crops / meat
+## ("raw", either one) + water into food, hydroponics turns water into crops
+func room_inputs_pm(slot: int, rate: Dictionary) -> Dictionary:
+	if not Data.raw_food() or rate.is_empty():
+		return {}
+	var def := Data.room_def(room(slot).type)
+	if def.get("cook", false):
+		var f := float(rate.get("food", 0.0))
+		return {"raw": f / Features.num("food.cook_yield", Data.COOK_YIELD), "water": f * Features.num("food.cook_water", Data.COOK_WATER)}
+	if def.has("raw_produce"):
+		return {"water": float(rate.get("crops", 0.0)) * Features.num("food.crop_water", Data.CROP_WATER)}
+	return {}
+
+
+func raw_stock() -> float:
+	return float(s.res.get("crops", 0.0)) + float(s.res.get("meat", 0.0))
+
+
+## the share of a room's full output it can make this step: limited by its inputs and by room left in storage
+func _input_frac(rate: Dictionary, inputs: Dictionary, m: float) -> float:
+	var f := 1.0
+	for k in inputs:
+		var need: float = float(inputs[k]) * m
+		if need > 0.0:
+			f = minf(f, (raw_stock() if k == "raw" else float(s.res.get(k, 0.0))) / need)
+	for k in rate:
+		var make: float = float(rate[k]) * m
+		if make > 0.0:
+			f = minf(f, maxf(0.0, cap(k) - float(s.res.get(k, 0.0))) / make)
+	return clampf(f, 0.0, 1.0)
+
+
+func _use_inputs(inputs: Dictionary, m: float, f: float) -> void:
+	for k in inputs:
+		var amt: float = float(inputs[k]) * m * f
+		if k != "raw":
+			_add_res(k, -amt)
+			continue
+		# crops and meat are used in proportion to what's stored, so neither piles up untouched
+		var tot := raw_stock()
+		if tot <= 0.0:
+			continue
+		for rk in Data.RAW_KEYS:
+			_add_res(rk, -amt * float(s.res.get(rk, 0.0)) / tot)
 
 
 func craft_speed(slot: int) -> float:
@@ -910,8 +959,13 @@ func _simulate(dt: float, offline: bool) -> void:
 		if def.power > 0.0:
 			_add_res("power", -room_power_pm(slot) * m)
 		var rate := room_rate_pm(slot)
+		var inputs := room_inputs_pm(slot, rate)
+		var frac := 1.0
+		if not inputs.is_empty():
+			frac = _input_frac(rate, inputs, m)
+			_use_inputs(inputs, m, frac)
 		for k in rate:
-			var amt: float = rate[k] * m
+			var amt: float = rate[k] * m * frac
 			_add_res(k, amt)
 			if not offline:
 				_accumulate_float(slot, k, amt)
@@ -941,7 +995,7 @@ func _simulate(dt: float, offline: bool) -> void:
 	eat *= Modes.mul("eat")
 	_add_res("food", -Data.DWELLER_FOOD_PM * eat * m * (0.92 if has_pet("cat") else 1.0))
 	if has_pet("hen"):
-		_add_res("food", 0.6 * m)
+		_add_res("meat" if Data.raw_food() else "food", 0.6 * m)    # eggs
 	_add_res("water", -Data.DWELLER_WATER_PM * eat * Env.water_mult() * m)
 	var starving: bool = res.food <= 0.0 or res.water <= 0.0
 	var crowded: bool = s.dwellers.size() > pop_cap()
@@ -1112,6 +1166,10 @@ func _tick_job(slot: int, dt: float, offline: bool) -> void:
 
 
 func _recipe(room_type: String, id: String) -> Dictionary:
+	for rec in Data.recipes(room_type):
+		if rec.id == id:
+			return rec
+	# a job started before the raw-food switch flipped still finishes with its own output
 	for rec in Data.room_def(room_type).get("recipes", []):
 		if rec.id == id:
 			return rec
@@ -1405,11 +1463,13 @@ func give_rewards(rew: Dictionary) -> String:
 				else:
 					parts.append("(ที่พักเต็ม)")
 			_:
-				if s.res.has(k):
-					_add_res(k, float(n))
+				# raw food switched off: crops / meat rewards arrive as food
+				var rk: String = "food" if k in Data.RAW_KEYS and not Data.raw_food() else str(k)
+				if s.res.has(rk):
+					_add_res(rk, float(n))
 				else:
-					add_item(k, n)
-				parts.append("+%d %s" % [n, Data.item_name(k)])
+					add_item(rk, n)
+				parts.append("+%d %s" % [n, Data.item_name(rk)])
 	resources_changed.emit()
 	return ", ".join(parts)
 

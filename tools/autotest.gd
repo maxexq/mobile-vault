@@ -100,6 +100,11 @@ func _run() -> void:
 		await _tips_test()
 		_finish()
 		return
+	if "--only=raw_food" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _raw_food_test()
+		_finish()
+		return
 	if "--only=scene_art" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _scene_art_test()
@@ -761,6 +766,7 @@ func _run() -> void:
 	await _announce_test()
 	await _scene_art_test()
 	await _industrial_background_test()
+	await _raw_food_test()
 	_thai_terms_test()
 	_finish()
 
@@ -4166,3 +4172,101 @@ func _col_diff(im: Image, a: int, b: int) -> float:
 		var q := im.get_pixel(b, y)
 		d += absf(p.r - q.r) + absf(p.g - q.g) + absf(p.b - q.b)
 	return d
+
+
+## MV-247: raw food. Hydroponics grows crops, mutated animals drop meat, the kitchen cooks crops / meat + water
+## into food (and stops when they run out or the pantry is full); recipes use sensible inputs; switch off = old game
+func _raw_food_test() -> void:
+	var res0: Dictionary = (Game.s.res as Dictionary).duplicate()
+	_check("raw food: the switch is on by default", Data.raw_food())
+	_check("raw food: every save has crops and meat", Game.s.res.has("crops") and Game.s.res.has("meat"))
+	var kitchen := -1
+	for i in Game.s.rooms.size():
+		if Game.room(i).type == "kitchen" and not Game.is_site(i):
+			kitchen = i
+			break
+	_check("raw food: the start layout has a kitchen", kitchen >= 0)
+	if Game.room_workers(kitchen).is_empty():
+		for d in Game.s.dwellers:
+			if not Game.is_away(d) and Game.squad_role(d) < 0 and int(d.room) != Data.CAB_SLOT:
+				Game.assign(d, kitchen)
+				break
+	var rate := Game.room_rate_pm(kitchen)
+	var ins := Game.room_inputs_pm(kitchen, rate)
+	var f := float(rate.get("food", 0.0))
+	_check("raw food: the kitchen cooks crops/meat + water (%.2f food uses %.2f raw, %.2f water)" % [f, float(ins.get("raw", 0.0)), float(ins.get("water", 0.0))],
+		f > 0.0 and is_equal_approx(float(ins.get("raw", 0.0)), f / Data.COOK_YIELD) and is_equal_approx(float(ins.get("water", 0.0)), f * Data.COOK_WATER))
+	Game.s.res.water = 100.0
+	Game.s.res.food = 0.0
+	Game.s.res.crops = 0.0
+	Game.s.res.meat = 0.0
+	_check("raw food: no crops or meat = the kitchen makes nothing", Game._input_frac(rate, ins, 1.0) == 0.0)
+	Game.s.res.crops = 40.0
+	Game.s.res.meat = 20.0
+	_check("raw food: stocked = full output", is_equal_approx(Game._input_frac(rate, ins, 1.0), 1.0))
+	Game._use_inputs(ins, 1.0, 1.0)
+	var used_c := 40.0 - float(Game.s.res.crops)
+	var used_m := 20.0 - float(Game.s.res.meat)
+	_check("raw food: crops and meat are used in proportion to stock (%.2f / %.2f)" % [used_c, used_m],
+		used_c > 0.0 and used_m > 0.0 and absf(used_c - 2.0 * used_m) < 0.01 and absf(used_c + used_m - float(ins.raw)) < 0.01)
+	Game.s.res.food = Game.cap("food")
+	_check("raw food: a full pantry stops cooking (nothing wasted)", Game._input_frac(rate, ins, 1.0) == 0.0)
+	# the real tick, run twice from the same state: with crops the kitchen adds food, with none it adds nothing
+	Game.s.res.food = 20.0
+	Game.s.res.meat = 0.0
+	var orig: Dictionary = Game.s      # both runs on copies; the live save object goes back untouched
+	Game.s = orig.duplicate(true)
+	Game.s.res.crops = 40.0
+	Game._simulate(30.0, true)
+	var food_fed := float(Game.s.res.food)
+	Game.s = orig.duplicate(true)
+	Game.s.res.crops = 0.0
+	Game._simulate(30.0, true)
+	var food_empty := float(Game.s.res.food)
+	Game.s = orig
+	_check("raw food: the tick cooks crops into food (%.1f with crops, %.1f without)" % [food_fed, food_empty], food_fed > food_empty + 1.0)
+	_check("raw food: hydroponics grows crops (switch off: food)", Data.room_produce("hydroponics").has("crops") and not Data.room_produce("hydroponics").has("food"))
+	# recipes
+	var kr := Data.recipes("kitchen").map(func(r): return str(r.id))
+	var cook: Dictionary = Data.recipes("kitchen").filter(func(r): return r.id == "cook_meal")[0]
+	_check("raw food: kitchen recipes cook crops / grill meat, no scrap", kr.has("grill_meat") and cook.cost.has("crops") and not cook.cost.has("scrap"))
+	var sr := Data.recipes("science").map(func(r): return str(r.id))
+	_check("raw food: science grows lab meat instead of making scrap out of power", sr.has("lab_meat") and not sr.has("refine"))
+	var no_scrap := true
+	for room_type in ["kitchen", "hydroponics", "medical", "refinery"]:
+		for rec in Data.recipes(room_type):
+			if room_type != "refinery" or rec.id == "biofuel":
+				no_scrap = no_scrap and not (rec.cost as Dictionary).has("scrap")
+	_check("raw food: food, medicine and biofuel recipes no longer use scrap", no_scrap)
+	# hunting: animals drop meat, people / machines don't
+	Game.s.res.meat = 0.0
+	Combat._on_kill({"id": -1, "mob": "rad_wolf", "lvl": 5, "boss": false, "warlord": false, "elite": false, "x": 300.0, "y": 150.0, "mech": [], "scale": 1.0, "tint": ""})
+	var wolf_meat := float(Game.s.res.meat)
+	Combat._on_kill({"id": -2, "mob": "scav_raider", "lvl": 5, "boss": false, "warlord": false, "elite": false, "x": 300.0, "y": 150.0, "mech": [], "scale": 1.0, "tint": ""})
+	_check("raw food: a rad-wolf kill gives meat (%.2f), a raider none" % wolf_meat, wolf_meat > 0.1 and is_equal_approx(float(Game.s.res.meat), wolf_meat))
+	# UI
+	_check("raw food: HUD shows crops and meat", main.hud.res_labels.has("crops") and main.hud.res_labels.has("meat"))
+	Game.s.res.crops = 0.0
+	Game.s.res.meat = 0.0
+	main.open_closeup(kitchen)
+	await wait(1.0)
+	_check("raw food: the kitchen close-up warns when crops and meat run out", _find_text(main.hud.room_closeup, "พืชผลและเนื้อหมด"))
+	await shot("raw_food_kitchen_empty")
+	main.hud.room_closeup.close()
+	await wait(0.4)
+	Game.s.res.crops = 60.0
+	Game.s.res.meat = 30.0
+	await wait(0.4)
+	await shot("raw_food_hud")
+	# switch off: the old game
+	Features.set_override("features", "raw_food", false)
+	_check("raw food off: kitchen recipes use scrap again", (Data.recipes("kitchen").filter(func(r): return r.id == "cook_meal")[0].cost as Dictionary).has("scrap") and not Data.recipes("kitchen").any(func(r): return r.id == "grill_meat"))
+	_check("raw food off: the kitchen cooks without inputs", Game.room_inputs_pm(kitchen, rate).is_empty() and Data.room_produce("hydroponics").has("food"))
+	var food0 := float(Game.s.res.food)
+	Game.s.res.food = 0.0
+	Game.give_rewards({"meat": 10, "crops": 5})
+	_check("raw food off: crop / meat rewards arrive as food", is_equal_approx(float(Game.s.res.food), 15.0))
+	Game.s.res.food = food0
+	Features.set_override("features", "raw_food", null)
+	Game.s.res = res0
+	Game.resources_changed.emit()

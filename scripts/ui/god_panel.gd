@@ -180,6 +180,10 @@ func _tab_res() -> void:
 		_row([_b("0", func(): Dev.res_set(key, 0.0)), _b("-100", func(): Dev.res_set(key, cur - 100.0)),
 			_b("+100", func(): Dev.res_set(key, cur + 100.0)), _b("เต็ม", func(): Dev.res_set(key, Game.cap(key)), "green")],
 			"%s %d/%d" % [Data.item_name(k), int(cur), int(Game.cap(k))])
+	_head("RAW FOOD", "พืชผลและเนื้อ (MV-247, สวิตช์ raw_food %s)" % ("เปิด" if Data.raw_food() else "ปิด"))
+	_row([_b("หมดคลัง (ครัวหยุด)", func(): Dev.raw_food("empty"), "red"), _b("พืช+เนื้อ 100", func(): Dev.raw_food("stock"), "green"),
+		_b("ฝูงสัตว์ให้ล่า", func(): Dev.raw_food("hunt"), "yellow")])
+	_note("ครัวใช้พืชผล/เนื้อ + น้ำทำอาหาร · ห้องปลูกพืชได้พืชผล · ฆ่าสัตว์กลายพันธุ์ได้เนื้อ (คน ซอมบี้ หุ่นยนต์ไม่ได้)")
 	_head("ITEMS", "ไอเท็ม")
 	_row([_b("ทุกชนิด +10", func(): Dev.items_all(10), "green"), _b("ทุกชนิด +100", func(): Dev.items_all(100), "green")])
 	for k in Data.ITEMS:

@@ -1027,6 +1027,13 @@ func _on_kill(e: Dictionary) -> void:
 		Game.give_xp(rd, xp * DECK_RESERVE_XP, Game._best_stat(rd))
 	Game._add_res("scrap", scrap)
 	Threat.on_kill(scrap)
+	# MV-247: mutated animals are hunted for meat (people, zombies and machines give none)
+	if Data.raw_food() and Data.MEAT_MOBS.has(str(e.get("mob", ""))):
+		# no level / raid-pay scaling: hunting should keep a small crew fed, not fill the pantry (~1.5 meat/min)
+		var meat := float(Data.MEAT_MOBS[str(e.mob)]) * Data.MEAT_PER_KILL * (12.0 if e.boss else (3.0 if e.elite else 1.0)) * Features.num("food.meat_kill", 1.0)
+		Game._add_res("meat", meat)
+		if e.boss or e.elite or rng.randf() < 0.25:
+			supply_found.emit("meat", meat, Vector2(float(e.x), float(e.y)))
 	# backpacks: chance to scavenge food / water from every kill
 	if supply > 0.0 and rng.randf() < minf(0.85, supply / 100.0 * 0.5 + (0.5 if e.boss else 0.0)):
 		var kind := "food" if rng.randf() < 0.5 else "water"

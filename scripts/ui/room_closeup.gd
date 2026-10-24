@@ -285,13 +285,25 @@ func _build_production(r: Dictionary, def: Dictionary) -> void:
 		txt += Loc.t("+%.1f %s/นาที  ") % [rate[k], Data.item_name(k)]
 	if txt == "" and not def.produce.is_empty():
 		txt = Loc.t("ไม่มีคนทำงาน — หยุดผลิต")
+	# MV-247: what the room uses up to make it
+	var ins := Game.room_inputs_pm(slot, rate)
+	var use_txt := ""
+	for k in ins:
+		use_txt += Loc.t("-%.1f %s/นาที  ") % [ins[k], Loc.t("พืชผล/เนื้อ") if k == "raw" else Data.item_name(k)]
 	var eff := UIKit.panel()
 	var v := UIKit.vbox(1)
 	eff.add_child(v)
-	v.add_child(UIKit.label("EFFECT: " + def.effect_en, UIKit.FP, UIKit.C_GREEN, true))
-	v.add_child(UIKit.wrap_label(def.effect_th, UIKit.FS_SMALL, UIKit.C_DIM))
+	var raw := Data.raw_food()
+	v.add_child(UIKit.label("EFFECT: " + str(def.get("raw_effect_en", def.effect_en) if raw else def.effect_en), UIKit.FP, UIKit.C_GREEN, true))
+	v.add_child(UIKit.wrap_label(Data.room_effect(r.type), UIKit.FS_SMALL, UIKit.C_DIM))
 	if txt != "":
 		v.add_child(UIKit.wrap_label(txt, UIKit.FS_SMALL, UIKit.C_TEXT))
+	if use_txt != "":
+		v.add_child(UIKit.wrap_label(Loc.t("ใช้ ") + use_txt, UIKit.FS_SMALL, UIKit.C_DIM))
+	if ins.has("raw") and Game.raw_stock() < 1.0:
+		v.add_child(UIKit.wrap_label(Loc.t("พืชผลและเนื้อหมด! ครัวหยุดทำอาหาร — ปลูกพืชในห้องปลูกพืช หรือล่าสัตว์กลายพันธุ์"), UIKit.FS_SMALL, UIKit.C_RED))
+	elif ins.has("water") and float(Game.s.res.water) < 1.0:
+		v.add_child(UIKit.wrap_label(Loc.t("น้ำหมด! ห้องนี้หยุดผลิต"), UIKit.FS_SMALL, UIKit.C_RED))
 	var syn := Crew.synergy_text(slot)
 	var cm := Crew.room_mult(slot)
 	if syn != "" or absf(cm - 1.0) > 0.01:
@@ -312,7 +324,7 @@ func _build_production(r: Dictionary, def: Dictionary) -> void:
 
 
 func _build_recipes(r: Dictionary, def: Dictionary) -> void:
-	var recs: Array = def.get("recipes", [])
+	var recs: Array = Data.recipes(r.type)
 	if recs.is_empty():
 		return
 	_section("CRAFTING", Loc.t("การผลิต"))

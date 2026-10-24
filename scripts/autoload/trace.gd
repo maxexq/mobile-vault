@@ -165,7 +165,7 @@ func _process(delta: float) -> void:
 func _sample() -> void:
 	var r: Dictionary = Game.s.res
 	rec("sample", "state", {"fps": Engine.get_frames_per_second(), "x": Engine.time_scale,
-		"food": int(r.food), "water": int(r.water), "power": int(r.power), "scrap": int(r.scrap), "fuel": int(r.get("fuel", 0)),
+		"food": int(r.food), "water": int(r.water), "power": int(r.power), "scrap": int(r.scrap), "fuel": int(r.get("fuel", 0)), "crops": int(r.get("crops", 0)), "meat": int(r.get("meat", 0)),
 		"hull": int(Game.s.hull), "km": snappedf(float(Game.s.km), 0.01), "biome": int(Game.s.biome), "wave": Combat.wave(),
 		"enemies": Combat.enemies.size(), "crew": Game.s.dwellers.size(), "happy": int(Game.avg_happiness()),
 		"weight": int(Haul.load_ratio() * 100.0), "nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))})

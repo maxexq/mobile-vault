@@ -182,7 +182,7 @@ func _process(delta: float) -> void:
 			if not (h as Dictionary).is_empty():
 				h.hp = h.max
 	if on("inf_res"):
-		for k in ["food", "water", "power", "scrap", "fuel"]:
+		for k in ["food", "water", "power", "scrap", "fuel", "crops", "meat"]:
 			if Game.s.res.has(k):
 				Game.s.res[k] = Game.cap(k)
 	if on("no_events"):
@@ -242,6 +242,27 @@ func res_set(k: String, v: float) -> void:
 	else:
 		Game.s.items[k] = maxi(0, int(v))
 	act("set %s = %d" % [k, int(v)])
+	Game.resources_changed.emit()
+
+
+## MV-247 raw food: "empty" (no crops / meat, little food: the kitchen stops), "stock" (100 of each),
+## "hunt" (a wave of mutated animals that drop meat)
+func raw_food(what: String) -> void:
+	match what:
+		"empty":
+			for k in Data.RAW_KEYS:
+				Game.s.res[k] = 0.0
+			Game.s.res.food = minf(float(Game.s.res.food), 10.0)
+		"stock":
+			for k in Data.RAW_KEYS:
+				Game.s.res[k] = minf(100.0, Game.cap(k))
+		"hunt":
+			var q := []
+			var mobs := ["rad_wolf", "rad_rat", "scorpion", "mutant_ape", "yeti", "toxic_toad"]
+			for i in mobs.size():
+				q.append({"t": 0.3 + i * 0.5, "mob": mobs[i], "lvl": Combat.enemy_level()})
+			Combat.debug_spawn(q, false)
+	act("raw food " + what)
 	Game.resources_changed.emit()
 
 
