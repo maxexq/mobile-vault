@@ -12,7 +12,8 @@
     "cloud_save": true,
     "google_login": true,
     "modes": true,
-    "channel_badge": true
+    "channel_badge": true,
+    "resume_on_reload": true
   },
   "events": {},
   "tune": {}

@@ -660,6 +660,7 @@ func _run() -> void:
 	_event_variety_test()
 	await _cloud_test()
 	await _cloud_account_test()
+	await _resume_test()
 	await _large_room_test()
 	await _features_test()
 	await _modes_test()
@@ -1502,6 +1503,42 @@ func _fake_run(gen: int) -> Dictionary:
 
 func _local_gen() -> int:
 	return int(Save.read().get("meta", {}).get("gen", -1))
+
+
+## a web page reload goes back into the saved game on its own, but waits for the cloud to answer and never
+## skips a login or a save conflict (switch "resume_on_reload"; the reload itself is detected in JS)
+func _resume_test() -> void:
+	var ts = main.hud.title_screen
+	var keep := {"url": Cloud.url, "state": Cloud.state, "need_login": Cloud.need_login, "chose": str(Cloud.meta.get("chose", ""))}
+	_check("resume: off outside a web reload", not ts.auto_continue)
+	Game.new_game()
+	Game.s.stats["resume_mark"] = 1
+	Game.save_game()
+	Game.started = false
+	ts.modulate.a = 1.0
+	ts.visible = true
+	ts.auto_continue = true
+	Cloud.url = "https://test.invalid"
+	Cloud.meta.chose = "guest"
+	Cloud.state = Cloud.State.CONNECTING
+	ts.try_auto_continue()
+	_check("resume: waits while the cloud is connecting", ts.auto_continue and ts.visible)
+	Cloud.state = Cloud.State.CONFLICT
+	ts.try_auto_continue()
+	_check("resume: never skips a save conflict", ts.auto_continue)
+	Cloud.state = Cloud.State.OK
+	Cloud.need_login = true
+	ts.try_auto_continue()
+	_check("resume: waits for the player to log in again", ts.auto_continue)
+	Cloud.need_login = false
+	ts.try_auto_continue()
+	_check("resume: enters the game once nothing is pending", not ts.auto_continue)
+	Cloud.url = keep.url
+	Cloud.state = keep.state
+	Cloud.need_login = keep.need_login
+	Cloud.meta.chose = keep.chose
+	await wait(0.6)
+	_check("resume: the saved game is running", Game.started and not ts.visible and int(Game.s.stats.get("resume_mark", 0)) == 1)
 
 
 ## Supabase cloud save against tools/cloud_fake.gd (same rev rules as the SQL migration)
