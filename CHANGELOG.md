@@ -19,6 +19,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Play logs are sent to the game's server with your player ID to help fix bugs and balance the game; a one-time notice explains it and Settings → Privacy turns it off (MV-116)
 
 ### Changed
+- New artwork for every road event, expedition encounter, expedition interior and landmark (49 images), in the same dark 16-bit style with the crew and the truck as you know them (MV-189)
 - Screen shake is half as strong, the same size on phones as on PC, and the boss bar now follows the screen-shake setting (MV-175)
 - The vehicle's engine rumble and road bumps are half as strong (they made some players dizzy), and Settings → Feel has a new Vehicle shake switch to turn them off (MV-176)
 - Test servers (staging / UAT) keep their own saves and logs, apart from the real game, and show a STAGING / UAT SERVER tag on the title screen (MV-112)
