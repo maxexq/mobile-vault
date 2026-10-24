@@ -1,0 +1,58 @@
+{
+  "spec": "micro-asset/1",
+  "id": "pt_dw_crew_ellie",
+  "title": "Ellie - matching portrait",
+  "why": "Make the scout readable in the existing crew sprite family.",
+  "parent": "pt_dw_scav_red",
+  "kind": "portrait",
+  "size": [
+    20,
+    20
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin1",
+    "skin2",
+    "orange1",
+    "orange2",
+    "red1",
+    "red2",
+    "blue1",
+    "blue3",
+    "wood0"
+  ],
+  "outline": "ol0",
+  "light": "top-left",
+  "layer": "ui",
+  "anchor": {
+    "x": 0,
+    "y": 0,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/chars.py",
+    "function": "portrait_crew_ellie"
+  },
+  "feature": "crew_roster_20",
+  "refs": [
+    "tools/art/crew_roster_20/concepts/ellie.png",
+    "tools/art/crew_roster_20/style-reference.png",
+    "tools/art/chars.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Exactly one atlas region named pt_dw_crew_ellie, 20x20 pixels, with binary transparency and only the listed palette names.",
+    "Preserve the large head, tiny right-facing eye, projecting nose, compact body and soot outline of the supplied existing-character reference.",
+    "Ellie Williams from The Last of Us: auburn hair tied into a tiny short ponytail contained within frame, muted dusty red short-sleeve shirt over gray neckline, blue-gray jeans, brown boots. No weapon, no writing or graphic on shirt, no large backpack.",
+    "No blur, antialiasing, fractional scaling, rotation, gradient pixels or isolated export specks; inspect at 1x and nearest 8x.",
+    "Portrait matches this same character, with a readable face and outfit at native 20x20 in the crew list and detail panel."
+  ],
+  "notes": "Ellie Williams from The Last of Us: auburn hair tied into a tiny short ponytail contained within frame, muted dusty red short-sleeve shirt over gray neckline, blue-gray jeans, brown boots. No weapon, no writing or graphic on shirt, no large backpack. Parent and anchor describe the matching atlas construction reference, not a second sprite attached in the world. The UI loads pt_<variant>; match the approved idle face and outfit.",
+  "author": "Codex art analyst",
+  "replace": false,
+  "priority": "medium"
+}

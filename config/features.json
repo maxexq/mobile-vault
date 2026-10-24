@@ -23,7 +23,8 @@
     "channel_badge": true,
     "room_ambience": true,
     "resume_on_reload": true,
-    "anticheat": true
+    "anticheat": true,
+    "crew_roster_20": true
   },
   "events": {},
   "tune": {}

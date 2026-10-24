@@ -1,0 +1,58 @@
+{
+  "spec": "micro-asset/1",
+  "id": "pt_dw_crew_mali",
+  "title": "Mali - matching portrait",
+  "why": "Make the field medic readable in the existing crew sprite family.",
+  "parent": "pt_dw_medic_black",
+  "kind": "portrait",
+  "size": [
+    20,
+    20
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin1",
+    "skin2",
+    "gray0",
+    "gray2",
+    "cream1",
+    "cream3",
+    "teal1",
+    "teal3",
+    "red2"
+  ],
+  "outline": "ol0",
+  "light": "top-left",
+  "layer": "ui",
+  "anchor": {
+    "x": 0,
+    "y": 0,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/chars.py",
+    "function": "portrait_crew_mali"
+  },
+  "feature": "crew_roster_20",
+  "refs": [
+    "tools/art/crew_roster_20/concepts/mali.png",
+    "tools/art/crew_roster_20/style-reference.png",
+    "tools/art/chars.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Exactly one atlas region named pt_dw_crew_mali, 20x20 pixels, with binary transparency and only the listed palette names.",
+    "Preserve the large head, tiny right-facing eye, projecting nose, compact body and soot outline of the supplied existing-character reference.",
+    "An original woman field medic with a simple short dark bob, bone canvas jacket, oxidized teal shirt and trousers, muted red upper-arm patch as one square, dark boots. Keep her distinct from the reference nurse by removing cap and chest cross.",
+    "No blur, antialiasing, fractional scaling, rotation, gradient pixels or isolated export specks; inspect at 1x and nearest 8x.",
+    "Portrait matches this same character, with a readable face and outfit at native 20x20 in the crew list and detail panel."
+  ],
+  "notes": "An original woman field medic with a simple short dark bob, bone canvas jacket, oxidized teal shirt and trousers, muted red upper-arm patch as one square, dark boots. Keep her distinct from the reference nurse by removing cap and chest cross. Parent and anchor describe the matching atlas construction reference, not a second sprite attached in the world. The UI loads pt_<variant>; match the approved idle face and outfit.",
+  "author": "Codex art analyst",
+  "replace": false,
+  "priority": "medium"
+}

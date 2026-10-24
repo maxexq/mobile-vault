@@ -21,7 +21,7 @@ def main():
     rooms.gen_rooms()
     truck.gen_truck()
     engine_bay.gen_engine_bay()
-    dvars = chars.gen_dwellers()
+    dvars = chars.gen_dwellers() + chars.gen_crew_roster()
     chars.gen_enemies()
     chars.gen_bosses()
     landmarks.gen_landmarks()

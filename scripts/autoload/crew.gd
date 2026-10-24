@@ -38,6 +38,10 @@ const ROLES := {
 	"builder": {"th": "ช่างก่อสร้าง", "en": "BUILDER", "icon": "hammer", "build": 1.0, "desc": "สร้าง/อัปเกรดห้องเร็วขึ้น 100% · ได้ XP จากงานก่อสร้าง +50%"},
 }
 const BUILDER_CHANCE := 0.25
+## MV-170: chance that an ordinary (non-builder) recruit is one of the 20 named crew (tune crew.roster_chance),
+## and how likely a cameo guest is next to an original (tune crew.cameo_weight; 1 = same weight)
+const ROSTER_CHANCE := 0.35
+const CAMEO_WEIGHT := 0.5
 ## mechanics know their way around a toolbox too
 const MECHANIC_BUILD := 0.15
 ## named crew have fixed traits (fits their bios)
@@ -345,3 +349,40 @@ func kill(d: Dictionary, cause: String) -> void:
 	Game.dwellers_changed.emit()
 	Game.squad_changed.emit()
 	Game.rooms_changed.emit()
+
+
+# ------------------------------------------------------------------ MV-170 named crew roster
+static func is_roster(variant: String) -> bool:
+	return variant.begins_with("dw_crew_")
+
+
+## a named crew member who is not on board yet, preferring those whose best stat matches ("" = none left)
+func roster_pick(best: String, rng: RandomNumberGenerator) -> String:
+	var aboard := {}
+	for d in Game.s.dwellers:
+		aboard[str(d.variant)] = true
+	var cameo_w := Features.num("crew.cameo_weight", CAMEO_WEIGHT)
+	for pass_ in 2:
+		var ids := []
+		var weights := []
+		var total := 0.0
+		for id in Data.CREW_ROSTER:
+			var r: Dictionary = Data.CREW_ROSTER[id]
+			if aboard.has("dw_crew_" + str(id)) or (pass_ == 0 and r.stat != best):
+				continue
+			var w := cameo_w if r.cameo else 1.0
+			if w <= 0.0:
+				continue
+			ids.append(id)
+			weights.append(w)
+			total += w
+		if total <= 0.0:
+			continue
+		var x := rng.randf() * total
+		for i in ids.size():
+			x -= float(weights[i])
+			if x < 0.0:
+				return str(ids[i])
+		return str(ids[-1])
+	return ""
+

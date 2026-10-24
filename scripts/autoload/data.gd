@@ -445,6 +445,30 @@ const FIRST_NAMES := ["มาร์ค", "คลารา", "บ็อบ", "แ
 const TITLES := {"army": "จ่า", "lab": "ดร.", "chef": "เชฟ", "medic": "พยาบาล", "scav": "", "jumpsuit": "", "raider": "", "builder": "ช่าง"}
 const OUTFIT_FOR_STAT := {"str": ["army", "scav"], "int": ["lab", "medic", "jumpsuit"], "agi": ["chef", "scav", "jumpsuit"]}
 const HAIRS := ["brown", "black", "blonde", "red", "gray"]
+## MV-170 named crew (Features "crew_roster_20"): sprite dw_crew_<id> + pt_dw_crew_<id> from tools/art/chars.py CREW.
+## stat = the best stat they show up with (decides their room like any recruit); cameo = visual guest only
+const CREW_ROSTER := {
+	"max": {"name": "แม็กซ์", "role": "นักเดินทางถนนร้าง", "stat": "agi", "cameo": true},
+	"rick": {"name": "ริก", "role": "อดีตนายอำเภอ", "stat": "str", "cameo": true},
+	"ellie": {"name": "เอลลี่", "role": "หน่วยสอดแนม", "stat": "agi", "cameo": true},
+	"jill": {"name": "นีออน", "role": "หน่วยกู้ภัย", "stat": "str", "cameo": true},
+	"leon": {"name": "เจฟ", "role": "อดีตตำรวจ", "stat": "str", "cameo": true},
+	"niran": {"name": "นิรันดร์", "role": "นักนำทาง", "stat": "agi", "cameo": false},
+	"mali": {"name": "มะลิ", "role": "หมอสนาม", "stat": "int", "cameo": false},
+	"boon": {"name": "บุญ", "role": "ช่างเครื่องดีเซล", "stat": "int", "cameo": false},
+	"dao": {"name": "ดาว", "role": "พนักงานวิทยุ", "stat": "int", "cameo": false},
+	"lek": {"name": "เล็ก", "role": "แม่ครัวแคมป์", "stat": "agi", "cameo": false},
+	"arun": {"name": "อรุณ", "role": "นักประดาน้ำกู้ซาก", "stat": "str", "cameo": false},
+	"ploy": {"name": "พลอย", "role": "นักพฤกษศาสตร์", "stat": "int", "cameo": false},
+	"somchai": {"name": "สมชาย", "role": "ช่างเชื่อม", "stat": "str", "cameo": false},
+	"mae": {"name": "แม่เม", "role": "ผู้ดูแลเสบียง", "stat": "agi", "cameo": false},
+	"ken": {"name": "เคน", "role": "ยามห้องนิรภัย", "stat": "str", "cameo": false},
+	"nok": {"name": "นก", "role": "นักวิ่งส่งของ", "stat": "agi", "cameo": false},
+	"isha": {"name": "อิชา", "role": "นักวิทยาศาสตร์แล็บ", "stat": "int", "cameo": false},
+	"tomas": {"name": "โทมัส", "role": "วิศวกรระบบน้ำ", "stat": "int", "cameo": false},
+	"june": {"name": "จูน", "role": "ช่างไฟฟ้า", "stat": "int", "cameo": false},
+	"viktor": {"name": "วิกเตอร์", "role": "คนขับรถหน้าหนาว", "stat": "str", "cameo": false},
+}
 
 
 func room_def(t: String) -> Dictionary:
