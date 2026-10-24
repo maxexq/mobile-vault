@@ -120,7 +120,11 @@ payload=$(jq -n --argjson embeds "$embeds" --arg mention "$MENTION" '{
 } + (if $mention != "" then {content: ($mention + " ดู log: select * from public.log_errors_recent;")} else {} end)')
 
 post "$payload"
-echo "Posted to $CHANNEL: spike=$spike new=$(jq length <<<"$new")"
+if [ "${DRY_RUN:-}" = "1" ]; then
+  echo "Dry run: not sent (would go to $CHANNEL): spike=$spike new=$(jq length <<<"$new")"
+else
+  echo "Posted to $CHANNEL: spike=$spike new=$(jq length <<<"$new")"
+fi
 
 # record it, so the next run doesn't post the same spike (cooldown) or the same new error again
 if [ "$MODE" = "test" ] || [ -n "${CHECK_JSON:-}" ] || [ "${DRY_RUN:-}" = "1" ]; then exit 0; fi

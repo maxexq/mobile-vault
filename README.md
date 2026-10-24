@@ -469,7 +469,7 @@ When you add a CI workflow (autotest, web export), put its `name:` in the `workf
 
 Only kinds `ERROR_SPIKE_KINDS` (`error,script,shader`) count: warnings and the GOD "ส่ง error ทดสอบ" errors (kind `test`) don't, unless a manual run ticks **include_test**. All `ERROR_SPIKE_*` are optional repository variables; empty = the default in brackets. `ERROR_SPIKE_MENTION` (e.g. `<@&role id>`) pings a role with each alert. What was posted is kept in `public.log_alerts` (`truncate public.log_alerts;` forgets it).
 
-Alerts go to their own channel, not the PR/CI feed: a production problem must not drown in PR messages, and the channel can have its own notification setting (all messages + a role ping) while the busy dev feed stays muted. Without `DISCORD_ALERTS_WEBHOOK_URL` they fall back to `DISCORD_WEBHOOK_URL`. Discord notify reports the Error spike workflow only when it fails (scheduled successes are muted).
+Alerts go to their own channel, not the PR/CI feed: a production problem must not drown in PR messages, and the channel can have its own notification setting (all messages + a role ping) while the busy dev feed stays muted. Without `DISCORD_ALERTS_WEBHOOK_URL` they fall back to `DISCORD_WEBHOOK_URL`. Discord notify reports the Error spike workflow only when it fails (successful runs, manual ones too, stay out of the dev feed). The **dry_run** box only prints the message in the run log (`Dry run: not sent`); leave it off to really post.
 
 Setup:
 1. Supabase → SQL Editor: run `supabase/migrations/0005_log_alerts.sql` once (after 0004).

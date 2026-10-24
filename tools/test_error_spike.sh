@@ -21,9 +21,9 @@ check "spike embed" "$out" '"title": "🚨 Error พุ่ง: 26 ครั้�
 check "new embed" "$out" '"title": "🆕 Error ใหม่ 2 แบบ (ไม่เคยเจอใน 7 วันก่อน)"'
 check "dashboard link" "$out" 'https://supabase.com/dashboard/project/abcd1234/sql/new'
 check "no pings by default" "$out" '"parse": []'
-check "fallback channel" "$out" 'Posted to dev-feed'
+check "fallback channel" "$out" 'would go to dev-feed'
 out=$(run CHECK_JSON=$FIX DISCORD_ALERTS_WEBHOOK_URL=https://example.invalid/x ERROR_SPIKE_MENTION='<@&123>' ERROR_SPIKE_NEW_DAYS=3)
-check "alerts channel" "$out" 'Posted to alerts'
+check "alerts channel" "$out" 'would go to alerts'
 check "mention" "$out" '"content": "<@&123> ดู log'
 check "new_days in title" "$out" 'ไม่เคยเจอใน 3 วันก่อน'
 out=$(run CHECK_JSON=$FIX ERROR_SPIKE_NEW_ALERTS=false)
