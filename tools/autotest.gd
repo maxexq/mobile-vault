@@ -2211,6 +2211,11 @@ func _roof_deck_test() -> void:
 	Game.s.deck = JSON.parse_string(JSON.stringify([rid]))[0]
 	_check("deck: float id after load still matches", Game.is_deck(cand))
 	cand.hp = float(cand.max_hp) * 0.4
+	# only the deck heal may move hp here: an infection, rads or starving left by earlier checks drain more than it heals
+	cand.infection = 0.0
+	cand.rads = 0.0
+	Game.s.res.food = maxf(float(Game.s.res.food), 100.0)
+	Game.s.res.water = maxf(float(Game.s.res.water), 100.0)
 	var hp0 := float(cand.hp)
 	for i in 10:
 		Game._simulate(1.0, true)
