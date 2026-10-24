@@ -2861,6 +2861,25 @@ func _engine_bay_test() -> void:
 	await wait(0.4)
 	_check("god: engine bay row", _find_text(main.hud.panels.god, "ห้องเครื่อง"))
 	main.hud.panels.god.close()
+	# MV-40: switch engine_bay off = the game before v4.6 (stock diesel numbers, nothing simulated, save kept)
+	e.heat = 115.0
+	e.cond = 20.0
+	e.resting = true
+	e.mode = "boost"
+	Features.set_override("features", "engine_bay", false)
+	_check("engine switch off: stock diesel numbers", EngineBay.type_id() == "diesel4" and EngineBay.mode() == "normal"
+		and is_equal_approx(EngineBay.speed_mult(), 1.0) and is_equal_approx(EngineBay.tow_mult(), 1.0)
+		and is_equal_approx(EngineBay.noise_mult(), 1.0) and is_equal_approx(EngineBay.weight(), 0.0))
+	_check("engine switch off: no rest or job holds the vehicle", EngineBay.blocked_reason() == "" and not EngineBay.resting())
+	EngineBay.tick(60.0, 1.0, true, false)
+	_check("engine switch off: no heat / wear simulated", is_equal_approx(float(e.heat), 115.0) and is_equal_approx(float(e.cond), 20.0))
+	Features.set_override("features", "engine_bay", null)
+	_check("engine switch on again: the saved engine state is back", EngineBay.resting() and EngineBay.heat() >= 115.0 and EngineBay.mode() == "boost")
+	Dev.engine_bay_switch(false)
+	var off_ok := not EngineBay.on()
+	Dev.engine_bay_switch(true)
+	_check("engine switch: GOD button flips it", off_ok and EngineBay.on())
+	Features.set_override("features", "engine_bay", null)
 	# back to the stock engine for the rest of the run
 	EngineBay.uninstall()
 	e.merge(EngineBay.default_state(), true)
