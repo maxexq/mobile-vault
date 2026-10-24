@@ -13,6 +13,7 @@ extends Node2D
 const PAN_LIMIT := 220.0
 const FIT_MARGIN := 4.0       # art px kept around the main body when a portrait phone zooms in (MV-148)
 const FIT_CAP := 2.0          # portrait zoom-in stops at this many times the UI pixel scale
+const SHAKE_SCALE := 0.5      # screen shake strength x (tune fx.shake; 1.0 = before MV-175)
 const TAP_SLOP := 8.0
 const PINCH_STEP := 1.25      # finger distance ratio for one pinch zoom step
 const PORTRAIT_BASE := Vector2i(360, 640)
@@ -367,19 +368,23 @@ func _process(delta: float) -> void:
 			camera.position.x = cam_home.x + round(pan_x)
 	if _shake > 0.0:
 		_shake = move_toward(_shake, 0.0, delta * 12.0)
-		camera.offset = Vector2(round(randf_range(-_shake, _shake)), round(randf_range(-_shake, _shake)))
+		# the camera moves in world px: x view_k keeps the shake the same size on screen at every zoom (a phone zoomed
+		# in to 4 px per art pixel used to shake 4x harder, MV-148 / MV-175)
+		var sw := _shake * view_k
+		camera.offset = Vector2(round(randf_range(-sw, sw)), round(randf_range(-sw, sw)))
 	else:
 		camera.offset = Vector2.ZERO
 	if blur_rect.visible:
 		_update_blur_rect()
 
 
+## amount is in UI pixels; tune fx.shake scales every shake (MV-175: half of the old strength by default)
 func shake(amount: float) -> void:
 	if amount >= 4.0:
 		Settings.buzz(int(amount * 10.0))
 	if not bool(Settings.get_value("shake")):
 		return
-	_shake = maxf(_shake, amount)
+	_shake = maxf(_shake, amount * Features.num("fx.shake", SHAKE_SCALE))
 
 
 func _on_setting_changed(key: String) -> void:

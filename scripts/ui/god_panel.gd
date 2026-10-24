@@ -126,6 +126,8 @@ func _tab_main() -> void:
 			var sz: Vector2i = it[0]
 			sb.append(_b(it[1], func(): Dev.window_preset(sz), "gray", true))
 		_row(sb, "จำลองจอ")
+	_head("SHAKE", "จอสั่น · แรง x%.2f (tune fx.shake) · %s" % [Features.num("fx.shake", 0.5), "เปิด" if bool(Settings.get_value("shake")) else "ปิดในตั้งค่า"])
+	_row([_b("สั่นเบา", func(): Dev.shake_test(2.0)), _b("สั่นแรงสุด", func(): Dev.shake_test(6.0), "red")], "ทดสอบ")
 	_head("OVERLAY", "ข้อมูลดีบักบนจอ")
 	_row([_b("FPS/ดีบัก: " + ("เปิด" if Dev.overlay else "ปิด"), func(): Dev.set_overlay(not Dev.overlay), "green" if Dev.overlay else "gray"),
 		_b("ซ่อนปุ่ม GOD", func(): Dev.lock(), "red", true)])
