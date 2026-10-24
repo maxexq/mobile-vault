@@ -44,20 +44,32 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
 4. Web export: `sh tools/stamp_build.sh` then
    `godot --headless --path . --export-release "Web" web/index.html`, commit `web/`.
    `cloud_config.json` must exist first or the build ships with cloud save OFF
-   (copy `cloud_config.example.json`, or recover it from the committed `web/index.pck`).
-5. Branch + PR into `main`, README updated, Plane ticket moved (below).
+   (copy `cloud_config.example.json`, or recover it from the committed `web/index.pck`). It holds a
+   `prod` and a `test` project (MV-112); an old flat file only works on the production host.
+5. Branch + PR into `staging` (see Git workflow), README updated, Plane ticket moved (below).
 6. The claude.ai playable artifact is updated by the project side after the PR; CLI sessions
    just say in the PR/ticket that the artifact still needs updating.
 
 ## Git workflow
 
-- `git pull origin main` before starting. Never push to `main` directly.
+Environments (MV-112, `docs/environments.md`): `staging` = internal test, `uat` = open test,
+`main` = production (only what players have). Each branch deploys its own Vercel URL; one build
+serves all of them and picks its environment from the host name (`config/environments.json`).
+
+- **Feature work branches from and PRs into `staging`.** Until `staging` exists on origin
+  (`git ls-remote --heads origin staging` prints nothing), use `main` instead everywhere below.
+- `git pull origin staging` before starting. Never push to `staging`, `uat` or `main` directly.
+- Promotion is a PR `staging` → `uat`, then `uat` → `main`, merged with a merge commit (not
+  squash). Only when Parames asks; Parames merges them.
+- Hotfix: branch from `main`, PR into `main`, then PRs `main` → `uat` → `staging` so the fix
+  flows back down.
 - Branch name starts with the ticket: `mv-<n>-short-name` (e.g. `mv-91-local-squad`).
 - PR title/body mention `MV-<n>`; one feature per PR. The version is semver in
   `BuildInfo.GAME_VERSION` (`4.7.0-alpha.1`; `-alpha.N`/`-beta.N`/`-rc.N` = test channel). Change it
   only with `python tools/release.py bump <alpha|beta|rc|stable|patch|minor|major>`, which also
   updates the web shell and `CHANGELOG.md`; add a line under `[Unreleased]` in `CHANGELOG.md` for
   player-visible changes. Releases: Actions → Release → Run workflow on main (README "Versioning & releases").
+  Version bumps belong in the promotion to `main`, not in feature PRs.
 
 ### Opening the PR (Claude Code CLI)
 
@@ -65,9 +77,9 @@ Open the PR yourself with the GitHub CLI (`gh`, logged in once with `gh auth log
 When the work is committed and the autotest passed:
 
 ```
-git fetch origin main && git rebase origin/main      # branch you created; resolve conflicts
+git fetch origin staging && git rebase origin/staging   # branch you created; resolve conflicts
 git push -u origin mv-<n>-short-name
-gh pr create --base main --title "MV-<n>: <what changed>" --assignee @me --body-file <tmp file>
+gh pr create --base staging --title "MV-<n>: <what changed>" --assignee @me --body-file <tmp file>
 python tools/plane.py link MV-<n> <PR url> "PR #<number>"
 python tools/plane.py move MV-<n> "In Review"
 ```
@@ -77,10 +89,11 @@ python tools/plane.py move MV-<n> "In Review"
   `Artifact: needs update` when the game changed. Write the body to a temp file outside the
   repo (Thai text and backticks break inline `--body` quoting on Windows).
 - Use `gh pr view --web` to show Parames the PR. Never merge it yourself: Parames merges.
-- After a merge: `python tools/plane.py move MV-<n> Done` (or "Awaiting Verify" when it still
-  needs a real phone/web check), then `git checkout main && git pull`.
+- After a merge into `staging`: `python tools/plane.py move MV-<n> "Awaiting Verify"` (check it on
+  the staging URL), then `git checkout staging && git pull`. **Done** once it reached `main`
+  (or right away when Parames says so).
 - If `gh` is missing or not logged in, push the branch and give Parames the link
-  `https://github.com/maxexq/mobile-vault/compare/main...<branch>?expand=1`. Do not install
+  `https://github.com/maxexq/mobile-vault/compare/staging...<branch>?expand=1`. Do not install
   `gh` yourself (ask first, see Hard rules).
 
 ## Plane tickets (workspace `mobile-vault`, project `MV`)

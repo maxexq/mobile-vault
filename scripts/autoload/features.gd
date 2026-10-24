@@ -5,7 +5,8 @@ extends Node
 ##                                          (OS.has_feature, e.g. "demo" / "staging")
 ##  3. remote features.json                 web only: <page folder>/features.json on the same host (Vercel
 ##                                          serves web/features.json), cached in localStorage; a failed fetch
-##                                          keeps the cache, no cache keeps layer 1-2
+##                                          keeps the cache, no cache keeps layer 1-2. Outside production
+##                                          features.<env>.json is tried first (MV-112, BuildInfo.env)
 ##  4. game mode                          Modes.apply(): the run's mode / mutators (Game.s.mode) switch systems off
 ##  5. tester overrides                     GOD MODE tab "ฟีเจอร์" (user://dev.cfg) or the page URL
 ##                                          ?ff=raids:off,event.raiders:off,tune.threat.rate_scale:1.5 (session only)
@@ -42,7 +43,8 @@ const FEATURES := {
 	"google_login": "ล็อกอิน / ผูกบัญชีด้วย Google (ปิด = เล่นแบบ Guest อย่างเดียว)",
 	"player_id": "ไอดีผู้เล่นแบบสั้น ในตั้งค่า > เซฟ ไว้แจ้งปัญหา (ปิด = ไม่แสดงและไม่บันทึกลงเซฟ/log)",
 	"cloud_logs": "ส่งบันทึกการเล่นขึ้นเซิร์ฟเวอร์ (ปิด = เก็บ log ไว้ในเครื่องอย่างเดียว)",
-	"portrait_fit": "มือถือแนวตั้ง: กล้อง AUTO ซูมรถให้เต็มจอ ปัดดูโบกี้ (ปิด = เห็นทั้งขบวนแต่รถเล็ก)",
+	"env_badge": "ป้าย STAGING / UAT / DEV SERVER บนหน้าแรกและหน้าเกี่ยวกับ (นอกเกมจริง)",
+	"portrait_fit":"มือถือแนวตั้ง: กล้อง AUTO ซูมรถให้เต็มจอ ปัดดูโบกี้ (ปิด = เห็นทั้งขบวนแต่รถเล็ก)",
 	"persistent_account": "ไอดีถาวร: มีเซฟแล้วไม่มีปุ่มเริ่มใหม่ (ปิด = มีปุ่ม NEW RUN ล้างทุกอย่างแล้วเริ่มใหม่)",
 	"channel_badge": "ป้าย ALPHA / BETA บนหน้าเริ่มเกมและหน้าเกี่ยวกับ",
 	"room_ambience": "แสงไฟและอนิเมชันเล็กๆ ในห้อง (ไฟกะพริบ, ไอน้ำ, ฟองน้ำ, เกจ)",
@@ -340,26 +342,40 @@ func fetch_remote() -> void:
 	var base = JavaScriptBridge.eval("location.origin + location.pathname.replace(/[^/]*$/, '')", true)
 	if base == null or not str(base).begins_with("http"):
 		return
-	remote_url = str(base) + "features.json"
 	remote_status = "loading"
 	changed.emit()
+	# MV-112: each environment has its own file (features.staging.json ...); without one it uses features.json
+	for file in remote_files(BuildInfo.env()):
+		remote_url = str(base) + file
+		var res := await _http_get(remote_url)
+		if res.size() > 1 and int(res[0]) == HTTPRequest.RESULT_SUCCESS and int(res[1]) == 200:
+			var raw: PackedByteArray = res[3]
+			apply_remote(JSON.parse_string(raw.get_string_from_utf8()))
+			return
+		if res.size() > 1 and int(res[0]) == HTTPRequest.RESULT_SUCCESS and int(res[1]) == 404:
+			continue      # no file for this environment: try the shared one
+		break
+	remote_status = "failed" if layers.remote.is_empty() else "cached"
+	changed.emit()
+
+
+## remote config files to try, in order: production reads features.json, other environments their own first
+static func remote_files(env_id: String) -> Array:
+	return ["features.json"] if env_id == "prod" else ["features.%s.json" % env_id, "features.json"]
+
+
+## [result, code, headers, body] of one GET, [] if it could not start
+func _http_get(u: String) -> Array:
 	var req := HTTPRequest.new()
 	req.timeout = TIMEOUT_SEC
 	add_child(req)
 	# the query string skips any stale HTTP cache between deploys
-	if req.request(remote_url + "?t=%d" % int(Time.get_unix_time_from_system())) != OK:
+	if req.request(u + "?t=%d" % int(Time.get_unix_time_from_system())) != OK:
 		req.queue_free()
-		remote_status = "failed"
-		changed.emit()
-		return
+		return []
 	var res: Array = await req.request_completed
 	req.queue_free()
-	if int(res[0]) != HTTPRequest.RESULT_SUCCESS or int(res[1]) != 200:
-		remote_status = "failed" if layers.remote.is_empty() else "cached"
-		changed.emit()
-		return
-	var raw: PackedByteArray = res[3]
-	apply_remote(JSON.parse_string(raw.get_string_from_utf8()))
+	return res
 
 
 # =================================================================== tester overrides (layer 5)

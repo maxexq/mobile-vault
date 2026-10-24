@@ -49,7 +49,7 @@ func _ready() -> void:
 	OS.add_logger(_logger)
 	var vp := DisplayServer.window_get_size()
 	rec("session", "start", {"v": VERSION, "os": OS.get_name(), "web": OS.has_feature("web"),
-		"debug": OS.is_debug_build(), "screen": "%dx%d" % [vp.x, vp.y], "locale": OS.get_locale()})
+		"debug": OS.is_debug_build(), "screen": "%dx%d" % [vp.x, vp.y], "locale": OS.get_locale(), "env": BuildInfo.env()})
 	Save.flush_requested.connect(persist)
 	_hook.call_deferred()
 

@@ -74,6 +74,10 @@ func _run() -> void:
 		await _version_test()
 		_finish()
 		return
+	if "--only=env" in OS.get_cmdline_user_args():
+		await _env_test()
+		_finish()
+		return
 	if "--only=thai" in OS.get_cmdline_user_args():
 		_thai_terms_test()
 		_finish()
@@ -677,6 +681,7 @@ func _run() -> void:
 	await _features_test()
 	await _modes_test()
 	await _version_test()
+	await _env_test()
 	_thai_terms_test()
 	_finish()
 
@@ -2767,6 +2772,39 @@ func _engine_bay_test() -> void:
 
 
 ## MV-111: semver + release channel badge + changelog / release tooling
+## MV-112: one build, the environment from the host name; only production hosts reach the production project
+func _env_test() -> void:
+	_check("env: production host is prod", BuildInfo.env_for_host("apocarlypse-mobile-vault.vercel.app") == "prod")
+	_check("env: Vercel branch URLs", BuildInfo.env_for_host("apocarlypse-mobile-vault-git-staging-maxexq.vercel.app") == "staging"
+		and BuildInfo.env_for_host("apocarlypse-mobile-vault-git-uat-maxexq.vercel.app") == "uat"
+		and BuildInfo.env_for_host("apocarlypse-mobile-vault-git-main-maxexq.vercel.app") == "prod")
+	_check("env: PR previews and unknown hosts are dev", BuildInfo.env_for_host("apocarlypse-mobile-vault-k2j3h4-maxexq.vercel.app") == "dev"
+		and BuildInfo.env_for_host("apocarlypse-mobile-vault-git-mv-112-env-maxexq.vercel.app") == "dev"
+		and BuildInfo.env_for_host("evil.example.com") == "dev")
+	_check("env: desktop / editor (tests) is dev, on the test project", BuildInfo.env() == "dev" and BuildInfo.cloud_project() == "test")
+	var both := {"projects": {"prod": {"url": "https://p.supabase.co", "anon_key": "pk"}, "test": {"url": "https://t.supabase.co", "anon_key": "tk"}}}
+	_check("env: per-project config picks its section", str(Cloud.pick_config(both, "prod").url) == "https://p.supabase.co"
+		and str(Cloud.pick_config(both, "test").url) == "https://t.supabase.co")
+	var flat := {"url": "https://p.supabase.co", "anon_key": "pk"}
+	_check("env: a flat (production) config is never used outside prod", not Cloud.pick_config(flat, "prod").is_empty()
+		and Cloud.pick_config(flat, "test").is_empty() and Cloud.pick_config({"projects": {"prod": {}}}, "test").is_empty())
+	_check("env: remote config file per environment", Features.remote_files("prod") == ["features.json"]
+		and Features.remote_files("staging") == ["features.staging.json", "features.json"])
+	_check("env: About shows the environment", BuildInfo.rows().any(func(r): return str(r[0]) == "ENV" and str(r[1]).begins_with("DEV")))
+	var tag := UIKit.env_tag()
+	_check("env: DEV SERVER badge outside production", tag.visible and tag.text == "DEV SERVER")
+	Dev.env_preview("prod")
+	UIKit.refresh_env_tag(tag)
+	_check("env: no badge in production (GOD preview)", not tag.visible)
+	Dev.env_preview("")
+	Features.set_override("features", "env_badge", false)
+	UIKit.refresh_env_tag(tag)
+	_check("env: switch env_badge hides it", not tag.visible)
+	Features.set_override("features", "env_badge", null)
+	tag.free()
+	_check("env: trace session start records it", Trace.entries.any(func(e): return str(e.msg) == "start" and str(e.get("data", {}).get("env", "")) == "dev"))
+
+
 func _version_test() -> void:
 	var v := BuildInfo.GAME_VERSION
 	var p := BuildInfo.parse_version(v)

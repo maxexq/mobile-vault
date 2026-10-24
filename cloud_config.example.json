@@ -1,5 +1,14 @@
 {
-  "url": "https://YOUR-PROJECT-REF.supabase.co",
-  "anon_key": "YOUR-ANON-OR-PUBLISHABLE-KEY",
-  "site_url": "https://YOUR-GAME.vercel.app/"
+  "projects": {
+    "prod": {
+      "url": "https://YOUR-PROD-PROJECT-REF.supabase.co",
+      "anon_key": "YOUR-PROD-ANON-OR-PUBLISHABLE-KEY",
+      "site_url": "https://apocarlypse-mobile-vault.vercel.app/"
+    },
+    "test": {
+      "url": "https://YOUR-TEST-PROJECT-REF.supabase.co",
+      "anon_key": "YOUR-TEST-ANON-OR-PUBLISHABLE-KEY",
+      "site_url": "https://YOUR-STAGING-URL.vercel.app/"
+    }
+  }
 }
