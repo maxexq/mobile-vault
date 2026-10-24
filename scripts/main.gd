@@ -34,6 +34,7 @@ var blur_rect: ColorRect
 var blur_mat: ShaderMaterial
 var crt: ColorRect
 var hud: HUD
+var marquee: Marquee
 
 var cam_home := Vector2.ZERO
 var pixel_scale := 1.0
@@ -146,6 +147,12 @@ func _ready() -> void:
 	hud.tutorial_overlay.main = self
 	Tutorial.hud = hud
 	Tutorial.main = self
+	# MV-188: announcement / new-version strip over the HUD and every panel, under the CRT
+	var marquee_layer := CanvasLayer.new()
+	marquee_layer.layer = 45
+	add_child(marquee_layer)
+	marquee = Marquee.new()
+	marquee_layer.add_child(marquee)
 	# CRT scanlines / vignette over everything
 	var crt_layer := CanvasLayer.new()
 	crt_layer.layer = 50

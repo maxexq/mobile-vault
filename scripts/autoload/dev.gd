@@ -1121,3 +1121,30 @@ func features_reset() -> void:
 func features_refetch() -> void:
 	act("features refetch remote")
 	Features.fetch_remote()
+
+
+# ---- announcement strip (MV-188)
+## put a test message on the top strip (not remembered as seen, so it can be shown again)
+func announce_test(text: String = "") -> void:
+	Trace.rec("god", "announce test")
+	Announce.push(text if text != "" else "ประกาศทดสอบ: ปิดปรับปรุงเซิร์ฟเวอร์ 22:00-22:30 น. เซฟของทุกคนปลอดภัย ขอบคุณที่เล่น Apocarlypse!")
+
+
+## the "new version" notice as a player would see it after a deploy (tap = save + reload the page)
+func announce_update_test() -> void:
+	Trace.rec("god", "announce update notice")
+	Announce.push_update(BuildInfo.GAME_VERSION)
+
+
+## fetch features.json + version.json now (web) instead of waiting for announce.poll_min
+func announce_poll() -> void:
+	Trace.rec("god", "announce poll")
+	Announce.poll()
+
+
+## forget which messages this browser has seen, so the features.json ones show again
+func announce_forget_seen() -> void:
+	Trace.rec("god", "announce forget seen")
+	Announce.seen.clear()
+	Save.write_key(Announce.SEEN_KEY, Announce.SEEN_PATH, "[]")
+	Announce.collect()

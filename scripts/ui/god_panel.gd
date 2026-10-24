@@ -407,6 +407,12 @@ func _tab_sys() -> void:
 		Loc.translation.get_message_count() + Loc.missing, "เปิด" if Features.on("english") else "ปิด"])
 	_row([_b("ไทย", func(): Dev.lang_set("th"), "yellow" if Loc.lang() == "th" else "gray"),
 		_b("English", func(): Dev.lang_set("en"), "yellow" if Loc.lang() == "en" else "gray")], "ภาษา")
+	_head("ANNOUNCE", "แถบประกาศตัวอักษรวิ่งบนจอ (MV-188)")
+	var ver := Announce.latest
+	_note("ข้อความจาก features.json ที่เปิดอยู่ %d · เห็นแล้ว %d · รอคิว %d · version.json ล่าสุด: %s" % [Features.announcements().size(),
+		Announce.seen.size(), Announce.queue.size(), ("v%s · %s" % [ver.get("version", "?"), ver.get("built", "?")]) if not ver.is_empty() else "ยังไม่ได้อ่าน"])
+	_row([_b("ประกาศทดสอบ", func(): Dev.announce_test(), "green", true), _b("แจ้งเวอร์ชันใหม่", func(): Dev.announce_update_test(), "yellow", true),
+		_b("เช็กตอนนี้", func(): Dev.announce_poll(), "gray"), _b("ลืมที่เคยเห็น", func(): Dev.announce_forget_seen(), "gray")])
 	var cp := UIKit.button("คัดลอกข้อมูลเวอร์ชัน", "gray")
 	cp.pressed.connect(func():
 		DisplayServer.clipboard_set(BuildInfo.as_text())
