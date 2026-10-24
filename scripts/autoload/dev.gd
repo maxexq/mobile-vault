@@ -756,6 +756,10 @@ func tip_show(k: String) -> void:
 ## a refugee with the builder role (hard hat) and, optionally, one construction trait
 func spawn_builder(build_trait: String = "") -> Dictionary:
 	var d := Game.recruit_random()
+	if Crew.is_roster(str(d.variant)):
+		# a GOD builder always wears the hard hat: a named crew member rolled here becomes an ordinary builder
+		d.variant = "dw_builder_%s" % Data.HAIRS[randi() % Data.HAIRS.size()]
+		d.name = str(Data.TITLES.builder) + str(Data.FIRST_NAMES[randi() % Data.FIRST_NAMES.size()])
 	_make_builder(d, true)
 	if build_trait != "" and Crew.TRAITS.has(build_trait):
 		var ts: Array = Crew.traits(d)

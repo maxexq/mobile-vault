@@ -3412,6 +3412,10 @@ func _crew_roster_test() -> void:
 	_check("crew roster: GOD boards all 20", on_board.size() == 20)
 	var mae: Dictionary = on_board.filter(func(d): return str(d.variant) == "dw_crew_mae")[0]
 	Dev.toggle_builder(mae)
+	Dev.roster_chance(1.0)
+	var gb := Dev.spawn_builder("")
+	_check("crew roster: GOD builder keeps the hard hat with chance 1", str(gb.variant).begins_with("dw_builder_") and Crew.is_builder(gb))
+	Dev.roster_chance(-1.0)
 	_check("crew roster: builder toggle keeps the named look", str(mae.variant) == "dw_crew_mae" and Crew.is_builder(mae))
 	Dev.toggle_builder(mae)
 	Features.set_override("features", "crew_roster_20", false)
