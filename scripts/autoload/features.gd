@@ -42,6 +42,7 @@ const FEATURES := {
 	"google_login": "ล็อกอิน / ผูกบัญชีด้วย Google (ปิด = เล่นแบบ Guest อย่างเดียว)",
 	"modes": "เลือกโหมดตอนเริ่มเกมใหม่ (ปิด = เริ่มโหมดปกติเสมอ)",
 	"channel_badge": "ป้าย ALPHA / BETA บนหน้าเริ่มเกมและหน้าเกี่ยวกับ",
+	"resume_on_reload": "รีเฟรชหน้าเว็บแล้วเข้าเกมต่อเลย ไม่ต้องกด เดินทางต่อ",
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
