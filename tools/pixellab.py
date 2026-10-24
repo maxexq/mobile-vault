@@ -79,7 +79,7 @@ def api(method, path, body=None, timeout=180):
                 return r.status, (json.loads(raw) if raw else {})
         except urllib.error.HTTPError as e:
             msg = e.read().decode(errors="replace")
-            if e.code == 429 and attempt < 3:
+            if e.code in (429, 502, 503, 504) and attempt < 3:
                 time.sleep(5 * (attempt + 1))
                 continue
             hint = {401: "token missing or wrong (see the docstring: env, .pixellab-api-key or cloud Network secret)",
