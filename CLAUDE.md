@@ -16,6 +16,8 @@ Parames's PC. Both follow this file. The game itself is described in `README.md`
 - **Art:** true 16-bit pixel art, dark post-apocalyptic, 3 rooms per vehicle floor, Nearest
   filter, everything in `assets/atlas/`. AI images are drafts: enforce grid and palette.
   (A 32-bit upgrade is proposed but not approved; keep 16-bit until told otherwise.)
+- **PixelLab API costs money:** `tools/pixellab.py gen ... --yes` spends Parames's credits. Show the
+  `--dry-run` cost estimate and get an OK before every paid batch (README "Redrawing sprites with PixelLab").
 - **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served by Vercel
   from `web/`.
 - Never commit secrets: `cloud_config.json`, `.plane-api-key`, `ai/.env` are git-ignored.
