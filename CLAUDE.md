@@ -39,6 +39,8 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
    `--only=<name>` runs one group, e.g. `--only=touch`, `--only=large`.
    CI (workflow **Autotest**) runs it on every PR and must be green before merge; on Linux
    `bash tools/ci_autotest.sh` does exactly what CI does.
+   A PR that only changes `.md` files (not `CHANGELOG.md`), `docs/` or `.claude/` skips the Godot
+   run in CI (MV-173); anything else gets the full run. While working, `--only=<name>` is enough.
 4. Web export: `sh tools/stamp_build.sh` then
    `godot --headless --path . --export-release "Web" web/index.html`, commit `web/`.
    `cloud_config.json` must exist first or the build ships with cloud save OFF

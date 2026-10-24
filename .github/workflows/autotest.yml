@@ -3,6 +3,9 @@
 # so a red run blocks the merge. Discord notify (MV-96) reports it through workflow_run,
 # which matches this workflow's `name:`, so keep it "Autotest".
 # Run the same thing locally on Linux: bash tools/ci_autotest.sh
+# A PR that only touches docs (see the "Docs-only PR?" step) skips the Godot steps, but the job
+# still reports success so the required check never sits on "pending" (MV-173). Don't use
+# paths-ignore for that: a workflow that never starts leaves a required check waiting forever.
 name: Autotest
 
 on:
@@ -14,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: autotest-${{ github.ref }}
@@ -34,6 +38,30 @@ jobs:
         with:
           persist-credentials: false
 
+      # Docs only = every changed file is a .md (except CHANGELOG.md, which the autotest reads)
+      # or sits under docs/ or .claude/. Pushes to main and manual runs always run everything.
+      - name: Docs-only PR?
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          godot=true
+          if [ "$EVENT" = pull_request ]; then
+            files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
+            [ -n "$files" ] && godot=false
+            while IFS= read -r f; do
+              case "$f" in
+                CHANGELOG.md) godot=true ;;
+                docs/*|.claude/*|*.md) ;;
+                *) godot=true ;;
+              esac
+            done <<<"$files"
+          fi
+          echo "godot=$godot" | tee -a "$GITHUB_OUTPUT"
+          [ "$godot" = true ] || echo "### Autotest: ⏭️ docs-only PR, Godot run skipped" >> "$GITHUB_STEP_SUMMARY"
+
       # BuildInfo.GAME_VERSION is semver and matches the web shell + CHANGELOG.md (MV-111)
       - name: Version check
         run: python3 tools/release.py check
@@ -44,13 +72,14 @@ jobs:
 
       - name: Cache Godot
         id: godot-cache
+        if: steps.scope.outputs.godot == 'true'
         uses: actions/cache@v4
         with:
           path: ~/godot
           key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
 
       - name: Download Godot ${{ env.GODOT_VERSION }}
-        if: steps.godot-cache.outputs.cache-hit != 'true'
+        if: steps.scope.outputs.godot == 'true' && steps.godot-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/godot && cd ~/godot
           curl -sSLf -o "$GODOT_ZIP" "https://github.com/godotengine/godot/releases/download/$GODOT_VERSION/$GODOT_ZIP"
@@ -58,22 +87,25 @@ jobs:
           unzip -q "$GODOT_ZIP" && rm "$GODOT_ZIP"
 
       - name: Install Godot
+        if: steps.scope.outputs.godot == 'true'
         run: |
           sudo ln -sf ~/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           godot --version
           command -v xvfb-run || (sudo apt-get update -q && sudo apt-get install -yq xvfb)
 
       - name: Import assets
+        if: steps.scope.outputs.godot == 'true'
         run: godot --headless --path . --import
 
       - name: Run autotest
+        if: steps.scope.outputs.godot == 'true'
         env:
           OUT: ${{ runner.temp }}/autotest
           TIMEOUT: "1200"
         run: bash tools/ci_autotest.sh
 
       - name: Upload screenshots and log
-        if: always()
+        if: always() && steps.scope.outputs.godot == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: autotest-${{ github.run_number }}
