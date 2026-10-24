@@ -10,6 +10,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Changed
 - Medical room redrawn with PixelLab (first AI-assisted sprite, snapped to the 16-bit palette) (MV-162)
+- All other rooms redrawn with PixelLab: quarters, kitchen, hydroponics, water, armory, science, radio, engine, refinery, workshop, empty (MV-166)
 
 ## [4.7.0-alpha.1] - 2026-10-24
 
