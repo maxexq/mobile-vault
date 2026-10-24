@@ -17,7 +17,7 @@ on:
   deployment_status:
   # CI workflows to report. None exist yet: put each new workflow's `name:` here.
   workflow_run:
-    workflows: [Autotest, Web export]
+    workflows: [Autotest, Web export, Release]
     types: [completed]
   # Actions tab > Discord notify > Run workflow: sends a test message.
   workflow_dispatch:

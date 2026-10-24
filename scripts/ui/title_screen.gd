@@ -28,6 +28,7 @@ var _gate_switch: Button
 var _settings_btn: Button
 var _chars := 0.0
 var _boot_text := ""
+var _channel: Label
 
 
 func _ready() -> void:
@@ -40,6 +41,10 @@ func _ready() -> void:
 	var v := UIKit.vbox(6)
 	_panel.add_child(v)
 	v.add_child(UIKit.logo())
+	_channel = UIKit.channel_tag()
+	v.add_child(_channel)
+	Features.changed.connect(func(): UIKit.refresh_channel_tag(_channel))
+	visibility_changed.connect(func(): UIKit.refresh_channel_tag(_channel))
 	v.add_child(UIKit.divider(UIKit.C_LINE_DIM))
 	_log = UIKit.label("", UIKit.FP, UIKit.C_DIM, true)
 	_log.custom_minimum_size.y = 52

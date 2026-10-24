@@ -222,6 +222,24 @@ static func logo(caption: String = "") -> VBoxContainer:
 	return v
 
 
+## "ALPHA TEST" / "BETA TEST" pixel tag under the logo (MV-111); hidden on a stable release or when the
+## channel_badge switch is off. Call refresh_channel_tag() on it after a switch or GOD preview change.
+static func channel_tag() -> Label:
+	var l := label("", FP, C_RED, true)
+	l.name = "ChannelTag"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	refresh_channel_tag(l)
+	return l
+
+
+static func refresh_channel_tag(l: Label) -> void:
+	var badge := BuildInfo.channel_badge()
+	l.visible = badge != "" and Features.on("channel_badge")
+	l.text = badge + " TEST"
+	l.tooltip_text = BuildInfo.channel_note()
+	l.add_theme_color_override("font_color", {"red": C_RED, "yellow": C_GOLD, "blue": C_BLUE}.get(BuildInfo.channel_color(), C_GREEN))
+
+
 ## bold Thai heading line with a pixel EN tag, e.g. "> CRAFTING  การผลิต"
 static func header(en: String, th: String = "", color: Color = C_GOLD) -> HBoxContainer:
 	var h := hbox(4)

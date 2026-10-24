@@ -34,6 +34,10 @@ jobs:
         with:
           persist-credentials: false
 
+      # BuildInfo.GAME_VERSION is semver and matches the web shell + CHANGELOG.md (MV-111)
+      - name: Version check
+        run: python3 tools/release.py check
+
       - name: Cache Godot
         id: godot-cache
         uses: actions/cache@v4

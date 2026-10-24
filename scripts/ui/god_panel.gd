@@ -325,6 +325,12 @@ func _tab_sys() -> void:
 	_head("VERSION", "เวอร์ชัน")
 	for r in BuildInfo.rows().slice(0, 5):
 		_note("%s: %s" % [r[0], r[1]])
+	var chb := []
+	for ch in BuildInfo.CHANNELS:
+		var cid: String = ch
+		chb.append(_b(cid, func(): Dev.channel_preview(cid), "yellow" if BuildInfo.channel_preview == cid else "gray"))
+	chb.append(_b("ของจริง", func(): Dev.channel_preview(""), "green" if BuildInfo.channel_preview == "" else "gray"))
+	_row(chb, "ดูป้ายช่อง")
 	var cp := UIKit.button("คัดลอกข้อมูลเวอร์ชัน", "gray")
 	cp.pressed.connect(func():
 		DisplayServer.clipboard_set(BuildInfo.as_text())

@@ -1,0 +1,64 @@
+# Publishes a GitHub Release for the version in BuildInfo.GAME_VERSION (MV-111).
+#   - Actions tab > Release > Run workflow (on main): tags main as v<version> and releases it, or
+#   - push a tag yourself: git tag v4.7.0-alpha.1 && git push origin v4.7.0-alpha.1
+# The notes are that version's CHANGELOG.md section plus GitHub's list of merged PRs; -alpha/-beta/-rc
+# versions are marked pre-release. The committed web build (web/) is attached as a zip.
+# Bump the version first with tools/release.py in a PR. Discord notify reports this by its `name:`.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Version and tag
+        id: v
+        run: |
+          VER=$(python3 tools/release.py version)
+          TAG="v$VER"
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            TAG="$GITHUB_REF_NAME"
+          elif [ "$GITHUB_REF_NAME" != main ]; then
+            echo "::error::run the Release workflow on main"; exit 1
+          fi
+          python3 tools/release.py check --tag "$TAG"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::release $TAG already exists: bump the version with tools/release.py"; exit 1
+          fi
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "pre=$([ "$(python3 tools/release.py channel)" = stable ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Release notes + web build
+        run: |
+          python3 tools/release.py notes "${{ steps.v.outputs.ver }}" > "$RUNNER_TEMP/notes.md"
+          cd web && zip -qr "$RUNNER_TEMP/apocarlypse-web-${{ steps.v.outputs.tag }}.zip" . -x '*.import'
+
+      - name: Publish
+        run: |
+          PRE=""
+          [ "${{ steps.v.outputs.pre }}" = true ] && PRE="--prerelease"
+          gh release create "${{ steps.v.outputs.tag }}" $PRE --target "$GITHUB_SHA" \
+            --title "Apocarlypse: Mobile Vault ${{ steps.v.outputs.tag }}" \
+            --notes-file "$RUNNER_TEMP/notes.md" --generate-notes \
+            "$RUNNER_TEMP/apocarlypse-web-${{ steps.v.outputs.tag }}.zip"
+        env:
+          GH_TOKEN: ${{ github.token }}

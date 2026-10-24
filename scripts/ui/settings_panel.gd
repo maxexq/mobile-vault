@@ -379,6 +379,7 @@ func _extra_rows() -> Array:
 
 func _tab_about() -> void:
 	_list.add_child(UIKit.logo("v" + BuildInfo.GAME_VERSION))
+	_list.add_child(UIKit.channel_tag())
 	_head("VERSION", "ข้อมูลเวอร์ชัน")
 	for r in BuildInfo.rows() + _extra_rows():
 		_info(str(r[0]), str(r[1]))
