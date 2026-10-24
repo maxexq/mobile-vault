@@ -2,6 +2,7 @@
 import math, os, random
 from PIL import ImageDraw
 from .common import *
+from . import icon_details
 
 ru = random.Random(5)
 
@@ -32,161 +33,125 @@ def icon(name, fn):
 
 
 def ic_power(i):
-    poly(i, [(9, 1), (3, 9), (7, 9), (5, 15), (12, 6), (8, 6), (10, 1)], P["y2"]); px(i, 9, 2, P["y3"])
+    icon_details.draw(i, "power")
 def ic_water(i):
-    poly(i, [(8, 1), (3, 9), (4, 12), (7, 14), (10, 14), (12, 12), (13, 9)], P["b2"]); px(i, 6, 9, P["b4"]); px(i, 6, 10, P["b4"])
+    icon_details.draw(i, "water")
 def ic_food(i):
-    rect(i, 3, 4, 10, 11, P["m3"]); rect(i, 3, 7, 10, 5, P["red"]); hline(i, 3, 4, 10, P["m4"]); hline(i, 3, 14, 10, P["m2"]); rect(i, 5, 8, 3, 2, P["y2"])
+    icon_details.draw(i, "food")
 def ic_scrap(i):
-    poly(i, [(2, 9), (8, 4), (14, 7), (9, 13)], P["m3"]); poly(i, [(2, 9), (9, 13), (9, 15), (2, 11)], P["m2"]); line(i, 5, 8, 10, 6, P["m4"]); px(i, 11, 8, P["r3"])
+    icon_details.draw(i, "scrap")
 def ic_people(i):
-    ellipse(i, 3, 2, 5, 5, P["b3"]); rect(i, 2, 8, 7, 6, P["b2"]); ellipse(i, 9, 3, 5, 5, P["red2"]); rect(i, 8, 9, 7, 5, P["red"])
+    icon_details.draw(i, "people")
 def ic_happy(i):
-    ellipse(i, 1, 1, 14, 14, P["y2"]); px(i, 5, 6, P["ol"]); px(i, 10, 6, P["ol"]); hline(i, 5, 10, 6, P["ol"]); px(i, 4, 9, P["ol"]); px(i, 11, 9, P["ol"])
+    icon_details.draw(i, "happy")
 def ic_sad(i):
-    ellipse(i, 1, 1, 14, 14, P["r3"]); px(i, 5, 6, P["ol"]); px(i, 10, 6, P["ol"]); hline(i, 5, 10, 6, P["ol"]); px(i, 4, 11, P["ol"]); px(i, 11, 11, P["ol"])
+    icon_details.draw(i, "sad")
 def ic_hammer(i):
-    line(i, 4, 13, 10, 7, P["wd2"], 2); poly(i, [(7, 3), (11, 1), (15, 5), (13, 7)], P["m3"]); px(i, 12, 3, P["m4"])
+    icon_details.draw(i, "hammer")
 def ic_map(i):
-    rect(i, 1, 3, 14, 11, P["c2"]); vline(i, 6, 3, 11, P["c0"]); vline(i, 10, 3, 11, P["c0"]); line(i, 2, 11, 7, 6, P["g3"]); line(i, 8, 8, 13, 5, P["red"])
+    icon_details.draw(i, "map")
 def ic_chest(i):
-    rect(i, 1, 6, 14, 8, P["wd2"]); rect(i, 1, 3, 14, 4, P["wd3"]); hline(i, 1, 7, 14, P["wd0"]); rect(i, 7, 6, 2, 3, P["y1"])
+    icon_details.draw(i, "chest")
 def ic_up(i):
-    poly(i, [(8, 1), (2, 8), (6, 8), (6, 14), (10, 14), (10, 8), (14, 8)], P["gr"]); px(i, 8, 3, P["gr2"])
+    icon_details.draw(i, "up")
 def ic_wrench(i):
-    line(i, 3, 13, 10, 6, P["m3"], 2); ellipse(i, 9, 1, 6, 6, P["m3"]); rect(i, 11, 2, 2, 2, P["clear"])
+    icon_details.draw(i, "wrench")
 def ic_skull(i):
-    ellipse(i, 3, 1, 10, 10, P["w2"]); rect(i, 5, 10, 6, 4, P["w2"]); rect(i, 5, 5, 2, 2, P["ol"]); rect(i, 9, 5, 2, 2, P["ol"]); px(i, 7, 12, P["ol"]); px(i, 9, 12, P["ol"])
+    icon_details.draw(i, "skull")
 def ic_gear(i):
-    for k in range(8):
-        a = k / 8 * math.tau; rect(i, int(7 + 6 * math.cos(a)), int(7 + 6 * math.sin(a)), 2, 2, P["m3"])
-    ellipse(i, 3, 3, 10, 10, P["m3"]); ellipse(i, 6, 6, 4, 4, P["clear"])
+    icon_details.draw(i, "gear")
 def ic_medkit(i):
-    rect(i, 2, 4, 12, 10, P["w2"]); rect(i, 6, 2, 4, 3, P["w1"]); rect(i, 7, 6, 2, 6, P["red"]); rect(i, 5, 8, 6, 2, P["red"])
+    icon_details.draw(i, "medkit")
 def ic_radaway(i):
-    rect(i, 5, 1, 6, 3, P["m3"]); rect(i, 4, 4, 8, 11, P["y1"]); rect(i, 5, 7, 6, 4, P["ol"]); px(i, 8, 8, P["y2"]); px(i, 6, 10, P["y2"]); px(i, 10, 10, P["y2"])
+    icon_details.draw(i, "radaway")
 def ic_stimpack(i):
-    line(i, 2, 14, 11, 5, P["w1"], 3); line(i, 11, 5, 14, 2, P["m3"]); rect(i, 5, 9, 3, 3, P["red"])
+    icon_details.draw(i, "stimpack")
 def ic_rifle(i):
-    rect(i, 1, 6, 14, 2, P["ol2"]); rect(i, 1, 8, 4, 3, P["wd1"]); rect(i, 8, 8, 2, 4, P["ol2"]); hline(i, 4, 5, 6, P["m2"])
+    icon_details.draw(i, "rifle")
 def ic_pistol(i):
-    rect(i, 2, 5, 11, 3, P["m2"]); rect(i, 3, 8, 3, 5, P["wd1"]); hline(i, 2, 5, 11, P["m3"])
+    icon_details.draw(i, "pistol")
 def ic_ammo(i):
-    for k in range(3):
-        rect(i, 2 + k * 4, 5, 3, 9, P["y1"]); rect(i, 2 + k * 4, 3, 3, 3, P["r3"]); vline(i, 2 + k * 4, 6, 7, P["y2"])
+    icon_details.draw(i, "ammo")
 def ic_armor(i):
-    poly(i, [(3, 2), (6, 2), (8, 4), (10, 2), (13, 2), (14, 6), (12, 7), (12, 14), (4, 14), (4, 7), (2, 6)], P["a2"]); rect(i, 6, 8, 4, 4, P["a1"])
+    icon_details.draw(i, "armor")
 def ic_meat(i):
-    ellipse(i, 2, 3, 11, 9, P["red"]); ellipse(i, 4, 5, 6, 4, P["red2"]); rect(i, 11, 10, 4, 2, P["w2"])
+    icon_details.draw(i, "meat")
 def ic_can(i):
-    rect(i, 4, 4, 8, 10, P["m3"]); rect(i, 4, 7, 8, 4, P["red"]); hline(i, 4, 4, 8, P["m4"])
+    icon_details.draw(i, "can")
 def ic_seed(i):
-    ellipse(i, 3, 6, 10, 8, P["wd2"]); line(i, 8, 6, 8, 2, P["g3"]); px(i, 9, 2, P["g4"]); px(i, 7, 3, P["g4"])
+    icon_details.draw(i, "seed")
 def ic_fuel(i):
-    rect(i, 3, 3, 10, 12, P["red"]); rect(i, 9, 1, 3, 3, P["m3"]); line(i, 5, 6, 10, 12, P["red0"]); line(i, 10, 6, 5, 12, P["red0"])
+    icon_details.draw(i, "fuel")
 def ic_hull(i):
-    poly(i, [(8, 1), (14, 4), (13, 10), (8, 15), (3, 10), (2, 4)], P["m3"]); poly(i, [(8, 3), (12, 5), (11, 9), (8, 12)], P["m2"])
+    icon_details.draw(i, "hull")
 def ic_sun(i):
-    ellipse(i, 4, 4, 8, 8, P["y2"])
-    for k in range(8):
-        a = k / 8 * math.tau; px(i, int(8 + 6.5 * math.cos(a)), int(8 + 6.5 * math.sin(a)), P["y1"])
+    icon_details.draw(i, "sun")
 def ic_rain(i):
-    ellipse(i, 2, 2, 12, 7, P["m3"]); ellipse(i, 5, 1, 7, 6, P["m4"])
-    for x in (4, 8, 12):
-        line(i, x, 10, x - 1, 13, P["b3"])
+    icon_details.draw(i, "rain")
 def ic_storm(i):
-    ellipse(i, 2, 2, 12, 7, P["m2"]); poly(i, [(8, 8), (5, 12), (8, 12), (6, 15), (11, 10), (8, 10), (10, 8)], P["y2"])
+    icon_details.draw(i, "storm")
 def ic_snow(i):
-    for a in range(3):
-        ang = a * math.pi / 3; line(i, int(8 - 6 * math.cos(ang)), int(8 - 6 * math.sin(ang)), int(8 + 6 * math.cos(ang)), int(8 + 6 * math.sin(ang)), P["w2"])
+    icon_details.draw(i, "snow")
 def ic_sand(i):
-    for k, y in enumerate((4, 8, 12)):
-        line(i, 2 + k, y, 14, y - 1, P["y0"] if k % 2 else P["r4"])
+    icon_details.draw(i, "sand")
 def ic_fog(i):
-    for y in (4, 8, 12):
-        hline(i, 2, y, 12, P["w1"])
+    icon_details.draw(i, "fog")
 def ic_moon(i):
-    ellipse(i, 3, 2, 11, 11, P["c3"]); ellipse(i, 6, 1, 10, 10, P["clear"])
+    icon_details.draw(i, "moon")
 def ic_str(i):
-    rect(i, 3, 6, 10, 5, P["sk"]); rect(i, 5, 3, 4, 4, P["sk"]); rect(i, 9, 5, 4, 3, P["sk2"])
+    icon_details.draw(i, "str")
 def ic_int(i):
-    ellipse(i, 2, 2, 12, 11, P["pk2"]); line(i, 8, 3, 8, 12, P["pk"]); line(i, 4, 7, 12, 7, P["pk"])
+    icon_details.draw(i, "int")
 def ic_agi(i):
-    poly(i, [(2, 12), (8, 4), (8, 8), (14, 2), (9, 12), (9, 8)], P["cy"])
+    icon_details.draw(i, "agi")
 def ic_explore(i):
-    poly(i, [(3, 14), (6, 4), (8, 1), (10, 4), (13, 14), (8, 10)], P["r3"]); px(i, 8, 5, P["y2"])
+    icon_details.draw(i, "explore")
 def ic_lock(i):
-    rect(i, 3, 7, 10, 8, P["y1"]); ImageDraw.Draw(i).rectangle([5, 2, 10, 8], outline=P["m3"]); rect(i, 7, 10, 2, 3, P["ol"])
+    icon_details.draw(i, "lock")
 def ic_pause(i):
-    rect(i, 3, 2, 4, 12, P["w2"]); rect(i, 9, 2, 4, 12, P["w2"])
+    icon_details.draw(i, "pause")
 def ic_play(i):
-    poly(i, [(4, 2), (13, 8), (4, 14)], P["gr"])
+    icon_details.draw(i, "play")
 def ic_close(i):
-    line(i, 3, 3, 12, 12, P["red2"], 2); line(i, 12, 3, 3, 12, P["red2"], 2)
+    icon_details.draw(i, "close")
 def ic_rad(i):
-    ellipse(i, 1, 1, 14, 14, P["y1"]); ellipse(i, 6, 6, 4, 4, P["ol"])
-    d = ImageDraw.Draw(i)
-    for k in range(3):
-        a = k * math.tau / 3 - math.pi / 2
-        d.pieslice([2, 2, 13, 13], math.degrees(a) - 25, math.degrees(a) + 25, fill=P["ol"])
-    ellipse(i, 6, 6, 4, 4, P["y1"]); px(i, 7, 7, P["ol"]); px(i, 8, 8, P["ol"])
+    icon_details.draw(i, "rad")
 def ic_xp(i):
-    poly(i, [(8, 1), (10, 6), (15, 6), (11, 9), (13, 15), (8, 11), (3, 15), (5, 9), (1, 6), (6, 6)], P["y2"])
+    icon_details.draw(i, "xp")
 def ic_acid(i):
-    ellipse(i, 2, 1, 12, 7, c("toxic1")); ellipse(i, 5, 0, 7, 6, c("toxic2"))
-    for x in (4, 8, 12):
-        line(i, x, 9, x - 1, 12, c("toxic3")); px(i, x - 1, 14, c("toxic3"))
+    icon_details.draw(i, "acid")
 def ic_ash(i):
-    ellipse(i, 2, 2, 12, 7, c("gray2")); ellipse(i, 5, 1, 7, 6, c("gray3"))
-    for (x, y) in ((4, 11), (8, 13), (11, 10), (6, 14), (13, 13)):
-        px(i, x, y, c("gray5"))
+    icon_details.draw(i, "ash")
 def ic_book(i):
-    rect(i, 2, 2, 12, 12, c("orange2")); rect(i, 4, 3, 9, 10, c("cream3")); vline(i, 3, 2, 12, c("orange0"))
-    for y in (5, 7, 9):
-        hline(i, 6, y, 5, c("sand1"))
-    rect(i, 9, 1, 2, 5, c("red3"))
+    icon_details.draw(i, "book")
 def ic_chat(i):
-    rect(i, 1, 2, 14, 9, c("green4")); poly(i, [(4, 11), (4, 14), (7, 11)], c("green4"))
-    for x in (4, 7, 10):
-        px(i, x + 1, 6, OL)
+    icon_details.draw(i, "chat")
 def ic_dog(i):
-    rect(i, 4, 7, 9, 4, c("wood3")); rect(i, 1, 5, 5, 4, c("wood3")); px(i, 2, 4, c("wood2")); px(i, 2, 6, OL)
-    for x in (5, 11):
-        vline(i, x, 11, 3, c("wood2"))
-    line(i, 13, 7, 15, 4, c("wood3"))
+    icon_details.draw(i, "dog")
 def ic_backpack_slot(i):
     pass
 def ic_dodge(i):
-    for k in range(3):
-        line(i, 2 + k * 2, 13 - k, 8 + k * 2, 3 + k, c("teal2") if k == 2 else c("teal1"))
+    icon_details.draw(i, "dodge")
 def ic_supply(i):
-    rect(i, 2, 7, 6, 7, c("red2")); hline(i, 2, 7, 6, c("gray6")); rect(i, 9, 5, 5, 9, c("blue2")); rect(i, 10, 3, 3, 2, c("gray5"))
+    icon_details.draw(i, "supply")
 def ic_flee(i):
-    poly(i, [(1, 8), (7, 3), (7, 6), (14, 6), (14, 10), (7, 10), (7, 13)], c("yellow2"))
+    icon_details.draw(i, "flee")
 def ic_signal(i):
-    vline(i, 8, 6, 9, c("gray5")); px(i, 8, 5, c("red3"))
-    for r in (3, 6):
-        ImageDraw.Draw(i).arc([8 - r, 5 - r, 8 + r, 5 + r], 200, 340, fill=c("green4"))
+    icon_details.draw(i, "signal")
 
 
 def ic_pill(i):
-    rect(i, 4, 1, 8, 3, c("gray5")); rect(i, 3, 4, 10, 11, c("sky3")); rect(i, 3, 7, 10, 5, c("gray6"))
-    rect(i, 6, 8, 4, 3, c("red2")); vline(i, 4, 5, 9, c("gray6"))
+    icon_details.draw(i, "pill")
 def ic_blueprint(i):
-    rect(i, 1, 2, 14, 12, c("blue2")); vline(i, 3, 2, 12, c("blue1"))
-    for x in range(5, 15, 3):
-        vline(i, x, 3, 10, c("blue3"))
-    for y in range(4, 13, 3):
-        hline(i, 4, y, 10, c("blue3"))
-    rect(i, 6, 6, 6, 4, c("gray6")); rect(i, 7, 7, 4, 2, c("blue2"))
+    icon_details.draw(i, "blueprint")
 def ic_thermo(i):
-    rect(i, 6, 1, 4, 10, c("gray6")); ellipse(i, 4, 9, 8, 7, c("red2")); vline(i, 7, 4, 7, c("red2")); px(i, 6, 11, c("red4"))
+    icon_details.draw(i, "thermo")
 
 
 def ic_eye(i):
-    ellipse(i, 1, 4, 14, 8, c("cream3")); ellipse(i, 5, 4, 7, 8, c("teal2")); ellipse(i, 7, 6, 3, 4, OL); px(i, 7, 6, c("gray6"))
+    icon_details.draw(i, "eye")
 def ic_zoom(i):
-    ellipse(i, 1, 1, 10, 10, c("gray4")); ellipse(i, 3, 3, 6, 6, c("blue2")); px(i, 4, 4, c("gray6")); line(i, 9, 9, 14, 14, c("wood2"), 2)
+    icon_details.draw(i, "zoom")
 
 
 ICONS = dict(eye=ic_eye, zoom=ic_zoom, pill=ic_pill, blueprint=ic_blueprint, thermo=ic_thermo, power=ic_power, water=ic_water, food=ic_food, scrap=ic_scrap, people=ic_people, happy=ic_happy, sad=ic_sad,
@@ -229,44 +194,41 @@ def _pack(i, a, b, frame_=False, roll=None):
 
 
 GEAR_ICONS = {
-    "shotgun": lambda i: (rect(i, 1, 6, 14, 3, P["m2"]), rect(i, 1, 9, 5, 3, P["wd1"]), hline(i, 6, 6, 9, P["m3"]), rect(i, 9, 9, 3, 2, P["wd2"])),
-    "smg": lambda i: (rect(i, 3, 5, 11, 3, P["ol2"]), rect(i, 6, 8, 2, 6, P["m2"]), rect(i, 3, 8, 2, 3, P["m1"]), hline(i, 3, 5, 11, P["m2"])),
-    "laser": lambda i: (rect(i, 1, 6, 13, 3, P["w1"]), rect(i, 2, 9, 4, 3, P["m2"]), hline(i, 4, 7, 9, P["cy"]), px(i, 14, 7, P["cy2"]), px(i, 15, 7, P["cy2"])),
-    "jacket": lambda i: _armor_shape(i, P["r2"], P["r1"]),
-    "mail": lambda i: _armor_shape(i, P["m2"], P["m1"], P["m3"]),
-    "riot": lambda i: _armor_shape(i, P["b1"], P["b0"], P["b3"]),
-    "powerframe": lambda i: _armor_shape(i, P["y0"], P["m1"], P["y2"]),
-    "chip": lambda i: (rect(i, 3, 3, 10, 10, P["g2"]), rect(i, 5, 5, 6, 6, P["ol2"]), [vline(i, x, 1, 2, P["y1"]) for x in (5, 8, 11)], [vline(i, x, 13, 2, P["y1"]) for x in (5, 8, 11)], px(i, 7, 7, P["red2"])),
-    "charm": lambda i: (line(i, 8, 1, 8, 5, P["m3"]), ellipse(i, 3, 5, 10, 10, P["g3"]), ellipse(i, 5, 7, 6, 6, P["g4"]), px(i, 7, 9, P["white"])),
-    "turret": lambda i: (rect(i, 2, 10, 12, 4, P["m1"]), orect(i, 3, 4, 8, 7, P["a2"]), rect(i, 10, 6, 6, 2, P["ol2"])),
-    "harpoon": lambda i: (rect(i, 2, 10, 12, 4, P["m1"]), orect(i, 3, 4, 8, 7, P["r2"]), rect(i, 10, 7, 4, 1, P["m3"]), poly(i, [(13, 5), (15, 7), (13, 9)], P["m4"])),
-    "tesla": lambda i: (rect(i, 4, 11, 8, 4, P["m1"]), vline(i, 8, 3, 8, P["b2"]), ellipse(i, 5, 0, 7, 6, P["cy"]), px(i, 3, 6, P["cy2"]), px(i, 13, 4, P["cy2"])),
-    "plates": lambda i: (orect(i, 1, 3, 7, 10, P["m2"]), orect(i, 8, 3, 7, 10, P["m3"]), px(i, 3, 5, P["m4"]), px(i, 10, 5, P["m4"]), px(i, 3, 10, P["m4"]), px(i, 12, 10, P["m4"])),
-    "engine": lambda i: (orect(i, 2, 5, 12, 9, P["m2"]), rect(i, 4, 2, 3, 4, P["m3"]), rect(i, 9, 2, 3, 4, P["m3"]), hline(i, 3, 9, 10, P["red2"]), rect(i, 0, 8, 2, 3, P["m1"])),
-    "spikes": lambda i: ([poly(i, [(2, 2 + k * 4), (14, 4 + k * 4), (2, 6 + k * 4)], P["m3"]) for k in range(3)], vline(i, 2, 1, 14, P["m1"])),
-    "saw": lambda i: ([rect(i, int(7 + 6 * math.cos(k / 8 * math.tau)), int(7 + 6 * math.sin(k / 8 * math.tau)), 2, 2, P["m3"]) for k in range(8)], ellipse(i, 2, 2, 12, 12, P["m4"]), ellipse(i, 6, 6, 4, 4, P["m1"])),
-    "plow": lambda i: (poly(i, [(2, 2), (12, 4), (14, 14), (2, 14)], P["y1"]), [line(i, 3, y, 12, y + 1, P["y0"]) for y in (6, 9, 12)]),
-    "cog": lambda i: ([rect(i, int(7 + 6 * math.cos(k / 6 * math.tau)), int(7 + 6 * math.sin(k / 6 * math.tau)), 2, 2, P["r3"]) for k in range(6)], ellipse(i, 3, 3, 10, 10, P["r3"]), ellipse(i, 6, 6, 4, 4, P["r1"])),
-    "sword": lambda i: (line(i, 3, 13, 12, 4, P["m4"], 2), line(i, 2, 10, 6, 14, P["y1"], 2), px(i, 13, 2, P["white"])),
-    "shield": lambda i: (poly(i, [(8, 1), (14, 3), (13, 10), (8, 15), (3, 10), (2, 3)], P["b2"]), poly(i, [(8, 3), (12, 4), (11, 9), (8, 12)], P["b3"])),
-    "crown": lambda i: (poly(i, [(1, 13), (1, 4), (5, 8), (8, 2), (11, 8), (15, 4), (15, 13)], P["y1"]), hline(i, 1, 12, 15, P["y0"]), px(i, 8, 9, P["red2"])),
-    "heal": lambda i: (rect(i, 6, 2, 4, 12, P["gr"]), rect(i, 2, 6, 12, 4, P["gr"]), px(i, 7, 3, P["gr2"])),
-    "fist": lambda i: (rect(i, 3, 5, 10, 7, P["sk"]), hline(i, 3, 7, 10, P["sk2"]), rect(i, 3, 12, 6, 3, P["sk2"])),
-    # helmets
-    "hardhat": lambda i: _helmet(i, c("yellow2"), c("orange1")),
-    "gasmask": lambda i: _helmet(i, c("green1"), c("green1"), mask=True),
-    "helmet": lambda i: _helmet(i, c("green2"), c("green1")),
-    "visor": lambda i: _helmet(i, c("gray4"), c("gray2"), visor=c("teal2")),
-    # boots
-    "boots": lambda i: _boot(i, c("sand2"), c("gray6")),
-    "workboots": lambda i: _boot(i, c("wood3"), c("wood1")),
-    "tacboots": lambda i: _boot(i, c("gray2"), c("green1")),
-    "jetboots": lambda i: _boot(i, c("gray4"), c("red2"), flame=True),
-    # backpacks
-    "backpack": lambda i: _pack(i, c("red2"), c("red1")),
-    "hikingpack": lambda i: _pack(i, c("blue2"), c("blue1"), roll=c("yellow2")),
-    "ruck": lambda i: _pack(i, c("green2"), c("green1"), roll=c("green1")),
-    "framepack": lambda i: _pack(i, c("orange2"), c("orange0"), frame_=True, roll=c("green2")),
+    "shotgun": lambda i: icon_details.draw(i, "shotgun"),
+    "smg": lambda i: icon_details.draw(i, "smg"),
+    "laser": lambda i: icon_details.draw(i, "laser"),
+    "jacket": lambda i: icon_details.draw(i, "jacket"),
+    "mail": lambda i: icon_details.draw(i, "mail"),
+    "riot": lambda i: icon_details.draw(i, "riot"),
+    "powerframe": lambda i: icon_details.draw(i, "powerframe"),
+    "chip": lambda i: icon_details.draw(i, "chip"),
+    "charm": lambda i: icon_details.draw(i, "charm"),
+    "turret": lambda i: icon_details.draw(i, "turret"),
+    "harpoon": lambda i: icon_details.draw(i, "harpoon"),
+    "tesla": lambda i: icon_details.draw(i, "tesla"),
+    "plates": lambda i: icon_details.draw(i, "plates"),
+    "engine": lambda i: icon_details.draw(i, "engine"),
+    "spikes": lambda i: icon_details.draw(i, "spikes"),
+    "saw": lambda i: icon_details.draw(i, "saw"),
+    "plow": lambda i: icon_details.draw(i, "plow"),
+    "cog": lambda i: icon_details.draw(i, "cog"),
+    "sword": lambda i: icon_details.draw(i, "sword"),
+    "shield": lambda i: icon_details.draw(i, "shield"),
+    "crown": lambda i: icon_details.draw(i, "crown"),
+    "heal": lambda i: icon_details.draw(i, "heal"),
+    "fist": lambda i: icon_details.draw(i, "fist"),
+    "hardhat": lambda i: icon_details.draw(i, "hardhat"),
+    "gasmask": lambda i: icon_details.draw(i, "gasmask"),
+    "helmet": lambda i: icon_details.draw(i, "helmet"),
+    "visor": lambda i: icon_details.draw(i, "visor"),
+    "boots": lambda i: icon_details.draw(i, "boots"),
+    "workboots": lambda i: icon_details.draw(i, "workboots"),
+    "tacboots": lambda i: icon_details.draw(i, "tacboots"),
+    "jetboots": lambda i: icon_details.draw(i, "jetboots"),
+    "backpack": lambda i: icon_details.draw(i, "backpack"),
+    "hikingpack": lambda i: icon_details.draw(i, "hikingpack"),
+    "ruck": lambda i: icon_details.draw(i, "ruck"),
+    "framepack": lambda i: icon_details.draw(i, "framepack"),
 }
 
 

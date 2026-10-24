@@ -53,6 +53,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Play logs are sent to the game's server with your player ID to help fix bugs and balance the game; a one-time notice explains it and Settings → Privacy turns it off (MV-116)
 
 ### Changed
+- Refined all 92 resource, equipment, weather and action icons with clearer native-pixel silhouettes, material edges and useful detail; their meanings and UI sizes are unchanged (MV-275)
 - Redrawn creatures: the pets Khao Tang, Som Jeed and two-headed Khai Dao, the Rad-Wolf, Acid Spitter and Bone Brute, and the Alpha Rad-Wolf, Junk Golem and Scorpion King warlords (MV-178)
 - Screen shake is half as strong, the same size on phones as on PC, and the boss bar now follows the screen-shake setting (MV-175)
 - The vehicle's engine rumble and road bumps are half as strong (they made some players dizzy), and Settings → Feel has a new Vehicle shake switch to turn them off (MV-176)

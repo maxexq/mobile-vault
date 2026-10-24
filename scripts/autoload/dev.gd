@@ -23,6 +23,7 @@ var unlocked := false
 var flags := {}
 var speed := 1.0
 var overlay := false
+var icon_scale := 2
 var _taps: Array = []
 var _layer: CanvasLayer
 var _lbl: Label
@@ -1072,6 +1073,13 @@ func mode_toll_test() -> void:
 
 # ---- version channel (MV-111)
 ## preview another channel's ALPHA/BETA/RC badge on the title + About ("" = the real channel); not saved
+## MV-275: inspect the real atlas at native / phone / large integer sizes.
+func icon_preview(scale: int) -> void:
+	icon_scale = clampi(scale, 1, 3)
+	Trace.rec("god", "icon preview x%d" % icon_scale)
+	changed.emit()
+
+
 func channel_preview(ch: String) -> void:
 	act("channel preview %s" % (ch if ch != "" else "off"))
 	BuildInfo.channel_preview = ch if BuildInfo.CHANNELS.has(ch) else ""
