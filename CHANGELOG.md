@@ -19,6 +19,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - All other rooms redrawn with PixelLab: quarters, kitchen, hydroponics, water, armory, science, radio, engine, refinery, workshop, empty (MV-166)
 - Portrait phones: the auto camera zooms the vehicle in to fill the screen width instead of showing the whole convoy small under a big sky; swipe to see the trailers, boss fights still pull back. Swiping follows your finger at every zoom (MV-148)
 
+### Security
+- Offline progress can no longer be stretched by editing the save time: once the game reaches the server it counts only the time since the server last received your save; the server also flags impossible progress for later leaderboards (MV-174)
+
 ### Fixed
 - The ladder shaft no longer cuts through a knocked-through large room; a steel post marks the old wall instead (MV-146)
 

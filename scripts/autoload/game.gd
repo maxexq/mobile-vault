@@ -126,7 +126,7 @@ func load_game() -> bool:
 	started = true
 	# Cloud.now() is the server clock once the cloud has answered, so a moved phone clock can't fake time away
 	var now := Cloud.now()
-	var elapsed := maxf(0.0, now - float(s.get("saved_at", now)))
+	var elapsed := offline_elapsed(float(s.get("saved_at", now)), now, Cloud.server_seen if Features.on("anticheat") else 0.0)
 	Trace.rec("save", "loaded save", {"away_sec": int(elapsed), "bytes": JSON.stringify(s).length()})
 	game_started.emit()
 	if elapsed > 30.0:
@@ -135,6 +135,17 @@ func load_game() -> bool:
 	if Account.take_mode_notice():
 		toast.emit("ตอนนี้ทุกคนเล่นด้วยไอดีถาวรแล้ว ขบวนของคุณกลับสู่โหมดเอาชีวิตรอด (ความยากเดิม) ของทุกอย่างยังอยู่ครบ", "biome")
 	return true
+
+
+## seconds away for the offline catch-up (MV-174). saved_at sits in the save, which the player can edit, so
+## once the cloud has answered, the time the server last accepted a save (server_seen, 0 = unknown) caps it:
+## moving saved_at back can't make the trip longer than the server saw. A save that is newer than the last
+## upload (played offline) keeps its own, shorter time.
+static func offline_elapsed(saved_at: float, now: float, server_seen: float = 0.0) -> float:
+	var away := maxf(0.0, now - saved_at)
+	if server_seen > 0.0:
+		away = minf(away, maxf(0.0, now - server_seen))
+	return away
 
 
 func _migrate() -> void:
@@ -854,6 +865,8 @@ func armory_bonus() -> float:
 # =================================================================== simulation
 func _simulate(dt: float, offline: bool) -> void:
 	var m := dt / 60.0     # minutes
+	if started:
+		Account.add_sim_time(dt)
 	var res: Dictionary = s.res
 	# --- time of day & weather
 	s.tod = fmod(float(s.tod) + dt / Data.DAY_LENGTH_SEC, 1.0)

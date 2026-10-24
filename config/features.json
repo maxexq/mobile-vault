@@ -18,7 +18,8 @@
     "persistent_account": true,
     "channel_badge": true,
     "room_ambience": true,
-    "resume_on_reload": true
+    "resume_on_reload": true,
+    "anticheat": true
   },
   "events": {},
   "tune": {}

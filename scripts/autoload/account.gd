@@ -55,6 +55,15 @@ func _ensure() -> void:
 		a.settings["diff"] = "normal"
 
 
+## simulated seconds over the account's whole life (online + offline catch-up). The server compares how much
+## this grew between two uploads with how much real time passed (MV-174, 0006_anticheat.sql), so it can never
+## grow faster than the clock without the save being flagged.
+func add_sim_time(dt: float) -> void:
+	var life = a.get("life")
+	if life is Dictionary:
+		life["sim_sec"] = float(life.get("sim_sec", 0.0)) + dt
+
+
 ## put the account's shared data into a vehicle (load, new game, next generation)
 func attach(veh: Dictionary) -> void:
 	_ensure()

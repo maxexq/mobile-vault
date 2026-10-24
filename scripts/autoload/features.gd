@@ -49,6 +49,7 @@ const FEATURES := {
 	"channel_badge": "ป้าย ALPHA / BETA บนหน้าเริ่มเกมและหน้าเกี่ยวกับ",
 	"room_ambience": "แสงไฟและอนิเมชันเล็กๆ ในห้อง (ไฟกะพริบ, ไอน้ำ, ฟองน้ำ, เกจ)",
 	"resume_on_reload": "รีเฟรชหน้าเว็บแล้วเข้าเกมต่อเลย ไม่ต้องกด เดินทางต่อ",
+	"anticheat": "กันโกงเวลา: คิดเวลาออฟไลน์ไม่เกินที่เซิร์ฟเวอร์เห็นเซฟล่าสุด (ฝั่งเซิร์ฟเวอร์ตรวจเสมอ)",
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {

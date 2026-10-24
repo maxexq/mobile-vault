@@ -2,7 +2,7 @@ extends RefCounted
 ## In-memory stand-in for the Supabase endpoints Cloud uses (dev only, excluded from exports):
 ## anonymous sign-up, refresh, user, Google sign-in / manual identity linking (redirect flow),
 ## logout (refresh tokens rotate like Supabase's), and rpc_load / rpc_save with the same rev rules as supabase/migrations/0001_cloud_save.sql
-## and the schema guard of 0002_schema_guard.sql, plus rpc_log of 0004_logs.sql (player logs).
+## and the schema guard of 0002_schema_guard.sql, the write rate limit of 0006_anticheat.sql (min_gap), plus rpc_log of 0004_logs.sql (player logs).
 ## `clock` is the fake server time.
 
 const GOOGLE := "https://accounts.google.test/o/oauth2"
@@ -17,6 +17,7 @@ var refreshes := 0
 var logs := {}        # user id -> rows sent through rpc_log (MV-116)
 var log_calls := 0
 var no_rpc_log := false   # a server where 0004_logs.sql was not run yet
+var min_gap := 0.0        # 0006_anticheat.sql: seconds between two accepted writes (0 = a server without it)
 var _n := 0
 
 
@@ -76,6 +77,8 @@ func handle(method: int, path: String, headers: PackedStringArray, body: String)
 			return {"code": 200, "body": {"ok": false, "old_client": true, "rev": rev, "server_time": clock}}
 		if cur != null and not b.p_force and rev != int(b.p_base_rev):
 			return {"code": 200, "body": {"ok": false, "conflict": true, "rev": rev, "server_time": clock}}
+		if cur != null and min_gap > 0.0 and clock - float(cur.updated_at) < min_gap:
+			return {"code": 200, "body": {"ok": false, "rate_limited": true, "retry_after": min_gap - (clock - float(cur.updated_at)), "rev": rev, "server_time": clock}}
 		rows[uid] = {"rev": rev + 1, "data": b.p_data, "settings": b.p_settings, "device_id": b.p_device_id, "updated_at": clock,
 			"schema": int(b.get("p_schema", 1))}
 		return {"code": 200, "body": {"ok": true, "rev": rev + 1, "server_time": clock}}

@@ -914,6 +914,32 @@ func logs_test_error() -> bool:
 	return await logs_flush()
 
 
+## MV-174: what the offline catch-up would give if saved_at had been moved back 4 hours, with and without the
+## server cap. Read-only (nothing in the save changes), so the save is not marked as cheated. {client, capped}
+func anticheat_time_test() -> Dictionary:
+	var now := Cloud.now()
+	var faked := float(Game.s.get("saved_at", now)) - 4 * 3600.0
+	var r := {"client": Game.offline_elapsed(faked, now), "capped": Game.offline_elapsed(faked, now, Cloud.server_seen if Features.on("anticheat") else 0.0)}
+	Trace.rec("god", "anticheat time test", r)
+	Game.toast.emit("แก้ saved_at ย้อน 4 ชม.: ได้ %d นาที ถ้าไม่มีกันโกง · ได้ %d นาที เมื่อเทียบเวลาเซิร์ฟเวอร์%s" % [int(r.client / 60.0), int(r.capped / 60.0),
+		"" if Cloud.server_seen > 0.0 else " (คลาวด์ยังไม่ตอบ จึงยังจำกัดไม่ได้)"], "info")
+	return r
+
+
+## MV-174: two uploads back to back; the server should refuse the second (too soon) and the save stays queued.
+## Read-only for the save.
+func anticheat_rate_test() -> int:
+	Trace.rec("god", "anticheat rate test")
+	var before := Cloud.rate_limited
+	Cloud.meta.dirty = true
+	await Cloud.upload()
+	Cloud.meta.dirty = true
+	await Cloud.upload()
+	var hit := Cloud.rate_limited - before
+	Game.toast.emit("เซิร์ฟเวอร์ปฏิเสธการเซฟที่ถี่เกิน %d ครั้ง%s" % [hit, "" if hit > 0 else " (ยังไม่ได้รัน 0006_anticheat.sql?)"], "info" if hit > 0 else "warn")
+	return hit
+
+
 ## copy "player id · full auth user id" for support lookups (MV-115); read-only, so the save stays ranked
 func player_id_copy() -> String:
 	var t := "%s · %s" % [Cloud.player_id() if Cloud.player_id() != "" else "-", Cloud.user_id() if Cloud.user_id() != "" else "-"]

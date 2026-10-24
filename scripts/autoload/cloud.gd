@@ -16,7 +16,7 @@ extends Node
 ## Config: res://cloud_config.json {"url": "https://<ref>.supabase.co", "anon_key": "<anon/publishable key>",
 ##   "site_url": "<public game URL, used when the game runs inside a frame where Google refuses to sign in>"}.
 ## The file is git-ignored; without it the cloud is OFF and the game behaves exactly as before.
-## Schema: supabase/migrations/0001_cloud_save.sql, 0002_schema_guard.sql, 0003_player_id.sql
+## Schema: supabase/migrations/0001_cloud_save.sql, 0002_schema_guard.sql, 0003_player_id.sql, 0006_anticheat.sql
 
 signal status_changed
 signal pulled      # a newer cloud save was written locally (title screen re-checks CONTINUE)
@@ -64,6 +64,11 @@ var need_login := false
 ## CONFLICT: what the cloud holds {rev, device_id, updated_at, data, settings}
 var remote := {}
 var last_sync_at := 0.0
+## server time (unix) of the last save the cloud accepted for this account, 0 = not known yet. Caps the offline
+## catch-up (Game.offline_elapsed), so editing saved_at in local storage can't buy extra time (MV-174).
+var server_seen := 0.0
+## the server refused the last write because it came too soon after the one before (0006_anticheat.sql)
+var rate_limited := 0
 ## tests inject an object with handle(method: int, path: String, headers: PackedStringArray, body: String) -> {code, body}
 var transport: Object = null
 
@@ -284,6 +289,7 @@ func _sync() -> void:
 		return
 	var save = r.body.get("save")
 	var rrev := int(save.get("rev", 0)) if save is Dictionary else 0
+	server_seen = float(save.get("updated_at", 0.0)) if save is Dictionary and save.get("updated_at") != null else 0.0
 	var local_empty := not Save.has_save()
 	if rrev == int(meta.rev):
 		if meta.dirty:
@@ -336,12 +342,18 @@ func _upload(force: bool) -> void:
 		return
 	if r.body.get("ok", false):
 		meta.rev = int(r.body.get("rev", meta.rev))
+		server_seen = float(r.body.get("server_time", server_seen))
 		if seq == _write_seq:
 			meta.dirty = false
 			meta.wiped = false
 		_save_meta()
 		remote = {}
 		Trace.rec("cloud", "uploaded", {"rev": meta.rev, "bytes": JSON.stringify(data).length()})
+		_ok()
+	elif r.body.get("rate_limited", false):
+		# too soon after the last accepted write: stay dirty, the next upload round sends it (nothing is lost)
+		rate_limited += 1
+		Trace.rec("cloud", "rate limited", {"retry_after": r.body.get("retry_after", 0)})
 		_ok()
 	elif r.body.get("conflict", false):
 		# someone else wrote first: fetch what they wrote so the player can compare

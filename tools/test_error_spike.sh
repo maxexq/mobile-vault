@@ -3,8 +3,8 @@
 #   bash tools/test_error_spike.sh
 # 1. .github/scripts/error-spike.sh with saved answers (DRY_RUN, nothing sent).
 # 2. supabase/migrations/0005_log_alerts.sql on a throwaway local PostgreSQL (needs postgresql 14+;
-#    skipped when initdb isn't there). Applies 0001-0005 on a stub `auth` schema, then
-#    tools/tests/log_alerts_test.sql.
+#    skipped when initdb isn't there). Applies 0001-0006 on a stub `auth` schema, then
+#    tools/tests/log_alerts_test.sql, then 0006_anticheat.sql (MV-174) with tools/tests/anticheat_test.sql.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 S=.github/scripts/error-spike.sh
@@ -56,6 +56,11 @@ else
     echo "PASS sql"
   else
     echo "FAIL sql:"; echo "$out"; fails=$((fails+1))
+  fi
+  if out=$("${Q[@]}" -f tools/tests/anticheat_test.sql 2>&1); then
+    echo "PASS sql anticheat (MV-174)"
+  else
+    echo "FAIL sql anticheat:"; echo "$out"; fails=$((fails+1))
   fi
 fi
 

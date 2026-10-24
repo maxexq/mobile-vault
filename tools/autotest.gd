@@ -74,6 +74,11 @@ func _run() -> void:
 		await _version_test()
 		_finish()
 		return
+	if "--only=anticheat" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _anticheat_test()
+		_finish()
+		return
 	if "--only=env" in OS.get_cmdline_user_args():
 		await _env_test()
 		_finish()
@@ -680,6 +685,7 @@ func _run() -> void:
 	await _ambience_test()
 	await _features_test()
 	await _modes_test()
+	await _anticheat_test()
 	await _version_test()
 	await _env_test()
 	_thai_terms_test()
@@ -1520,6 +1526,86 @@ func _fake_run(gen: int) -> Dictionary:
 
 func _local_gen() -> int:
 	return int(Account.account_of(Save.read()).get("meta", {}).get("gen", -1))
+
+
+## anti-cheat F0/F1 (MV-174): the offline catch-up is capped by the server's last accepted save, the account
+## counts simulated seconds, a write refused for coming too soon stays queued, GOD tests stay read-only.
+## The server side (0006_anticheat.sql) is tested on PostgreSQL by tools/test_error_spike.sh.
+func _anticheat_test() -> void:
+	Features.clear_overrides()
+	var t := 2_000_000_000.0
+	_check("anticheat: no server time = the save's own time", is_equal_approx(Game.offline_elapsed(t - 4 * 3600.0, t), 4 * 3600.0))
+	_check("anticheat: saved_at moved back is capped by the server", is_equal_approx(Game.offline_elapsed(t - 4 * 3600.0, t, t - 600.0), 600.0))
+	_check("anticheat: played offline since the last upload keeps its shorter time", is_equal_approx(Game.offline_elapsed(t - 300.0, t, t - 3 * 3600.0), 300.0))
+	_check("anticheat: a save from the future gives nothing", Game.offline_elapsed(t + 50.0, t, t - 600.0) == 0.0)
+	# the account counts simulated time, online and offline
+	if not Game.started:
+		main._on_start(true)
+		await wait(0.5)
+	Tutorial.skip()
+	var sim0 := float(Account.a.get("life", {}).get("sim_sec", 0.0))
+	Game._simulate(10.0, true)
+	var sim1 := float(Account.a.life.get("sim_sec", 0.0))
+	_check("anticheat: account counts simulated seconds (%.1f -> %.1f)" % [sim0, sim1], sim1 >= sim0 + 10.0 and sim1 < sim0 + 11.0)
+	Game.save_game()
+	_check("anticheat: sim_sec is in the saved account", float(Account.account_of(Save.read()).get("life", {}).get("sim_sec", 0.0)) >= sim1 - 0.01)
+	# cloud: the server time of the last accepted save
+	var keep := Save.read()
+	var fake = load("res://tools/cloud_fake.gd").new()
+	Cloud.session = {}
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": ""}
+	Cloud.server_seen = 0.0
+	Cloud._save_session()
+	Cloud._save_meta()
+	var was_started := Game.started
+	Game.started = false        # the sync must not count as an open run (it would ask instead of pulling)
+	await Cloud.start_for_test(fake)
+	var uid := Cloud.user_id()
+	_check("anticheat: upload remembers the server time", Cloud.state == Cloud.State.OK and is_equal_approx(Cloud.server_seen, fake.clock))
+	fake.min_gap = 3.0
+	var rl := Cloud.rate_limited
+	Cloud.meta.dirty = true
+	await Cloud.upload()
+	_check("anticheat: too-soon write refused, kept for later", Cloud.rate_limited == rl + 1 and Cloud.meta.dirty and Cloud.state == Cloud.State.OK
+		and int(fake.rows[uid].rev) == 1)
+	fake.clock += 60.0
+	await Cloud.upload()
+	_check("anticheat: next round goes up", not Cloud.meta.dirty and int(fake.rows[uid].rev) == 2 and is_equal_approx(Cloud.server_seen, fake.clock))
+	# a fresh boot reads updated_at of the cloud row
+	fake.rows[uid].updated_at = fake.clock - 600.0
+	Cloud.server_seen = 0.0
+	await Cloud.sync()
+	_check("anticheat: sync reads the server's last save time", is_equal_approx(Cloud.server_seen, fake.clock - 600.0))
+	# loading a save whose saved_at was moved back 4 hours: only the 10 minutes the server saw count
+	Game.started = was_started
+	var d := Save.read()
+	(d.main as Dictionary).saved_at = Cloud.now() - 4 * 3600.0
+	Save.write(d)
+	Game.load_game()
+	var away := -1
+	for i in range(Trace.entries.size() - 1, -1, -1):
+		if str(Trace.entries[i].msg) == "loaded save":
+			away = int(Trace.entries[i].data.away_sec)
+			break
+	_check("anticheat: edited saved_at gives only the server's 10 minutes (got %d s)" % away, away >= 590 and away <= 700)
+	Features.set_override("features", "anticheat", false)
+	_check("anticheat: switch off = the save's own time", int(Game.offline_elapsed(Cloud.now() - 4 * 3600.0, Cloud.now(), Cloud.server_seen if Features.on("anticheat") else 0.0)) == 4 * 3600)
+	Features.set_override("features", "anticheat", null)
+	# GOD tests: read-only, the save stays clean
+	Game.s.stats.erase("cheated")
+	var r: Dictionary = Dev.anticheat_time_test()
+	_check("anticheat: GOD time test shows the cap", r.client > r.capped and r.capped < 900.0)
+	var hit: int = await Dev.anticheat_rate_test()
+	_check("anticheat: GOD rate test hits the limit", hit >= 1)
+	_check("anticheat: GOD tests don't mark the save as cheated", not bool(Game.s.stats.get("cheated", false)))
+	# back to a local-only game
+	Save.write(keep)
+	Cloud.transport = null
+	Cloud.state = Cloud.State.OFF
+	Cloud.url = ""
+	Cloud.server_seen = 0.0
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": ""}
+	Cloud._save_meta()
 
 
 ## persistent account (MV-159): v1 saves migrate, the account survives the next generation, no picker,

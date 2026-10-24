@@ -391,6 +391,13 @@ func _tab_sys() -> void:
 	if Telemetry.last_error != "":
 		_note("ผิดพลาดล่าสุด: " + Telemetry.last_error)
 	_row([_b("ส่ง log ตอนนี้", func(): Dev.logs_flush(), "green"), _b("ส่ง error ทดสอบ", func(): Dev.logs_test_error(), "yellow")])
+	_head("ANTI-CHEAT", "กันโกง (MV-174)")
+	var seen := "ยังไม่รู้ (คลาวด์ยังไม่ตอบ)" if Cloud.server_seen <= 0.0 else Time.get_datetime_string_from_unix_time(int(Cloud.server_seen + 7 * 3600), true)
+	_note("เซิร์ฟเวอร์รับเซฟล่าสุด: %s · เวลาจำลองสะสม %.1f ชม. · ถูกจำกัดความถี่ %d ครั้ง%s" % [seen,
+		float(Account.a.get("life", {}).get("sim_sec", 0.0)) / 3600.0, Cloud.rate_limited, "" if Features.on("anticheat") else " · สวิตช์ anticheat ปิด"])
+	_row([_b("ทดสอบโกงเวลา (saved_at -4 ชม.)", func(): Dev.anticheat_time_test(), "yellow", true)])
+	if Cloud.enabled():
+		_row([_b("อัปโหลดซ้อน 2 ครั้ง (ทดสอบจำกัดความถี่)", func(): Dev.anticheat_rate_test(), "yellow", true)])
 	_head("SETTINGS", "การตั้งค่า")
 	_note("ขนาดเซฟ %.1f KB · FPS %s · ภาษา %s" % [Settings.save_size_bytes() / 1024.0, str(Settings.get_value("fps")), str(Settings.get_value("lang"))])
 	_row([_b("คืนค่าเริ่มต้น", Dev.settings_reset)])
