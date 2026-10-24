@@ -228,7 +228,10 @@ func bio(d: Dictionary) -> Dictionary:
 		return BIOS[k]
 	var h := absi(hash(str(d.id) + str(d.name)))
 	var outfit := str(d.variant).split("_")[1] if str(d.variant).count("_") >= 2 else "scav"
-	var role: String = {"army": "อดีตทหาร", "lab": "นักวิทยาศาสตร์", "chef": "พ่อครัว", "medic": "ผู้ช่วยแพทย์", "jumpsuit": "ช่างซ่อม", "scav": "นักคุ้ยซาก", "raider": "อดีตโจร", "builder": "อดีตช่างก่อสร้าง"}.get(outfit, "ผู้รอดชีวิต")
+	var rid := str(d.variant).trim_prefix("dw_crew_")
+	if Crew.is_roster(str(d.variant)) and Data.CREW_ROSTER.has(rid):
+		outfit = "roster"
+	var role: String = str(Data.CREW_ROSTER[rid].role) if outfit == "roster" else {"army": "อดีตทหาร", "lab": "นักวิทยาศาสตร์", "chef": "พ่อครัว", "medic": "ผู้ช่วยแพทย์", "jumpsuit": "ช่างซ่อม", "scav": "นักคุ้ยซาก", "raider": "อดีตโจร", "builder": "อดีตช่างก่อสร้าง"}.get(outfit, "ผู้รอดชีวิต")
 	return {"role": role,
 		"text": "%s %s\nเป้าหมาย: %s" % [ORIGINS[h % ORIGINS.size()], TRAITS[(h / 7) % TRAITS.size()], GOALS[(h / 53) % GOALS.size()]],
 		"likes": "-", "fear": "-"}

@@ -1,0 +1,201 @@
+{
+  "format": "crew-roster-draft/1",
+  "native_target": [
+    14,
+    20
+  ],
+  "production_ready": false,
+  "counts": {
+    "cameos": 5,
+    "originals": 15
+  },
+  "reference": "style-reference.png",
+  "notes": "Generated enlarged visual drafts. Validate the native grid, master palette and animation before game integration.",
+  "characters": [
+    {
+      "id": "max",
+      "name": "Max",
+      "role": "Road survivor",
+      "type": "cameo",
+      "source": "Mad Max",
+      "brief": "Max Rockatansky from Mad Max, short tousled brown hair, tiny dark stubble cluster, battered near-black leather jacket, one muted gray shoulder patch, dark brown trousers and boots. No weapon, no dog, no car.",
+      "number": 1,
+      "image": "max.png"
+    },
+    {
+      "id": "rick",
+      "name": "Rick",
+      "role": "Sheriff",
+      "type": "cameo",
+      "source": "The Walking Dead",
+      "brief": "Rick Grimes from The Walking Dead in his early sheriff look: tan wide-brim sheriff hat, short brown hair, tiny dark stubble, muted bone/tan uniform shirt, dark brown belt and pants, a single dull gray badge pixel. No weapon.",
+      "number": 2,
+      "image": "rick.png"
+    },
+    {
+      "id": "ellie",
+      "name": "Ellie",
+      "role": "Scout",
+      "type": "cameo",
+      "source": "The Last of Us",
+      "brief": "Ellie Williams from The Last of Us: auburn hair tied into a tiny short ponytail contained within frame, muted dusty red short-sleeve shirt over gray neckline, blue-gray jeans, brown boots. No weapon, no writing or graphic on shirt, no large backpack.",
+      "number": 3,
+      "image": "ellie.png"
+    },
+    {
+      "id": "jill",
+      "name": "Jill",
+      "role": "Rescue specialist",
+      "type": "cameo",
+      "source": "Resident Evil",
+      "brief": "Jill Valentine in her classic Resident Evil look: small muted steel-blue beret, short brown bob, pale slate-blue shirt and dark blue tactical vest/shoulder straps, gray-blue trousers and dark boots. No weapon and no unreadable insignia.",
+      "number": 4,
+      "image": "jill.png"
+    },
+    {
+      "id": "leon",
+      "name": "Leon",
+      "role": "Police survivor",
+      "type": "cameo",
+      "source": "Resident Evil",
+      "brief": "Leon S. Kennedy in his classic Resident Evil 2 police uniform: simple side-swept light brown fringe, steel-blue police suit with dark blue vest, muted gray chest patch and belt, dark boots. No weapon, no RPD lettering.",
+      "number": 5,
+      "image": "leon.png"
+    },
+    {
+      "id": "niran",
+      "name": "Niran",
+      "role": "Pathfinder",
+      "type": "original",
+      "brief": "An original lean adult pathfinder with short black hair, muted olive field shirt, bone neck cloth represented by one small cluster, brown trousers, dark boots. A dark diagonal compass strap. Face calm and alert.",
+      "number": 6,
+      "image": "niran.png"
+    },
+    {
+      "id": "mali",
+      "name": "Mali",
+      "role": "Field medic",
+      "type": "original",
+      "brief": "An original woman field medic with a simple short dark bob, bone canvas jacket, oxidized teal shirt and trousers, muted red upper-arm patch as one square, dark boots. Keep her distinct from the reference nurse by removing cap and chest cross.",
+      "number": 7,
+      "image": "mali.png"
+    },
+    {
+      "id": "boon",
+      "name": "Boon",
+      "role": "Diesel mechanic",
+      "type": "original",
+      "brief": "An original older dark-skinned man diesel mechanic, short gray flat-top hair, tiny gray mustache cluster, steel-blue overalls over a muted rust undershirt, dull brown belt, dark boots. No hat and no handheld tool.",
+      "number": 8,
+      "image": "boon.png"
+    },
+    {
+      "id": "dao",
+      "name": "Dao",
+      "role": "Radio operator",
+      "type": "original",
+      "brief": "An original woman radio operator with short auburn bob, one compact dark headset earpiece contained against head, slate-blue jacket with bone collar, brown belt, dark gray pants. One tiny muted steel radio clip on belt, no antenna sticking outside frame.",
+      "number": 9,
+      "image": "dao.png"
+    },
+    {
+      "id": "lek",
+      "name": "Lek",
+      "role": "Camp cook",
+      "type": "original",
+      "brief": "An original middle-aged cook with a simple bone rag head wrap, dark skin, muted gray apron over a bone shirt, rust brown trousers and dark boots. One darker apron pocket as a 2-pixel cluster. No tall chef hat or utensils.",
+      "number": 10,
+      "image": "lek.png"
+    },
+    {
+      "id": "arun",
+      "name": "Arun",
+      "role": "Salvage diver",
+      "type": "original",
+      "brief": "An original salvage diver with a fitted dark olive rubber cap, medium-brown skin, oxidized teal waterproof work jacket with dull bone neck seal, dark teal pants and black boots. No oxygen tank, no mask over face, no fins.",
+      "number": 11,
+      "image": "arun.png"
+    },
+    {
+      "id": "ploy",
+      "name": "Ploy",
+      "role": "Botanist",
+      "type": "original",
+      "brief": "An original young woman botanist with muted blonde hair in a short tucked ponytail, olive-green overalls over bone short sleeves, brown boots and belt. One small olive pocket flap, no plants held in hands.",
+      "number": 12,
+      "image": "ploy.png"
+    },
+    {
+      "id": "somchai",
+      "name": "Somchai",
+      "role": "Welder",
+      "type": "original",
+      "brief": "An original welder with a flat mustard hardhat and compact raised soot-gray welding visor over brow, medium tan skin, dark rust work apron over slate blue shirt, gray trousers, dark boots. Visor must not obscure the simple right-facing face; no torch.",
+      "number": 13,
+      "image": "somchai.png"
+    },
+    {
+      "id": "mae",
+      "name": "Mae",
+      "role": "Quartermaster",
+      "type": "original",
+      "brief": "An original elderly woman quartermaster, short silver-gray hair with one small tucked braid shape, bone utility vest over muted brown sleeves, dark brown belt and tiny square hip pouch, olive-gray trousers, dark boots. No glasses or handheld props.",
+      "number": 14,
+      "image": "mae.png"
+    },
+    {
+      "id": "ken",
+      "name": "Ken",
+      "role": "Vault guard",
+      "type": "original",
+      "brief": "An original dark-skinned guard with fitted soot-black combat helmet and one muted olive stripe, dark olive armored tunic, bone single chest patch, charcoal trousers and brown boots. No gun, no shield; keep shape compact.",
+      "number": 15,
+      "image": "ken.png"
+    },
+    {
+      "id": "nok",
+      "name": "Nok",
+      "role": "Runner",
+      "type": "original",
+      "brief": "An original runner with black short hair and muted rust-red bandana, faded blue sleeveless shirt, rust-brown trousers, dark belt and boots. Athletic but same reference chunky proportions; bare forearms use medium tan skin.",
+      "number": 16,
+      "image": "nok.png"
+    },
+    {
+      "id": "isha",
+      "name": "Isha",
+      "role": "Lab scientist",
+      "type": "original",
+      "brief": "An original woman lab scientist with dark brown skin and compact short curly black hair silhouette, bone short lab jacket over muted teal shirt, slate-blue pants, dark boots. Small dark collar seam; no glasses, vial or logo.",
+      "number": 17,
+      "image": "isha.png"
+    },
+    {
+      "id": "tomas",
+      "name": "Tomas",
+      "role": "Water engineer",
+      "type": "original",
+      "brief": "An original bald older man water engineer with tiny dark square beard cluster, warm tan skin, muted teal maintenance jumpsuit, rust-brown tool belt and one dull gray buckle, charcoal boots. No cap or external tool.",
+      "number": 18,
+      "image": "tomas.png"
+    },
+    {
+      "id": "june",
+      "name": "June",
+      "role": "Electrician",
+      "type": "original",
+      "brief": "An original woman electrician with dark brown short hair under a faded steel-blue work cap, muted mustard work jacket over blue overalls, simple dark belt, brown boots. One dull gray jacket seam; no lightning symbol or handheld tool.",
+      "number": 19,
+      "image": "june.png"
+    },
+    {
+      "id": "viktor",
+      "name": "Viktor",
+      "role": "Cold-weather driver",
+      "type": "original",
+      "brief": "An original older man driver with dark gray close-fitting fur cap with short ear flaps, pale weathered skin, dusty snow-blue winter coat with bone collar, charcoal trousers and brown boots, tiny gray beard cluster. Keep coat narrow like the original body.",
+      "number": 20,
+      "image": "viktor.png"
+    }
+  ]
+}

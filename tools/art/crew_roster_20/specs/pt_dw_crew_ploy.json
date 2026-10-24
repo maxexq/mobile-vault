@@ -1,0 +1,58 @@
+{
+  "spec": "micro-asset/1",
+  "id": "pt_dw_crew_ploy",
+  "title": "Ploy - matching portrait",
+  "why": "Make the botanist readable in the existing crew sprite family.",
+  "parent": "pt_dw_lab_blonde",
+  "kind": "portrait",
+  "size": [
+    20,
+    20
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin1",
+    "skin3",
+    "yellow1",
+    "yellow2",
+    "green1",
+    "green3",
+    "cream2",
+    "cream3",
+    "wood1"
+  ],
+  "outline": "ol0",
+  "light": "top-left",
+  "layer": "ui",
+  "anchor": {
+    "x": 0,
+    "y": 0,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/chars.py",
+    "function": "portrait_crew_ploy"
+  },
+  "feature": "crew_roster_20",
+  "refs": [
+    "tools/art/crew_roster_20/concepts/ploy.png",
+    "tools/art/crew_roster_20/style-reference.png",
+    "tools/art/chars.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Exactly one atlas region named pt_dw_crew_ploy, 20x20 pixels, with binary transparency and only the listed palette names.",
+    "Preserve the large head, tiny right-facing eye, projecting nose, compact body and soot outline of the supplied existing-character reference.",
+    "An original young woman botanist with muted blonde hair in a short tucked ponytail, olive-green overalls over bone short sleeves, brown boots and belt. One small olive pocket flap, no plants held in hands.",
+    "No blur, antialiasing, fractional scaling, rotation, gradient pixels or isolated export specks; inspect at 1x and nearest 8x.",
+    "Portrait matches this same character, with a readable face and outfit at native 20x20 in the crew list and detail panel."
+  ],
+  "notes": "An original young woman botanist with muted blonde hair in a short tucked ponytail, olive-green overalls over bone short sleeves, brown boots and belt. One small olive pocket flap, no plants held in hands. Parent and anchor describe the matching atlas construction reference, not a second sprite attached in the world. The UI loads pt_<variant>; match the approved idle face and outfit.",
+  "author": "Codex art analyst",
+  "replace": false,
+  "priority": "medium"
+}

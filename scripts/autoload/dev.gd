@@ -456,6 +456,36 @@ func recruit(n: int = 1) -> void:
 	Game.dwellers_changed.emit()
 
 
+## MV-170: board one of the 20 named crew directly (no random roll; works with the switch off too)
+func spawn_roster(id: String) -> Dictionary:
+	if not Data.CREW_ROSTER.has(id):
+		return {}
+	var r: Dictionary = Data.CREW_ROSTER[id]
+	var st := {"str": 3, "int": 3, "agi": 3}
+	st[r.stat] = 6
+	var d := Game._add_dweller({"name": r.name, "variant": "dw_crew_" + id, "str": st.str, "int": st.int, "agi": st.agi,
+		"lvl": 1 + int(Game.s.get("lap", 0))})
+	act("spawn crew " + id)
+	Game.dwellers_changed.emit()
+	return d
+
+
+## every named crew member not on board yet
+func spawn_roster_all() -> void:
+	for id in Data.CREW_ROSTER:
+		var on_board := false
+		for d in Game.s.dwellers:
+			on_board = on_board or str(d.variant) == "dw_crew_" + str(id)
+		if not on_board:
+			spawn_roster(str(id))
+
+
+## tester override of crew.roster_chance (-1 = back to the default)
+func roster_chance(k: float) -> void:
+	Trace.rec("god", "roster chance %.2f" % k)
+	Features.set_override("tune", "crew.roster_chance", null if k < 0.0 else k)
+
+
 ## a stranger at the door for inspection (grade "rare"/"very_rare", kind "" = random)
 func stranger(kind: String = "", grade: String = "rare") -> void:
 	if Inspection.queue_candidate("god", grade, kind).is_empty():
@@ -724,6 +754,8 @@ func spawn_builder(build_trait: String = "") -> Dictionary:
 
 func _make_builder(d: Dictionary, on_: bool) -> void:
 	d["role"] = "builder" if on_ else ""
+	if Crew.is_roster(str(d.variant)):
+		return      # MV-170 named crew keep their own look as builders
 	var parts := str(d.variant).split("_")
 	var hair := parts[-1] if parts.size() >= 3 else Data.HAIRS[0]
 	if on_:

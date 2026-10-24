@@ -10,6 +10,7 @@ var _tabs: HFlowContainer
 var _list: VBoxContainer
 var _log_cat := ""
 var _save_box: TextEdit
+var _crew_anim := "idle"       # MV-170 roster preview: animation every preview sprite plays
 
 const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["log", "LOG/เซฟ"]]
 const SRC_TH := {"code": "ค่าในโค้ด", "default": "ค่าเริ่มต้น", "build": "บิลด์", "remote": "รีโมต", "mode": "โหมดเกม", "dev": "ผู้ทดสอบ"}
@@ -216,6 +217,7 @@ func _tab_crew() -> void:
 		var tid: String = t
 		bb.append(_b("ช่าง+" + str(Crew.TRAITS[t].th), func(): Dev.spawn_builder(tid), "red" if Crew.TRAITS[t].get("bad", false) else "gray"))
 	_row(bb)
+	_crew_roster()
 	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
 	for g in Inspection.GRADES:
 		var gid: String = g
@@ -242,6 +244,45 @@ func _tab_crew() -> void:
 			_b("ตาย", func(): Dev.kill(dd), "red")])
 		_row([_b("เลิกเป็นช่าง" if Crew.is_builder(dd) else "เป็นช่าง", func(): Dev.toggle_builder(dd), "yellow" if Crew.is_builder(dd) else "gray"),
 			_b("สุ่ม trait ใหม่", func(): Dev.reroll_traits(dd))])
+
+
+## MV-170: every named crew sprite (any animation) + portrait, and a button that boards that one
+func _crew_roster() -> void:
+	_head("CREW ROSTER", "ลูกเรือมีชื่อ 20 คน · สวิตช์ %s · โอกาส %d%%" % ["เปิด" if Features.on("crew_roster_20") else "ปิด",
+		roundi(Features.num("crew.roster_chance", Crew.ROSTER_CHANCE) * 100.0)])
+	var ab := []
+	for a in Atlas.DW_FRAMES:
+		var an: String = a
+		ab.append(_b(an, func(): _crew_anim = an, "yellow" if an == _crew_anim else "gray"))
+	_row(ab, "ท่า")
+	_row([_b("ขึ้นรถครบทุกคน", func(): Dev.spawn_roster_all(), "green"), _b("โอกาส 100%", func(): Dev.roster_chance(1.0)),
+		_b("โอกาส 0%", func(): Dev.roster_chance(0.0)), _b("โอกาสค่าเดิม", func(): Dev.roster_chance(-1.0))])
+	var grid := UIKit.flow(3)
+	grid.name = "RosterGrid"
+	for id in Data.CREW_ROSTER:
+		var rid: String = id
+		var r: Dictionary = Data.CREW_ROSTER[rid]
+		var cell := VBoxContainer.new()
+		cell.name = "crew_" + rid
+		cell.add_theme_constant_override("separation", 1)
+		var top := HBoxContainer.new()
+		var stage := Control.new()
+		stage.custom_minimum_size = Vector2(Atlas.DW_W * 2, Atlas.DW_H * 2)
+		var spr := AnimatedSprite2D.new()
+		spr.name = "Sprite"
+		spr.sprite_frames = Atlas.dweller_frames("dw_crew_" + rid)
+		spr.centered = false
+		spr.scale = Vector2(2, 2)
+		spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		stage.add_child(spr)
+		spr.play(_crew_anim)
+		top.add_child(stage)
+		top.add_child(UIKit.tex_rect(Atlas.tex("pt_dw_crew_" + rid), Vector2(20, 20)))
+		cell.add_child(top)
+		cell.add_child(UIKit.label(("★ " if r.cameo else "") + str(r.name), UIKit.FS_SMALL, UIKit.C_TEXT))
+		cell.add_child(_b("ขึ้นรถ", func(): Dev.spawn_roster(rid), "green"))
+		grid.add_child(cell)
+	_list.add_child(grid)
 
 
 func _tab_fight() -> void:
@@ -466,6 +507,8 @@ func _tune_code_default(key: String) -> float:
 		"inspection.rare_chance": return Inspection.RARE_CHANCE
 		"inspection.very_rare_chance": return Inspection.VERY_RARE_CHANCE
 		"ambience.flicker": return RoomAmbience.FLICKER_PM
+		"crew.roster_chance": return Crew.ROSTER_CHANCE
+		"crew.cameo_weight": return Crew.CAMEO_WEIGHT
 	return 1.0
 
 

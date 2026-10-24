@@ -1,0 +1,58 @@
+{
+  "spec": "micro-asset/1",
+  "id": "pt_dw_crew_lek",
+  "title": "Lek - matching portrait",
+  "why": "Make the camp cook readable in the existing crew sprite family.",
+  "parent": "pt_dw_chef_brown",
+  "kind": "portrait",
+  "size": [
+    20,
+    20
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin0",
+    "skin1",
+    "cream1",
+    "cream3",
+    "gray1",
+    "gray3",
+    "gray5",
+    "orange1",
+    "orange2"
+  ],
+  "outline": "ol0",
+  "light": "top-left",
+  "layer": "ui",
+  "anchor": {
+    "x": 0,
+    "y": 0,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/chars.py",
+    "function": "portrait_crew_lek"
+  },
+  "feature": "crew_roster_20",
+  "refs": [
+    "tools/art/crew_roster_20/concepts/lek.png",
+    "tools/art/crew_roster_20/style-reference.png",
+    "tools/art/chars.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Exactly one atlas region named pt_dw_crew_lek, 20x20 pixels, with binary transparency and only the listed palette names.",
+    "Preserve the large head, tiny right-facing eye, projecting nose, compact body and soot outline of the supplied existing-character reference.",
+    "An original middle-aged cook with a simple bone rag head wrap, dark skin, muted gray apron over a bone shirt, rust brown trousers and dark boots. One darker apron pocket as a 2-pixel cluster. No tall chef hat or utensils.",
+    "No blur, antialiasing, fractional scaling, rotation, gradient pixels or isolated export specks; inspect at 1x and nearest 8x.",
+    "Portrait matches this same character, with a readable face and outfit at native 20x20 in the crew list and detail panel."
+  ],
+  "notes": "An original middle-aged cook with a simple bone rag head wrap, dark skin, muted gray apron over a bone shirt, rust brown trousers and dark boots. One darker apron pocket as a 2-pixel cluster. No tall chef hat or utensils. Parent and anchor describe the matching atlas construction reference, not a second sprite attached in the world. The UI loads pt_<variant>; match the approved idle face and outfit.",
+  "author": "Codex art analyst",
+  "replace": false,
+  "priority": "medium"
+}
