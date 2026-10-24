@@ -4,6 +4,9 @@ extends Node2D
 ## Tall 9:16-friendly layers are stacked upwards from the road line. Every layer autoscrolls with the truck
 ## speed (road fastest, skyline slowest). Changing biome cross-fades the whole set.
 ## Everything is drawn at 1:1 inside the low-res world viewport -> true pixel art.
+## v2 (MV-163, Features "bg_v2"): a biome with assets/bg/v2/<id>.json gets its layout from that file
+## (tools/art/bg2.py: 8 layers, 1440-3840 px strips at real scale). Only the biome on screen (and the
+## one fading out) is built; the rest are freed so the long strips don't all sit in phone memory.
 
 const BW := 480.0
 const ROAD_Y := 290.0            # top of the road strip (tyres touch at ROAD_Y + 10)
@@ -21,16 +24,18 @@ const SUN_POS := Vector2(150, ROAD_Y - 250.0)
 const GROUND_COLORS := {"industrial": Color("26262a"), "desert": Color("4e3e2a"), "forest": Color("3a2818"),
 	"swamp": Color("21160f"), "tundra": Color("3a3a3e"), "metro": Color("18181c")}
 
-var groups: Dictionary = {}      # biome id -> {root, layers:[Parallax2D]}
+const V2_DIR := "res://assets/bg/v2/"
+
+var groups: Dictionary = {}      # biome id -> {root, layers:[Parallax2D], v2: bool}
 var rails: Parallax2D            # railway laid over the road when the convoy is an armoured train
 var current := ""
 var _speed := 0.0
 
 
 func _ready() -> void:
-	for b in Data.BIOMES:
-		_build_group(b.id)
+	add_to_group("world_bg")
 	Game.biome_changed.connect(_on_biome_changed)
+	Features.changed.connect(_on_features_changed)
 	rails = _px_layer(load("res://assets/bg/rails.png"), 1.0, 1.0, ROAD_Y + 8.0, BW)
 	rails.z_index = 1
 	rails.visible = false
@@ -43,7 +48,7 @@ func _px_layer(tex: Texture2D, scroll_x: float, speed: float, y: float, repeat_w
 	px.repeat_size = Vector2(repeat_w, 0)
 	# repeat_times spreads copies evenly behind and in front of the original (docs: 2D Parallax > Repeat times);
 	# the wide battle zoom shows ~1.6x more world, so cover ~±1300 px whatever the strip width
-	px.repeat_times = maxi(5, int(ceil(2600.0 / repeat_w)) | 1)
+	px.repeat_times = maxi(3 if repeat_w >= 1300.0 else 5, int(ceil(2600.0 / repeat_w)) | 1)
 	px.set_meta("speed", speed)
 	var spr := Sprite2D.new()
 	spr.texture = tex
@@ -53,7 +58,22 @@ func _px_layer(tex: Texture2D, scroll_x: float, speed: float, y: float, repeat_w
 	return px
 
 
+## v2 layout of a biome, or {} when the switch is off / the biome has not been converted yet
+static func v2_layout(id: String) -> Dictionary:
+	if not Features.on("bg_v2"):
+		return {}
+	var path := V2_DIR + id + ".json"
+	if not FileAccess.file_exists(path):
+		return {}
+	var d = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return d if d is Dictionary and d.has("layers") else {}
+
+
 func _build_group(id: String) -> void:
+	var lay := v2_layout(id)
+	if not lay.is_empty():
+		_build_group_v2(id, lay)
+		return
 	var root := Node2D.new()
 	root.name = id
 	root.visible = false
@@ -88,7 +108,75 @@ func _build_group(id: String) -> void:
 	ground.size = Vector2(8000, 1200)
 	ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(ground)
-	groups[id] = {"root": root, "layers": layers}
+	groups[id] = {"root": root, "layers": layers, "v2": false}
+
+
+func _build_group_v2(id: String, lay: Dictionary) -> void:
+	var root := Node2D.new()
+	root.name = id
+	root.visible = false
+	root.modulate.a = 0.0
+	add_child(root)
+	var sky_h := float(lay.get("sky_h", 900))
+	var sky_tex: Texture2D = load(V2_DIR + id + "_sky.png")
+	var top := ColorRect.new()
+	top.color = sky_tex.get_image().get_pixel(0, 0)
+	top.position = Vector2(-4000, ROAD_Y - sky_h - 2000.0)
+	top.size = Vector2(8000, 2004)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(top)
+	root.add_child(_px_layer(sky_tex, 0.0, 0.0, ROAD_Y + 4.0 - sky_h, 64.0))
+	var sun := Parallax2D.new()
+	sun.scroll_scale = Vector2(0.02, 1.0)
+	var ss := Sprite2D.new()
+	ss.texture = load(V2_DIR + id + "_sun.png")
+	ss.centered = false
+	var sp: Array = lay.get("sun", [150, 40])
+	ss.position = Vector2(float(sp[0]), ROAD_Y - 250.0 + float(sp[1]))
+	sun.add_child(ss)
+	root.add_child(sun)
+	var layers := []
+	for L in lay.layers:
+		var px := _px_layer(load(V2_DIR + "%s_%s.png" % [id, L.name]), float(L.scroll), float(L.speed), float(L.y), float(L.w))
+		px.name = str(L.name)
+		root.add_child(px)
+		layers.append(px)
+	var ground := ColorRect.new()
+	ground.color = Color(str(lay.get("ground", "#15121c")))
+	ground.position = Vector2(-4000, ROAD_Y + 64.0)
+	ground.size = Vector2(8000, 1200)
+	ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(ground)
+	groups[id] = {"root": root, "layers": layers, "v2": true}
+
+
+## the switch was flipped (GOD MODE / remote config): rebuild the biome on screen in the other style
+func _on_features_changed() -> void:
+	if current == "" or not groups.has(current):
+		return
+	if bool(groups[current].v2) == not v2_layout(current).is_empty():
+		return
+	_free_group(current)
+	_build_group(current)
+	var root: Node2D = groups[current].root
+	root.visible = true
+	root.modulate.a = 1.0
+
+
+func _free_group(id: String) -> void:
+	if groups.has(id):
+		groups[id].root.queue_free()
+		groups.erase(id)
+
+
+## GOD MODE: jump every layer of the biome on screen ahead by `sec` seconds of driving at road speed,
+## to check the strips loop without a visible seam or a quick repeat
+func skip(sec: float) -> void:
+	if not groups.has(current):
+		return
+	for px in groups[current].layers:
+		var p := px as Parallax2D
+		p.scroll_offset.x += ROAD_PX_PER_SEC * float(p.get_meta("speed")) * sec
 
 
 func _on_biome_changed(index: int, instant: bool) -> void:
@@ -97,22 +185,23 @@ func _on_biome_changed(index: int, instant: bool) -> void:
 		return
 	var old := current
 	current = id
+	if not groups.has(id):
+		_build_group(id)
 	var g: Dictionary = groups[id]
 	var root: Node2D = g.root
 	root.visible = true
 	move_child(root, get_child_count() - 1)
 	if instant or old == "":
 		root.modulate.a = 1.0
-		for k in groups:
+		for k in groups.keys():
 			if k != id:
-				groups[k].root.visible = false
+				_free_group(k)
 		return
 	var tw := create_tween()
 	tw.tween_property(root, "modulate:a", 1.0, 3.0).set_trans(Tween.TRANS_SINE)
 	tw.tween_callback(func():
-		var o: Node2D = groups[old].root
-		o.visible = false
-		o.modulate.a = 0.0)
+		if old != current:
+			_free_group(old))
 
 
 func _process(delta: float) -> void:

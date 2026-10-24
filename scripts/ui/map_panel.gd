@@ -59,10 +59,15 @@ func refresh() -> void:
 		var p := UIKit.panel(UIKit.C_BG2, col.darkened(0.3))
 		var h := UIKit.hbox(4)
 		p.add_child(h)
-		var at := AtlasTexture.new()
-		at.atlas = load("res://assets/bg/%s_far.png" % b.id)
-		at.region = Rect2(150, 230, 56, 56)
-		var thumb := UIKit.tex_rect(at, Vector2(56, 56))
+		var tex: Texture2D
+		if not Background.v2_layout(b.id).is_empty():
+			tex = load(Background.V2_DIR + "%s_thumb.png" % b.id)
+		else:
+			var at := AtlasTexture.new()
+			at.atlas = load("res://assets/bg/%s_far.png" % b.id)
+			at.region = Rect2(150, 230, 56, 56)
+			tex = at
+		var thumb := UIKit.tex_rect(tex, Vector2(56, 56))
 		if locked:
 			thumb.modulate = Color(0.4, 0.4, 0.4)
 		h.add_child(thumb)

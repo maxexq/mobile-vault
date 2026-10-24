@@ -532,6 +532,14 @@ func drop_gear(rar: int, n: int = 3) -> void:
 
 
 # ---- world
+## background loop check (MV-163): jump the parallax layers ahead by `sec` seconds of driving
+func bg_skip(sec: float) -> void:
+	var bg := get_tree().get_first_node_in_group("world_bg") as Background
+	if bg:
+		bg.skip(sec)
+	act("bg skip %ds" % int(sec))
+
+
 func goto_biome(i: int) -> void:
 	i = clampi(i, 0, Data.BIOMES.size() - 1)
 	Game.s.biome = i

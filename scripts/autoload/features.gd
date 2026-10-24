@@ -42,6 +42,7 @@ const FEATURES := {
 	"google_login": "ล็อกอิน / ผูกบัญชีด้วย Google (ปิด = เล่นแบบ Guest อย่างเดียว)",
 	"modes": "เลือกโหมดตอนเริ่มเกมใหม่ (ปิด = เริ่มโหมดปกติเสมอ)",
 	"channel_badge": "ป้าย ALPHA / BETA บนหน้าเริ่มเกมและหน้าเกี่ยวกับ",
+	"bg_v2": "ฉากหลังแบบใหม่ หลาย layer สเกลจริง (biome ที่แปลงแล้ว)",
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {

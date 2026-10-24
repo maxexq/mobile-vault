@@ -15,6 +15,7 @@ generator keeps it and the atlas layout stays the same.
   python tools/pixellab.py accept room_medical 2            candidate seed 2 -> override
   python tools/pixellab.py reject room_medical               remove the override (back to drawn sprite)
   python tools/pixellab.py spec create-image-pixflux        request schema from the live OpenAPI spec
+  python tools/pixellab.py kit all --prefix ind_ [--yes]     standalone assets listed in tools/art/pixellab/kit.json
 
 gen options: --prompt "..." (else tools/art/pixellab/prompts.json), --endpoint pixflux|bitforge,
 --strength 1-999 (how much the init image is kept, default 300), --no-init, --style SPRITE
@@ -36,6 +37,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HERE = os.path.join(ROOT, "tools", "art", "pixellab")
 OVERRIDES = os.path.join(HERE, "overrides")
 CANDIDATES = os.path.join(HERE, "candidates")
+KIT = os.path.join(HERE, "kit")
 ATLAS = os.path.join(ROOT, "assets", "atlas")
 sys.path.insert(0, os.path.join(ROOT, "tools", "art"))
 from pixelize import pixelize, load_palette  # noqa: E402
@@ -79,7 +81,7 @@ def api(method, path, body=None, timeout=180):
                 return r.status, (json.loads(raw) if raw else {})
         except urllib.error.HTTPError as e:
             msg = e.read().decode(errors="replace")
-            if e.code == 429 and attempt < 3:
+            if e.code in (429, 502, 503, 504) and attempt < 3:
                 time.sleep(5 * (attempt + 1))
                 continue
             hint = {401: "token missing or wrong (see the docstring: env, .pixellab-api-key or cloud Network secret)",
@@ -271,6 +273,41 @@ def cmd_gen(a):
     print(f"spent ${spent:.4f}; compare {out_dir}/preview.png, then: python tools/pixellab.py accept {a.sprite} <seed>")
 
 
+def cmd_kit(a):
+    """new standalone asset (not an atlas sprite), e.g. a background building; text only, transparent background.
+    Kept as drawn by PixelLab (no palette snap): tools/art/bg2.py tints and quantizes it per layer."""
+    spec = json.load(open(os.path.join(HERE, "kit.json"), encoding="utf-8"))
+    items = {k: v for k, v in spec["items"].items() if k == a.name or (a.name == "all" and k.startswith(a.prefix or ""))}
+    if not items:
+        sys.exit(f"no kit item '{a.name}' in tools/art/pixellab/kit.json")
+    est = 0.0
+    for name, it in items.items():
+        w, h = it["size"]
+        print(f"{name}: {w}x{h}  {it['prompt'][:90]}")
+        est += 0.008 + 0.005 * min(1.0, w * h / 160000)
+    print(f"{len(items)} call(s), about ${est:.3f} (or {len(items)} trial generations)")
+    if not a.yes:
+        print("not sent: add --yes to spend credits")
+        return
+    os.makedirs(KIT, exist_ok=True)
+    for name, it in items.items():
+        w, h = it["size"]
+        if os.path.exists(os.path.join(KIT, f"{name}.png")) and not a.redo:
+            print(f"  {name}: already in kit/, skipped (--redo to replace)")
+            continue
+        body = {"description": f"{it['prompt']}, {spec['style']}", "image_size": {"width": w, "height": h},
+                "no_background": True, "view": "side", "seed": a.seed, "text_guidance_scale": 8.0}
+        body.update(spec.get("defaults", {}))
+        res = call("create-image-pixflux", body)
+        out = os.path.join(KIT, f"{name}.png")
+        from_b64(res["image"]).save(out)
+        usd = float((res.get("usage") or {}).get("usd") or 0.0)
+        os.makedirs(CANDIDATES, exist_ok=True)
+        with open(os.path.join(CANDIDATES, "usage.jsonl"), "a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": int(time.time()), "kit": name, "seed": a.seed, "size": [w, h], "usd": usd}) + "\n")
+        print(f"  {out}")
+
+
 def cmd_accept(a):
     src = os.path.join(CANDIDATES, a.sprite, f"{a.seed}.png")
     if not os.path.exists(src):
@@ -324,6 +361,13 @@ def main():
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--yes", action="store_true", help="really call the API (spends credits)")
     p.set_defaults(fn=cmd_gen)
+    p = sub.add_parser("kit", help="standalone assets from tools/art/pixellab/kit.json -> tools/art/pixellab/kit/")
+    p.add_argument("name", help="item name, or 'all' (with --prefix)")
+    p.add_argument("--prefix")
+    p.add_argument("--seed", type=int, default=2024)
+    p.add_argument("--redo", action="store_true", help="regenerate items that already exist")
+    p.add_argument("--yes", action="store_true", help="really call the API (spends credits)")
+    p.set_defaults(fn=cmd_kit)
     for name, fn in (("accept", cmd_accept), ("reject", cmd_reject)):
         p = sub.add_parser(name)
         p.add_argument("sprite")

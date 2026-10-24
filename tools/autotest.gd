@@ -69,12 +69,18 @@ func _run() -> void:
 		await _version_test()
 		_finish()
 		return
+	if "--only=bg" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _background_test(true)
+		_finish()
+		return
 	if "--only=thai" in OS.get_cmdline_user_args():
 		_thai_terms_test()
 		_finish()
 		return
 	await _tutorial_test()
 	await shot("main_industrial_rain")
+	await _background_test(false)
 	Combat.reset_wave(6)
 	Threat.force_raid()
 	await wait(6.0)
@@ -2682,6 +2688,57 @@ func _thai_terms_test() -> void:
 
 
 ## title screen: the backdrop van drives (wheels turn, engine rumbles) and the menu window stays on screen
+# ------------------------------------------------------------------ v2 backgrounds (MV-163)
+func _background_test(switch_biomes: bool) -> void:
+	var bg: Background = main.background
+	var lay := Background.v2_layout("industrial")
+	_check("bg: industrial has a v2 layout", not lay.is_empty() and lay.layers.size() >= 8)
+	_check("bg: industrial is built as v2", bg.current == "industrial" and bg.groups.has("industrial") and bg.groups.industrial.v2)
+	var ok_w := true
+	var widths := []
+	for i in lay.layers.size():
+		var L: Dictionary = lay.layers[i]
+		var px: Parallax2D = bg.groups.industrial.layers[i]
+		var spr := px.get_child(0) as Sprite2D
+		widths.append(spr.texture.get_width())
+		ok_w = ok_w and spr.texture.get_width() == int(L.w) and is_equal_approx(px.repeat_size.x, float(L.w))
+	_check("bg: every layer is as wide as its loop %s" % str(widths), ok_w)
+	# at road speed each layer needs at least 20 s before the same strip comes round again
+	var loops := []
+	for L in lay.layers:
+		loops.append(float(L.w) / (Background.ROAD_PX_PER_SEC * maxf(0.001, float(L.speed))))
+	_check("bg: no layer loops faster than 20 s %s" % str(loops.map(func(t): return int(t))), loops.all(func(t): return t >= 20.0))
+	_check("bg: only the biome on screen is loaded", bg.groups.size() == 1)
+	var thumb: Texture2D = load(Background.V2_DIR + "industrial_thumb.png")
+	_check("bg: map thumbnail 56x56", thumb != null and thumb.get_size() == Vector2(56, 56))
+	var near: Parallax2D = bg.groups.industrial.layers[lay.layers.size() - 2]
+	var before := near.scroll_offset.x
+	Dev.bg_skip(30.0)
+	_check("bg: GOD skip moves the layers", near.scroll_offset.x > before + 100.0)
+	await wait(0.4)
+	await shot("bg_v2_industrial")
+	Dev.bg_skip(120.0)
+	await wait(0.3)
+	await shot("bg_v2_industrial_later")
+	Dev.feature_set("bg_v2", false)
+	await wait(0.2)
+	_check("bg: switch off rebuilds the old background", bg.groups.has("industrial") and not bg.groups.industrial.v2 and bg.groups.size() == 1)
+	Dev.feature_set("bg_v2", null)
+	await wait(0.2)
+	_check("bg: switch back on rebuilds v2", bg.groups.industrial.v2)
+	if not switch_biomes:
+		return
+	Dev.goto_biome(1)
+	await wait(0.5)
+	_check("bg: during the cross-fade both biomes exist", bg.groups.size() == 2)
+	await wait(3.2)
+	_check("bg: after the fade only the new biome is kept", bg.groups.size() == 1 and bg.groups.has("desert"))
+	_check("bg: an unconverted biome falls back to v1", not bg.groups.desert.v2)
+	Dev.goto_biome(0)
+	await wait(3.6)
+	_check("bg: back to v2 industrial", bg.groups.has("industrial") and bg.groups.industrial.v2 and bg.groups.size() == 1)
+
+
 func _title_backdrop_test() -> void:
 	var v: Node = main.vehicle
 	_check("title: van wheels turn", v.wheels.size() > 0 and v.wheels[0].is_playing())

@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Added
+- Industrial ruins background rebuilt: 8 parallax layers at real scale, long non-repeating streets, sodium-lit shops and smoking skyline (switch `bg_v2`) (MV-163)
+
 ### Changed
 - Medical room redrawn with PixelLab (first AI-assisted sprite, snapped to the 16-bit palette) (MV-162)
 

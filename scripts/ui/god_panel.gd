@@ -268,6 +268,9 @@ func _tab_world() -> void:
 		var bi: int = i
 		bb.append(_b(str(Data.BIOMES[i].th), func(): Dev.goto_biome(bi), "yellow" if int(Game.s.biome) == bi else "gray"))
 	_row(bb)
+	_row([_b("ฉาก +30 วิ", func(): Dev.bg_skip(30.0)), _b("ฉาก +2 นาที", func(): Dev.bg_skip(120.0)),
+		_b("ฉากใหม่: " + ("เปิด" if Features.on("bg_v2") else "ปิด"), func(): Dev.feature_set("bg_v2", not Features.on("bg_v2")),
+			"green" if Features.on("bg_v2") else "gray")], "ฉากหลัง (เช็กการวน)")
 	_row([_b("ไปด่านตรวจ", func(): Dev.goto_checkpoint()), _b("ผ่านบอสด่านนี้", func(): Dev.beat_warlord()), _b("รอบ +1", func(): Dev.lap_add())],
 		"รอบ %d · %.1f กม." % [int(Game.s.get("lap", 0)) + 1, float(Game.s.km)])
 	_head("EVENTS", "เรียกอีเว้นต์บนถนน")

@@ -1,0 +1,91 @@
+{
+ "style": "dark post-apocalyptic, abandoned for years, soot, rust streaks, broken windows, muted desaturated colours, side view orthographic, flat facade facing the camera, pixel art, crisp pixels, no ground, no sky",
+ "defaults": {
+  "outline": "selective outline",
+  "shading": "detailed shading",
+  "detail": "highly detailed"
+ },
+ "items": {
+  "ind_apartment_a": {
+   "size": [
+    64,
+    72
+   ],
+   "layer": "mid",
+   "prompt": "seven storey soviet concrete apartment block, rows of small dark windows, a few balconies, collapsed top corner, exposed rebar"
+  },
+  "ind_apartment_b": {
+   "size": [
+    56,
+    48
+   ],
+   "layer": "mid",
+   "prompt": "five storey brick tenement building, half collapsed on one side, floors visible inside, fire escape stairs"
+  },
+  "ind_warehouse": {
+   "size": [
+    104,
+    36
+   ],
+   "layer": "mid",
+   "prompt": "long industrial warehouse with sawtooth roof, corrugated metal walls, big roller doors, holes in the roof"
+  },
+  "ind_factory": {
+   "size": [
+    72,
+    112
+   ],
+   "layer": "mid",
+   "prompt": "brick factory hall with one tall smokestack chimney, steel pipes, small high windows, rusty roof"
+  },
+  "ind_water_tower": {
+   "size": [
+    32,
+    72
+   ],
+   "layer": "mid",
+   "prompt": "rusty steel water tower on four tall lattice legs, ladder"
+  },
+  "ind_refinery": {
+   "size": [
+    128,
+    48
+   ],
+   "layer": "far2",
+   "prompt": "oil refinery: cylindrical storage tanks, distillation towers, tangled pipes and catwalks, silhouette"
+  },
+  "ind_containers": {
+   "size": [
+    64,
+    28
+   ],
+   "layer": "mid2",
+   "prompt": "stack of rusty shipping containers, two high, dented, faded paint"
+  },
+  "ind_bus_wreck": {
+   "size": [
+    60,
+    18
+   ],
+   "layer": "mid2",
+   "prompt": "burnt out city bus wreck, no wheels, broken windows, rust"
+  },
+  "ind_shop": {
+   "size": [
+    76,
+    52
+   ],
+   "layer": "near",
+   "prompt": "two storey ruined corner shop, boarded windows, torn awning, faded sign board, graffiti"
+  },
+  "ind_gas_station": {
+   "size": [
+    96,
+    44
+   ],
+   "layer": "near",
+   "prompt": "abandoned gas station canopy with two fuel pumps and a small kiosk, broken canopy lights",
+   "trim_bottom": 8
+  }
+ }
+}
