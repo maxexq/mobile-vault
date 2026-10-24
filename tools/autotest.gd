@@ -1622,6 +1622,9 @@ func _cloud_test() -> void:
 	_check("cloud: off without cloud_config.json in tests", not Cloud.enabled())
 	Cloud.session = {}
 	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": ""}
+	# stored too: a session left in user:// by an aborted run must not leak into this one
+	Cloud._save_session()
+	Cloud._save_meta()
 	Save.write(_fake_run(3))      # a player who already has a local save when the cloud ships
 	await Cloud.start_for_test(fake)
 	var uid := Cloud.user_id()
@@ -2205,6 +2208,26 @@ func _cloud_account_test() -> void:
 	await Cloud.start_for_test(fake)
 	var guest := Cloud.user_id()
 	_check("account: starts as guest", Cloud.is_guest() and guest != "" and Cloud.account_text().begins_with("Guest"))
+	# MV-115: short public player id; the vectors match public.player_id() in 0003_player_id.sql
+	_check("player id: base32 of the first 48 bits of the user id", Cloud.short_id("0f1e2d3c-4b5a-4987-8a6b-5c4d3e2f1a0b") == "0G3SQ-MSKUU"
+		and Cloud.short_id("ffffffff-ffff-4fff-bfff-ffffffffffff") == "7ZZZZ-ZZZZZ" and Cloud.short_id("not-a-uuid") == "" and Cloud.short_id("") == "")
+	var pid := Cloud.player_id()
+	_check("player id: a guest has one", pid.length() == 11 and pid == Cloud.short_id(guest))
+	var traced := func(e): return str(e.msg) == "player" and str(e.get("data", {}).get("pid", "")) == pid
+	_check("player id: in the trace and its export", Trace.entries.any(traced) and Trace.export_text().contains(pid))
+	_check("player id: the save carries it", str(Account.envelope({}).account.get("pid", "")) == pid)
+	main.hud.settings_panel.open_tab("data")
+	await wait(0.2)
+	var sp_labels: Array = main.hud.settings_panel._list.find_children("*", "Label", true, false)
+	var sp_buttons: Array = main.hud.settings_panel._list.find_children("*", "Button", true, false)
+	_check("player id: Settings > เซฟ shows it with a copy button", sp_labels.any(func(l): return l.text == pid)
+		and sp_buttons.any(func(b): return b.text.contains("คัดลอกไอดี")))
+	await shot("player_id_settings")
+	main.hud.settings_panel.close()
+	_check("player id: GOD copy gives id + user id", Dev.player_id_copy() == "%s · %s" % [pid, guest])
+	Features.set_override("features", "player_id", false)
+	_check("player id: switch off hides it", Cloud.player_id() == "")
+	Features.set_override("features", "player_id", null)
 	Features.set_override("features", "google_login", false)
 	_check("account: google_login switch hides Google", not Cloud.can_google())
 	Features.set_override("features", "google_login", null)
@@ -2229,6 +2252,7 @@ func _cloud_account_test() -> void:
 	await Cloud._take_oauth_return(fake.google_return(opened[0], "parames@gmail.com"))
 	await Cloud.sync()
 	_check("account: linked, same user id", Cloud.user_id() == guest and not Cloud.is_guest() and Cloud.session.email == "parames@gmail.com")
+	_check("player id: kept when the guest links Google", Cloud.player_id() == pid)
 	_check("account: the guest save is now the Google save", int(fake.rows[guest].data.meta.gen) == 20 and Cloud.state == Cloud.State.OK and Cloud.meta.oauth.is_empty())
 	_check("account: title shows the email", ts._account_btn.text.contains("parames@gmail.com") and not ts._gate.visible)
 	# coming back later (new page load): the stored session is used, nobody is asked to log in again

@@ -16,7 +16,7 @@ extends Node
 ## Config: res://cloud_config.json {"url": "https://<ref>.supabase.co", "anon_key": "<anon/publishable key>",
 ##   "site_url": "<public game URL, used when the game runs inside a frame where Google refuses to sign in>"}.
 ## The file is git-ignored; without it the cloud is OFF and the game behaves exactly as before.
-## Schema: supabase/migrations/0001_cloud_save.sql, 0002_schema_guard.sql
+## Schema: supabase/migrations/0001_cloud_save.sql, 0002_schema_guard.sql, 0003_player_id.sql
 
 signal status_changed
 signal pulled      # a newer cloud save was written locally (title screen re-checks CONTINUE)
@@ -34,6 +34,9 @@ const SCHEMA := 2     # 2 = account envelope (Account); the server refuses write
 const UPLOAD_SEC := 60.0     # while playing, upload at most once a minute (local autosave stays at 15 s)
 const RETRY_SEC := 30.0      # offline: try again this often
 const TIMEOUT_SEC := 15.0
+## player id alphabet: Crockford base32 with U for D, so nothing reads as 0 (O, D: the UI font draws 0 almost
+## like D) or 1 (I, L). Support can normalise O/D -> 0 and I/L -> 1 when a player reads the id out.
+const PID_CHARS := "0123456789ABCEFGHJKMNPQRSTUVWXYZ"
 
 var state := State.OFF
 var last_error := ""
@@ -101,6 +104,26 @@ func now() -> float:
 
 func user_id() -> String:
 	return str(session.get("user_id", ""))
+
+
+## short public player id (MV-115) the player can read out or copy for support: the first 48 bits of the
+## auth user id in base32 (PID_CHARS), "XXXXX-XXXXX". Same on every device, kept when a guest links Google;
+## supabase/migrations/0003_player_id.sql computes the same value (public.player_id) for lookups.
+static func short_id(uid: String) -> String:
+	var hex := uid.replace("-", "").left(12)
+	if hex.length() < 12 or not hex.is_valid_hex_number():
+		return ""
+	var n := hex.hex_to_int()
+	var out := ""
+	for i in 10:
+		out = PID_CHARS[n & 31] + out
+		n >>= 5
+	return out.left(5) + "-" + out.right(5)
+
+
+## "" without an account or with the player_id switch off
+func player_id() -> String:
+	return short_id(user_id()) if Features.on("player_id") else ""
 
 
 func status_text() -> String:

@@ -298,11 +298,18 @@ func _cloud_rows() -> void:
 		return
 	var st := _info("STATUS", "")
 	var acc := _info("ACCOUNT", "")
+	var pid_row: HBoxContainer = _info("PLAYER ID", "") if Features.on("player_id") else null
 	var last := _info("SYNC", "")
 	_syncs.append(func():
 		(st.get_child(1) as Label).text = Cloud.status_text()
 		(acc.get_child(1) as Label).text = Cloud.account_text()
+		if pid_row:
+			(pid_row.get_child(1) as Label).text = Cloud.player_id() if Cloud.player_id() != "" else "-"
 		(last.get_child(1) as Label).text = "rev %d · %s" % [int(Cloud.meta.rev), _when(Cloud.last_sync_at) if Cloud.last_sync_at > 0 else "ยังไม่ได้ซิงก์"])
+	if pid_row and Cloud.player_id() != "":
+		_action("คัดลอกไอดีผู้เล่น", "gray", "book", func():
+			DisplayServer.clipboard_set(Cloud.player_id())
+			_say("คัดลอกไอดีแล้ว แนบไอดีนี้ตอนแจ้งปัญหาหรือติดต่อทีมงาน"))
 	_account_rows()
 	if Cloud.state == Cloud.State.CONFLICT:
 		var r := Cloud.remote
@@ -391,6 +398,8 @@ func _extra_rows() -> Array:
 	var d: Dictionary = Game.s if Game.started else Account.vehicle_of(Save.read())
 	if not d.is_empty():
 		out.append(["SAVE FMT", "account v%d · v%d · route %d · slots %d" % [Account.V, int(d.get("version", 1)), int(d.get("route_v", 1)), int(d.get("slots_v", 1))]])
+	if Cloud.player_id() != "":
+		out.append(["PLAYER", Cloud.player_id()])
 	out.append(["SESSION", Trace.session])
 	return out
 

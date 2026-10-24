@@ -17,6 +17,11 @@ var refreshes := 0
 var _n := 0
 
 
+## uuid-shaped like Supabase's (v4 layout), so Cloud.short_id gives every fake user a real player id
+func _new_uid() -> String:
+	return "%08x-%04x-4000-8000-%012x" % [0x5eed0000 + _n * 7919, _n, _n]
+
+
 func handle(method: int, path: String, headers: PackedStringArray, body: String) -> Dictionary:
 	await Engine.get_main_loop().process_frame
 	calls.append(path)
@@ -27,7 +32,7 @@ func handle(method: int, path: String, headers: PackedStringArray, body: String)
 		return {"code": 400, "body": {"message": "GET with a body"}}
 	if path == "/auth/v1/signup":
 		_n += 1
-		var uid := "user-%04d-fake" % _n
+		var uid := _new_uid()
 		accounts[uid] = {"email": "", "anon": true}
 		return {"code": 200, "body": _session(uid)}
 	if path.begins_with("/auth/v1/token"):
@@ -111,7 +116,7 @@ func google_return(opened: String, email: String) -> String:
 		uid = owner
 		if uid == "":
 			_n += 1
-			uid = "user-%04d-fake" % _n
+			uid = _new_uid()
 			accounts[uid] = {"email": email, "anon": false}
 	else:
 		return "error=invalid_request"
