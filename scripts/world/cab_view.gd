@@ -15,6 +15,7 @@ var _state := ""
 var _glow := Color.WHITE
 var _t := 0.0
 var _steam: Node2D
+var ambience: RoomAmbience
 
 
 func setup(t: String) -> void:
@@ -25,6 +26,9 @@ func setup(t: String) -> void:
 	interior = Sprite2D.new()
 	interior.centered = false
 	add_child(interior)
+	ambience = RoomAmbience.new()
+	add_child(ambience)
+	ambience.setup("cab_" + t)
 	actors_root = Node2D.new()
 	actors_root.position.y = size.y - RoomView.H     # DwellerActor.FLOOR_Y assumes a 52 px room
 	add_child(actors_root)
@@ -70,6 +74,7 @@ func _update_state() -> void:
 	if stt != _state:
 		_state = stt
 		interior.texture = Atlas.tex("cab_%s_%s" % [tier, stt])
+		ambience.cab_state = stt
 		_steam.emitting = stt == "hot" or stt == "broken"
 		if _steam is GPUParticles2D:
 			(_steam as GPUParticles2D).modulate = Color(0.5, 0.5, 0.5) if stt == "broken" else Color.WHITE
@@ -88,6 +93,7 @@ func has_global_point(p: Vector2) -> bool:
 
 
 func _process(delta: float) -> void:
+	ambience.visible = Features.on("room_ambience")
 	_t += delta
 	if _t >= 0.25:
 		_t = 0.0

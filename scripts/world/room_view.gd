@@ -37,6 +37,8 @@ var _top: Node2D
 var _type := ""
 var _t := 0.0
 var _is_dark := false
+var ambience: RoomAmbience
+var _amb_ok := false
 static var _add_mat: CanvasItemMaterial
 
 
@@ -54,6 +56,9 @@ func _ready() -> void:
 	_scaffold.visible = false
 	add_child(_scaffold)
 	_scaffolds.append(_scaffold)
+	ambience = RoomAmbience.new()
+	ambience.visible = false
+	add_child(ambience)
 	actors_root = Node2D.new()
 	add_child(actors_root)
 	_dark = ColorRect.new()
@@ -99,6 +104,10 @@ func refresh() -> void:
 		if i < cell_xs.size():
 			_scaffolds[i].position = Vector2(float(cell_xs[i]), 0)
 	_dark.size = Vector2(w, H)
+	# lamp light + micro animation fit the 64 px room art; wide rooms and building sites stay as drawn
+	_amb_ok = unlocked and not site and cell_xs.size() == 1 and t != "locked"
+	if _amb_ok:
+		ambience.setup(t)
 	_update_reveal()
 	var want: Array = []
 	if unlocked and t != "empty":
@@ -204,6 +213,7 @@ func _process(delta: float) -> void:
 		_update_torches()
 		# the bulb flickers back to life now and then
 		_dark.color.a = 0.9 if randf() > 0.01 else 0.6
+	ambience.visible = _amb_ok and not _is_dark and not Game.is_constructing(slot) and Features.on("room_ambience")
 	if Game.is_constructing(slot) and Game.is_slot_unlocked(slot):
 		_update_reveal()
 		_tick_fx(delta)

@@ -502,8 +502,10 @@ func apply_light(ambient: Color, night: float) -> void:
 	var warm := Color(1.0, 0.97, 0.9).lerp(inv * Color(1.0, 0.9, 0.75), clampf(night * 0.85, 0.0, 1.0))
 	for rv in room_views:
 		rv.set_glow(warm)
+		rv.ambience.night = night
 	if cab_view:
 		cab_view.set_glow(warm)
+		cab_view.ambience.night = night
 	headlight.visible = night > 0.15 or Game.s.get("weather", "") in ["storm", "fog", "sandstorm", "snow", "ashfall"]
 	headlight.modulate.a = clampf(maxf(night, 0.5), 0.0, 1.0)
 	antenna_light.modulate = Color("ff5a4a") * Color(inv.r, inv.g, inv.b) if night > 0.3 else Color("ff5a4a")
