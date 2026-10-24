@@ -31,6 +31,8 @@ var _ov_t := 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# run after Game/Combat/Env so "invincible" refills whatever they took this frame (MV-41)
+	process_priority = 1000
 	var cfg := ConfigFile.new()
 	if cfg.load(CFG) == OK:
 		unlocked = bool(cfg.get_value("dev", "unlocked", false))

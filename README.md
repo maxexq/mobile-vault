@@ -339,6 +339,7 @@ assets/events/                event illustrations
 assets/fonts/                 Chakra Petch (Thai) + Silkscreen (pixel), SIL OFL
 tools/generate_pixel_art.py   regenerates every PNG (python3 + Pillow) via tools/art/*.py
 tools/autotest.gd             smoke test (excluded from export)
+tools/ci_autotest.sh          runs the autotest like CI does (xvfb, fails on FAIL / SCRIPT ERROR / hang)
 tools/balance.gd              4-hour headless balance bot (`godot --headless --path . -- --balance --minutes=240`)
 ```
 
@@ -360,6 +361,9 @@ godot --path . -- --autotest --out=/absolute/output/dir
 ```
 Visits every screen, fires events, fast-forwards 30 min, round-trips the save, rotates to portrait, and writes screenshots.
 Add `--only=large` (after `--`) to run just the large-room checks (~30 s), `--only=thai` for the Thai wording checks.
+
+**CI (MV-110):** GitHub Actions workflow **Autotest** (`.github/workflows/autotest.yml`) runs the whole autotest on every PR into `main` and every push to `main`, on Godot 4.7.2-stable (download checked against the release SHA-512, then cached) under `xvfb-run` with the opengl3 driver. The run fails on any `[autotest] FAIL` line, any `SCRIPT ERROR`, a crash before `[autotest] DONE` or a hang (20 min). The autotest itself exits with code 1 when a check failed. Screenshots + `autotest.log` are uploaded as the run's artifact (7 days) and the PASS/FAIL table goes into the job summary. The Discord notify workflow (MV-96) reports each run. Same thing on a Linux machine: `bash tools/ci_autotest.sh [--only=touch]` (env `GODOT`, `OUT`, `TIMEOUT`).
+To block merging a red PR: repo **Settings → Rules → Rulesets** (or Branches → branch protection) for `main` → *Require status checks to pass* → add **autotest**.
 
 ## 8. Replacing the art
 
