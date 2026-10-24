@@ -42,6 +42,7 @@ const FEATURES := {
 	"google_login": "ล็อกอิน / ผูกบัญชีด้วย Google (ปิด = เล่นแบบ Guest อย่างเดียว)",
 	"modes": "เลือกโหมดตอนเริ่มเกมใหม่ (ปิด = เริ่มโหมดปกติเสมอ)",
 	"channel_badge": "ป้าย ALPHA / BETA บนหน้าเริ่มเกมและหน้าเกี่ยวกับ",
+	"room_ambience": "แสงไฟและอนิเมชันเล็กๆ ในห้อง (ไฟกะพริบ, ไอน้ำ, ฟองน้ำ, เกจ)",
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
@@ -54,6 +55,7 @@ const TUNE := {
 	"encounter.danger_chance": [0.0, 0.2, "โอกาสจุดพิเศษต่อกะโหลก"],
 	"inspection.rare_chance": [0.0, 1.0, "โอกาสคนแปลกหน้า (หายาก)"],
 	"inspection.very_rare_chance": [0.0, 1.0, "โอกาสคนแปลกหน้า (หายากมาก)"],
+	"ambience.flicker": [0.0, 30.0, "ไฟห้องกะพริบ (ครั้ง/นาที ต่อดวง)"],
 }
 const LAYERS := ["default", "build", "remote", "mode", "dev"]
 

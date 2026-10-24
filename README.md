@@ -224,11 +224,11 @@ Autoload `Features` (`scripts/autoload/features.gd`, right after `Save`) is the 
 | 4 | mode | the run's game mode / mutators (`Game.s.mode`, set by `Modes`, see §4m) | per save |
 | 5 | tester | GOD MODE tab **ฟีเจอร์** (kept in `user://dev.cfg`, cleared by "ซ่อนปุ่ม GOD") or the URL `?ff=raids:off,event.raiders:off,tune.threat.rate_scale:1.5` (this session only) | testers |
 
-**Switches** (`Features.on(key)`): `road_events`, `raids` (no raids; the checkpoint warlord still blocks the road), `encounters`, `strangers` (recruits join directly), `expeditions`, `roof_deck`, `large_rooms`, `tutorial` (new games only), `cloud_save` (read at boot, so a remote kill switch bites on the next launch), `modes` (off = NEW RUN skips the rules picker and starts a standard run), `channel_badge` (the ALPHA / BETA / RC tag under the logo, §9 Versioning). Switching one off hides it from play; save data is never deleted.
+**Switches** (`Features.on(key)`): `road_events`, `raids` (no raids; the checkpoint warlord still blocks the road), `encounters`, `strangers` (recruits join directly), `expeditions`, `roof_deck`, `large_rooms`, `tutorial` (new games only), `cloud_save` (read at boot, so a remote kill switch bites on the next launch), `modes` (off = NEW RUN skips the rules picker and starts a standard run), `channel_badge` (the ALPHA / BETA / RC tag under the logo, §9 Versioning), `room_ambience` (room lamp light + micro animation, §4n). Switching one off hides it from play; save data is never deleted.
 
 **Road events** (`events.<id>`): `on`, `weight` (2 = two cards per shuffle-bag round, 0.5 = a card in about half the rounds, 0 = never), `biomes` (`["*"]` or biome ids, adds the event to roads it is not normally on), `from` / `to` (`"2026-11-14"` or `"2026-11-14 18:00"`, local time at `tz_hours`, default 7 = Thailand; a date-only `to` covers the whole day). Clock = `Cloud.now()` (server time when the cloud is on). This is the hook for festival events: put the event in `Data.EVENTS` without a biome and open it with a window.
 
-**Tune** (`Features.num(key, CONST)`, clamped): `events.gap_min/gap_max`, `threat.rate_scale/roll_k/min_quiet`, `encounter.base_chance/danger_chance`, `inspection.rare_chance/very_rare_chance`.
+**Tune** (`Features.num(key, CONST)`, clamped): `events.gap_min/gap_max`, `threat.rate_scale/roll_k/min_quiet`, `encounter.base_chance/danger_chance`, `inspection.rare_chance/very_rare_chance`, `ambience.flicker` (lamp flickers per minute per lamp, 0.6).
 
 The remote file can only switch off / re-time / re-weight / re-tune what the build already contains: unknown keys are dropped, numbers are clamped, a broken file changes nothing. Example `web/features.json` for a festival weekend with no raids:
 
@@ -262,6 +262,19 @@ NEW RUN opens a rules picker on the title screen: **mode**, **difficulty** and a
 
 Research multiplier = mode × difficulty × (1 + mutator bonuses). Multipliers stack by product (`Modes.mul(key)`), switches go into the Features "mode" layer (after remote, before tester overrides, so GOD can still flip them). `Modes.ranked()` = a ranked mode and `stats.cheated` never set; it is the flag the online leaderboards will read. Balance bot: `-- --balance --mode=peaceful,hard,fuel_scarce`. Autotest `_modes_test()`.
 
+## 4n. Room lighting + micro animation (MV-167)
+
+Every 64 px room and the cab engine bay get a `RoomAmbience` layer (`scripts/world/room_ambience.gd`) between the interior art and the crew. It is drawn in code on the 1 px grid at 12 fps, so it needs no new art or PixelLab credits.
+
+| Part | What it does |
+|---|---|
+| Lamp | An additive light pool under the ceiling lamp, built as 3 dithered bands. It breathes slowly and is stronger at night (`Vehicle.apply_light` passes `night`). It flickers now and then (`ambience.flicker` per minute): the bulb goes grey and the room dips dark. Dust motes drift in the light. |
+| Rooms | medical: ECG on the monitor · quarters: blinking alarm clock · kitchen: pot steam and stove flames · hydroponics: grow-light pulse and drips · water: tank bubbles and a pipe drip · armory: crate LED · science: flask bubbles, a glowing vial and a scanning screen · radio: LEDs and a VU meter · engine: gauge needles, warning lamp and exhaust puffs · refinery: furnace fire, gauges and a scrolling screen · workshop: turning wheel and vise sparks |
+| Cab engine bay | Heat gauge needle from `EngineBay.heat()`, a status LED (green, or blinking red when hot or broken), rocker covers ticking while running, a hot glow on the block, and sparks when broken. |
+| Off when | The Features switch `room_ambience` is off, during a blackout (the head-torches take over), on building sites, and in wide knock-through rooms (their art is still the old procedural one). |
+
+Positions are pixels of the PixelLab room art (`tools/art/pixellab/overrides`). If a room is redrawn, move its entries in `_draw_fx`. Autotest: `--only=ambience`.
+
 ## 4c. True pixel art pipeline
 
 - Window: `canvas_items` stretch + **integer** scale mode. `main.gd` picks the design size so it is exactly window ÷ S (S = whole number, base 360×640 portrait / 560×320 landscape) → full-bleed, no letterbox, 1 art pixel = S screen pixels.
@@ -281,7 +294,7 @@ Research multiplier = mode × difficulty × (1 + mutator bonuses). Multipliers s
 |---|---|
 | ทั่วไป | switches: invincible (hull / crew / squad), one-hit kills, free build/upgrade/buy, resources always full, no random road events, instant construction · game speed ×1/2/5/10/20 · fast-forward +10 min / +1 h / +4 h (offline simulation) · time of day · any weather · FPS/debug overlay |
 | ทรัพยากร | fill / empty everything, set each resource and every usable/material item, all items +10/+100 · forge: test kit (3 items of every rarity + scrap/components), max +level on everything equipped, clear the stash · all blueprints, +100 research points |
-| รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, engine bay: heat 40/100/115 °C, condition 100/30/0 %, oil / coolant full or low, every engine into the stash, force a breakdown, rest on/off, finish the engine job, build every empty slot, max room levels · construction: finish now / +50 % / instant-build switch · all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
+| รถ | swap chassis van/bus/rig/train in place, 0–2 trailers, Vault Lv 1–6, hull 100/50/10/0 %, engine bay: heat 40/100/115 °C, condition 100/30/0 %, oil / coolant full or low, every engine into the stash, force a breakdown, rest on/off, finish the engine job, build every empty slot, max room levels, every lamp flickers for 2 s (room ambience) · construction: finish now / +50 % / instant-build switch · all mods max / none, weight readout, short circuit / dead battery, acid, solar damage, radiation, infection |
 | ลูกเรือ | recruit, heal, happiness 100/20/0 for everyone, pets · spawn a builder (hard hat) plain or with engineer / quick hands / architect / clumsy · strangers at the door: every kind (human / infected / mimic / thief / raider mole) × rare / very rare, clear the queue · per survivor: traits shown, builder on/off, reroll traits, +5 levels, force strike, desert now, kill |
 | ต่อสู้ | set wave, kill all enemies, heal squad · force a raid (warning first), set threat 0 / 90 · defence squad: auto-fill with the strongest idle crew, auto-equip best gear, clear · spawn the biome warlord or any mutant boss, spawn 3 of any mob (mutants highlighted), drop 3 items of any rarity |
 | ฟีเจอร์ | every Features switch with where its value comes from (ค่าเริ่มต้น / บิลด์ / รีโมต / ผู้ทดสอบ), tap to flip · every road event on/off (biome's own marked *, weight and date window shown) · tune numbers ÷2 / ×2 / back to code · reload remote, clear tester overrides |
@@ -315,6 +328,7 @@ scripts/
   world/vehicle.gd            van / bus / rig / train shells + trailers, exterior shell (X-ray), wheels per tier, mods, pets, dust/mud, smoke, solar tilt frames, headlight, body bob
   world/cab_view.gd           the engine room in the cab (state art, crew, steam)
   world/room_view.gd          room interior, level pips, synergy markers, craft strip, build highlight, night glow, blackout + head-torches
+  world/room_ambience.gd      lamp light pools + flicker, per-room micro animation, cab engine bay gauges (MV-167)
   world/pet_actor.gd          roaming pets
   autoload/haul.gd            weight / engine capacity / speed / fuel burn
   autoload/modes.gd           game modes: mode / difficulty / mutators of a run (Game.s.mode)

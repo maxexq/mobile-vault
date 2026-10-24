@@ -175,6 +175,7 @@ func _tab_vehicle() -> void:
 		_b("งานซ่อมเสร็จ", func(): Dev.engine_finish_job())])
 	_head("ROOMS & MODS", "ห้องและมอด")
 	_row([_b("สร้างห้องทุกช่องว่าง", func(): Dev.rooms_fill(), "green"), _b("ทุกห้อง Lv สูงสุด", func(): Dev.rooms_max())])
+	_row([_b("ไฟทุกห้องกะพริบ", func(): Dev.lamps_flicker(), "gray", true)], "แสง/อนิเมชันห้อง")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
 	var ib := Dev.on("instant_build")
 	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),
@@ -412,6 +413,7 @@ func _tune_code_default(key: String) -> float:
 		"encounter.danger_chance": return Encounter.DANGER_CHANCE
 		"inspection.rare_chance": return Inspection.RARE_CHANCE
 		"inspection.very_rare_chance": return Inspection.VERY_RARE_CHANCE
+		"ambience.flicker": return RoomAmbience.FLICKER_PM
 	return 1.0
 
 
