@@ -3869,6 +3869,15 @@ func _announce_test() -> void:
 	await get_tree().process_frame
 	Announce.collect()
 	_check("announce: a seen message is not shown again", not Announce.has_id("t-hello") and Announce.queue.is_empty())
+	# repeat_hours: shown again once that much time has passed since it was last shown
+	var now_t := Time.get_unix_time_from_system()
+	Announce.seen["t-rep"] = now_t - 2.0 * 3600.0
+	_check("announce: repeat_hours cleaned + clamped", Features._clean({"announce": [{"id": "a", "text": "x", "repeat_hours": 9999}]}).announce[0].repeat_hours == 720.0)
+	_check("announce: repeat_hours 6 not due after 2 h", not Announce.due({"id": "t-rep", "repeat_hours": 6.0}))
+	_check("announce: repeat_hours 1 due after 2 h", Announce.due({"id": "t-rep", "repeat_hours": 1.0}))
+	_check("announce: no repeat_hours = once", not Announce.due({"id": "t-rep"}) and Announce.due({"id": "never-seen"}))
+	Announce.seen.erase("t-rep")
+	_check("announce: shown time is remembered", float(Announce.seen.get("t-hello", 0.0)) > now_t - 60.0)
 	# new deploy detection
 	var stamp: Dictionary = BuildInfo.stamp().duplicate()
 	BuildInfo._stamp["built"] = "2026-10-24T10:00:00Z"
@@ -3911,7 +3920,7 @@ func _announce_test() -> void:
 	Dev.announce_test()
 	Dev.announce_update_test()
 	_check("announce: GOD test message + update notice queued", (m.visible and Announce.queue.size() == 1) or Announce.queue.size() == 2)
-	Announce.seen.append("t-hello")
+	Announce.seen["t-hello"] = 1.0
 	Dev.announce_forget_seen()
 	_check("announce: GOD forget seen", not Announce.seen.has("t-hello"))
 	m._stop()
