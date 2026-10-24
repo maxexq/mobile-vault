@@ -379,6 +379,13 @@ func _tab_sys() -> void:
 		var sid: String = st.id
 		sb.append(_b(sid, func(): Dev.tutorial_goto(sid), "yellow" if Tutorial.active() and Tutorial.step_id() == sid else "gray", true))
 	_row(sb, "ไปขั้น")
+	var tips_seen: Array = Tutorial.state().get("tips", [])
+	_note("คำแนะนำครั้งแรก: เห็นแล้ว %d / %d%s" % [tips_seen.size(), Tutorial.TIPS.size(), "" if Tutorial.tips_on() or Tutorial.active() else " (ปิดอยู่)"])
+	var tip_btns := [_b("รีเซ็ตคำแนะนำ", func(): Dev.tips_reset(), "yellow", true)]
+	for k in Tutorial.TIPS:
+		var tk: String = k
+		tip_btns.append(_b(tk, func(): Dev.tip_show(tk), "green" if tips_seen.has(tk) else "gray"))
+	_row(tip_btns, "คำแนะนำ")
 	_head("CLOUD SAVE", "เซฟคลาวด์")
 	_note("สถานะ: %s · rev %d%s" % [Cloud.status_text(), int(Cloud.meta.get("rev", 0)), "" if Cloud.user_id() == "" else " · " + Cloud.user_id().substr(0, 8)])
 	_note("ไอดีผู้เล่น: " + (Cloud.player_id() if Cloud.player_id() != "" else ("- (สวิตช์ player_id ปิดอยู่)" if not Features.on("player_id") else "- (ยังไม่มีบัญชี)")))

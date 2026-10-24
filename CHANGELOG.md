@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Sgt. Mark explains each system the first time you open it (map, squad, solar, loot, garage, skills, expeditions, strangers, engine bay and more); turn tips off or see them again in Settings (MV-150)
 - English, part 1: menus, settings, panels and the tutorial (testers only for now; the game's content follows) (MV-151)
 - Rooms come alive: ceiling lamps cast a soft light that flickers now and then, plus small animations in every room (pot steam, tank bubbles, ECG, radio LEDs, gauges, furnace fire, turning wheel) and in the cab engine bay (MV-167)
 - Player ID: a short id (like `0G3SQ-MSKUU`) in Settings → Save with a copy button, to quote when reporting a problem; it stays the same on every device and after linking Gmail (MV-115)

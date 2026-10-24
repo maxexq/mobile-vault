@@ -255,6 +255,12 @@ func _tab_game() -> void:
 	tb.disabled = not Game.started
 	if not Game.started:
 		_list.add_child(UIKit.wrap_label(Loc.t("เริ่มเกมก่อนแล้วค่อยเปิดบทแนะนำ"), UIKit.FS_SMALL, UIKit.C_DIM))
+	if Features.on("tutorial_tips"):
+		_toggle(Loc.t("คำแนะนำเมื่อเปิดระบบใหม่"), "tips", Loc.t("จ่ามาร์คจะอธิบายแต่ละระบบครั้งแรกที่เปิดหน้านั้น"))
+		var rb := _action(Loc.t("แสดงคำแนะนำทุกระบบอีกครั้ง"), "gray", "book", func():
+			Tutorial.reset_tips()
+			_say(Loc.t("คำแนะนำจะขึ้นอีกครั้งเมื่อเปิดแต่ละระบบ")))
+		rb.disabled = not Game.started
 	_action(Loc.t("คืนค่าตั้งค่าเริ่มต้น"), "gray", "cog", func():
 		Settings.reset_defaults()
 		_say(Loc.t("คืนค่าตั้งค่าทั้งหมดแล้ว")))
