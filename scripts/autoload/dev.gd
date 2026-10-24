@@ -617,6 +617,17 @@ func event(id: String) -> void:
 	Game.trigger_event(id)
 
 
+## MV-134: a random road event whose clock runs out in 2 s (as if the player were watching), to see the crew's pick
+func event_quick_timeout() -> void:
+	var ids := Data.EVENTS.keys()
+	event(str(ids[randi() % ids.size()]))
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud and hud.event_popup.is_open:
+		hud.event_popup.decide_total = maxf(hud.event_popup.decide_total, 2.0)
+		hud.event_popup.decide_left = 2.0
+		hud.event_popup.since_input = 0.0
+
+
 func arrive(site: String) -> void:
 	if Expedition.active():
 		return

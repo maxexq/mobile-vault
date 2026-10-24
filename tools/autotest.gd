@@ -44,6 +44,9 @@ func wait(t: float) -> void:
 
 func _run() -> void:
 	Save.wipe()
+	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
+	# event could time out in the middle of another test); _qte_test turns the clock on for itself (MV-134)
+	Settings.set_value("event_timer", "off")
 	await wait(1.2)
 	await shot("title")
 	_title_backdrop_test()
@@ -85,6 +88,11 @@ func _run() -> void:
 		return
 	if "--only=tips" in OS.get_cmdline_user_args():
 		await _tips_test()
+		_finish()
+		return
+	if "--only=qte" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _qte_test()
 		_finish()
 		return
 	if "--only=english" in OS.get_cmdline_user_args():
@@ -715,6 +723,7 @@ func _run() -> void:
 	await _english_test()
 	await _shake_test()
 	await _tips_test()
+	await _qte_test()
 	await _engine_shake_test()
 	_thai_terms_test()
 	_finish()
@@ -1858,7 +1867,8 @@ func _loot_tabs_test() -> void:
 		get_viewport().push_input(mv, true)
 		await wait(0.05)
 		var hov := get_viewport().gui_get_hovered_control()
-		_check("loot tabs: %s tab button is the control under the finger" % from, hov != null and (hov == btn or btn.is_ancestor_of(hov)))
+		_check("loot tabs: %s tab button is the control under the finger (got %s)" % [from, str(hov.get_path()) if hov else "none"],
+			hov != null and (hov == btn or btn.is_ancestor_of(hov)))
 		get_viewport().push_input(ev, true)
 		await wait(0.15)
 		var up: InputEventMouseButton = ev.duplicate()
@@ -2955,6 +2965,73 @@ func _tips_test() -> void:
 	for k in Tutorial.TIPS:
 		all_th = all_th and Loc.t(Tutorial.TIPS[k].text) != "" and str(Tutorial.TIPS[k].text).contains("ครับ")
 	_check("tips: every tip is in Sgt. Mark's voice", all_th)
+	await wait(0.2)
+
+
+func _qte_index(id: String, action: String) -> int:
+	var chs: Array = Data.EVENTS[id].choices
+	for i in chs.size():
+		if str(chs[i].action) == action:
+			return i
+	return -1
+
+
+## MV-134: quick-time road events: a clock by danger, the crew's cautious pick on time-out, paused while idle
+func _qte_test() -> void:
+	_no_events()
+	var ep = main.hud.event_popup
+	if Game.active_event != "":
+		Game.cancel_event()
+		ep.close()
+	Settings.set_value("event_timer", "normal")
+	var d0 := Game.event_danger("cache")
+	_check("qte: time by danger (cache %d -> %.1f s)" % [d0, Game.event_decide_sec("cache")],
+		is_equal_approx(Game.event_decide_sec("cache"), clampf(30.0 / (1.0 + 0.5 * d0), 5.0, 30.0))
+		and Game.event_decide_sec("raiders") < Game.event_decide_sec("cache"))
+	var t0 := Game.event_decide_sec("radstorm")
+	Settings.set_value("event_timer", "long")
+	_check("qte: 'long' setting doubles it", is_equal_approx(Game.event_decide_sec("radstorm"), t0 * 2.0))
+	Settings.set_value("event_timer", "off")
+	_check("qte: 'off' setting = no timer", Game.event_decide_sec("radstorm") == 0.0)
+	Settings.set_value("event_timer", "normal")
+	Features.set_override("features", "event_timer", false)
+	_check("qte: switch off = no timer", Game.event_decide_sec("radstorm") == 0.0)
+	Features.set_override("features", "event_timer", null)
+	_check("qte: time-out picks the cautious choice", Game.event_auto_choice("cache") == _qte_index("cache", "ignore")
+		and Game.event_auto_choice("radstorm") == _qte_index("radstorm", "shelter") and Game.event_auto_choice("raiders") == _qte_index("raiders", "ram"))
+	# through the real pop-up: a player who is there times out, an idle one doesn't
+	Game.trigger_event("cache")
+	await wait(0.3)
+	_check("qte: the pop-up shows a clock", ep.is_open and ep.decide_left > 0.0 and ep._timer_bar != null)
+	await shot("qte_event_timer")
+	ep.since_input = 999.0
+	var left: float = ep.decide_left
+	await wait(0.5)
+	_check("qte: idle player (no touch for 20 s) -> the clock waits", not ep.clock_running() and is_equal_approx(ep.decide_left, left) and Game.active_event == "cache")
+	ep.since_input = 0.0
+	ep.decide_left = 0.1
+	await wait(0.4)
+	_check("qte: time's up -> the crew drives on, the event ends", Game.active_event == ""
+		and Trace.entries.any(func(e): return str(e.msg).begins_with("time out cache")))
+	ep.close()
+	await wait(0.2)
+	# a fight picked for the commander goes out with the two strongest crew
+	Game.trigger_event("raiders")
+	await wait(0.3)
+	ep._choice = _qte_index("raiders", "fight")
+	ep._selected = []
+	ep.since_input = 0.0
+	ep.time_out()
+	_check("qte: a fight on time-out sends the strongest crew", Game.active_event == "" and ep._selected.size() > 0
+		and int(ep._selected[0]) == int(Game.auto_defenders()[0]))
+	ep.close()
+	await wait(0.2)
+	Dev.event_quick_timeout()
+	await wait(2.6)
+	_check("qte: GOD 'time out in 2 s' button", Game.active_event == "")
+	if ep.is_open:
+		ep.close()
+	Settings.set_value("event_timer", "off")      # back to waiting for the rest of the run
 	await wait(0.2)
 
 
