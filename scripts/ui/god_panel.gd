@@ -355,9 +355,9 @@ func _tab_fight() -> void:
 
 
 func _tab_world() -> void:
-	_head("INDUSTRIAL SKY", "Wide parallax / game-time lighting")
-	_row([_b("Sunrise", func(): Dev.background_preview(0.25)), _b("Daylight", func(): Dev.background_preview(0.5)), _b("Sunset", func(): Dev.background_preview(0.75)), _b("Moonlight", func(): Dev.background_preview(0.0))])
-	_row([_b("New background ON", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("Legacy background", func(): Dev.feature_set("industrial_parallax", false), "gray")])
+	_head("INDUSTRIAL SKY", "ฉากนิคมอุตสาหกรรมใหม่ (MV-369) ตามเวลาในเกม")
+	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
+	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])
 	var bb := []
 	for i in Data.BIOMES.size():
 		var bi: int = i

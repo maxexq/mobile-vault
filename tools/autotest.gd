@@ -4147,7 +4147,7 @@ func _industrial_background_test() -> void:
 		for control in row.get_children():
 			if control is Button:
 				preview_buttons[control.text] = control
-	_check("background: GOD world tab provides all four clock previews", preview_buttons.has("Sunrise") and preview_buttons.has("Daylight") and preview_buttons.has("Sunset") and preview_buttons.has("Moonlight") and preview_buttons.has("Legacy background"))
+	_check("background: GOD world tab provides all four clock previews", preview_buttons.has("รุ่งเช้า") and preview_buttons.has("กลางวัน") and preview_buttons.has("พระอาทิตย์ตก") and preview_buttons.has("กลางคืน") and preview_buttons.has("ฉากเดิม"))
 	god.close()
 	Features.layers.dev = overrides
 	Features.changed.emit()
