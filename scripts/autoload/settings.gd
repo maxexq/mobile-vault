@@ -25,6 +25,7 @@ const DEFAULTS := {
 	"gore": true,
 	"vibrate": true,
 	"pacing": "threat",      # threat (enemies come in raids drawn by noise / light) | classic (back-to-back waves)
+	"telemetry": true,       # send play logs with the player id to the game's server (Telemetry, MV-116); opt-out
 }
 
 var v: Dictionary = DEFAULTS.duplicate()
