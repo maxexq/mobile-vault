@@ -838,8 +838,8 @@ def gen_construction():
 # ------------------------------------------------------------------ v4.4 large rooms (2 or 3 cells knocked through)
 # A large room is the room's own wall/floor drawn at the full width, the original furniture in the left cell, the
 # same furniture mirrored in the right cell and (3 cells) a type-specific centre piece. Where the partition wall
-# stood there is a steel post; where the ladder shaft crosses the room (main body, cells 0|1) the ladder keeps
-# running through it. Keys: room_<type>_x<gap>[_<gap>] with the gaps (px) between the cells, as laid out in
+# stood there is a steel post, also where the ladder shaft crosses the room (main body, cells 0|1): the shaft is
+# boarded over so it never cuts through a large room (MV-146). Keys: room_<type>_x<gap>[_<gap>] with the gaps (px) between the cells, as laid out in
 # scripts/world/vehicle.gd (main body 10 then 2, trailers 2 and 2).
 MERGE_TYPES = ["quarters", "kitchen", "water", "hydroponics", "medical", "refinery", "workshop", "armory", "science", "radio"]
 WIDE_GAPS = [(2,), (10,), (2, 2), (10, 2)]
@@ -869,20 +869,6 @@ def _seam_post(img, x, w):
     for k in range(4):
         tint_px(img, cx - 2, 8 + k * 9, c("orange1"), 0.45)
         tint_px(img, cx + 3, 12 + k * 9, c("orange1"), 0.45)
-
-
-def _seam_ladder(img, x, w):
-    """the vehicle's ladder shaft keeps running through the knocked-through room"""
-    rect(img, x, 4, w, RH - 4, c("night2"))
-    vline(img, x, 4, RH - 4, OL)
-    vline(img, x + w - 1, 4, RH - 4, OL)
-    vline(img, x + 2, 0, RH, c("yellow1"))
-    vline(img, x + w - 3, 0, RH, c("yellow1"))
-    for yy in range(1, RH, 4):
-        hline(img, x + 2, yy, w - 4, c("yellow2"))
-    for xx in range(x + 1, x + w - 1):                 # hazard edge of the hatches in ceiling and floor
-        px(img, xx, 3, c("yellow2") if (xx // 2) % 2 else OL)
-        px(img, xx, FLOOR, c("yellow2") if (xx // 2) % 2 else OL)
 
 
 # --- centre pieces (64 px cell of a 3-wide room) -------------------------------------------
@@ -1168,10 +1154,7 @@ def wide_room(t, gaps):
         grime(img, random.Random(len(t) * 13 + W))
         for k, g in enumerate(gaps):
             sx = xs[k] + RW_CELL
-            if g >= 8:
-                _seam_ladder(img, sx, g)
-            else:
-                _seam_post(img, sx, g)
+            _seam_post(img, sx, g)
         lx = LAMPS.get(t, 32)
         lamps = [xs[0] + lx, xs[-1] + RW_CELL - 1 - lx] + ([xs[1] + 32] if len(xs) == 3 else [])
         _light_multi(img, lamps)

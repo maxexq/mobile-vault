@@ -1942,6 +1942,7 @@ func _large_room_test() -> void:
 	var rv3: RoomView = main.vehicle.room_views[3]
 	_check("large: room view spans both cells", is_equal_approx(rv3.w, 138.0) and not main.vehicle.room_views[4].visible and rv3.seams.size() == 1)
 	_check("large: wide art exists for this layout", Atlas.has(rv3.wide_key("kitchen")))
+	_check("large: ladder shaft doesn't cut through a merged room (MV-146)", _shaft_free("kitchen"))
 	# third cell
 	_check("large: 2+1 merges into 3", Game.merge_candidates(5) == [3])
 	Game.merge_rooms(5, 3)
@@ -2007,6 +2008,23 @@ func _large_room_test() -> void:
 	Game.rooms_changed.emit()
 	await wait(0.4)
 	print("[autotest] large rooms done: %d failed total" % _fails)
+
+
+## the old ladder art ran solid black outlines down both edges of the 10 px shaft gap; the boarded-over gap
+## (steel post on the room wall) leaves those edge columns mostly wall colour
+func _shaft_free(t: String) -> bool:
+	var img := Atlas.sheet.get_image()
+	for key in ["room_%s_x10" % t, "room_%s_x10_2" % t]:
+		var r: Array = Atlas.regions[key]
+		var dark := 0
+		for col in [64, 73]:
+			for y in range(8, 44):
+				var p := img.get_pixel(int(r[0]) + col, int(r[1]) + y)
+				if maxf(p.r, maxf(p.g, p.b)) < 40.0 / 255.0:
+					dark += 1
+		if dark >= 36:
+			return false
+	return true
 
 
 ## a wave that stays open for the whole check: one spawn queued far in the future, so neither the squad,
