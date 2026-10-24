@@ -28,6 +28,7 @@ const DEFAULTS := {
 	"vibrate": true,
 	"pacing": "threat",      # threat (enemies come in raids drawn by noise / light) | classic (back-to-back waves)
 	"tips": true,            # Sgt. Mark explains each system the first time its window opens (MV-150)
+	"event_timer": "normal",  # road events: normal | long (x2 time) | off (no timer) (MV-134)
 	"telemetry": true,       # send play logs with the player id to the game's server (Telemetry, MV-116); opt-out
 }
 
