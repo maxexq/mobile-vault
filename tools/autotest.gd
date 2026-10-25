@@ -131,6 +131,11 @@ func _run() -> void:
 		await _barks_test()
 		_finish()
 		return
+	if "--only=flagged" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _flagged_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -842,6 +847,7 @@ func _run() -> void:
 	await _engine_rest_test()
 	await _quarters_guard_test()
 	await _barks_test()
+	await _flagged_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -5203,3 +5209,81 @@ func _barks_test() -> void:
 		ch._bark_gap = 0.0
 		return Dev.bark(k) == k))
 	reset.call()
+
+## MV-244: a stranger who turns up while the vehicle drives flags it down: it parks, the door window opens by itself
+## (once), "drive past" leaves them and lets it go, as does any other answer or them giving up; never when it was
+## already parked, during offline catch-up, or with the switch off
+func _flagged_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	var keep_q: Array = Inspection.queue().duplicate(true)
+	var keep_trav: bool = bool(Game.s.traveling)
+	var keep_stall := float(Game.s.stall)
+	Inspection.queue().clear()
+	Game.s.traveling = true
+	Game.s.stall = 0.0
+	Game.s.hull = maxf(50.0, float(Game.s.hull))
+	Game.s.res.power = maxf(50.0, float(Game.s.res.power))
+	_check("flagged: road clear to start (%s)" % Game.blocked_reason(), Game.blocked_reason() == "")
+	var c := Inspection.queue_candidate("test", "rare", "human")
+	_check("flagged: a stranger while driving flags it down", bool(c.get("halt", false)) and Inspection.halting()
+		and Game.blocked_reason() == "จอดรับคนแปลกหน้า" and not Game.is_moving() and Game.speed_factor() == 0.0)
+	await wait(0.6)
+	var door = main.hud.panels.door
+	_check("flagged: the door window opens by itself", door.is_open)
+	var past: Array = door.find_children("*", "Button", true, false).filter(func(b): return str(b.text).contains("ขับผ่าน"))
+	_check("flagged: the window offers 'drive past'", past.size() == 1)
+	await shot("flagged_door")
+	var passed0 := int(Inspection.st().stats.get("passed", 0))
+	past[0].pressed.emit()
+	await wait(0.2)
+	_check("flagged: drive past leaves them and the vehicle goes", Inspection.queue().is_empty() and not Inspection.halting()
+		and Game.blocked_reason() == "" and int(Inspection.st().stats.passed) == passed0 + 1)
+	door.close()
+	await wait(0.2)
+	# closing the window doesn't make it pop up again for the same stranger
+	c = Inspection.queue_candidate("test", "rare", "human")
+	await wait(0.6)
+	door.close()
+	await wait(0.6)
+	_check("flagged: opens once per stranger, not again after closing", not door.is_open and Inspection.halting())
+	Inspection.refuse(c)
+	_check("flagged: turning them away lets it go", not Inspection.halting() and Game.blocked_reason() == "")
+	c = Inspection.queue_candidate("test", "rare", "human")
+	c.wait = 0.01
+	Inspection.tick(0.1, false)
+	_check("flagged: giving up lets it go", Inspection.queue().is_empty() and not Inspection.halting())
+	await wait(0.3)
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	# no stop: already parked, offline catch-up, switch off
+	Game.s.traveling = false
+	c = Inspection.queue_candidate("test", "rare", "human")
+	_check("flagged: already parked = just knocks", not bool(c.halt) and not Inspection.halting())
+	Inspection.queue().clear()
+	Game.s.traveling = true
+	Game.sim_offline = true
+	c = Inspection.queue_candidate("test", "rare", "human")
+	Game.sim_offline = false
+	_check("flagged: offline catch-up never parks the vehicle", not bool(c.halt) and Game.blocked_reason() == "")
+	Inspection.queue().clear()
+	Features.set_override("features", "stop_for_strangers", false)
+	c = Inspection.queue_candidate("test", "rare", "human")
+	_check("flagged: switch off = drives on as before", not bool(c.halt) and not Inspection.halting() and Game.blocked_reason() == "")
+	Features.set_override("features", "stop_for_strangers", null)
+	await wait(0.6)
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	Inspection.queue().clear()
+	for q in keep_q:
+		Inspection.queue().append(q)
+	Game.s.traveling = keep_trav
+	Game.s.stall = keep_stall
+	Inspection.queue_changed.emit()

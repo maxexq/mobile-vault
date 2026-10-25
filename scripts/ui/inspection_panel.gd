@@ -123,6 +123,15 @@ func refresh() -> void:
 		refresh())
 	hb.add_child(shoot)
 	list.add_child(hb)
+	# MV-244: they flagged the vehicle down: it can also just drive on without opening the door
+	if bool(c.get("halt", false)) and Features.on("stop_for_strangers"):
+		var past := UIKit.button(Loc.t("ขับผ่าน ไม่รับ"), "gray", "play")
+		past.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		past.pressed.connect(func():
+			_outcome = Inspection.pass_by(c)
+			refresh())
+		list.add_child(past)
+		list.add_child(UIKit.wrap_label(Loc.t("รถจอดข้างทางอยู่ จะออกตัวต่อเมื่อตัดสินใจแล้ว"), UIKit.FS_SMALL, UIKit.C_DIM))
 
 
 func _portrait(c: Dictionary, k: int) -> Control:

@@ -156,12 +156,13 @@ Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins 
 | Part | How it works |
 |---|---|
 | The knock | A blinking red strip above the travel bar ("มีคนเคาะประตู!") opens the door window. Up to 2 strangers wait; one left unanswered for 10 min walks away. |
+| Flagged down (MV-244) | A stranger who turns up while the vehicle is driving flags it down: it slows to a stop by the road (`Game.blocked_reason` "จอดรับคนแปลกหน้า", so "เร่งเครื่องหนี" is closed too, MV-243) and the door window opens by itself once no other window is showing. The window adds **ขับผ่าน ไม่รับ** (drive on, they are left behind, `Inspection.pass_by`, counted in `stats.passed`). Any answer, or them giving up after 10 min, lets the vehicle go. Offline catch-up never parks it; one who comes while it is already parked just knocks as before. Switch `stop_for_strangers`; GOD → ลูกเรือ shows whether it is parked for someone. Autotest `--only=flagged`. |
 | What they really are | **Human** (≈55 %, less each lap), **infected** (hid a bite), **mimic** (not human), **thief**, **raider mole**. |
 | Checks | 7 checks, 1 point each, **3 points** (+1 staffed medical room, +1 a healer aboard), so you never see everything: eyes (bloodshot / glassy), teeth (rotten / too perfect), hands & nails (black veins / spotless / gang tattoo), forearm (bitten bandage / raider brand), bag (lockpicks + other people's IDs / live radio + our route on a map — may be refused), temperature (fever / cold), story (shaky). Each check shows a flashlit 96×48 pixel close-up. |
 | Circumstantial | Tells are probabilities: impostors never show all signs (but always at least one), honest people sometimes look tired, feverish or have an old biker tattoo. The field guide in the window lists what each sign may mean. |
 | The call | **Let in** (joins with the hidden secret), **turn away** (never know), **shoot** (right: their loot — antibiotics / components / scrap + stimpack / ammo; wrong: everyone −20 happiness and a name on the memorial wall). |
 | Later | Admitted impostors go off after a few minutes: infected fall sick and may infect a roommate, a mimic drags someone off at night (a strong rear bruiser may fight it off), a thief disappears with 20–35 % of food/water/scrap/fuel and 30 % of meds/components, a raider opens the rear door (hull −30, scrap −30 %, 2 people hurt). Logged in `s.insp_log` + Trace. |
-| Code | `scripts/autoload/inspection.gd`, `scripts/ui/inspection_panel.gd`, art `tools/art/inspect.py` → `assets/inspect/`. God mode → ลูกเรือ: spawn any kind of stranger. |
+| Code | `scripts/autoload/inspection.gd`, `scripts/ui/inspection_panel.gd`, art `tools/art/inspect.py` → `assets/inspect/`. God mode → ลูกเรือ: spawn any kind of stranger (while driving = flagged down, MV-244). |
 ## 4h. Expedition special encounters
 
 | System | How it works |

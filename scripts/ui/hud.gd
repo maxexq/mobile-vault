@@ -59,6 +59,7 @@ var _exp_lbl: Label
 var _exp_btn: Button
 var _scav_btn: Button
 var _door_box: PanelContainer
+var _door_auto := -1          # MV-244: cid of the stranger whose door window already opened by itself
 var _door_lbl: Label
 var room_closeup: RoomCloseup
 var event_popup: EventPopup
@@ -672,6 +673,10 @@ func _refresh_door() -> void:
 		var c := Inspection.current()
 		_door_lbl.text = Loc.t("มีคนเคาะประตู! %s [%s] · %s") % [c.name, Inspection.GRADES[c.grade].th, Game.fmt_time(float(c.wait))]
 		_door_box.modulate.a = 1.0 if int(Time.get_ticks_msec() / 500) % 2 == 0 else 0.75
+		# MV-244: someone flagged the vehicle down: it parks, and the door window opens once nothing else is showing
+		if Inspection.halting() and bool(c.get("halt", false)) and int(c.cid) != _door_auto and not any_modal_open():
+			_door_auto = int(c.cid)
+			open_door()
 
 
 func open_door() -> void:
