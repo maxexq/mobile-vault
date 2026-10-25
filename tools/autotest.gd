@@ -59,14 +59,19 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=confirm" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		if "--confirm-ui-sequence" in OS.get_cmdline_user_args():
+			get_window().size = Vector2i(1280, 640)
+			await wait(0.6)
+			await _touch_test()
+			await _settings_test()
+		await _confirm_actions_test()
+		_finish()
+		return
 	if "--only=buttons" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _button_skin_menu_test()
-		_finish()
-		return
-	if "--only=confirm" in OS.get_cmdline_user_args():
-		Tutorial.skip()
-		await _confirm_actions_test()
 		_finish()
 		return
 	if "--only=background" in OS.get_cmdline_user_args():
@@ -1359,8 +1364,9 @@ func _confirm_actions_test() -> void:
 	var saved_settings := Settings.v.duplicate(true)
 	var saved_size := get_window().size
 	Game.set_process(false)
-	Account.a = saved_account.duplicate(true)
-	Game.s = saved_state.duplicate(true)
+	# Earlier integration checks deliberately leave stale squad IDs; use a fresh, isolated vehicle.
+	Account.a = {}
+	Game.setup_default_state()
 	Account.attach(Game.s)
 	Game.started = true
 	main.hud.title_screen.visible = false
@@ -1369,6 +1375,7 @@ func _confirm_actions_test() -> void:
 	Settings.set_value("tips", false)
 	_no_events()
 	Tutorial.skip()
+	Game._emit_all(true)
 	var dialog: ConfirmPanel = main.hud.confirmation
 	var room_ui: RoomCloseup = main.hud.room_closeup
 	Game.s.rooms[1] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
@@ -1398,6 +1405,9 @@ func _confirm_actions_test() -> void:
 	escape.pressed = true
 	Input.parse_input_event(escape)
 	await get_tree().process_frame
+	escape = escape.duplicate()
+	escape.pressed = false
+	Input.parse_input_event(escape)
 	_check("confirm: Escape cancels without a refund", not dialog.is_open and float(Game.s.res.scrap) == scrap_before)
 	room_ui._request_demolish()
 	await _finger(81, Vector2(1, 1), true)
@@ -1408,6 +1418,9 @@ func _confirm_actions_test() -> void:
 	await wait(0.1)
 	var point := dialog.cancel_button.get_global_rect().get_center()
 	await _finger(82, point, true)
+	await wait(0.08)
+	var hit := get_viewport().gui_get_hovered_control()
+	_check("confirm: touch reaches Cancel (hit %s)" % (str(hit.get_path()) if hit else "none"), hit == dialog.cancel_button)
 	await _finger(82, point, false)
 	await wait(0.1)
 	_check("confirm: touch Cancel preserves the target", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
@@ -3863,11 +3876,16 @@ func _thai_terms_test() -> void:
 func _title_backdrop_test() -> void:
 	var v: Node = main.vehicle
 	_check("title: van wheels turn", v.wheels.size() > 0 and v.wheels[0].is_playing())
+	# Half-pixel rumble randomly skips beats; test motion with a deterministic whole-pixel amplitude.
+	# _engine_shake_test separately checks the default half strength and its distribution.
+	var rumble_override = Features.layers.dev.get("tune", {}).get("fx.engine_shake")
+	Features.set_override("tune", "fx.engine_shake", 1.0)
 	var ys := {}
 	for i in 30:
 		await get_tree().process_frame
 		ys[v.body.position.y] = true
 	_check("title: engine rumble moves the body", ys.size() >= 2)
+	Features.set_override("tune", "fx.engine_shake", rumble_override)
 	var p: Control = main.hud.title_screen._panel
 	var vp: Rect2 = main.hud.title_screen.get_viewport_rect()
 	_check("title: menu window inside the screen", vp.encloses(p.get_rect()))
