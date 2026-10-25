@@ -112,15 +112,19 @@ func refresh() -> void:
 			refresh())
 	hb.add_child(admit)
 	var no := UIKit.button(Loc.t("ไล่ไป"), "gray", "close")
+	no.name = "RefuseStranger"
 	no.pressed.connect(func():
-		_outcome = Inspection.refuse(c)
-		refresh())
+		ConfirmPanel.ask(self, Loc.t("ไล่ไป"), Loc.t("%s จะออกจากประตูไป คุณจะเรียกคนนี้กลับมาไม่ได้") % c.name, Loc.t("ยืนยันไล่ไป"), func():
+			_outcome = Inspection.refuse(c)
+			refresh(), func(): return is_same(Inspection.current(), c)))
 	hb.add_child(no)
 	var shoot := UIKit.button(Loc.t("ยิง"), "red", "shotgun")
+	shoot.name = "ShootStranger"
 	shoot.pressed.connect(func():
-		_outcome = Inspection.shoot(c)
-		get_tree().call_group("shake", "shake", 4.0)
-		refresh())
+		ConfirmPanel.ask(self, Loc.t("ยิง"), Loc.t("ยิง %s ที่ประตู การตัดสินใจนี้ย้อนคืนไม่ได้และอาจส่งผลต่อความสุขของลูกเรือ") % c.name, Loc.t("ยืนยันยิง"), func():
+			_outcome = Inspection.shoot(c)
+			get_tree().call_group("shake", "shake", 4.0)
+			refresh(), func(): return is_same(Inspection.current(), c)))
 	hb.add_child(shoot)
 	list.add_child(hb)
 	# MV-244: they flagged the vehicle down: it can also just drive on without opening the door

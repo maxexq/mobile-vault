@@ -59,6 +59,16 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=confirm" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		if "--confirm-ui-sequence" in OS.get_cmdline_user_args():
+			get_window().size = Vector2i(1280, 640)
+			await wait(0.6)
+			await _touch_test()
+			await _settings_test()
+		await _confirm_actions_test()
+		_finish()
+		return
 	if "--only=buttons" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _button_skin_menu_test()
@@ -812,6 +822,7 @@ func _run() -> void:
 	await _inspection_test()
 	await _threat_test()
 	await _settings_test()
+	await _confirm_actions_test()
 	_event_variety_test()
 	await _cloud_test()
 	await _cloud_account_test()
@@ -1353,6 +1364,249 @@ func _tutorial_test() -> void:
 
 
 ## settings window: every option applies + persists, version info, save export / validate / reset
+## MV-422: real UI entry points must leave state untouched until a named confirmation.
+func _confirm_actions_test() -> void:
+	var saved_state := Game.s
+	var saved_account := Account.a
+	var saved_store := Save.read()
+	var saved_started := Game.started
+	var saved_processing := Game.is_processing()
+	var saved_title: bool = main.hud.title_screen.visible
+	var saved_features: Dictionary = Features.layers.dev.duplicate(true)
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_size := get_window().size
+	Game.set_process(false)
+	# Earlier integration checks deliberately leave stale squad IDs; use a fresh, isolated vehicle.
+	Account.a = {}
+	Game.setup_default_state()
+	Account.attach(Game.s)
+	Game.started = true
+	main.hud.title_screen.visible = false
+	Features.set_override("features", "confirm_actions", true)
+	Features.set_override("features", "english", true)
+	Settings.set_value("tips", false)
+	_no_events()
+	Tutorial.skip()
+	Game._emit_all(true)
+	var dialog: ConfirmPanel = main.hud.confirmation
+	var room_ui: RoomCloseup = main.hud.room_closeup
+	Game.s.rooms[1] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[2] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	Game.s.res.scrap = 50.0
+	main.open_closeup(1)
+	await wait(0.5)
+	var room_before: Dictionary = Game.s.rooms[1]
+	var scrap_before := float(Game.s.res.scrap)
+	(room_ui.find_child("DemolishButton", true, false) as Button).pressed.emit()
+	_check("confirm: demolish click opens a modal without deleting or refunding", dialog.is_open and is_same(Game.s.rooms[1], room_before) and float(Game.s.res.scrap) == scrap_before)
+	_check("confirm: Cancel has keyboard focus and the HUD treats it as modal", dialog.cancel_button.has_focus() and main.hud.any_modal_open())
+	# Keyboard acceptance acts on Cancel, never on the destructive option by default.
+	var enter := InputEventKey.new()
+	enter.keycode = KEY_ENTER
+	enter.pressed = true
+	Input.parse_input_event(enter)
+	await get_tree().process_frame
+	enter = enter.duplicate()
+	enter.pressed = false
+	Input.parse_input_event(enter)
+	await wait(0.1)
+	_check("confirm: default Enter cancels and preserves the room", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
+	room_ui._request_demolish()
+	var escape := InputEventKey.new()
+	escape.keycode = KEY_ESCAPE
+	escape.pressed = true
+	Input.parse_input_event(escape)
+	await get_tree().process_frame
+	escape = escape.duplicate()
+	escape.pressed = false
+	Input.parse_input_event(escape)
+	_check("confirm: Escape cancels without a refund", not dialog.is_open and float(Game.s.res.scrap) == scrap_before)
+	room_ui._request_demolish()
+	await _finger(81, Vector2(1, 1), true)
+	await _finger(81, Vector2(1, 1), false)
+	await wait(0.1)
+	_check("confirm: backdrop tap cancels without deleting", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
+	room_ui._request_demolish()
+	await wait(0.1)
+	var point := dialog.cancel_button.get_global_rect().get_center()
+	await _finger(82, point, true)
+	await wait(0.08)
+	var hit := get_viewport().gui_get_hovered_control()
+	_check("confirm: touch reaches Cancel (hit %s)" % (str(hit.get_path()) if hit else "none"), hit == dialog.cancel_button)
+	await _finger(82, point, false)
+	await wait(0.1)
+	_check("confirm: touch Cancel preserves the target", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
+	room_ui._request_demolish()
+	dialog.confirm_button.pressed.emit()
+	dialog.confirm_button.pressed.emit()
+	var refund := float(Data.room_def("kitchen").cost) * 0.5
+	_check("confirm: accepting demolishes once and refunds once", Game.s.rooms[1].type == "empty" and float(Game.s.res.scrap) == scrap_before + refund)
+	Game.s.rooms[1] = room_before
+	room_ui.refresh()
+	room_ui._request_demolish()
+	Game.s.rooms[1] = room_before.duplicate(true)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: a replaced room cannot be deleted by a stale prompt", Game.s.rooms[1].type == "kitchen")
+	room_ui._request_demolish()
+	room_ui.close()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: closing the originating window invalidates the action", Game.s.rooms[1].type == "kitchen")
+	await wait(0.2)
+	Game.s.rooms[1] = {"type": "kitchen", "level": 1, "job": {}, "build": {"kind": "build", "left": 100.0, "total": 100.0}}
+	main.open_closeup(1)
+	await wait(0.2)
+	(room_ui.find_child("CancelConstructionButton", true, false) as Button).pressed.emit()
+	_check("confirm: construction cancellation waits for a decision", dialog.is_open and Game.is_site(1))
+	dialog.close_btn.pressed.emit()
+	_check("confirm: X cancels construction deletion", Game.is_site(1))
+	room_ui._request_demolish()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: construction cancellation commits after confirmation", Game.s.rooms[1].type == "empty")
+	Game.s.rooms[1] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[2] = {"type": "annex", "level": 1, "job": {}, "build": {}}
+	room_ui.refresh()
+	(room_ui.find_child("SplitButton", true, false) as Button).pressed.emit()
+	dialog.close()
+	_check("confirm: cancelling a split preserves the large room", Game.room_span(1) == 2)
+	room_ui._request_split()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: accepting a split preserves both rooms and their level", Game.room_span(1) == 1 and Game.s.rooms[2].type == "kitchen" and int(Game.s.rooms[2].level) == 1)
+	room_ui.close()
+	await wait(0.2)
+	var loot_ui: LootPanel = main.hud.panels.inventory
+	var item := Loot.roll_item("weapon", 1, 0)
+	Game.s.gear = [item]
+	main.hud.open_panel("inventory")
+	loot_ui.detail_uid = int(item.uid)
+	loot_ui.refresh()
+	(loot_ui.find_child("SalvageButton", true, false) as Button).pressed.emit()
+	_check("confirm: single salvage names the item without removing it", dialog.is_open and dialog.message.text.contains(Loot.item_name(item)) and Loot.stash().size() == 1)
+	dialog.cancel_button.pressed.emit()
+	_check("confirm: cancelling single salvage preserves gear", Loot.stash().size() == 1)
+	loot_ui._request_salvage(item)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: accepting single salvage removes that item", Loot.stash().is_empty())
+	var first := Loot.roll_item("weapon", 1, 0)
+	var locked := Loot.roll_item("armor", 1, 0)
+	locked.lock = true
+	Game.s.gear = [first, locked]
+	loot_ui._request_bulk_salvage(0)
+	dialog.cancel_button.pressed.emit()
+	_check("confirm: cancelling bulk salvage preserves every item", Loot.stash().size() == 2 and Loot.stash().has(first))
+	loot_ui._request_bulk_salvage(0)
+	_check("confirm: bulk preview excludes locked gear", dialog.is_open and dialog.confirm_button.text.contains("1"))
+	var later := Loot.roll_item("boots", 1, 0)
+	Game.s.gear.append(later)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: bulk salvage preserves locked gear and drops arriving after the prompt", Loot.stash().size() == 2 and Loot.stash().has(locked) and Loot.stash().has(later))
+	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
+	Game.s.res.scrap = 200.0
+	loot_ui._request_synthesize(0)
+	_check("confirm: synthesis waits without consuming items or scrap", dialog.is_open and Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	Game.s.gear[0].lock = true
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: locking an ingredient invalidates synthesis", Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	Game.s.gear[0].lock = false
+	loot_ui._request_synthesize(0)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: synthesis consumes exactly three ingredients after acceptance", Loot.stash().size() == 1 and int(Loot.stash()[0].rar) == 1 and float(Game.s.res.scrap) == 185.0)
+	Game.s.combat.auto_salvage = -1
+	loot_ui._request_auto_salvage(1)
+	dialog.close()
+	_check("confirm: cancelling auto-salvage keeps it off", int(Game.s.combat.auto_salvage) == -1)
+	loot_ui._request_auto_salvage(1)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: enabling auto-salvage requires acceptance", int(Game.s.combat.auto_salvage) == 1)
+	loot_ui._request_auto_salvage(-1)
+	_check("confirm: turning auto-salvage off is immediate", not dialog.is_open and int(Game.s.combat.auto_salvage) == -1)
+	main.hud.open_settings("data")
+	Game.save_game()
+	var stored := JSON.stringify(Save.read())
+	main.hud.settings_panel._on_reset_pressed()
+	main.hud.settings_panel._on_reset_pressed()
+	_check("confirm: repeated reset clicks still wait and preserve the saved game", dialog.is_open and JSON.stringify(Save.read()) == stored and Game.started)
+	dialog.close()
+	Settings._finish_import("not json")
+	_check("confirm: invalid imported files never open a confirmation", not dialog.is_open)
+	Settings._finish_import(stored)
+	_check("confirm: a valid import waits before replacing the saved game", dialog.is_open and JSON.stringify(Save.read()) == stored)
+	dialog.close()
+	_check("confirm: cancelling import leaves the saved game byte-for-byte unchanged", JSON.stringify(Save.read()) == stored)
+	main.hud.settings_panel.close()
+	await wait(0.2)
+	main.hud.title_screen.visible = true
+	main.hud.title_screen.modulate.a = 1.0
+	main.hud.title_screen._new_run()
+	_check("confirm: NEW RUN waits when an existing save would be erased", dialog.is_open and JSON.stringify(Save.read()) == stored)
+	dialog.close()
+	_check("confirm: cancelling NEW RUN keeps the existing save", JSON.stringify(Save.read()) == stored and main.hud.title_screen.visible)
+	main.hud.title_screen.visible = false
+	main.hud.open_settings("data")
+	# Long localized prompts remain inside the viewport, with both choices always reachable.
+	for size in [Vector2i(360, 640), Vector2i(720, 1280), Vector2i(1600, 1200)]:
+		get_window().size = size
+		await wait(0.3)
+		for language in ["th", "en"]:
+			Settings.set_value("lang", language)
+			main.hud.settings_panel._on_reset_pressed()
+			await wait(0.1)
+			var screen: Rect2 = main.hud.get_global_rect()
+			_check("confirm: %s %s frame and both choices fit the screen" % [size, language], screen.encloses(dialog.box.get_global_rect()) and dialog.box.get_global_rect().encloses(dialog.cancel_button.get_global_rect()) and dialog.box.get_global_rect().encloses(dialog.confirm_button.get_global_rect()))
+			await shot("confirm_%s_%dx%d" % [language, size.x, size.y])
+			dialog.close()
+	main.hud.settings_panel.close()
+	await wait(0.2)
+	var nextgen: NextGenPanel = main.hud.panels.nextgen
+	main.hud.open_nextgen(false)
+	nextgen.step = "crew"
+	nextgen.refresh()
+	var gen := Meta.generation()
+	(nextgen.find_child("NextGenerationButton", true, false) as Button).pressed.emit()
+	_check("confirm: next generation waits without replacing the vehicle", dialog.is_open and Meta.generation() == gen)
+	dialog.close()
+	_check("confirm: cancelling next generation retains its selection screen", nextgen.is_open and nextgen.step == "crew" and Meta.generation() == gen)
+	nextgen.close()
+	await wait(0.2)
+	Inspection.queue().clear()
+	var stranger := Inspection.queue_candidate("confirm-test", "rare", "human")
+	main.hud.open_door()
+	var door: InspectionPanel = main.hud.panels.door
+	(door.find_child("RefuseStranger", true, false) as Button).pressed.emit()
+	dialog.close()
+	_check("confirm: cancelling stranger dismissal keeps them at the door", is_same(Inspection.current(), stranger))
+	(door.find_child("ShootStranger", true, false) as Button).pressed.emit()
+	dialog.close()
+	_check("confirm: cancelling shooting leaves the visitor alive", is_same(Inspection.current(), stranger))
+	door.close()
+	await wait(0.2)
+	main.hud.open_panel("god")
+	Dev.confirm_preview()
+	_check("confirm: GOD MODE previews the actual dialog", dialog.is_open)
+	dialog.close()
+	var calls := [0]
+	Features.set_override("features", "confirm_actions", false)
+	ConfirmPanel.ask(main.hud.panels.god, "test", "test", "test", func(): calls[0] += 1)
+	_check("confirm: feature off restores direct actions without leaving a modal", calls[0] == 1 and not dialog.is_open)
+	main.hud.panels.god.close()
+	await wait(0.2)
+	if saved_store.is_empty():
+		Save.wipe()
+	else:
+		Save.write(saved_store)
+	Account.a = saved_account
+	Game.s = saved_state
+	Game.started = saved_started
+	Game.set_process(saved_processing)
+	for key in saved_settings:
+		Settings.set_value(key, saved_settings[key])
+	Features.layers.dev = saved_features
+	Features.changed.emit()
+	main.hud.title_screen.visible = saved_title
+	Game._emit_all(true)
+	get_window().size = saved_size
+	await wait(0.3)
+
+
 func _settings_test() -> void:
 	get_window().size = Vector2i(720, 1280)
 	await wait(1.2)
@@ -1423,7 +1677,8 @@ func _settings_test() -> void:
 	_check("save: junk rejected", Settings.validate_save("{\"hello\": 1}") != "" and Settings.validate_save("not json") != "")
 	DirAccess.remove_absolute(path)
 	main.hud.settings_panel._on_reset_pressed()
-	_check("save: reset needs a second tap", Save.has_save())
+	_check("save: reset waits for confirmation", Save.has_save() and main.hud.confirmation.is_open)
+	main.hud.confirmation.close()
 	main.hud.settings_panel.close()
 	await wait(0.3)
 	Settings.reset_progress(false)
@@ -3633,11 +3888,16 @@ func _thai_terms_test() -> void:
 func _title_backdrop_test() -> void:
 	var v: Node = main.vehicle
 	_check("title: van wheels turn", v.wheels.size() > 0 and v.wheels[0].is_playing())
+	# Half-pixel rumble randomly skips beats; test motion with a deterministic whole-pixel amplitude.
+	# _engine_shake_test separately checks the default half strength and its distribution.
+	var rumble_override = Features.layers.dev.get("tune", {}).get("fx.engine_shake")
+	Features.set_override("tune", "fx.engine_shake", 1.0)
 	var ys := {}
 	for i in 30:
 		await get_tree().process_frame
 		ys[v.body.position.y] = true
 	_check("title: engine rumble moves the body", ys.size() >= 2)
+	Features.set_override("tune", "fx.engine_shake", rumble_override)
 	var p: Control = main.hud.title_screen._panel
 	var vp: Rect2 = main.hud.title_screen.get_viewport_rect()
 	_check("title: menu window inside the screen", vp.encloses(p.get_rect()))
