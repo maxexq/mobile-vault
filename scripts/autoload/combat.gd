@@ -1081,7 +1081,7 @@ func _on_wave_cleared() -> void:
 	gap_t = 1.8
 	var w := wave()
 	if wave_is_warlord:
-		cs().boss_beaten[str(Game.s.biome)] = true
+		cs().boss_beaten[str(int(Game.s.biome))] = true    # biome is a float after a save load
 		Game.toast.emit("ปราบบอสด่านตรวจสำเร็จ! เส้นทางเปิดแล้ว", "biome")
 		Game.travel_changed.emit()
 	elif wave_is_boss:

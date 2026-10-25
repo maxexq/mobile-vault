@@ -169,6 +169,15 @@ func _migrate() -> void:
 	_free_away_squad()
 	s.merge({"combat": {}}, false)
 	(s.combat as Dictionary).merge({"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1, "threat": 0.0, "raid_kpm": 0.0, "fight_share": 0.3}, false)
+	# MV-378: the biome came back from JSON as a float, so beaten checkpoints were stored as "2.0" while
+	# boss_beaten() looks up "2": the warlord respawned forever. Re-key them as whole numbers.
+	s.biome = int(s.get("biome", 0))
+	s.lap = int(s.lap)
+	var beaten := {}
+	for k in (s.combat.boss_beaten as Dictionary):
+		if s.combat.boss_beaten[k]:
+			beaten[str(int(float(str(k))))] = true
+	s.combat.boss_beaten = beaten
 	for d in s.dwellers:
 		d.merge({"rads": 0.0, "away_until": 0.0, "xp": 0.0, "happy": 70.0}, false)
 		if not d.has("gear"):

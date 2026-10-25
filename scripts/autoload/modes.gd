@@ -189,7 +189,7 @@ func tick(dt: float, offline: bool) -> void:
 	if float(Game.s.res.scrap) < c:
 		return
 	Game._add_res("scrap", -c)
-	Combat.cs().boss_beaten[str(Game.s.biome)] = true
+	Combat.cs().boss_beaten[str(int(Game.s.biome))] = true
 	Trace.rec("meta", "toll paid", {"biome": int(Game.s.biome), "scrap": c})
 	if not offline:
 		Game.toast.emit(Loc.t("จ่ายค่าผ่านทาง %d เศษเหล็ก ด่านตรวจเปิดทางให้แล้ว") % c, "biome")
