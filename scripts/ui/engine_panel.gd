@@ -111,11 +111,18 @@ func _build_status() -> void:
 			refresh())
 		ar.add_child(bt)
 	_list.add_child(ar)
-	var rest := UIKit.button(Loc.t("จอดพักเครื่องตอนนี้") if not EngineBay.resting() else Loc.t("กำลังพักเครื่อง…"), "orange", "pause")
-	rest.disabled = EngineBay.resting()
-	rest.pressed.connect(func():
-		e.resting = true
-		EngineBay._changed())
+	# MV-419: park to rest at any temperature; once cool enough the same button sets off again
+	var rest: Button
+	if not EngineBay.resting():
+		rest = UIKit.button(Loc.t("จอดพักเครื่องตอนนี้"), "orange", "pause")
+		rest.pressed.connect(EngineBay.rest_now)
+	elif EngineBay.can_resume():
+		rest = UIKit.button(Loc.t("ออกเดินทางต่อ"), "green", "play")
+		rest.pressed.connect(EngineBay.resume_now)
+	else:
+		rest = UIKit.button(Loc.t("กำลังพักเครื่อง…"), "orange", "pause")
+		rest.disabled = true
+	rest.name = "RestButton"
 	_list.add_child(rest)
 	_list.add_child(UIKit.wrap_label(Loc.t("ปิดพักอัตโนมัติ = ขับต่อได้จนถึง %d°C แล้วเครื่องดับเอง (เสียสภาพ -5%%) · ตอนออฟไลน์จะพักเสมอ") % int(EngineBay.STALL_AT)))
 	# crew
@@ -238,7 +245,10 @@ func _update() -> void:
 			EngineBay.power_pm(), ", ".join(bt) if not bt.is_empty() else "-", 0.12 * Game.speed_kmh() * EngineBay.noise_mult() + EngineBay.smoke_pm()]
 		var w := []
 		if EngineBay.resting():
-			w.append(Loc.t("จอดพักเครื่อง รอเย็นถึง %d°C") % int(EngineBay.RESUME_AT))
+			if bool(e.get("rest_hold", false)) and EngineBay.can_resume():
+				w.append(Loc.t("จอดพักเครื่องอยู่ กด ออกเดินทางต่อ เมื่อพร้อม"))
+			else:
+				w.append(Loc.t("จอดพักเครื่อง รอเย็นถึง %d°C") % int(EngineBay.RESUME_AT))
 		if EngineBay.heat() >= EngineBay.HOT:
 			w.append(Loc.t("เครื่องร้อน!"))
 		if EngineBay.cond() < EngineBay.BREAK_BELOW:

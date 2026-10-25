@@ -411,6 +411,7 @@ func engine_breakdown() -> void:
 
 func engine_rest(on: bool) -> void:
 	EngineBay.st().resting = on
+	EngineBay.st().rest_hold = false
 	act("engine rest %s" % on)
 	EngineBay._changed()
 
