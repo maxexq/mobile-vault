@@ -342,6 +342,9 @@ func _tab_fight() -> void:
 		var bid: String = id
 		bb.append(_b(str(Combat.WAVE_BOSSES[id].th), func(): Dev.spawn_boss(bid), "gray", true))
 	_row(bb)
+	_row([_b("วอร์ลอร์ด", func(): Dev.entrance_preview("warlord"), "red", true), _b("บอส", func(): Dev.entrance_preview("boss"), "yellow", true),
+		_b("อีลิท", func(): Dev.entrance_preview("elite"), "gray", true), _b("เรียกอีลิท ×3", func(): Dev.spawn_elites(3), "gray", true)],
+		"เปิดตัวบอส (MV-387)%s" % ("" if Features.on("boss_intro") else " · ปิดอยู่"))
 	_head("MOBS", "เรียกศัตรูทีละชนิด ×3")
 	var mb := []
 	for id in Combat.MOBS:

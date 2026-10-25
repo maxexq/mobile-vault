@@ -65,6 +65,7 @@ var event_popup: EventPopup
 var encounter_popup: EncounterPopup
 var title_screen: TitleScreen
 var boss_bar: BossBar
+var boss_intro: BossIntro
 var _boss_was := false
 var _view_box: HBoxContainer
 var _xray_btn: Button
@@ -89,6 +90,8 @@ func _ready() -> void:
 	_build_combat_chip()
 	boss_bar = BossBar.new()
 	add_child(boss_bar)
+	boss_intro = BossIntro.new()
+	add_child(boss_intro)
 	_view_box = UIKit.hbox(2)
 	_xray_btn = UIKit.button("", "gray", "eye")
 	_xray_btn.custom_minimum_size = Vector2(26, 22)
@@ -496,6 +499,8 @@ func _apply_layout() -> void:
 		_view_box.position = Vector2(M, _top.position.y + _top.size.y + 2)
 		boss_bar.position = Vector2(M + 60, _top.position.y + _top.size.y + 2)
 		boss_bar.size = Vector2(vp.x - 52 - M * 2 - 160, 32)
+	# below the boss bar and the toasts that stack under it, in the open sky
+	boss_intro.band_y = roundf(maxf(boss_bar.position.y + BossBar.H + 14.0, vp.y * 0.36))
 	_place_toasts()
 	if banner.visible:
 		show_banner(banner_lbl.text)

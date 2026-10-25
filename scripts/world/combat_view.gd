@@ -52,6 +52,7 @@ var _numbers := 0
 var debris: Array = []          # [sprite, vel, landed, life]
 var _ram_t := 4.0
 var _road_zombies: Array = []
+var last_entrance := ""          # MV-387: kind of the last entrance played (warlord | boss | elite), for tests
 
 
 static func sim_to_view(p: Vector2) -> Vector2:
@@ -81,6 +82,7 @@ func setup(v: Vehicle) -> void:
 	Combat.supply_found.connect(_on_supply)
 	Combat.boss_event.connect(_on_boss_event)
 	Combat.tagged_in.connect(_on_tagged_in)
+	Combat.entrance.connect(_on_entrance)
 	Mods.mods_changed.connect(_sync_heroes)
 	Game.squad_changed.connect(_sync_heroes)
 	Game.dwellers_changed.connect(_sync_rest)
@@ -540,6 +542,58 @@ func _tick_debris(delta: float) -> void:
 			debris.remove_at(i)
 
 
+# ------------------------------------------------------------------ entrances (MV-387)
+## a boss drops in from above and lands in a dust burst + shock ring + shake, then roars; an air boss swoops in;
+## an elite only flashes a gold glint and "ELITE". Dev.entrance_preview sends a fake enemy (id -1): the effect
+## then plays at a stand-in spot behind the vehicle.
+func _on_entrance(e: Dictionary) -> void:
+	last_entrance = "warlord" if e.get("warlord", false) else ("boss" if e.get("boss", false) else "elite")
+	var n: EnemyActor = enemy_nodes.get(int(e.get("id", -1)))
+	var at := n.global_position if n else sim_to_view(Vector2(Combat.MELEE_STOP + 90.0, Combat.GROUND_Y))
+	if last_entrance == "elite":
+		var head := at + Vector2(0, -(n.height() if n else 16.0) - 6.0)
+		var p := FX.particles({"tex": Atlas.tex("pt_spark"), "amount": 10, "lifetime": 0.5, "dir": Vector2.UP, "spread": 180.0,
+			"vmin": 14.0, "vmax": 30.0, "color": Color("ffd56b"), "explosiveness": 1.0, "damping": 40.0})
+		p.one_shot = true
+		p.position = head.round()
+		p.z_index = 12
+		add_child(p)
+		p.emitting = true
+		get_tree().create_timer(0.8).timeout.connect(p.queue_free)
+		_text(head + Vector2(-10, -8), "ELITE", Color("ffd56b"))
+		return
+	var warlord := last_entrance == "warlord"
+	var air := str(e.get("kind", "")) == "air"
+	if n:
+		n.drop_in(air)
+	get_tree().create_timer(EnemyActor.DROP_T).timeout.connect(func():
+		var spot := at
+		if is_instance_valid(n):
+			spot = n.global_position
+			n.roar()
+		_land(spot, warlord, air))
+
+
+func _land(at: Vector2, warlord: bool, air: bool) -> void:
+	if not air:
+		var p := FX.particles({"tex": Atlas.tex("pt_dust"), "amount": 26 if warlord else 16, "lifetime": 0.7, "dir": Vector2.UP, "spread": 80.0,
+			"vmin": 20.0, "vmax": 55.0 if warlord else 38.0, "gravity": Vector2(0, 60), "box": Vector2(10, 1), "smin": 1.0, "smax": 2.0,
+			"color": Color(0.72, 0.64, 0.52, 0.9), "explosiveness": 1.0, "damping": 25.0})
+		p.one_shot = true
+		p.position = at.round()
+		p.z_index = 8
+		add_child(p)
+		p.emitting = true
+		get_tree().create_timer(1.2).timeout.connect(p.queue_free)
+		var ring := ShockRing.new()
+		ring.position = at.round()
+		ring.big = warlord
+		add_child(ring)
+	_poof(at + Vector2(0, -6), true)
+	get_tree().call_group("shake", "shake", 6.0 if warlord else 4.0)
+	_text(at + Vector2(-6, -40 if warlord else -30), "!!", UIKit.C_RED)
+
+
 # ------------------------------------------------------------------ boss tells
 func _on_boss_event(kind: String, e: Dictionary) -> void:
 	var n: EnemyActor = enemy_nodes.get(int(e.id))
@@ -622,7 +676,11 @@ func _tick_ram(delta: float) -> void:
 
 # =================================================================== actors
 class EnemyActor extends Node2D:
+	const DROP_T := 0.35
+	const DROP_H := 70.0
 	var spr: AnimatedSprite2D
+	var drop := 0.0          # px above the ground while dropping in (MV-387)
+	var air_drop := false
 	var target := Vector2.ZERO
 	var hp_ratio := 1.0
 	var stunned := false
@@ -682,7 +740,7 @@ class EnemyActor extends Node2D:
 		_t += delta
 		var moving := position.distance_to(target) > 0.5
 		position = position.lerp(target, clampf(delta * 10.0, 0.0, 1.0))
-		spr.position = position.round() - position
+		spr.position = position.round() - position + Vector2(0, -roundf(drop))
 		spr.speed_scale = 1.0 if moving else 0.4
 		if stunned:
 			spr.speed_scale = 0.0
@@ -695,6 +753,10 @@ class EnemyActor extends Node2D:
 
 	func _draw() -> void:
 		var o := spr.position
+		if drop > 0.5 and not air_drop:
+			# shadow on the road grows as the boss falls
+			var sw := roundf(_w * (1.0 - drop / DROP_H * 0.7))
+			draw_rect(Rect2(Vector2(-floorf(sw / 2.0), -1), Vector2(sw, 2)), Color(0, 0, 0, 0.45))
 		var w := maxf(14.0, _w) if not is_boss else maxf(30.0, _w)
 		var y := -_h - 4.0
 		var x0 := -floorf(w / 2.0)
@@ -707,6 +769,23 @@ class EnemyActor extends Node2D:
 				draw_rect(Rect2(o + Vector2(round(cos(a) * 6), round(y - 4 + sin(a) * 2)), Vector2(1, 1)), Color("ffcc6a"))
 		if is_boss:
 			draw_texture(Atlas.icon("crown"), o + Vector2(-8, y - 17))
+
+	## MV-387: fall in from above (an air boss swoops from higher up)
+	func drop_in(air: bool) -> void:
+		air_drop = air
+		drop = DROP_H * (1.6 if air else 1.0)
+		var tw := create_tween()
+		tw.tween_property(self, "drop", 0.0, DROP_T).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT if air else Tween.EASE_IN)
+
+	## squash on landing, then a stretched roar with a red flash
+	func roar() -> void:
+		var tw := create_tween()
+		tw.tween_property(self, "scale", Vector2(1.2, 0.8), 0.06)
+		tw.tween_property(self, "scale", Vector2.ONE, 0.1)
+		tw.tween_interval(0.15)
+		tw.tween_callback(func(): _flash = 0.12)
+		tw.tween_property(self, "scale", Vector2(0.92, 1.14), 0.12).set_ease(Tween.EASE_OUT)
+		tw.tween_property(self, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 
 	func die(killed: bool) -> void:
 		set_process(false)
@@ -824,3 +903,30 @@ class HeroActor extends Node2D:
 			draw_texture(Atlas.icon(["rifle", "fist", "heal"][slot]), Vector2(-8, -40))
 		if dead:
 			draw_string(UIKit.font_pixel, Vector2(-7, -24), "KO", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("f0644a"))
+
+
+## MV-387: a pixel ring that spreads along the road where a boss lands
+class ShockRing extends Node2D:
+	var big := false
+	var _t := 0.0
+
+	func _ready() -> void:
+		z_index = 4
+
+	func _process(delta: float) -> void:
+		_t += delta
+		if _t >= 0.4:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var k := _t / 0.4
+		var rx := roundf((10.0 + k * (60.0 if big else 40.0)))
+		var ry := roundf(rx * 0.22)
+		var c := Color(0.9, 0.82, 0.62, 0.8 * (1.0 - k))
+		# flat ellipse of 1 px dots on whole pixels (no anti-aliasing)
+		var steps := int(rx * 2.0)
+		for i in steps:
+			var a := TAU * i / steps
+			draw_rect(Rect2(Vector2(roundf(cos(a) * rx), roundf(sin(a) * ry)), Vector2.ONE), c)

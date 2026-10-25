@@ -18,6 +18,7 @@ signal heroes_changed
 signal supply_found(kind: String, amount: float, at: Vector2)
 signal boss_event(kind: String, e: Dictionary)   # enrage | armor_break | summon | burrow | erupt | explode | acid | solar
 signal tagged_in(slot: int, did: int, out_did: int)   # the roof-deck reserve jumped in for a fallen defender
+signal entrance(e: Dictionary)   # MV-387: a boss / warlord / elite just spawned (switch boss_intro)
 
 const STEP := 0.1
 ## enemies scale a little faster than gear (Loot.ILVL_GROWTH = 1.12) -> pushing hits a wall,
@@ -608,6 +609,8 @@ func _spawn(q: Dictionary) -> void:
 		e.stop_x = MELEE_STOP + rng.randf_range(0, 10)
 	enemies.append(e)
 	enemy_spawned.emit(e)
+	if (e.boss or e.elite) and Features.on("boss_intro"):
+		entrance.emit(e)
 
 
 # =================================================================== main loop

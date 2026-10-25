@@ -105,6 +105,11 @@ func _run() -> void:
 		_checkpoint_test()
 		_finish()
 		return
+	if "--only=boss_intro" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _boss_intro_test()
+		_finish()
+		return
 	if "--only=pity" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _pity_test()
@@ -778,6 +783,7 @@ func _run() -> void:
 	await _industrial_background_test()
 	await _raw_food_test()
 	await _pity_test()
+	await _boss_intro_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -4353,3 +4359,76 @@ func _pity_test() -> void:
 	Features.set_override("tune", "loot.pity_epic", null)
 	Features.set_override("tune", "loot.pity_legend", null)
 	_check("pity: default tune 40 / 150", Loot.pity_need(3) == 40 and Loot.pity_need(4) == 150)
+
+
+## waits (up to max_s) until cond() is true
+func _wait_for(cond: Callable, max_s: float) -> void:
+	var t := 0.0
+	while t < max_s and not cond.call():
+		await wait(0.02)
+		t += 0.02
+
+
+## MV-387: boss / warlord / elite entrances: the HUD band with the name, drop-in + landing in the world, elites
+## without a band, never takes taps, switch off, tune, GOD previews
+func _boss_intro_test() -> void:
+	var intro: BossIntro = main.hud.boss_intro
+	var cv: CombatView = main.combat_view
+	_no_events()
+	Dev.kill_enemies()
+	await wait(0.4)
+	cv.last_entrance = ""
+	Dev.spawn_boss("warlord")
+	await _wait_for(func(): return cv.last_entrance != "", 3.0)
+	var b := Combat.current_boss()
+	var n = cv.enemy_nodes.get(int(b.get("id", -1)))
+	_check("boss intro: warlord drops in from above", cv.last_entrance == "warlord" and n != null and float(n.drop) > 0.0)
+	await wait(0.15)
+	_check("boss intro: warlord WARNING band with its name (%s)" % intro._name.text, intro.visible and intro.kind == "warlord"
+		and not b.is_empty() and intro._name.text.contains(str(b.name)))
+	_check("boss intro: the band never takes taps", intro.mouse_filter == Control.MOUSE_FILTER_IGNORE
+		and intro._name.mouse_filter == Control.MOUSE_FILTER_IGNORE and intro._title.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	await shot("boss_intro_warlord")
+	await wait(0.4)
+	_check("boss intro: warlord landed", n != null and is_instance_valid(n) and float(n.drop) == 0.0)
+	await shot("boss_intro_warlord_landed")
+	await _wait_for(func(): return not intro.visible, 4.0)
+	_check("boss intro: band goes away on its own", not intro.visible and intro.kind == "")
+	# a mutant boss: the smaller band
+	Dev.kill_enemies()
+	await wait(0.4)
+	cv.last_entrance = ""
+	Dev.spawn_boss(str(Combat.WAVE_BOSSES.keys()[0]))
+	await _wait_for(func(): return cv.last_entrance != "", 3.0)
+	await wait(0.15)
+	_check("boss intro: mutant boss gets the BOSS band", cv.last_entrance == "boss" and intro.visible and intro.kind == "boss")
+	await shot("boss_intro_boss")
+	await _wait_for(func(): return not intro.visible, 4.0)
+	# elites: world cue only
+	Dev.kill_enemies()
+	await wait(0.4)
+	cv.last_entrance = ""
+	Dev.spawn_elites(1)
+	await _wait_for(func(): return cv.last_entrance != "", 3.0)
+	_check("boss intro: elite gets a glint, no band", cv.last_entrance == "elite" and not intro.visible)
+	# switch off
+	Dev.kill_enemies()
+	await wait(0.4)
+	Features.set_override("features", "boss_intro", false)
+	cv.last_entrance = ""
+	Dev.spawn_boss("warlord")
+	await wait(1.2)
+	_check("boss intro: switch off = no entrance", cv.last_entrance == "" and not intro.visible and not Combat.current_boss().is_empty())
+	Features.set_override("features", "boss_intro", null)
+	Dev.kill_enemies()
+	await wait(0.4)
+	# GOD previews + tune
+	Features.set_override("tune", "boss_intro.time", 0.5)
+	Dev.entrance_preview("warlord")
+	_check("boss intro: GOD preview + tune boss_intro.time", intro.kind == "warlord" and is_equal_approx(intro._dur, 1.3) and cv.last_entrance == "warlord")
+	Features.set_override("tune", "boss_intro.time", null)
+	Dev.entrance_preview("elite")
+	_check("boss intro: GOD elite preview", cv.last_entrance == "elite")
+	await _wait_for(func(): return not intro.visible, 4.0)
+	Dev.kill_enemies()
+	await wait(0.4)
