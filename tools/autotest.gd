@@ -100,6 +100,11 @@ func _run() -> void:
 		await _tips_test()
 		_finish()
 		return
+	if "--only=checkpoint" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		_checkpoint_test()
+		_finish()
+		return
 	if "--only=raw_food" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _raw_food_test()
@@ -767,6 +772,7 @@ func _run() -> void:
 	await _scene_art_test()
 	await _industrial_background_test()
 	await _raw_food_test()
+	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
 
@@ -4176,6 +4182,29 @@ func _col_diff(im: Image, a: int, b: int) -> float:
 
 ## MV-247: raw food. Hydroponics grows crops, mutated animals drop meat, the kitchen cooks crops / meat + water
 ## into food (and stops when they run out or the pantry is full); recipes use sensible inputs; switch off = old game
+## MV-378: a save load turns the biome into a float; the beaten warlord must still open the checkpoint
+func _checkpoint_test() -> void:
+	var keep := {"biome": Game.s.biome, "km": Game.s.km, "vault_level": Game.s.vault_level, "beaten": (Game.s.combat.boss_beaten as Dictionary).duplicate()}
+	Game.s.biome = 0.0     # as JSON.parse_string hands it back
+	Game.s.km = Data.biome_start_km(1)
+	Game.s.vault_level = maxi(int(Game.s.vault_level), int(Data.biome(1).req))
+	Game.s.combat.boss_beaten = {}
+	_check("checkpoint: warlord blocks the road after a load", Game.at_checkpoint() and Combat.warlord_due())
+	Combat.wave_is_warlord = true
+	Combat._on_wave_cleared()
+	Combat.wave_is_warlord = false
+	_check("checkpoint: killing the warlord opens it (no respawn)", Combat.boss_beaten(0) and not Game.at_checkpoint() and not Combat.warlord_due())
+	Game.s.combat.boss_beaten = {"0.0": true}     # a save written before the fix
+	Game.s.biome = 0.0
+	Game._migrate()
+	_check("checkpoint: old saves with \"0.0\" keys are repaired", Combat.boss_beaten(0) and typeof(Game.s.biome) == TYPE_INT and not Game.at_checkpoint())
+	Game.s.biome = int(keep.biome)
+	Game.s.km = float(keep.km)
+	Game.s.vault_level = int(keep.vault_level)
+	Game.s.combat.boss_beaten = keep.beaten
+	Combat.wave_changed.emit()
+
+
 func _raw_food_test() -> void:
 	var res0: Dictionary = (Game.s.res as Dictionary).duplicate()
 	_check("raw food: the switch is on by default", Data.raw_food())

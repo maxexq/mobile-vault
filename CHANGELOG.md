@@ -13,6 +13,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Food is now grown and hunted: hydroponics grows crops, mutated animals drop meat, and the kitchen cooks crops or meat with water into meals (it stops when they run out). Medicine, biofuel and other recipes use sensible ingredients instead of scrap (MV-247)
 - New artwork for every road event, expedition encounter, expedition interior and landmark (49 images), in the same dark 16-bit style with the crew and the truck as you know them (MV-189)
 
+### Fixed
+- Beating the checkpoint boss at the end of a map now opens the road to the next map; after reloading the game it used to respawn forever. Saves stuck at a checkpoint are repaired on load (MV-378)
+
 ## [4.7.0-alpha.2] - 2026-10-24
 
 ### Merged pull requests
