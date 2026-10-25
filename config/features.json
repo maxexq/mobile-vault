@@ -30,7 +30,8 @@
     "raw_food": true,
     "loot_pity": true,
     "boss_intro": true,
-    "vehicle_detail": true
+    "vehicle_detail": true,
+    "vehicle_ambience": true
   },
   "events": {},
   "tune": {}

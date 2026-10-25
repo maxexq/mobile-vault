@@ -106,6 +106,13 @@ func _loop_frames(prefix: String, n: int, fps: float) -> SpriteFrames:
 	return sf
 
 
+## MV-388: a numbered strip <prefix>_0..n-1 as one "default" animation (cached per prefix)
+func strip_frames(prefix: String, n: int, fps: float, loop: bool = true) -> SpriteFrames:
+	var sf := _loop_frames(prefix, n, fps)
+	sf.set_animation_loop("default", loop)
+	return sf
+
+
 func track_frames() -> SpriteFrames:
 	if _frames_cache.has("_tracks"):
 		return _frames_cache["_tracks"]

@@ -275,9 +275,152 @@ ENGINES = {"diesel4": _eng_diesel4, "v8": _eng_v8, "turbo6": _eng_turbo6, "woodg
            "electric": _eng_electric, "hybrid": _eng_hybrid, "turbine": _eng_turbine, "fusion": _eng_fusion}
 
 
+# ------------------------------------------------------------------ MV-388 phase 2 (rig-detail-idle-concept-v1)
+# Runtime overlays for CabView, cab-local. The block decals are sparse (grooves, fasteners, grime) and only draw
+# inside the block outline, so the run-state firing pixels and glow underneath stay visible; columns covered by the
+# turbo (rig) or the generator box (train) stay transparent.
+BLOCK = {"van": (9, 35, 14, 13), "bus": (9, 22, 17, 14), "rig": (8, 18, 16, 13), "train": (7, 36, 22, 20)}
+
+
+def _firing(bw, bh):
+    """the run/hot firing pixels _engine() draws on the block: keep them clear"""
+    return {(3 + i * 5, bh - 3) for i in range(bw // 6 + 1)}
+
+
+def _decal_block(bw, bh, grooves, mask_x, fast, grime, metal=True):
+    img = new(bw, bh)
+    keep = _firing(bw, bh)
+    lit = c("gray4") if metal else c("yellow2")
+    dark = c("gray2") if metal else c("yellow0")
+
+    def put(x, y, col):
+        if 1 <= x < min(bw - 1, mask_x) and 2 <= y < bh - 1 and (x, y) not in keep:
+            px(img, x, y, col)
+
+    for gx in grooves:                                     # cooling-fin grooves: dark slot, lit right lip
+        for y in range(4, bh - 3):
+            put(gx, y, dark)
+            put(gx + 1, y, lit)
+    for (x, y) in fast:                                    # two short fastener highlights
+        put(x, y, c("gray5") if metal else c("gray4"))
+        put(x + 1, y + 1, OL)
+    for (x, y, k) in grime:                                # one lower grime cluster
+        put(x, y, c(k))
+    return img
+
+
+def decal_engine_van_block():
+    """14x13 inline-four: three fin grooves, two fasteners, low grime"""
+    return _decal_block(14, 13, (3, 6, 9), 99, ((2, 2), (11, 2)), ((1, 10, "gray1"), (2, 11, "gray1"), (5, 11, "orange1")))
+
+
+def decal_engine_bus_block():
+    """17x14 inline-six: four fin grooves, two fasteners, low grime"""
+    return _decal_block(17, 14, (3, 6, 9, 12), 99, ((2, 2), (14, 2)), ((1, 11, "gray1"), (2, 12, "gray1"), (6, 12, "orange1")))
+
+
+def decal_engine_rig_block():
+    """16x13 turbo-diesel: ribbed casting, dark pipe fittings; the turbo (local x>=13) stays untouched"""
+    img = _decal_block(16, 13, (), 13, ((2, 2), (10, 2)), ((1, 10, "gray1"), (2, 11, "gray1"), (5, 11, "orange2")))
+    for y in (4, 7):                                       # ribs across the casting
+        for x in range(2, 12):
+            if (x, y) not in _firing(16, 13):
+                px(img, x, y, c("gray2"))
+                px(img, x, y - 1, c("gray4"))
+    for (x, y) in ((3, 9), (9, 9)):                        # dark pipe fittings
+        rect(img, x, y, 2, 1, OL)
+        px(img, x, y - 1, c("gray1"))
+    return img
+
+
+def decal_engine_train_block():
+    """22x20 diesel-electric genset: worn ochre casing, generator vents; the generator box (x>=21) is left alone"""
+    img = _decal_block(22, 20, (), 21, ((2, 3), (18, 3)), ((1, 17, "gray1"), (2, 17, "gray2"), (3, 18, "gray1"), (6, 18, "orange1")), False)
+    for y in (6, 9, 12):                                   # generator vent louvers: dark slot, lit lip above
+        hline(img, 4, y, 11, OL)
+        hline(img, 4, y - 1, 11, c("yellow2"))
+        px(img, 14, y, c("yellow0"))
+    for (x, y) in ((17, 7), (18, 8), (16, 13), (2, 9)):    # worn paint patches
+        px(img, x, y, c("yellow0"))
+    return img
+
+
+def prop_engine_fan_idle():
+    """4 frames 5x10: the fan disc seen edge-on, fixed rim, 1 px hub, two blades in hand-drawn phases.
+    Fully covers the old static fan inside the rim, so nothing of it shows between the blades."""
+    blades = [
+        [(2, 1), (2, 2), (2, 3), (2, 6), (2, 7), (2, 8)],          # vertical
+        [(3, 1), (3, 2), (3, 3), (1, 6), (1, 7), (1, 8)],          # leaning right
+        [(1, 4), (3, 4), (1, 5), (3, 5), (1, 3), (3, 6)],          # flat (seen end-on)
+        [(1, 1), (1, 2), (1, 3), (3, 6), (3, 7), (3, 8)],          # leaning left
+    ]
+    out = []
+    for f in range(4):
+        img = new(5, 10)
+        ellipse(img, 0, 0, 5, 10, OL)
+        ellipse(img, 1, 1, 3, 8, c("gray1"))
+        for (x, y) in blades[f]:
+            px(img, x, y, c("gray3"))
+        tip = blades[f][0]
+        px(img, tip[0], tip[1], c("gray4"))
+        px(img, 2, 4, c("gray5"))                                   # hub
+        px(img, 2, 5, c("gray4"))
+        out.append(img)
+    return out
+
+
+def prop_engine_hose_idle():
+    """4 frames 5x6: coolant hose from an inlet on the left to an outlet at the bottom right, along the top and
+    down the right column (clear of the rig's turbo); the bend flexes by 1 px. Two dull clamps."""
+    bends = [(0, 0), (0, 1), (1, 1), (1, 0)]                        # (dx, dy) of the bend per frame, unsynchronised
+    out = []
+    for f, (dx, dy) in enumerate(bends):
+        img = new(5, 6)
+        px(img, 0, 0, c("gray4"))                                   # inlet (fixed)
+        px(img, 1, 0, c("gray2"))                                   # clamp 1
+        for x in range(2, 4 - dx):
+            px(img, x, 0 + dy, OL)
+        px(img, 3 - dx + (1 if dx else 0), 1, OL)                   # the bend
+        for y in range(2, 5):
+            px(img, 4, y, OL)
+        px(img, 4, 3, c("gray2"))                                   # clamp 2
+        px(img, 4, 5, c("gray4"))                                   # outlet (fixed)
+        px(img, 3, 1 + dy, c("gray1"))                              # hose shading at the bend
+        out.append(img)
+    return out
+
+
+def fx_engine_heat_vent():
+    """6 frames 8x12, non-looping: a thin stepped wisp rising from the block, no glow, no spark"""
+    out = []
+    for f in range(6):
+        img = new(8, 12)
+        top = 11 - f * 2
+        for i in range(min(f + 2, 6)):
+            y = top + i
+            if 0 <= y < 12:
+                x = 3 + (1 if (y + f) % 4 < 2 else 0) - (1 if y < 4 else 0)
+                col = c("cream1") if i < 2 and f < 4 else (c("gray4") if f < 5 else c("gray2"))
+                px(img, x, y, col)
+                if i == 0 and f >= 2:
+                    px(img, x + 1, y, c("gray4"))
+        out.append(img)
+    return out
+
+
 def gen_engine_bay():
     for tier in CAB:
         for st in STATES:
             add(f"cab_{tier}_{st}", cab_room(tier, st))
     for k, fn in ENGINES.items():
         add(f"eng_{k}", fn())
+    # MV-388 phase 2 overlays (placed by CabView)
+    for tier, fn in (("van", decal_engine_van_block), ("bus", decal_engine_bus_block), ("rig", decal_engine_rig_block),
+                     ("train", decal_engine_train_block)):
+        add(f"decal_engine_{tier}_block", fn())
+    for i, f in enumerate(prop_engine_fan_idle()):
+        add(f"prop_engine_fan_idle_{i}", f)
+    for i, f in enumerate(prop_engine_hose_idle()):
+        add(f"prop_engine_hose_idle_{i}", f)
+    for i, f in enumerate(fx_engine_heat_vent()):
+        add(f"fx_engine_heat_vent_{i}", f)
