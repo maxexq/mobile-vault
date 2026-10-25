@@ -182,6 +182,32 @@ func resting() -> bool:
 
 
 ## a parked job (oil change, overhaul) holds the vault
+## the player parks to rest the engine (MV-419). Pressed while it is already cool enough to drive, the rest holds
+## until the player resumes (rest_hold); pressed while hot, it ends by itself once cooled, as an auto-rest does
+func rest_now() -> void:
+	var e := st()
+	if e.is_empty() or not on():
+		return
+	e.resting = true
+	e.rest_hold = heat() <= RESUME_AT
+	_changed()
+
+
+## back on the road after a rest; refused while the engine is still too hot
+func can_resume() -> bool:
+	return resting() and heat() <= RESUME_AT
+
+
+func resume_now() -> bool:
+	if not can_resume():
+		return false
+	var e := st()
+	e.resting = false
+	e.rest_hold = false
+	_changed()
+	return true
+
+
 func job_holds() -> bool:
 	if not on():
 		return false
@@ -353,6 +379,7 @@ func tick(dt: float, m: float, running: bool, offline: bool) -> void:
 	if not bool(e.resting):
 		if h >= STALL_AT:
 			e.resting = true
+			e.rest_hold = false
 			e.cond = maxf(OFFLINE_FLOOR if offline else 0.0, float(e.cond) - 5.0)
 			e.coolant = maxf(0.0, float(e.coolant) - 20.0)
 			Game._add_res("water", -5.0)
@@ -362,10 +389,11 @@ func tick(dt: float, m: float, running: bool, offline: bool) -> void:
 			_changed()
 		elif running and (bool(e.auto_rest) or offline) and h >= float(e.rest_at):
 			e.resting = true
+			e.rest_hold = false
 			if not offline:
 				Game.toast.emit("เครื่องร้อน %d°C จอดพักเครื่องอัตโนมัติ" % int(h), "warn")
 			_changed()
-	elif h <= RESUME_AT:
+	elif h <= RESUME_AT and not bool(e.get("rest_hold", false)):
 		e.resting = false
 		if not offline:
 			Game.toast.emit("เครื่องเย็นลงแล้ว ออกเดินทางต่อ", "good")

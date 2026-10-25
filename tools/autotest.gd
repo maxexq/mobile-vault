@@ -105,6 +105,11 @@ func _run() -> void:
 		_checkpoint_test()
 		_finish()
 		return
+	if "--only=engine_rest" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _engine_rest_test()
+		_finish()
+		return
 	if "--only=env_micro" in OS.get_cmdline_user_args():
 		_env_micro_test()
 		_finish()
@@ -807,6 +812,7 @@ func _run() -> void:
 	await _engine_detail_test()
 	await _idle_motion_test()
 	_env_micro_test()
+	await _engine_rest_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -4658,3 +4664,40 @@ func _env_micro_test() -> void:
 		if Atlas.regions.has("%s_%d" % [id, int(sp[2])]):
 			ok = false
 	_check("env micro: 8 environment strips in the atlas at their spec sizes and frame counts", ok)
+
+
+## MV-419: the engine panel's park-to-rest works on a cool engine (it used to end on the next tick), the same button
+## sets off again; a rest started hot still ends by itself once cooled
+func _engine_rest_test() -> void:
+	var e := EngineBay.st()
+	var was_heat := float(e.get("heat", 40.0))
+	Dev.engine_rest(false)
+	Dev.engine_set("heat", 40.0)
+	main.hud.open_panel("engine")
+	var ep = main.hud.panels.engine
+	ep.tab = "status"
+	ep.refresh()
+	await wait(0.2)
+	var btn: Button = ep.find_child("RestButton", true, false)
+	_check("engine rest: park button on a cool engine", btn != null and not btn.disabled and btn.text == Loc.t("จอดพักเครื่องตอนนี้"))
+	btn.pressed.emit()
+	for i in 20:
+		EngineBay.tick(0.5, 0.5 / 60.0, false, false)
+	await wait(0.2)
+	_check("engine rest: a cool engine stays parked (was cancelled on the next tick)", EngineBay.resting()
+		and EngineBay.blocked_reason() != "")
+	btn = ep.find_child("RestButton", true, false)
+	_check("engine rest: the same button now sets off again", btn != null and not btn.disabled and btn.text == Loc.t("ออกเดินทางต่อ"))
+	await shot("engine_rest_resume")
+	btn.pressed.emit()
+	await wait(0.1)
+	_check("engine rest: set off", not EngineBay.resting() and EngineBay.blocked_reason() == "")
+	Dev.engine_set("heat", 105.0)
+	EngineBay.rest_now()
+	_check("engine rest: too hot to set off yet", not EngineBay.can_resume() and not EngineBay.resume_now() and EngineBay.resting())
+	Dev.engine_set("heat", EngineBay.RESUME_AT - 5.0)
+	EngineBay.tick(0.5, 0.5 / 60.0, false, false)
+	_check("engine rest: a rest started hot ends by itself once cooled", not EngineBay.resting())
+	ep.close()
+	Dev.engine_set("heat", was_heat)
+	await wait(0.1)

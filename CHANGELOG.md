@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Fixed
+- The engine room's "park to rest" button works again when the engine is already cool; it now holds until you tap "set off again" (MV-419)
+
 ### Changed
 - The vehicle moves a little even when parked: the roof flag waves, a rear chain sways, a mudflap flutters in the wind, the exhaust puffs instead of smoking non-stop (electric and fusion engines stay clean), and rain drips off the roof (MV-388)
 - The engine room comes alive: a turning cooling fan, a quivering coolant hose, detailed engine castings, and wisps of steam when the engine runs hot (MV-388)
