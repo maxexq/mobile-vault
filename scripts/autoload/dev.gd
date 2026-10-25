@@ -222,6 +222,15 @@ func set_tod(v: float) -> void:
 	act("time of day %.2f" % v)
 
 
+## MV-369: one-click real map preview at an exact simulation time.
+func background_preview(tod: float) -> void:
+	goto_biome(0)
+	weather("clear")
+	set_tod(tod)
+	act("industrial background preview", {"tod": tod})
+	changed.emit()
+
+
 func weather(w: String) -> void:
 	Game.force_weather(w)
 	act("weather " + w)

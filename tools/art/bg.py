@@ -543,3 +543,5 @@ def gen_backgrounds():
         mid(name, cfg)
         near(name, cfg)
         road(name, cfg)
+    from .industrial_bg import generate
+    generate()

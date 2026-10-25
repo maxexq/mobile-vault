@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Changed
+- The industrial map has a wider layered background, dithered sky colours driven by game time, moving sun and moon, subtle chimney smoke, drifting dust and small amber lights (MV-369)
 - Food is now grown and hunted: hydroponics grows crops, mutated animals drop meat, and the kitchen cooks crops or meat with water into meals (it stops when they run out). Medicine, biofuel and other recipes use sensible ingredients instead of scrap (MV-247)
 - New artwork for every road event, expedition encounter, expedition interior and landmark (49 images), in the same dark 16-bit style with the crew and the truck as you know them (MV-189)
 
