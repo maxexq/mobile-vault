@@ -28,6 +28,17 @@ export function sign(body, secret) {
   return createHmac("sha256", secret).update(body, "utf8").digest("base64");
 }
 
+// what this deployment sees, for a 403 (short: GOD shows the first 120 characters): per project the last 4 characters
+// of its game key (public, it ships in the build) or "missing", and "+secret" / "-secret". Never a secret's value.
+export function seen(env) {
+  const out = {};
+  for (const p of ["PROD", "TEST"]) {
+    const gk = (env[`GA_GAME_KEY_${p}`] || "").trim();
+    out[p.toLowerCase()] = (gk === "" ? "missing" : ".." + gk.slice(-4)) + ((env[`GA_SECRET_${p}`] || "").trim() !== "" ? "+secret" : "-secret");
+  }
+  return out;
+}
+
 function reply(status, obj) {
   return new Response(JSON.stringify(obj), {
     status,
@@ -42,7 +53,7 @@ export async function handle(request, env = process.env, send = fetch) {
   const game = url.searchParams.get("game") || "";
   if (!ROUTES.has(route)) return reply(400, { error: "unknown route" });
   const secret = secretFor(game, env);
-  if (secret === "") return reply(403, { error: "unknown game key" });
+  if (secret === "") return reply(403, { error: "unknown game key", got: ".." + game.slice(-4), ...seen(env) });
   const body = await request.text();
   if (Buffer.byteLength(body, "utf8") > MAX_BYTES) return reply(413, { error: "body too large" });
   try {

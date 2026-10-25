@@ -47,6 +47,9 @@ r = await handle(req(`route=events&game=${ENV.GA_GAME_KEY_TEST}`, null, "GET"), 
 check("GET refused (405)", r.status === 405);
 r = await handle(req(`route=events&game=${ENV.GA_GAME_KEY_TEST}`, body), {}, fakeGA);
 check("no env vars = every key refused", r.status === 403 && sent.length === 1);
+const diag = await (await handle(req(`route=events&game=${ENV.GA_GAME_KEY_TEST}`, body), { GA_GAME_KEY_TEST: "test-game-key" }, fakeGA)).json();
+check("403 says what it sees in under 120 characters, never a secret", diag.got === "..-key" && diag.test === "..-key-secret"
+  && diag.prod === "missing-secret" && !JSON.stringify(diag).includes("test-secret") && JSON.stringify(diag).length < 120);
 
 const status401 = async () => new Response("Unauthorized", { status: 401 });
 r = await handle(req(`route=init&game=${ENV.GA_GAME_KEY_PROD}`, "{}"), ENV, status401);
