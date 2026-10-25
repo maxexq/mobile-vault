@@ -52,6 +52,7 @@ var xray := true                  # true = cut-away (rooms visible)
 var _xray_hold := 0.0             # tap on the hull peeks inside for a few seconds
 var _ext_alpha := 0.0
 var _wheels_root: Node2D
+var _detail_root: Node2D        # MV-388 runtime chassis details (leaf springs), switch vehicle_detail
 var _shells: Node2D
 var _seams_root: Node2D          # large-room interior strips drawn over the hull partitions (v4.4)
 var _exteriors: Node2D
@@ -113,6 +114,9 @@ func _ready() -> void:
 	body.add_child(_rooms_root)
 	pets_root = Node2D.new()
 	body.add_child(pets_root)
+	# above the wheels (they are outside body), under the shell: the springs show in the wheel-well gaps
+	_detail_root = Node2D.new()
+	body.add_child(_detail_root)
 	_shells = Node2D.new()
 	body.add_child(_shells)
 	_seams_root = Node2D.new()
@@ -177,6 +181,7 @@ func _ready() -> void:
 		else:
 			_refresh_mods())
 	Meta.generation_started.connect(func(_g): rebuild())
+	Features.changed.connect(_sync_detail)
 	rebuild()
 
 
@@ -505,6 +510,38 @@ func _refresh_mods() -> void:
 		if not w.get_meta("rail", false):
 			w.visible = not rear_wheels.has(w.position)
 			w.sprite_frames = Atlas.wheel_frames(off)
+	_sync_detail()
+
+
+## MV-388: a stock leaf spring above every road wheel (main vehicle + trailers). Not on rails; the main vehicle's
+## springs give way to the heavy-suspension coil-overs, and the rear ones to the tracks.
+func _sync_detail() -> void:
+	for ch in _detail_root.get_children():
+		_detail_root.remove_child(ch)
+		ch.queue_free()
+	if Game.s.is_empty() or not Features.on("vehicle_detail"):
+		return
+	var vd := Game.vehicle_def()
+	var spots := []
+	if not vd.get("rail", false) and Mods.level("suspension") == 0:
+		var tracked: bool = Mods.level("tracks") > 0
+		for w in vd.wheels:
+			if not (tracked and float(w[0]) > 100.0):
+				spots.append(float(w[0]))
+	if str(vd.get("trailer", "trailer")) == "trailer":
+		for t in n_trailers:
+			for w in TRAILER_WHEELS:
+				spots.append(unit_x(t) + w.x)
+	for x in spots:
+		var s := Sprite2D.new()
+		s.texture = Atlas.tex("prop_car_leaf_spring")
+		s.centered = false
+		s.position = Vector2(x - 16.0, 266.0)
+		_detail_root.add_child(s)
+
+
+func leaf_springs() -> int:
+	return _detail_root.get_child_count() if is_instance_valid(_detail_root) else 0
 
 
 func _on_weather(w: String) -> void:

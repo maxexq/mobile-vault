@@ -362,27 +362,51 @@ def solar_frames():
 
 
 def wheel_frames():
+    """MV-389: road tyre 32x32, 4 phases. 2px tread clusters advance tau/48 per frame (12 clusters = one period
+    in 4 frames), five lugs + five recessed rim holes advance a fifth of a turn over the loop; the top-left
+    highlights stay fixed."""
     out = []
+    cx = cy = 15.5
+
+    def at(r, a):
+        return round(cx + r * math.cos(a)), round(cy + r * math.sin(a))
+
     for f in range(4):
         w = new(32, 32)
         ellipse(w, 0, 0, 32, 32, OL)
         ellipse(w, 1, 1, 30, 30, c("gray1"))
+        # tread: 12 raised 2px blocks with a dark groove behind each on the outer band
         for k in range(12):
             a = (k / 12) * math.tau + f * math.tau / 48
-            for rad in (13.5, 14.5):
-                px(w, round(15.5 + rad * math.cos(a)), round(15.5 + rad * math.sin(a)), c("gray0"))
+            for da in (0.0, 0.09):
+                for rad in (13.0, 14.0):
+                    px(w, *at(rad, a + da), c("gray2"))
+            for rad in (13.0, 14.0):
+                px(w, *at(rad, a + 0.2), c("gray0"))
+        # dark bead ring where tyre meets rim
+        for k in range(56):
+            px(w, *at(9.6, k / 56 * math.tau), c("gray0"))
+        # fixed top-left tyre highlight
+        for k in range(7):
+            px(w, *at(13.0, -math.pi * 0.85 + k * 0.1), c("gray3"))
+        # steel rim: outline, lip, face
         ellipse(w, 7, 7, 18, 18, OL)
         ellipse(w, 8, 8, 16, 16, c("gray5"))
-        ellipse(w, 9, 9, 13, 13, c("gray4"))
+        ellipse(w, 9, 9, 14, 14, c("gray4"))
+        # five recessed holes between the lugs, five lugs on the ring
         for k in range(5):
             a = k / 5 * math.tau + f * (math.tau / 5) / 4
-            px(w, round(15.5 + 5 * math.cos(a)), round(15.5 + 5 * math.sin(a)), c("gray2"))
-        ellipse(w, 12, 12, 8, 8, OL)
-        ellipse(w, 13, 13, 6, 6, c("orange1"))
+            hx_, hy_ = at(5.6, a + math.tau / 10)
+            px(w, hx_, hy_, c("gray0"))
+            px(w, hx_ + 1, hy_, OL)
+            lx, ly = at(3.8, a)
+            px(w, lx, ly, c("gray5"))
+            px(w, lx + 1, ly + 1, c("gray2"))
+        # small oily rust hub
+        ellipse(w, 13, 13, 6, 6, OL)
+        ellipse(w, 14, 14, 4, 4, c("orange1"))
         px(w, 14, 14, c("orange3"))
-        for k in range(7):
-            a = -math.pi * 0.85 + k * 0.1
-            px(w, round(15.5 + 13 * math.cos(a)), round(15.5 + 13 * math.sin(a)), c("gray3"))
+        px(w, 16, 16, c("gray0"))
         out.append(w)
     return out
 

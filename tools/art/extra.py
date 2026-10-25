@@ -384,22 +384,40 @@ def gen_fx():
 
 
 def gen_drivetrain():
-    # off-road knobby wheels (same 32x32 footprint so they fit the wheel wells)
+    # off-road knobby wheels (same 32x32 footprint so they fit the wheel wells). MV-390: bigger 2px knob groups,
+    # recessed six-lug yellow rim, rust hub; knobs advance tau/64 per frame (16 knobs = one period in 4 frames)
+    def at(r, a, c0=15.5):
+        return round(c0 + r * math.cos(a)), round(c0 + r * math.sin(a))
+
     for f in range(4):
         w = new(32, 32)
         ellipse(w, 0, 0, 32, 32, OL)
         ellipse(w, 1, 1, 30, 30, c("gray1"))
         for k in range(16):
             a = (k / 16) * math.tau + f * math.tau / 64
-            rect(w, round(15 + 14 * math.cos(a)), round(15 + 14 * math.sin(a)), 2, 2, c("gray0"))
-            px(w, round(15.5 + 12 * math.cos(a + 0.2)), round(15.5 + 12 * math.sin(a + 0.2)), c("gray2"))
+            # a knob: 2x2 block on the edge + a second row inside, lit edge on the inner side
+            x, y = at(13.6, a, 15.0)
+            rect(w, x, y, 2, 2, c("gray0"))
+            x, y = at(11.6, a + 0.04, 15.0)
+            rect(w, x, y, 2, 1, c("gray0"))
+            px(w, *at(10.4, a + 0.2), c("gray2"))
+        # fixed top-left highlight on the tyre shoulder
+        for k in range(5):
+            px(w, *at(13.0, -math.pi * 0.82 + k * 0.12), c("gray3"))
         ellipse(w, 8, 8, 16, 16, OL)
         ellipse(w, 9, 9, 14, 14, c("yellow1"))
-        ellipse(w, 11, 11, 10, 10, c("gray3"))
+        # recess: dark ring inside the paint, lower-right side deeper
+        ellipse(w, 11, 11, 10, 10, c("gray0"))
+        ellipse(w, 11, 11, 9, 9, c("gray3"))
         for k in range(6):
             a = k / 6 * math.tau + f * (math.tau / 6) / 4
-            px(w, round(15.5 + 4 * math.cos(a)), round(15.5 + 4 * math.sin(a)), OL)
-        ellipse(w, 13, 13, 6, 6, c("orange1"))
+            x, y = at(4.0, a)
+            px(w, x, y, c("gray4"))
+            if get(w, x + 1, y + 1)[:3] == c("gray3")[:3]:    # shadow only on the rim face, never on the paint
+                px(w, x + 1, y + 1, OL)
+        ellipse(w, 13, 13, 6, 6, OL)
+        ellipse(w, 14, 14, 4, 4, c("orange1"))
+        px(w, 16, 16, c("gray0"))
         add(f"bwheel_{f}", w)
     # heavy suspension: coil-over shock absorbers above each wheel, 3 levels (8x20)
     for lv in (1, 2, 3):
