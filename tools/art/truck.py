@@ -261,8 +261,9 @@ def weather(img, seed=7):
     return img
 
 
-def gen_roof_props(floors=4):
-    """everything that stands on the roof (drawn into the shell's top 36px)"""
+def gen_roof_props(floors=4, flag=True):
+    """everything that stands on the roof (drawn into the shell's top 36px); MV-388: flag=False leaves the
+    flag out, Vehicle animates it (prop_car_flag_idle)"""
     img = new(TW, 38)
     by = 36
     # planter boxes with veggies
@@ -293,7 +294,8 @@ def gen_roof_props(floors=4):
     rect(img, 109, by - 6, 8, 2, c("gray3"))
     vline(img, 113, 2, by - 8, OL)
     vline(img, 114, 2, by - 8, c("gray4"))
-    poly(img, [(115, 4), (126, 5), (122, 7), (125, 9), (115, 10)], c("red1"), OL)
+    if flag:
+        poly(img, [(115, 4), (126, 5), (122, 7), (125, 9), (115, 10)], c("red1"), OL)
     # water tank on legs + satellite dish on top
     tx, ty, tw, th = 150, by - 20, 32, 14
     for lx in (tx + 3, tx + tw - 5):
@@ -728,6 +730,33 @@ def gen_mods():
     mod_roof_deck()
 
 
+FLAG_PTS = [(0, 0), (11, 1), (7, 3), (10, 5), (0, 6)]     # the old flag polygon, local to (115, 4)
+
+
+def prop_car_flag_idle():
+    """MV-398: 4 frames 12x7 at 3 fps; frame 0 is the old torn flag, the hoist (x=0) never moves, the torn edge
+    shifts 1-2 px; a dark fold (red0) and a frayed ol1 tip"""
+    edges = [
+        FLAG_PTS,
+        [(0, 0), (10, 1), (7, 3), (11, 5), (0, 6)],
+        [(0, 0), (11, 2), (8, 3), (10, 6), (0, 6)],
+        [(0, 0), (11, 0), (6, 3), (9, 5), (0, 6)],
+    ]
+    out = []
+    for f, pts in enumerate(edges):
+        img = new(12, 7)
+        poly(img, pts, c("red1"), OL)
+        if f:
+            fx = 3 + f
+            for y in range(2, 5):
+                if get(img, fx, y)[:3] == c("red1")[:3]:
+                    px(img, fx, y, c("red0"))
+            tip = pts[1]
+            px(img, min(11, tip[0]), tip[1], c("ol1"))
+        out.append(img)
+    return out
+
+
 def gen_truck():
     from . import vehicles
     vehicles.gen_vehicles()
@@ -735,6 +764,8 @@ def gen_truck():
         add(f"solar_{i}", f)
     for i, f in enumerate(wheel_frames()):
         add(f"wheel_{i}", f)
+    for i, f in enumerate(prop_car_flag_idle()):
+        add(f"prop_car_flag_idle_{i}", f)
     turret_sprites()
     gen_mods()
     # spikes on the rear bumper (vertical rack, 10x26)

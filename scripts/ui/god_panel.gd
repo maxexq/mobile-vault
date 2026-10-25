@@ -226,6 +226,8 @@ func _tab_vehicle() -> void:
 	_row([_b("ห้องเครื่องมีชีวิต: " + ("เปิด" if Features.on("vehicle_ambience") else "ปิด"), func(): Dev.vehicle_ambience_switch(not Features.on("vehicle_ambience")),
 		"green" if Features.on("vehicle_ambience") else "red"), _b("ไอร้อนพุ่ง 1 ครั้ง", func(): Dev.vent_preview(), "gray", true)],
 		"MV-388 พัดลม/ท่อ/ไอร้อน (ไอร้อนแบบใหม่ขึ้นเฉพาะ 115°C)")
+	_row([_b("ควันท่อ", func(): Dev.vehicle_fx_preview("puff"), "gray", true), _b("หยดฝน (ต้องฝนตก)", func(): Dev.vehicle_fx_preview("drip"), "gray", true),
+		_b("บังโคลนสะบัด", func(): Dev.vehicle_fx_preview("flap"), "gray", true)], "MV-388 ธง/โซ่/บังโคลน/ควัน/หยดฝน")
 	_row([_b("40°C", func(): Dev.engine_set("heat", 40.0), "green"), _b("100°C", func(): Dev.engine_set("heat", 100.0)), _b("115°C", func(): Dev.engine_set("heat", 115.0), "red")], "ความร้อน")
 	_row([_b("100%", func(): Dev.engine_set("cond", 100.0), "green"), _b("30%", func(): Dev.engine_set("cond", 30.0)), _b("0", func(): Dev.engine_set("cond", 0.0), "red")], "สภาพ")
 	_row([_b("น้ำมัน 100", func(): Dev.engine_set("oil", 100.0), "green"), _b("น้ำมัน 10", func(): Dev.engine_set("oil", 10.0)),

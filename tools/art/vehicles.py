@@ -480,6 +480,47 @@ BOGIE_DETAIL = decal_train_bogie_detail()
 LAMP_CAGE_AT = {"van": ((0, 210), (0, 210)), "bus": ((0, 222), (0, 224)), "rig": ((0, 228), (0, 230))}
 
 
+def prop_car_chain_idle():
+    """MV-399: 4 frames 6x14 at 2 fps: a safety chain hanging from the rear deck; the top two pixels are fixed,
+    links alternate dark / lit, only the lower tip moves (1 px)"""
+    tips = [0, 1, 0, -1]
+    out = []
+    for f, dx in enumerate(tips):
+        img = new(6, 14)
+        px(img, 2, 0, OL)                                   # shackle (fixed)
+        px(img, 2, 1, c("gray4"))
+        for y in range(2, 13):
+            x = 2 + (dx if y >= 9 else 0)
+            px(img, x, y, c("gray2") if y % 2 else c("gray4"))
+            if y % 2 == 0:
+                px(img, x + 1, y, OL)
+        px(img, 2 + dx, 13, c("orange1"))                   # rusty hook
+        out.append(img)
+    return out
+
+
+def prop_car_mudflap_idle():
+    """MV-400: 4 frames 10x14 at 3 fps, played once per wind gust: rubber flap on two fixed mounting pixels,
+    the ragged lower edge moves at most 1 px; caked dust near the bottom"""
+    sway = [0, 1, 1, 0]
+    out = []
+    for f, dx in enumerate(sway):
+        img = new(10, 14)
+        px(img, 2, 0, OL)                                   # mounting bolts (fixed)
+        px(img, 7, 0, OL)
+        rect(img, 1, 1, 8, 9, OL)
+        rect(img, 2, 1, 6, 8, c("gray1"))
+        vline(img, 2, 1, 8, c("gray2"))
+        for y in range(10, 13):                             # lower part sways
+            hline(img, 1 + dx, y, 8, OL)
+            hline(img, 2 + dx, y, 6, c("gray1") if y < 12 else c("sand1"))
+        for x in (2, 5, 7):                                 # ragged edge
+            px(img, x + dx, 13, OL)
+        px(img, 4 + dx, 11, c("sand1"))
+        out.append(img)
+    return out
+
+
 def shell_details(img, floors, trailer, tier=""):
     """bake the static MV-388 details once into a weathered shell (before exterior() copies it)"""
     xs = (16, 218) if trailer else (38, 248)
@@ -499,7 +540,7 @@ FRONTS = {"van": front_van, "bus": front_bus, "rig": front_rig, "train": front_t
 
 
 def roof_props(img, floors, tier):
-    props = T.gen_roof_props(floors)
+    props = T.gen_roof_props(floors, flag=False)     # MV-388: the flag is animated by Vehicle
     paste(img, props, 0, roof_y(floors) - 36)
     if tier == "van":
         # roof rack with crates/jerrycans over the front
@@ -637,6 +678,10 @@ def gen_vehicles():
     add("prop_car_leaf_spring", prop_car_leaf_spring())
     add("decal_car_lamp_cage", LAMP_CAGE)
     add("decal_train_bogie_detail", BOGIE_DETAIL)
+    for i, f in enumerate(prop_car_chain_idle()):
+        add(f"prop_car_chain_idle_{i}", f)
+    for i, f in enumerate(prop_car_mudflap_idle()):
+        add(f"prop_car_mudflap_idle_{i}", f)
     for i, f in enumerate(rail_wheel_frames()):
         add(f"rwheel_{i}", f)
     save(rails_strip(), OUT_BG + "/rails.png")

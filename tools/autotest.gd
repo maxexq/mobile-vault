@@ -105,6 +105,11 @@ func _run() -> void:
 		_checkpoint_test()
 		_finish()
 		return
+	if "--only=idle_motion" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _idle_motion_test()
+		_finish()
+		return
 	if "--only=engine_detail" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _engine_detail_test()
@@ -796,6 +801,7 @@ func _run() -> void:
 	await _boss_intro_test()
 	await _vehicle_detail_test()
 	await _engine_detail_test()
+	await _idle_motion_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -4564,4 +4570,67 @@ func _engine_detail_test() -> void:
 	Dev.engine_set("cond", was_cond)
 	Game.s.traveling = was_trav
 	Dev.set_tier(was_tier)
+	await wait(0.2)
+
+
+## MV-388 phase 3: roof flag animates (frame 0 when off), rear chain follows the last deck, mudflap behind the
+## rearmost road tyre (not under tracks, not on rails), exhaust puffs replace the smoke emitter (max 2, none when
+## broken), roof drips only in rain / storm, switch off restores the old smoke
+func _idle_motion_test() -> void:
+	var v: Vehicle = main.vehicle
+	var was_tier := Game.tier()
+	var was_tr := Game.trailers()
+	var was_mods: Dictionary = Game.s.mods.duplicate(true)
+	var was_w := str(Game.s.get("weather", "clear"))
+	Game.s.mods["tracks"] = 0
+	Dev.set_tier("rig")
+	Dev.set_trailers(0)
+	Dev.engine_set("cond", 100.0)
+	Dev.engine_set("heat", 40.0)
+	await wait(0.3)
+	_check("idle motion: the roof flag waves (shells no longer carry it)", v.flag.visible and v.flag.is_playing()
+		and v.flag.position == Vehicle.FLAG_POS)
+	_check("idle motion: chain on the rear deck (%s)" % str(v.chain.position), v.chain.visible and v.chain.position == Vector2(266, 263))
+	_check("idle motion: mudflap behind the rig's rear tyre (%s)" % str(v.mudflap.position), v.mudflap.visible and v.mudflap.position == Vector2(238, 276))
+	_check("idle motion: puffs replace the old smoke emitter", not v.smoke.emitting and v.exhaust_burning())
+	v.puff_now()
+	v.puff_now()
+	v.puff_now()
+	_check("idle motion: at most two exhaust puffs (%d)" % v.puffs_active(), v.puffs_active() == 2)
+	await shot("idle_motion_rig")
+	Game.s.mods["tracks"] = 1
+	Mods.mods_changed.emit()
+	await wait(0.1)
+	_check("idle motion: tracks hide the mudflap", not v.mudflap.visible)
+	Dev.set_trailers(1)
+	await wait(0.2)
+	_check("idle motion: with a trailer the chain and mudflap move to its rear (%s, %s)" % [str(v.chain.position), str(v.mudflap.position)],
+		v.chain.position == Vector2(266 + 248, 263) and v.mudflap.visible and v.mudflap.position == Vector2(280 + 200, 276))
+	Dev.engine_set("cond", 0.0)
+	await wait(0.4)
+	_check("idle motion: a broken engine makes no puffs", not v.exhaust_burning() and v.puffs_active() == 0)
+	Dev.engine_set("cond", 100.0)
+	Dev.weather("rain")
+	await wait(0.1)
+	_check("idle motion: rain runs off the roof", v.drip_now() or v.drip.visible)
+	Dev.weather("acid_rain")
+	await wait(0.1)
+	_check("idle motion: no water drip in acid rain", not v.drip.visible)
+	Dev.weather("clear")
+	await wait(0.1)
+	_check("idle motion: dry = no drip", not v.drip.visible)
+	Features.set_override("features", "vehicle_ambience", false)
+	await wait(0.2)
+	_check("idle motion: switch off = old smoke back, flag still on frame 0, no chain / flap / puffs", v.smoke.emitting
+		and v.flag.visible and not v.flag.is_playing() and v.flag.frame == 0 and not v.chain.visible and not v.mudflap.visible and v.puffs_active() == 0)
+	Features.set_override("features", "vehicle_ambience", null)
+	Dev.set_tier("train")
+	Dev.set_trailers(0)
+	await wait(0.2)
+	_check("idle motion: no mudflap on the train", not v.mudflap.visible)
+	Game.s.mods = was_mods
+	Dev.set_tier(was_tier)
+	Dev.set_trailers(was_tr)
+	Dev.weather(was_w)
+	Mods.mods_changed.emit()
 	await wait(0.2)

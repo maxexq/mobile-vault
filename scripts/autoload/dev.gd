@@ -375,6 +375,12 @@ func vehicle_ambience_switch(v: bool) -> void:
 	feature_set("vehicle_ambience", v)
 
 
+## MV-388 phase 3: one exhaust puff / roof drip / mudflap flutter now (drips need rain or a storm)
+func vehicle_fx_preview(what: String) -> void:
+	act("vehicle fx preview " + what)
+	get_tree().call_group("vehicle_fx", what + "_now")
+
+
 func vent_preview() -> void:
 	act("engine vent preview")
 	get_tree().call_group("cab_view", "vent_now")
