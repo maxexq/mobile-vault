@@ -116,6 +116,11 @@ func _run() -> void:
 		await _engine_rest_test()
 		_finish()
 		return
+	if "--only=analytics" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _analytics_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -825,6 +830,7 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -4862,3 +4868,111 @@ func _quarters_guard_test() -> void:
 	Game.rooms_changed.emit()
 	Game.dwellers_changed.emit()
 	await wait(0.3)
+
+
+## MV-423: GameAnalytics over the Collection API, with a fake transport (the autotest never calls the network):
+## signing (the API's own test vector), consent + switches, the session, cleaned event ids, map progression, the
+## error cap, batching and the resend rules
+func _analytics_test() -> void:
+	const SANDBOX_GK := "5c6bcb5402204249437fb5a7a80a4959"
+	const SANDBOX_SK := "16813a12f718bc5c620f56944e1abc3ea13ccbac"
+	_check("analytics: HMAC matches GameAnalytics' test vector",
+		Analytics.hmac_auth('{"test": "test"}', SANDBOX_SK) == "slnR8CKJtKtFDaESSrqnqQeUvp5FaVV7d5XHxt50N5A=")
+	_check("analytics: no network in test runs without a fake transport", not Analytics.active())
+	var sent := []
+	var codes := [201]
+	Analytics.transport = func(route: String, body: String, auth: String) -> int:
+		sent.append({"route": route, "body": body, "auth": auth})
+		return int(codes.pop_front()) if not codes.is_empty() else 200
+	Analytics.set_keys(SANDBOX_GK, SANDBOX_SK)
+	Analytics.queue.clear()
+	Analytics.errors_sent = 0
+	Analytics._session_id = ""
+	var was_tel: bool = bool(Settings.get_value("telemetry"))
+	var was_notice: bool = bool(Cloud.meta.get("log_notice", false))
+	Settings.set_value("telemetry", true)
+	Cloud.meta.log_notice = true
+	_check("analytics: active with keys, consent and the switch", Analytics.active() and Analytics.status() == "on")
+	Analytics.start_session()
+	_check("analytics: a session sends init and queues the user event", sent.size() == 1 and sent[0].route == "init"
+		and Analytics.queue.size() == 1 and Analytics.queue[0].category == "user")
+	var ev: Dictionary = Analytics.queue[0]
+	var re := RegEx.create_from_string("^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
+	_check("analytics: annotations (v2, uuid session, rest api v2, build)", int(ev.v) == 2 and re.search(str(ev.session_id)) != null
+		and ev.sdk_version == "rest api v2" and ev.build == BuildInfo.GAME_VERSION and int(ev.session_num) >= 1)
+	_check("analytics: ids keep only GameAnalytics' characters", Analytics.clean_id("RoadEvent:ปล้นรถ #1:a:b:c:d:e", 5) == "RoadEvent:______ _1:a:b:c")
+	Analytics.design("Room:Built:kitchen")
+	Analytics._on_biome(1, false)
+	var cats := Analytics.queue.map(func(e): return str(e.get("event_id", e.category)))
+	_check("analytics: design + map progression (%s)" % ", ".join(cats), cats.has("Room:Built:kitchen")
+		and cats.has("Complete:Map:" + str(Data.biome(0).id)) and cats.has("Start:Map:" + str(Data.biome(1).id)))
+	for i in 15:
+		Analytics.error("error", "boom %d" % i)
+	_check("analytics: at most 10 errors per launch", Analytics.queue.filter(func(e): return e.category == "error").size() == 10)
+	var n := Analytics.queue.size()
+	Analytics.flush()
+	var last: Dictionary = sent[-1]
+	var arr = JSON.parse_string(last.body)
+	_check("analytics: one signed batch to /events", last.route == "events" and arr is Array and (arr as Array).size() == n
+		and last.auth == Analytics.hmac_auth(last.body, SANDBOX_SK) and Analytics.queue.is_empty() and Analytics.sent_total >= n)
+	codes.assign([413])
+	Analytics.design("Test:Again")
+	Analytics.flush()
+	_check("analytics: 413 keeps the batch and halves the next one", Analytics.queue.size() == 1 and Analytics._batch_max == Analytics.BATCH_MAX / 2)
+	codes.assign([400])
+	Analytics.flush()
+	_check("analytics: 400 drops it (never resend bad data)", Analytics.queue.is_empty() and Analytics.last_error.begins_with("400"))
+	# offline: nothing is lost, even across a reload
+	codes.assign([0])
+	Analytics.design("Offline:One")
+	Analytics.design("Offline:Two")
+	Analytics.flush()
+	var stored = JSON.parse_string(Save.read_key(Analytics.QUEUE_KEY, Analytics.QUEUE_PATH))
+	_check("analytics: offline = the batch stays queued and is saved in the browser", Analytics.queue.size() == 2
+		and stored is Array and (stored as Array).size() == 2 and Analytics.last_error == "offline")
+	Analytics.queue.clear()
+	Analytics._load_queue()
+	_check("analytics: a reload brings the saved queue back with whole numbers", Analytics.queue.size() == 2
+		and typeof(Analytics.queue[0].client_ts) == TYPE_INT and typeof(Analytics.queue[0].session_num) == TYPE_INT
+		and str(Analytics.queue[1].event_id) == "Offline:Two")
+	Analytics.flush()
+	stored = JSON.parse_string(Save.read_key(Analytics.QUEUE_KEY, Analytics.QUEUE_PATH))
+	_check("analytics: back online they go up and leave the saved queue", Analytics.queue.is_empty() and stored is Array
+		and (stored as Array).is_empty() and str(JSON.parse_string(sent[-1].body)[1].event_id) == "Offline:Two")
+	# full queue: the oldest session goes first, as a whole
+	var fill := []
+	for i in Analytics.QUEUE_MAX - 50:
+		fill.append({"category": "design", "event_id": "Old:%d" % i, "session_id": "old-session"})
+	for i in 100:
+		fill.append({"category": "design", "event_id": "New:%d" % i, "session_id": "new-session"})
+	Analytics.queue = fill
+	Analytics._trim()
+	_check("analytics: over the cap the oldest session is dropped whole (%d left)" % Analytics.queue.size(),
+		Analytics.queue.size() == 100 and str(Analytics.queue[0].session_id) == "new-session")
+	Analytics.clear_queue()
+	Analytics.end_session()
+	_check("analytics: session_end with its length", JSON.parse_string(sent[-1].body)[0].category == "session_end"
+		and int(JSON.parse_string(sent[-1].body)[0].length) >= 0)
+	Analytics.queue = [{"category": "design", "event_id": "Waiting:One", "session_id": "x"}]
+	Analytics._persist()
+	Settings.set_value("telemetry", false)
+	Analytics._process(0.1)
+	Analytics.design("Test:OptedOut")
+	_check("analytics: player opted out = nothing queued, the saved queue is cleared", Analytics.queue.is_empty()
+		and Save.read_key(Analytics.QUEUE_KEY, Analytics.QUEUE_PATH) == "[]" and Analytics.status() == "player opted out")
+	Settings.set_value("telemetry", true)
+	Features.set_override("features", "game_analytics", false)
+	Analytics.design("Test:SwitchOff")
+	_check("analytics: switch off = nothing queued", Analytics.queue.is_empty())
+	Features.set_override("features", "game_analytics", null)
+	Analytics.set_keys("", "")
+	_check("analytics: no keys for this environment = off", not Analytics.active() and Analytics.status().begins_with("no keys"))
+	Analytics.transport = Callable()
+	Analytics.clear_queue()
+	Analytics._batch_max = Analytics.BATCH_MAX
+	Analytics._load_keys()
+	Analytics._session_id = ""
+	Analytics.queue.clear()
+	Analytics.errors_sent = 0
+	Settings.set_value("telemetry", was_tel)
+	Cloud.meta.log_notice = was_notice

@@ -48,7 +48,7 @@ func _notice() -> void:
 		return
 	Cloud.meta.log_notice = true
 	Cloud._save_meta()
-	Game.toast.emit("เกมส่งบันทึกการเล่นพร้อมไอดีผู้เล่นไปที่เซิร์ฟเวอร์ เพื่อแก้บั๊กและปรับเกม ปิดได้ที่ ตั้งค่า > ความเป็นส่วนตัว", "info")
+	Game.toast.emit("เกมส่งบันทึกการเล่นพร้อมไอดีผู้เล่นไปที่เซิร์ฟเวอร์ และสถิติการเล่นแบบไม่ระบุตัวตนไปที่ GameAnalytics เพื่อแก้บั๊กและปรับเกม ปิดได้ที่ ตั้งค่า > ความเป็นส่วนตัว", "info")
 	Trace.rec("session", "log notice shown")
 
 

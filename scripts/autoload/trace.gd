@@ -15,6 +15,8 @@ const KEEP := 400
 const SAMPLE_SEC := 30.0
 const VERSION := BuildInfo.GAME_VERSION
 
+signal recorded(entry: Dictionary)   # every new entry (Analytics forwards errors, MV-423)
+
 var session := ""
 var entries: Array = []
 var sink_url := ""
@@ -73,6 +75,7 @@ func rec(cat: String, msg: String, data: Dictionary = {}) -> void:
 	if not data.is_empty():
 		e["data"] = data
 	entries.append(e)
+	recorded.emit(e)
 	if cat != "sample" and cat != "error":
 		print("[trace] %s %s %s" % [cat, msg, JSON.stringify(data) if not data.is_empty() else ""])
 	if entries.size() > MAX:
