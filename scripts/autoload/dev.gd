@@ -736,6 +736,18 @@ func event(id: String) -> void:
 	Game.trigger_event(id)
 
 
+## MV-427: someone says the line for this moment now (skips the cooldown); "" = a random kind. Read-only (not cheated)
+func bark(kind: String = "") -> String:
+	var m = get_tree().current_scene
+	if m == null or m.get("chatter") == null:
+		return ""
+	var kinds: Array = Lore.BARKS.keys()
+	var k := kind if kind != "" else str(kinds[randi() % kinds.size()])
+	var ok: bool = m.chatter.bark(k, -1, "", true)
+	Trace.rec("god", "bark %s" % k, {"said": ok})
+	return k if ok else ""
+
+
 ## MV-134: a random road event whose clock runs out in 2 s (as if the player were watching), to see the crew's pick
 func event_quick_timeout() -> void:
 	var ids := Data.EVENTS.keys()
