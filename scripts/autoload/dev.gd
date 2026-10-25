@@ -370,6 +370,22 @@ func vehicle_detail_switch(v: bool) -> void:
 	feature_set("vehicle_detail", v)
 
 
+## MV-388: the vehicle_ambience switch (engine-room fan / hose / hot vent) and one hot-vent wisp now
+func vehicle_ambience_switch(v: bool) -> void:
+	feature_set("vehicle_ambience", v)
+
+
+## MV-388 phase 3: one exhaust puff / roof drip / mudflap flutter now (drips need rain or a storm)
+func vehicle_fx_preview(what: String) -> void:
+	act("vehicle fx preview " + what)
+	get_tree().call_group("vehicle_fx", what + "_now")
+
+
+func vent_preview() -> void:
+	act("engine vent preview")
+	get_tree().call_group("cab_view", "vent_now")
+
+
 func engine_set(key: String, v: float) -> void:
 	var e := EngineBay.st()
 	e[key] = v

@@ -34,6 +34,12 @@ const ROAD_Y := 300.0             # tyre contact line (local)
 const TRAILER_WHEELS := [Vector2(60, 284), Vector2(184, 284)]
 const WAGON_WHEELS := [Vector2(34, 290), Vector2(54, 290), Vector2(172, 290), Vector2(192, 290)]
 const TRAIN_WHEELS := [Vector2(16, 290), Vector2(36, 290), Vector2(150, 290), Vector2(170, 290), Vector2(214, 290), Vector2(234, 290)]
+## MV-388 phase 3 idle motion (switch vehicle_ambience): roof flag (the shells no longer carry it), rear chain,
+## mudflap behind the rearmost road tyre, exhaust puffs instead of the smoke emitter, rain runoff off the roof
+const FLAG_POS := Vector2(115, 4)         # relative to a 4-floor roof (in _roof_root)
+const CHAIN_POS := Vector2(266, 263)      # + rear_shift()
+const PUFF_GAP := 1.0                     # x the spec ranges: driving 0.8-1.4 s, parked idle 2.5-4 s (tune vehicle.puff_gap)
+const DRIP_GAP := 4.5                     # s between roof drips in rain on average (3-6 s, tune vehicle.drip_gap)
 
 var body: Node2D
 var room_views: Array[RoomView] = []
@@ -53,6 +59,15 @@ var _xray_hold := 0.0             # tap on the hull peeks inside for a few secon
 var _ext_alpha := 0.0
 var _wheels_root: Node2D
 var _detail_root: Node2D        # MV-388 runtime chassis details (leaf springs), switch vehicle_detail
+var flag: AnimatedSprite2D      # MV-388 phase 3 idle motion
+var chain: AnimatedSprite2D
+var mudflap: AnimatedSprite2D
+var puffs: Array[AnimatedSprite2D] = []
+var drip: AnimatedSprite2D
+var _flap_root: Node2D          # behind the wheels
+var _puff_t := 0.0
+var _drip_t := 0.0
+var _flap_t := 0.0
 var _shells: Node2D
 var _seams_root: Node2D          # large-room interior strips drawn over the hull partitions (v4.4)
 var _exteriors: Node2D
@@ -97,6 +112,8 @@ func length() -> float:
 
 
 func _ready() -> void:
+	_flap_root = Node2D.new()
+	add_child(_flap_root)
 	_wheels_root = Node2D.new()
 	add_child(_wheels_root)
 	tracks = AnimatedSprite2D.new()
@@ -136,6 +153,7 @@ func _ready() -> void:
 	antenna_light.position = ANTENNA
 	antenna_light.modulate = Color("ff5a4a")
 	_roof_root.add_child(antenna_light)
+	_build_idle_motion()
 	_mods_root = Node2D.new()
 	body.add_child(_mods_root)
 	_exteriors = Node2D.new()
@@ -182,6 +200,7 @@ func _ready() -> void:
 			_refresh_mods())
 	Meta.generation_started.connect(func(_g): rebuild())
 	Features.changed.connect(_sync_detail)
+	add_to_group("vehicle_fx")
 	rebuild()
 
 
@@ -601,6 +620,7 @@ func _process(delta: float) -> void:
 			(d as GPUParticles2D).amount_ratio = clampf(_speed, 0.2, 1.0)
 	if smoke is GPUParticles2D:
 		(smoke as GPUParticles2D).speed_scale = 1.0 + _speed * 0.8
+	_tick_idle_motion(delta, moving)
 	antenna_light.visible = fmod(_t, 1.6) < 0.25
 	var k := shake_scale()
 	_bump_t -= delta
@@ -628,3 +648,144 @@ func _process(delta: float) -> void:
 	for s in solars:
 		s.texture = Atlas.tex("solar_%d" % frame)
 		s.modulate = Color(1, 0.55, 0.5) if float(Game.s.solar.get("damage", 0.0)) > 0.3 and int(_t * 3.0) % 2 == 0 else Color.WHITE
+
+
+# ------------------------------------------------------------------ MV-388 phase 3: idle motion
+func _strip(prefix: String, n: int, fps: float, loop: bool, parent: Node) -> AnimatedSprite2D:
+	var a := AnimatedSprite2D.new()
+	a.centered = false
+	a.sprite_frames = Atlas.strip_frames(prefix, n, fps, loop)
+	parent.add_child(a)
+	return a
+
+
+## built once (pools, no per-frame nodes); rebuild() / _refresh_mods() only move them
+func _build_idle_motion() -> void:
+	flag = _strip("prop_car_flag_idle", 4, 3.0, true, _roof_root)
+	flag.position = FLAG_POS
+	# the chain hangs behind the shell (the deck covers its top), in its own node next to the leaf springs
+	var chain_root := Node2D.new()
+	body.add_child(chain_root)
+	body.move_child(chain_root, _detail_root.get_index())
+	chain = _strip("prop_car_chain_idle", 4, 2.0, true, chain_root)
+	chain.frame = randi() % 4
+	mudflap = _strip("prop_car_mudflap_idle", 4, 3.0, false, _flap_root)
+	for i in 2:
+		var p := _strip("fx_car_exhaust_puff", 6, 6.0, false, body)
+		body.move_child(p, smoke.get_index() + 1)               # behind the shell, like the old emitter
+		p.visible = false
+		p.animation_finished.connect(p.hide)
+		puffs.append(p)
+	drip = _strip("fx_car_roof_rain_drip", 6, 6.0, false, body)
+	drip.visible = false
+	drip.animation_finished.connect(drip.hide)
+	_flap_t = randf_range(6.0, 10.0)
+
+
+func idle_motion_on() -> bool:
+	return Features.on("vehicle_ambience") and not Game.s.is_empty()
+
+
+## where the chain / mudflap / drip / puffs sit for the current tier, trailers and mods
+func _place_idle_motion() -> void:
+	var vd := Game.vehicle_def()
+	chain.position = CHAIN_POS + Vector2(rear_shift(), 0)
+	# mudflap behind the convoy's rearmost road tyre (trailer tyres are never under the tracks)
+	var flap_x := -1.0
+	if str(vd.get("trailer", "trailer")) == "trailer" and n_trailers > 0:
+		flap_x = unit_x(n_trailers - 1) + TRAILER_WHEELS[-1].x + 16.0
+	elif not vd.get("rail", false) and not (vd.wheels as Array).is_empty():
+		var rear: Array = vd.wheels[-1]
+		if not (Mods.level("tracks") > 0 and float(rear[0]) > 100.0):
+			flap_x = float(rear[0]) + 16.0
+	mudflap.set_meta("x", flap_x)
+	mudflap.position = Vector2(maxf(flap_x, 0.0), 276)
+	var ch: Array = vd.get("chimney", [250, 272])
+	for i in puffs.size():
+		puffs[i].position = Vector2(float(ch[0]) + i * 2, float(ch[1]) - 14.0)
+	drip.position = Vector2(250, roof_y() + 6.0)
+
+
+## combustion only: no puffs from an electric / fusion engine or silent mode, nor when broken, resting or held
+## by a parked job. Cosmetic: nothing here touches fuel, wear, heat or speed.
+func exhaust_burning() -> bool:
+	if EngineBay.state_key() == "broken" or EngineBay.resting() or EngineBay.job_holds():
+		return false
+	var kind := str(EngineBay.t().get("fuel_kind", "fuel"))
+	if kind == "power" or kind == "none":
+		return false
+	return not (EngineBay.mode() == "silent" and EngineBay.t().get("silent", false))
+
+
+func _tick_idle_motion(delta: float, moving: bool) -> void:
+	var on := idle_motion_on()
+	_place_idle_motion()
+	# flag: always there (the shells lost theirs); wind moves it, held on frame 0 when the switch is off
+	if on:
+		if not flag.is_playing():
+			flag.play("default")
+	elif flag.is_playing() or flag.frame != 0:
+		flag.stop()
+		flag.frame = 0
+	chain.visible = on
+	if on and not chain.is_playing():
+		chain.play("default")
+	var flap_x: float = mudflap.get_meta("x", -1.0)
+	mudflap.visible = on and flap_x >= 0.0
+	if mudflap.visible and not mudflap.is_playing():
+		_flap_t -= delta
+		if moving or _flap_t <= 0.0:
+			_flap_t = randf_range(6.0, 10.0)
+			mudflap.frame = 0
+			mudflap.play("default")
+	# exhaust: the new puffs replace the old emitter, never both
+	smoke.emitting = not on
+	if not on or not exhaust_burning():
+		for p in puffs:
+			p.visible = false
+		_puff_t = minf(_puff_t, 0.5)
+	else:
+		_puff_t -= delta
+		if _puff_t <= 0.0:
+			puff_now(moving)
+	# rain runoff: rain / storm only (acid rain keeps its own art), one drip at a time
+	var wet: bool = str(Game.s.get("weather", "")) in ["rain", "storm"]
+	if not on or not wet:
+		drip.visible = false
+		return
+	_drip_t -= delta
+	if _drip_t <= 0.0:
+		drip_now()
+
+
+## one exhaust puff now (max two at once); also GOD MODE's preview
+func puff_now(moving: bool = true) -> bool:
+	var k := Features.num("vehicle.puff_gap", PUFF_GAP)
+	_puff_t = (randf_range(0.8, 1.4) if moving else randf_range(2.5, 4.0)) * k
+	for p in puffs:
+		if not p.visible:
+			p.visible = true
+			p.frame = 0
+			p.play("default")
+			return true
+	return false
+
+
+func drip_now() -> bool:
+	_drip_t = randf_range(0.67, 1.33) * Features.num("vehicle.drip_gap", DRIP_GAP)
+	if drip.visible:
+		return false
+	drip.visible = true
+	drip.frame = 0
+	drip.play("default")
+	return true
+
+
+func flap_now() -> void:
+	if mudflap.visible:
+		mudflap.frame = 0
+		mudflap.play("default")
+
+
+func puffs_active() -> int:
+	return puffs.filter(func(p): return p.visible).size()

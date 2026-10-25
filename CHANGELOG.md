@@ -9,6 +9,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Changed
+- The vehicle moves a little even when parked: the roof flag waves, a rear chain sways, a mudflap flutters in the wind, the exhaust puffs instead of smoking non-stop (electric and fusion engines stay clean), and rain drips off the roof (MV-388)
+- The engine room comes alive: a turning cooling fan, a quivering coolant hose, detailed engine castings, and wisps of steam when the engine runs hot (MV-388)
 - More detailed vehicles: new tyre tread and rims on road, off-road and rail wheels, chipped and rusty pillars, weld patches, fuel-tank straps, a caged front lamp, riveted train bogies and leaf springs over the wheels (MV-388)
 - Bosses make an entrance: they drop in with a dust burst and a roar, a WARNING band shows the checkpoint warlord's name, and elites flash gold when they appear (MV-387)
 - Bad-luck protection for gear: after 40 drops without an Epic or better, the next one is guaranteed Epic+, and after 150 without a Legendary the next is Legendary+. The gear tab shows how close you are (MV-47)

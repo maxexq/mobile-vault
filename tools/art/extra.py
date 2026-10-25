@@ -523,6 +523,39 @@ def gen_events_extra():
     E.save_ev(img, "story_command")
 
 
+def fx_car_exhaust_puff():
+    """MV-401: 6 frames 12x14 at 6 fps, once: a 2-3 px birth cluster at the bottom-left grows, rises and breaks
+    apart in whole pixels; the last frame is empty"""
+    clusters = [
+        [(1, 12), (2, 12), (1, 11)],
+        [(1, 10), (2, 10), (3, 10), (2, 9), (1, 11)],
+        [(2, 7), (3, 7), (4, 7), (2, 8), (3, 8), (4, 6), (1, 9)],
+        [(3, 4), (4, 4), (5, 4), (3, 5), (5, 5), (6, 3), (2, 6)],
+        [(4, 1), (6, 1), (5, 2), (7, 2), (3, 3)],
+        [],
+    ]
+    shade = ["gray3", "gray3", "gray2", "gray2", "gray1", "gray1"]
+    out = []
+    for f, pts in enumerate(clusters):
+        img = new(12, 14)
+        for i, (x, y) in enumerate(pts):
+            px(img, x, y, c("gray3") if (i == 0 and f < 3) else c(shade[f]))
+        out.append(img)
+    return out
+
+
+def fx_car_roof_rain_drip():
+    """MV-402: 6 frames 5x12 at 6 fps, once: a droplet swells on the roof edge, drops in steps, gone"""
+    steps = [[(2, 0)], [(2, 0), (2, 1)], [(2, 3)], [(2, 6), (2, 5)], [(2, 10), (2, 9)], []]
+    out = []
+    for f, pts in enumerate(steps):
+        img = new(5, 12)
+        for i, (x, y) in enumerate(pts):
+            px(img, x, y, c("gray5") if i == 0 else c("blue1") if f > 1 else c("gray4"))
+        out.append(img)
+    return out
+
+
 def gen_extra():
     for name, fn in ENEMIES.items():
         add(f"en_{name}_0", fn(0))
@@ -532,5 +565,9 @@ def gen_extra():
             add(f"boss_{k}_{f}", fn(f))
     gen_fx()
     gen_drivetrain()
+    for i, f in enumerate(fx_car_exhaust_puff()):
+        add(f"fx_car_exhaust_puff_{i}", f)
+    for i, f in enumerate(fx_car_roof_rain_drip()):
+        add(f"fx_car_roof_rain_drip_{i}", f)
     add("lm_market", L.weather(lm_market(), 77) if hasattr(L, "weather") else lm_market())
     gen_events_extra()
