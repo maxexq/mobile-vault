@@ -189,6 +189,10 @@ func _build_grid() -> void:
 				refresh())
 			fh.add_child(b)
 		_list.add_child(fh)
+		if Features.on("loot_pity"):
+			var pl := UIKit.label(Loc.t("การันตี: มหากาพย์ในอีก %d ดรอป · ตำนานในอีก %d ดรอป") % [Loot.pity_left(3), Loot.pity_left(4)], UIKit.FS_SMALL, UIKit.C_DIM)
+			pl.name = "PityLine"
+			_list.add_child(pl)
 	var items: Array = []
 	for it in Loot.stash():
 		if pick_slot != "":

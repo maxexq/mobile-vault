@@ -105,6 +105,11 @@ func _run() -> void:
 		_checkpoint_test()
 		_finish()
 		return
+	if "--only=pity" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _pity_test()
+		_finish()
+		return
 	if "--only=raw_food" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _raw_food_test()
@@ -772,6 +777,7 @@ func _run() -> void:
 	await _scene_art_test()
 	await _industrial_background_test()
 	await _raw_food_test()
+	await _pity_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -4299,3 +4305,51 @@ func _raw_food_test() -> void:
 	Features.set_override("features", "raw_food", null)
 	Game.s.res = res0
 	Game.resources_changed.emit()
+
+
+## MV-47: loot pity: never more than N-1 random drops in a row without Epic+ / Legendary+, switch + tune +
+## GOD actions, tester drops don't count, JSON floats in the counter, the gear panel line
+func _pity_test() -> void:
+	Dev.pity_reset()
+	Features.set_override("tune", "loot.pity_epic", 5.0)
+	Features.set_override("tune", "loot.pity_legend", 20.0)
+	var run_e := 0
+	var run_l := 0
+	var worst_e := 0
+	var worst_l := 0
+	for i in 400:
+		var r := Loot.drop_rarity(0.0, 0)
+		run_e = 0 if r >= 3 else run_e + 1
+		run_l = 0 if r >= 4 else run_l + 1
+		worst_e = maxi(worst_e, run_e)
+		worst_l = maxi(worst_l, run_l)
+	_check("pity: at most 4 drops in a row without Epic+ (tune 5)", worst_e <= 4)
+	_check("pity: at most 19 drops in a row without Legendary+ (tune 20)", worst_l <= 19)
+	Dev.pity_next(4)
+	_check("pity: GOD next drop is Legendary+", Loot.pity_left(4) == 1 and Loot.drop_rarity(0.0, 0) >= 4 and int(Loot.pity().legend) == 0)
+	Loot.pity().epic = 3.0     # a save from JSON gives floats
+	_check("pity: float counter from a save", Loot.pity_left(3) == 2)
+	Dev.pity_next(3)
+	var before := int(Loot.pity().epic)
+	Dev.drop_gear(0, 3)
+	_check("pity: GOD drops don't move the counter", int(Loot.pity().epic) == before)
+	Features.set_override("features", "loot_pity", false)
+	for i in 30:
+		Loot.drop_rarity(0.0, 0)
+	_check("pity: switch off = plain rolls, counter kept", int(Loot.pity().epic) == before)
+	Features.set_override("features", "loot_pity", null)
+	Dev.pity_reset()
+	_check("pity: GOD reset", int(Loot.pity().epic) == 0 and int(Loot.pity().legend) == 0 and Loot.pity_left(3) == 5)
+	var inv = main.hud.panels.inventory
+	inv.tab = "gear"
+	inv.pick_slot = ""
+	inv.detail_uid = -1
+	inv.open()
+	await wait(0.3)
+	var line = inv.find_child("PityLine", true, false)
+	_check("pity: gear panel shows the guarantee", line != null and str(line.text).contains("5"))
+	await shot("loot_pity")
+	inv.close()
+	Features.set_override("tune", "loot.pity_epic", null)
+	Features.set_override("tune", "loot.pity_legend", null)
+	_check("pity: default tune 40 / 150", Loot.pity_need(3) == 40 and Loot.pity_need(4) == 150)

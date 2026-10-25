@@ -27,7 +27,8 @@
     "anticheat": true,
     "crew_roster_20": true,
     "announce": true,
-    "raw_food": true
+    "raw_food": true,
+    "loot_pity": true
   },
   "events": {},
   "tune": {}

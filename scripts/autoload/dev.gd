@@ -638,9 +638,22 @@ func kill_enemies() -> void:
 
 func drop_gear(rar: int, n: int = 3) -> void:
 	for i in n:
-		var it := Loot.roll_random(Combat.enemy_level(), 0.0, rar, 0.3)
+		var it := Loot.roll_random(Combat.enemy_level(), 0.0, rar, 0.3, false)
 		Loot.add_to_stash(it)
 	act("drop gear rarity %d x%d" % [rar, n])
+	Game.gear_changed.emit()
+
+
+## MV-47: the player's next random drop hits the Epic+ (3) / Legendary+ (4) guarantee
+func pity_next(rar: int) -> void:
+	Loot.pity()["legend" if rar >= 4 else "epic"] = Loot.pity_need(rar) - 1
+	act("pity next %d" % rar)
+	Game.gear_changed.emit()
+
+
+func pity_reset() -> void:
+	Loot.pity().merge({"epic": 0, "legend": 0}, true)
+	act("pity reset")
 	Game.gear_changed.emit()
 
 

@@ -79,7 +79,7 @@ func setup_default_state(keep_meta: bool = false) -> void:
 		"stats": {"events": 0, "km_total": 0.0},
 		"saved_at": Time.get_unix_time_from_system(),
 		"gear": [], "van_gear": {"turret": null, "plating": null, "engine": null, "spikes": null},
-		"squad": [-1, -1, -1], "deck": -1, "next_uid": 1,
+		"squad": [-1, -1, -1], "deck": -1, "next_uid": 1, "pity": {"epic": 0, "legend": 0},
 		"combat": {"wave": 1, "best": 1, "push": true, "boss_beaten": {}, "kpm": 0.0, "kills": 0, "auto_salvage": -1, "threat": 0.0, "raid_kpm": 0.0, "fight_share": 0.3},
 		"mods": {}, "exp": {}, "at_site": "", "sites_done": {}, "memorial": [], "generator": true,
 		"cab": {"type": "engine", "level": 1, "job": {}, "build": {}}, "engine": EngineBay.default_state(),
@@ -1456,9 +1456,9 @@ func give_rewards(rew: Dictionary) -> String:
 					var luck := armory_bonus() * 10.0
 					var lvl := Combat.enemy_level()
 					if k == "_vanpart":
-						it = Loot.roll_item(Loot.VAN_SLOTS[rng.randi() % 4], lvl, Loot.roll_rarity(luck, 1))
+						it = Loot.roll_item(Loot.VAN_SLOTS[rng.randi() % 4], lvl, Loot.drop_rarity(luck, 1))
 					else:
-						it = Loot.roll_item(k.substr(1), lvl, Loot.roll_rarity(luck, 1))
+						it = Loot.roll_item(k.substr(1), lvl, Loot.drop_rarity(luck, 1))
 					Loot.add_to_stash(it)
 					parts.append("%s [%s]" % [Loot.item_name(it), Loot.rarity(int(it.rar)).th])
 				gear_changed.emit()

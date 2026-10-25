@@ -114,6 +114,10 @@ const LEGEND_NAMES := {
 
 const ILVL_GROWTH := 1.12
 const STASH_CAP := 60
+## MV-47 bad-luck protection (switch loot_pity): random drops count in Game.s.pity; after this many drops
+## without one, the next drop is at least Epic / Legendary (tune loot.pity_epic / loot.pity_legend)
+const PITY_EPIC := 40.0
+const PITY_LEGEND := 150.0
 
 var rng := RandomNumberGenerator.new()
 
@@ -207,9 +211,51 @@ func roll_item(slot: String, ilvl: int, rar: int, base_id: String = "") -> Dicti
 	return item
 
 
-func roll_random(ilvl: int, luck_pct: float = 0.0, min_rar: int = 0, van_chance: float = 0.3) -> Dictionary:
+## counts_pity = false for tester drops, so GOD MODE doesn't move the player's guarantee
+func roll_random(ilvl: int, luck_pct: float = 0.0, min_rar: int = 0, van_chance: float = 0.3, counts_pity: bool = true) -> Dictionary:
 	var slots: Array = VAN_SLOTS if rng.randf() < van_chance else HERO_SLOTS
-	return roll_item(slots[rng.randi() % slots.size()], ilvl, roll_rarity(luck_pct, min_rar))
+	var rar := drop_rarity(luck_pct, min_rar) if counts_pity else roll_rarity(luck_pct, min_rar)
+	return roll_item(slots[rng.randi() % slots.size()], ilvl, rar)
+
+
+# ------------------------------------------------------------------ pity (MV-47)
+## {"epic": drops since the last Epic+, "legend": drops since the last Legendary+}
+func pity() -> Dictionary:
+	if not (Game.s.get("pity") is Dictionary):
+		Game.s["pity"] = {}
+	Game.s.pity.merge({"epic": 0, "legend": 0}, false)
+	return Game.s.pity
+
+
+## drops per guarantee: rar 3 = Epic+, 4 = Legendary+
+func pity_need(rar: int) -> int:
+	if rar >= 4:
+		return int(Features.num("loot.pity_legend", PITY_LEGEND))
+	return int(Features.num("loot.pity_epic", PITY_EPIC))
+
+
+## drops left until the guarantee (1 = the next drop)
+func pity_left(rar: int) -> int:
+	return maxi(1, pity_need(rar) - int(pity().get("legend" if rar >= 4 else "epic", 0)))
+
+
+## rarity of a random drop (kills, raids, expeditions, rewards) with the guarantee applied
+func drop_rarity(luck_pct: float = 0.0, min_rar: int = 0) -> int:
+	var r := roll_rarity(luck_pct, min_rar)
+	if not Features.on("loot_pity"):
+		return r
+	var p := pity()
+	var forced := -1
+	if r < 4 and pity_left(4) <= 1:
+		forced = 4
+	elif r < 3 and pity_left(3) <= 1:
+		forced = 3
+	if forced >= 0:
+		r = roll_rarity(luck_pct, forced)
+		Trace.rec("loot", "pity", {"min": forced, "rar": r, "epic": int(p.epic), "legend": int(p.legend)})
+	p.epic = 0 if r >= 3 else int(p.epic) + 1
+	p.legend = 0 if r >= 4 else int(p.legend) + 1
+	return r
 
 
 func _roll_affix(k: String, ilvl: int, rar: int) -> float:
