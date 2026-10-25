@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Added
+- Confirmation windows explain what will be lost before room demolition, construction cancellation, gear salvage/synthesis, save replacement/reset and other irreversible actions (MV-422).
+
 ### Changed
 - Anonymous play statistics (maps reached, rooms built, events, play time) now also go to GameAnalytics so we can see how the game is played; the privacy notice and the Settings switch cover it, and turning it off stops both (MV-423)
 

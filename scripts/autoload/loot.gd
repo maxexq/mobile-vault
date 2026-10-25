@@ -400,10 +400,13 @@ func salvage(uid: int) -> Dictionary:
 	return {}
 
 
-func salvage_bulk(max_rar: int) -> Dictionary:
+func salvage_bulk(max_rar: int, selected_ids: Array = []) -> Dictionary:
 	var st := stash()
 	var total := {"components": 0, "scrap": 0, "count": 0}
 	for i in range(st.size() - 1, -1, -1):
+		# MV-422: a confirmation only authorizes the items shown, not later drops.
+		if not selected_ids.is_empty() and not selected_ids.has(int(st[i].uid)):
+			continue
 		if int(st[i].rar) <= max_rar and not st[i].lock:
 			var v := salvage_value(st[i])
 			total.components += int(v.components)
