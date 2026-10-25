@@ -3,11 +3,12 @@
 
 import { handle, sign, secretFor } from "../api/ga.mjs";
 
+// obviously fake keys: nothing secret-looking in the repo (GameAnalytics' own sandbox vector is checked in tools/autotest.gd)
 const ENV = {
-  GA_GAME_KEY_PROD: "5c6bcb5402204249437fb5a7a80a4959",
-  GA_SECRET_PROD: "16813a12f718bc5c620f56944e1abc3ea13ccbac",
-  GA_GAME_KEY_TEST: "00000000000000000000000000000001",
-  GA_SECRET_TEST: "0000000000000000000000000000000000000002",
+  GA_GAME_KEY_PROD: "prod-game-key",
+  GA_SECRET_PROD: "prod-secret",
+  GA_GAME_KEY_TEST: "test-game-key",
+  GA_SECRET_TEST: "test-secret",
 };
 let fails = 0;
 function check(name, ok) {
@@ -18,8 +19,8 @@ function req(query, body, method = "POST") {
   return new Request(`https://game.test/api/ga?${query}`, { method, body: method === "POST" ? body : undefined });
 }
 
-// GameAnalytics' own test vector (same one tools/autotest.gd checks on the game side)
-check("HMAC matches GameAnalytics' test vector", sign('{"test": "test"}', ENV.GA_SECRET_PROD) === "slnR8CKJtKtFDaESSrqnqQeUvp5FaVV7d5XHxt50N5A=");
+// the standard HMAC-SHA256 example (key "key"): hex f7bc83f4...1a3cd8, here in base64 as the Collection API wants it
+check("HMAC-SHA256 base64 matches the standard example", sign("The quick brown fox jumps over the lazy dog", "key") === "97yD9DBThCSxMpjmqm+xQ+9NWaFJRhdZl0edvC0aPNg=");
 check("secret only for our own game keys", secretFor(ENV.GA_GAME_KEY_TEST, ENV) === ENV.GA_SECRET_TEST && secretFor("ffff", ENV) === "");
 
 const sent = [];
