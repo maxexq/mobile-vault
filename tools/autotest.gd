@@ -110,6 +110,11 @@ func _run() -> void:
 		await _engine_rest_test()
 		_finish()
 		return
+	if "--only=quarters_guard" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _quarters_guard_test()
+		_finish()
+		return
 	if "--only=env_micro" in OS.get_cmdline_user_args():
 		_env_micro_test()
 		_finish()
@@ -813,6 +818,7 @@ func _run() -> void:
 	await _idle_motion_test()
 	_env_micro_test()
 	await _engine_rest_test()
+	await _quarters_guard_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -1070,7 +1076,12 @@ func _construction_checks() -> void:
 	_check("build: unfinished quarters add no beds", cap0 == Game.pop_cap())
 	Game._offline_progress(1800.0)
 	_check("offline: site finished while away", not Game.is_constructing(free) and Game.pop_cap() > cap0)
-	Game.demolish_room(free)
+	# test cleanup, not a player demolish (MV-420 would rightly refuse it: the crew needs these beds)
+	Game.s.rooms[free] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	for d in Game.s.dwellers:
+		if int(d.room) == free:
+			d.room = -1
+	Game.rooms_changed.emit()
 	if raised:
 		Game.s.vault_level = 1
 		Game.vault_level_changed.emit(1)
@@ -4701,3 +4712,54 @@ func _engine_rest_test() -> void:
 	ep.close()
 	Dev.engine_set("heat", was_heat)
 	await wait(0.1)
+
+
+## MV-420: living quarters can't be torn down (or split) when the crew would outnumber the beds left
+func _quarters_guard_test() -> void:
+	var was_rooms: Array = Game.s.rooms.duplicate(true)
+	var was_dw: Array = Game.s.dwellers.duplicate(true)
+	# only one finished quarters (Lv2 = 8 beds) on board: pop cap = base 6 + 8
+	var free := []
+	for i in Game.s.rooms.size():
+		if Game.s.rooms[i].type == "quarters":
+			Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+		if Game.is_slot_unlocked(i) and Game.s.rooms[i].type == "empty" and not Game.is_annex(i):
+			free.append(i)
+	var q: int = free[0]
+	var q2: int = free[free.size() - 1]
+	Game.s.rooms[q] = {"type": "quarters", "level": 2, "job": {}, "build": {}}
+	# exactly 8 crew: more than the base 6 beds, fewer than base + this room's 8 (restored afterwards)
+	if Game.s.dwellers.size() > Data.BASE_POP_CAP + 2:
+		Game.s.dwellers = Game.s.dwellers.slice(0, Data.BASE_POP_CAP + 2)
+	while Game.s.dwellers.size() < Data.BASE_POP_CAP + 2:
+		Game.recruit_random()
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	var n: int = Game.s.dwellers.size()
+	_check("quarters guard: setup %d crew, %d beds" % [n, Game.pop_cap()], n > Data.BASE_POP_CAP and n <= Game.pop_cap())
+	_check("quarters guard: tearing down the only quarters is refused (%d beds would be left)" % Game.beds_short(q),
+		Game.beds_short(q) == Data.BASE_POP_CAP)
+	Game.demolish_room(q)
+	_check("quarters guard: demolish_room leaves it standing", Game.s.rooms[q].type == "quarters")
+	main.open_closeup(q)
+	await wait(0.8)
+	var btn: Button = main.hud.room_closeup.find_child("DemolishButton", true, false)
+	_check("quarters guard: the close-up's demolish button is disabled with the reason", btn != null and btn.disabled)
+	await shot("quarters_guard")
+	main.hud.room_closeup.close()
+	await wait(0.4)
+	_check("quarters guard: keeping every bed (a split that loses none) is fine", Game.beds_short(q, Game.room_beds(q)) == -1)
+	Game.s.rooms[q2] = {"type": "quarters", "level": 2, "job": {}, "build": {}}
+	_check("quarters guard: with a second quarters it may go", Game.beds_short(q) == -1)
+	Game.demolish_room(q)
+	_check("quarters guard: demolished once there are beds elsewhere", Game.s.rooms[q].type == "empty")
+	var other := -1
+	for i in Game.s.rooms.size():
+		if Game.s.rooms[i].type == "kitchen":
+			other = i
+	_check("quarters guard: other rooms are never blocked", other >= 0 and Game.beds_short(other) == -1)
+	Game.s.rooms = was_rooms
+	Game.s.dwellers = was_dw
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	await wait(0.3)

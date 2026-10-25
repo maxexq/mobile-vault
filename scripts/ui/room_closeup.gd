@@ -379,13 +379,18 @@ func _build_upgrade(r: Dictionary, def: Dictionary) -> void:
 		h.add_child(b)
 	else:
 		h.add_child(UIKit.label(Loc.t("ห้องเลเวลสูงสุดแล้ว (MAX)"), UIKit.FS_SMALL, UIKit.C_GOLD))
+	var short := Game.beds_short(slot)       # MV-420: tearing down these quarters would leave crew without a bed
 	if r.type != "engine":
 		var d := UIKit.button(Loc.t("รื้อ"), "red", "close")
+		d.name = "DemolishButton"
+		d.disabled = short >= 0
 		d.pressed.connect(func():
 			Game.demolish_room(slot)
 			refresh())
 		h.add_child(d)
 	_content.add_child(h)
+	if short >= 0:
+		_content.add_child(UIKit.wrap_label(Game.beds_short_text(short), UIKit.FS_SMALL, UIKit.C_GOLD))
 	_update_buttons()
 
 
@@ -432,6 +437,11 @@ func _build_large(r: Dictionary, def: Dictionary) -> void:
 		v.add_child(UIKit.wrap_label(Loc.t("ยังไม่มี%sอยู่ติดกัน") % def.th, UIKit.FS_SMALL, UIKit.C_DIM))
 	if span > 1 and not Game.is_constructing(slot):
 		var sp := UIKit.button(Loc.t("แยกกลับเป็น %d ห้อง (ฟรี · ไม่คืนวัสดุ)") % span, "gray", "close")
+		sp.name = "SplitButton"
+		var short := Game.beds_short(slot, Game.split_beds(slot))
+		sp.disabled = short >= 0
+		if short >= 0:
+			v.add_child(UIKit.wrap_label(Game.beds_short_text(short), UIKit.FS_SMALL, UIKit.C_GOLD))
 		sp.pressed.connect(func():
 			Game.split_room(slot)
 			refresh())

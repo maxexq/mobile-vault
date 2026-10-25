@@ -395,9 +395,37 @@ func cap(res: String) -> float:
 func pop_cap() -> int:
 	var c := Data.BASE_POP_CAP
 	for i in s.rooms.size():
-		if s.rooms[i].type == "quarters" and not is_site(i):
-			c += int(round(4.0 * float(s.rooms[i].level) * room_scale(i)))
+		c += room_beds(i)
 	return c
+
+
+## beds a room adds to pop_cap: finished living quarters only (a building site gives none)
+func room_beds(slot: int) -> int:
+	if slot < 0 or slot >= s.rooms.size() or s.rooms[slot].type != "quarters" or is_site(slot):
+		return 0
+	return int(round(4.0 * float(s.rooms[slot].level) * room_scale(slot)))
+
+
+## MV-420: beds left if this living quarters went away (demolish; a split passes the beds its single rooms keep),
+## or -1 when that is fine. Not fine = the crew would outnumber the beds left.
+func beds_short(slot: int, keep: int = 0) -> int:
+	var lose := room_beds(room_anchor(slot)) - keep
+	if lose <= 0:
+		return -1
+	var left := pop_cap() - lose
+	return left if s.dwellers.size() > left else -1
+
+
+## beds the single rooms of a split would give
+func split_beds(slot: int) -> int:
+	var a := room_anchor(slot)
+	if s.rooms[a].type != "quarters":
+		return 0
+	return room_cells(a).size() * int(round(4.0 * float(s.rooms[a].level)))
+
+
+func beds_short_text(left: int) -> String:
+	return Loc.t("ห้องพักไม่พอ: ลูกเรือ %d คน จะเหลือที่นอน %d ที่ (สร้างห้องพักอื่นก่อน)") % [s.dwellers.size(), left]
 
 
 # ------------------------------------------------------------------ vehicle tier / layout
@@ -1670,6 +1698,10 @@ func demolish_room(slot: int) -> void:
 	var r: Dictionary = s.rooms[slot]
 	if r.type in ["empty", "engine", "annex"]:
 		return
+	var short := beds_short(slot)
+	if short >= 0:
+		toast.emit(beds_short_text(short), "warn")
+		return
 	for d in s.dwellers:
 		if int(d.room) == slot:
 			d.room = -1
@@ -1845,6 +1877,10 @@ func split_room(slot: int) -> bool:
 	var a := room_anchor(slot)
 	var cells := room_cells(a)
 	if cells.size() <= 1 or is_constructing(a):
+		return false
+	var short := beds_short(a, split_beds(a))
+	if short >= 0:
+		toast.emit(beds_short_text(short), "warn")
 		return false
 	var ra: Dictionary = s.rooms[a]
 	for i in range(1, cells.size()):
