@@ -121,6 +121,11 @@ func _run() -> void:
 		await _analytics_test()
 		_finish()
 		return
+	if "--only=outbox" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _outbox_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -801,6 +806,7 @@ func _run() -> void:
 	await _cloud_test()
 	await _cloud_account_test()
 	await _logs_test()
+	await _outbox_test()
 	await _account_test()
 	await _resume_test()
 	await _large_room_test()
@@ -4976,3 +4982,104 @@ func _analytics_test() -> void:
 	Analytics.errors_sent = 0
 	Settings.set_value("telemetry", was_tel)
 	Cloud.meta.log_notice = was_notice
+
+
+## MV-424: the server outbox: backoff with jitter and its cap, Retry-After, one request at a time by priority, and a
+## held lane pausing Cloud's automatic retry / upload / last try on hide and the log batches (tools/cloud_fake.gd)
+func _outbox_test() -> void:
+	const L := "outbox-test"
+	var SB := Outbox.SUPABASE
+	Outbox.rng = func() -> float: return 0.0
+	_check("outbox: first hold is half the base (jitter floor)", is_equal_approx(Outbox.backoff(1), Outbox.BASE_SEC * 0.5))
+	Outbox.rng = func() -> float: return 1.0
+	_check("outbox: doubles per failure", is_equal_approx(Outbox.backoff(3), Outbox.BASE_SEC * 4.0))
+	_check("outbox: capped at max", is_equal_approx(Outbox.backoff(30), Outbox.MAX_SEC))
+	Outbox.rng = Callable()
+	var spread := {}
+	for i in 20:
+		spread[snappedf(Outbox.backoff(2), 0.01)] = true
+	_check("outbox: jitter spreads the holds (%d different of 20)" % spread.size(), spread.size() >= 10
+		and spread.keys().all(func(v): return v >= Outbox.BASE_SEC and v <= Outbox.BASE_SEC * 2.0))
+	_check("outbox: Retry-After in seconds, a date is ignored", Outbox.retry_after(PackedStringArray(["Content-Type: x", "Retry-After: 120"])) == 120.0
+		and Outbox.retry_after(PackedStringArray(["retry-after: Wed, 21 Oct 2026 07:28:00 GMT"])) == 0.0)
+	Outbox.report(L, 503)
+	_check("outbox: 503 holds the lane", not Outbox.open(L) and Outbox.hold_left(L) > 0.0 and int(Outbox.lane(L).fails) == 1)
+	Outbox.report(L, 429, 400.0)
+	_check("outbox: Retry-After wins when longer", Outbox.hold_left(L) > 390.0 and int(Outbox.lane(L).fails) == 2)
+	Outbox.report(L, 404)
+	_check("outbox: any other answer (404) clears it", Outbox.open(L) and int(Outbox.lane(L).fails) == 0)
+	Outbox.report(L, 0)
+	Features.set_override("features", "server_outbox", false)
+	_check("outbox: switch off = never held", Outbox.open(L))
+	Features.set_override("features", "server_outbox", null)
+	Outbox.reset(L)
+	# one request at a time; the waiting ones by priority
+	var order := []
+	await Outbox.acquire(L, Outbox.Prio.SAVE)
+	var job := func(p: int, tag: String) -> void:
+		await Outbox.acquire(L, p)
+		order.append(tag)
+		await get_tree().process_frame
+		Outbox.release(L)
+	job.call(Outbox.Prio.LOGS, "logs")
+	job.call(Outbox.Prio.SAVE, "save")
+	job.call(Outbox.Prio.AUTH, "auth")
+	_check("outbox: a busy lane makes the others wait", order.is_empty() and (Outbox.lane(L).waiting as Array).size() == 3)
+	Outbox.release(L)
+	await wait(0.3)
+	_check("outbox: then one at a time: sign-in, save, logs (%s)" % ", ".join(order), order == ["auth", "save", "logs"]
+		and not Outbox.lane(L).busy and (Outbox.lane(L).waiting as Array).is_empty())
+	# the real lane, against the fake server
+	var fake = load("res://tools/cloud_fake.gd").new()
+	Cloud.session = {}
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}, "chose": "guest"}
+	Cloud._save_session()
+	Cloud._save_meta()
+	Settings.set_value("telemetry", true)
+	await Cloud.start_for_test(fake)
+	Outbox.reset(SB)
+	_check("outbox: cloud up, lane open", Cloud.state == Cloud.State.OK and Outbox.open(SB))
+	fake.online = false
+	Cloud.meta.dirty = true
+	await Cloud.sync()
+	_check("outbox: server gone = cloud offline and the lane held", Cloud.state == Cloud.State.OFFLINE and not Outbox.open(SB))
+	fake.online = true
+	var n: int = fake.calls.size()
+	Cloud._t = 0.0
+	Cloud._process(Cloud.RETRY_SEC * 2.0)
+	await wait(0.2)
+	_check("outbox: held = no automatic retry, even after 60 s", fake.calls.size() == n and Cloud.state == Cloud.State.OFFLINE)
+	Outbox.lane(SB).hold_until = 0     # the hold ran out
+	Cloud._process(Cloud.RETRY_SEC * 0.5 + 0.1)
+	await wait(0.5)
+	_check("outbox: hold over = it retries and recovers", fake.calls.size() > n and Cloud.state == Cloud.State.OK
+		and int(Outbox.lane(SB).fails) == 0)
+	# the save: no upload round and no last try on hide while held, but "sync now" still goes
+	Cloud.meta.dirty = true
+	Outbox.report(SB, 503)
+	n = fake.calls.size()
+	Cloud._process(Cloud.UPLOAD_SEC + 1.0)
+	Cloud._on_flush()
+	await wait(0.2)
+	_check("outbox: held = no upload round, no last try on hide", fake.calls.size() == n)
+	await Cloud.sync()
+	_check("outbox: what the player asks for still goes and opens the lane", fake.calls.size() > n and Outbox.open(SB)
+		and Cloud.state == Cloud.State.OK)
+	# player logs wait in the trace while held
+	Cloud.meta.log_notice = true
+	Trace.rec("meta", "outbox log wait")
+	Outbox.report(SB, 503)
+	var lc: int = fake.log_calls
+	Telemetry._t = 0.0
+	Telemetry._process(Features.num("logs.flush_sec", Telemetry.FLUSH_SEC) + 1.0)
+	Telemetry._on_hide()
+	await wait(0.2)
+	_check("outbox: held = log batches wait in the trace", fake.log_calls == lc and not Telemetry.pending().is_empty())
+	Outbox.reset(SB)
+	Telemetry._process(0.1)
+	await wait(0.3)
+	_check("outbox: open again = the batch goes", fake.log_calls > lc)
+	Outbox.rng = Callable()
+	Outbox._lanes.erase(L)
+	Outbox.reset(SB)
+	Save.wipe()

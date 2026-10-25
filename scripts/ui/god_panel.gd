@@ -516,6 +516,14 @@ func _tab_sys() -> void:
 		Analytics.queue.size(), Analytics.sent_total, Analytics.errors_sent, Analytics.ERRORS_MAX,
 		"" if Analytics.last_error == "" else " · ผิดพลาดล่าสุด: " + Analytics.last_error])
 	_row([_b("ส่ง event ทดสอบ (Test:GodMode)", func(): Dev.ga_test_event(), "green")])
+	_head("OUTBOX", "คิวส่งขึ้นเซิร์ฟเวอร์ (MV-424)")
+	var ob: Dictionary = Outbox.lane(Outbox.SUPABASE)
+	_note("%s · ล้มเหลวติดกัน %d · รอคิว %d · ผ่าน %d · พักไปแล้ว %d ครั้ง · คำตอบล่าสุด %s%s" % [
+		"เปิด" if Outbox.open(Outbox.SUPABASE) else "พักอยู่อีก %d วิ" % ceili(Outbox.hold_left(Outbox.SUPABASE)),
+		int(ob.fails), (ob.waiting as Array).size(), int(ob.ok), int(ob.holds),
+		"-" if int(ob.last_code) < 0 else ("ไม่ตอบ" if int(ob.last_code) == 0 else str(ob.last_code)),
+		"" if Outbox.on() else " · สวิตช์ server_outbox ปิด (ส่งตรงแบบเดิม)"])
+	_row([_b("จำลองเซิร์ฟเวอร์ล่ม (503)", func(): Dev.outbox_fail(), "yellow"), _b("เปิดคิวตอนนี้", func(): Dev.outbox_open(), "green")])
 	_head("ANTI-CHEAT", "กันโกง (MV-174)")
 	var seen := "ยังไม่รู้ (คลาวด์ยังไม่ตอบ)" if Cloud.server_seen <= 0.0 else Time.get_datetime_string_from_unix_time(int(Cloud.server_seen + 7 * 3600), true)
 	_note("เซิร์ฟเวอร์รับเซฟล่าสุด: %s · เวลาจำลองสะสม %.1f ชม. · ถูกจำกัดความถี่ %d ครั้ง%s" % [seen,

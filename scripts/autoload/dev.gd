@@ -1091,6 +1091,22 @@ func logs_test_error() -> bool:
 	return await logs_flush()
 
 
+## server outbox (MV-424): pretend the server answered 503, so the lane is held for its next backoff step (press again
+## to climb the steps); read-only for the save (not cheated)
+func outbox_fail() -> void:
+	Outbox.report(Outbox.SUPABASE, 503)
+	Trace.rec("god", "outbox fake 503", {"fails": Outbox.lane(Outbox.SUPABASE).fails})
+	Game.toast.emit("พักการส่งขึ้นเซิร์ฟเวอร์ %d วิ (ล้มเหลวติดกัน %d ครั้ง)" % [ceili(Outbox.hold_left(Outbox.SUPABASE)),
+		int(Outbox.lane(Outbox.SUPABASE).fails)], "info")
+
+
+## lift the hold now: the automatic save / log rounds go on their next tick
+func outbox_open() -> void:
+	Outbox.reset(Outbox.SUPABASE)
+	Trace.rec("god", "outbox open")
+	Game.toast.emit("เปิดคิวเซิร์ฟเวอร์แล้ว", "info")
+
+
 ## MV-174: what the offline catch-up would give if saved_at had been moved back 4 hours, with and without the
 ## server cap. Read-only (nothing in the save changes), so the save is not marked as cheated. {client, capped}
 func anticheat_time_test() -> Dictionary:

@@ -252,8 +252,9 @@ func _on_local_wiped() -> void:
 
 
 func _on_flush() -> void:
-	# the tab is going away: one last try (the browser may cut it off; the next start catches up)
-	if state == State.OK and meta.dirty and not _busy:
+	# the tab is going away: one last try (the browser may cut it off; the next start catches up). Not while the
+	# server is held off (MV-424): the save waits locally and goes up on the next start
+	if state == State.OK and meta.dirty and not _busy and Outbox.open(Outbox.SUPABASE):
 		upload()
 
 
@@ -261,12 +262,23 @@ func _process(delta: float) -> void:
 	if state == State.OFF or state == State.CONNECTING or state == State.CONFLICT or _busy:
 		return
 	_t += delta
-	if state == State.OFFLINE and _t >= RETRY_SEC:
+	if state == State.OFFLINE and _retry_due():
 		_t = 0.0
 		sync()
-	elif state == State.OK and meta.dirty and _t >= UPLOAD_SEC:
+	elif state == State.OK and meta.dirty and _t >= UPLOAD_SEC and Outbox.open(Outbox.SUPABASE):
 		_t = 0.0
 		upload()
+
+
+## offline: try again after RETRY_SEC; with the outbox (MV-424) once its backoff hold is over instead, which starts at
+## 15-30 s and doubles up to outbox.max_sec while the server stays away (a refused request, not a dead server, keeps
+## the plain RETRY_SEC)
+func _retry_due() -> bool:
+	if not Outbox.on():
+		return _t >= RETRY_SEC
+	if not Outbox.open(Outbox.SUPABASE):
+		return false
+	return _t >= (RETRY_SEC * 0.5 if int(Outbox.lane(Outbox.SUPABASE).fails) > 0 else RETRY_SEC)
 
 
 # ------------------------------------------------------------------ sync
@@ -758,8 +770,18 @@ func _rpc(fn: String, args: Dictionary) -> Dictionary:
 	return {"ok": false}
 
 
-## one HTTP request; returns {code (0 = no answer), body (parsed JSON or null), error}
+## one HTTP request through the outbox lane (MV-424: one at a time, sign-in before saves before logs, and the answer
+## sets or clears the server's backoff); returns {code (0 = no answer), body (parsed JSON or null), error, retry_after}
 func _call(method: int, path: String, body: Dictionary, auth: bool) -> Dictionary:
+	var prio := Outbox.Prio.AUTH if path.begins_with("/auth/") else (Outbox.Prio.LOGS if path.ends_with("/rpc_log") else Outbox.Prio.SAVE)
+	await Outbox.acquire(Outbox.SUPABASE, prio)
+	var r: Dictionary = await _request(method, path, body, auth)
+	Outbox.release(Outbox.SUPABASE)
+	Outbox.report(Outbox.SUPABASE, int(r.get("code", 0)), float(r.get("retry_after", 0.0)))
+	return r
+
+
+func _request(method: int, path: String, body: Dictionary, auth: bool) -> Dictionary:
 	var headers := PackedStringArray(["apikey: " + anon_key, "Content-Type: application/json"])
 	if auth:
 		headers.append("Authorization: Bearer " + str(session.get("access_token", "")))
@@ -781,7 +803,7 @@ func _call(method: int, path: String, body: Dictionary, auth: bool) -> Dictionar
 		return {"code": 0, "body": null, "error": "network %d" % int(res[0])}
 	var raw: PackedByteArray = res[3]
 	var parsed = JSON.parse_string(raw.get_string_from_utf8()) if raw.size() > 0 else null
-	return {"code": int(res[1]), "body": parsed, "error": ""}
+	return {"code": int(res[1]), "body": parsed, "error": "", "retry_after": Outbox.retry_after(res[2])}
 
 
 ## MV-116: one batch of Trace entries into public.logs (rpc_log, 0004_logs.sql). Uses _call, not _rpc: a failed
