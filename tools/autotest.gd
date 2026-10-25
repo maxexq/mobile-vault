@@ -131,6 +131,11 @@ func _run() -> void:
 		await _barks_test()
 		_finish()
 		return
+	if "--only=rooms_x" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _rooms_x_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -841,6 +846,7 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _rooms_x_test()
 	await _barks_test()
 	await _analytics_test()
 	_checkpoint_test()
@@ -5203,3 +5209,138 @@ func _barks_test() -> void:
 		ch._bark_gap = 0.0
 		return Dev.bark(k) == k))
 	reset.call()
+
+## MV-429: room expansion foundation, with a stand-in room (radio art + the weld strip) since the foundation ships no
+## real room: registry and build menu, saved namespace, jobs (pay once, pause dark / building, freeze when off, claim
+## once, JSON float ids, demolition), and the shared RoomAnim (rest / active / dark / paused / hidden / switches / GOD)
+func _rooms_x_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	_check("rooms_x: the foundation registers no room by itself", RoomX.DEFS.is_empty() and Data.buildable() == Data.BUILDABLE)
+	var keep_res: Dictionary = Game.s.res.duplicate(true)
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	Game.s.erase("rx")
+	var before: String = JSON.stringify(Game.s.res)
+	RoomX.st()
+	_check("rooms_x: an old save gets the namespace once, nothing else changes", Game.s.rx is Dictionary and int(Game.s.rx.v) == RoomX.VERSION
+		and JSON.stringify(Game.s.res) == before and RoomX.jobs().is_empty())
+	RoomX.extra["rx_test"] = {"th": "ห้องทดสอบ", "en": "TEST ROOM", "cost": 50, "unlock": 1, "stat": "int", "produce": {}, "power": 0.2,
+		"effect_th": "ทดสอบ", "effect_en": "TEST", "recipes": [], "art": "room_radio",
+		"anims": [{"prefix": "fx_weld", "count": 4, "fps": 8.0, "loop": true, "rest": 0, "x": 20, "y": 20, "active": "job"}]}
+	_check("rooms_x: a registered room joins the build menu", Data.buildable().has("rx_test") and Data.room_def("rx_test").en == "TEST ROOM"
+		and Data.room_art("rx_test") == "room_radio" and Data.room_art("kitchen") == "room_kitchen")
+	Features.set_override("features", "rooms_expansion", false)
+	_check("rooms_x: switch off = not offered", not Data.buildable().has("rx_test") and Data.buildable() == Data.BUILDABLE)
+	Features.set_override("features", "rooms_expansion", null)
+	# the full run reaches here with every slot built: free one single-cell room (all rooms are restored at the end)
+	var has_empty := false
+	for i in Game.s.rooms.size():
+		has_empty = has_empty or (Game.is_slot_unlocked(i) and str(Game.s.rooms[i].type) == "empty" and not Game.is_annex(i))
+	if not has_empty:
+		for i in Game.s.rooms.size():
+			if Game.is_slot_unlocked(i) and not Game.is_annex(i) and Game.room_cells(i).size() == 1 and str(Game.s.rooms[i].type) != "engine":
+				Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}}
+				break
+	var slot := Dev.rx_build("rx_test")
+	await wait(0.3)
+	_check("rooms_x: built in an empty slot (%d)" % slot, slot >= 0 and str(Game.room(slot).type) == "rx_test" and not Game.is_constructing(slot))
+	if slot < 0:
+		RoomX.extra.erase("rx_test")
+		Game.s.rooms = keep_rooms
+		Game.rooms_changed.emit()
+		return
+	var rv = main.vehicle.room_views.filter(func(v): return v.slot == slot)[0]
+	_check("rooms_x: the room shows its art and one animation strip", rv.anims.size() == 1 and rv.interior.texture == Atlas.tex("room_radio"))
+	var anim: RoomAnim = rv.anims[0]
+	await wait(0.4)
+	_check("rooms_x: idle room holds the rest frame", anim.cur_frame == 0)
+	# jobs: pay once, one per room
+	Game.s.res.power = maxf(80.0, float(Game.s.res.power))
+	Game.s.res.scrap = 100.0
+	var j := RoomX.start_job(slot, "test", 10.0, {"scrap": 30})
+	var again := RoomX.start_job(slot, "test", 10.0, {"scrap": 30})
+	_check("rooms_x: a job starts and pays once; a second one is refused", not j.is_empty() and again.is_empty()
+		and is_equal_approx(float(Game.s.res.scrap), 70.0) and RoomX.start_block(slot) != "")
+	_check("rooms_x: no job in a room that isn't an expansion room", RoomX.start_job(0 if slot != 0 else 1, "x", 5.0).is_empty())
+	RoomX.tick(4.0, false)
+	_check("rooms_x: the clock runs", is_equal_approx(float(j.left), 6.0) and is_equal_approx(RoomX.progress(j), 0.4))
+	await wait(0.6)
+	_check("rooms_x: a busy room animates (frame %d)" % anim.cur_frame, anim.cur_frame != 0 or anim._t > 0.0)
+	await shot("rooms_x_active")
+	# dark room: paused, animation at rest
+	var pw := float(Game.s.res.power)
+	Game.s.res.power = 0.0
+	var l0 := float(j.left)        # the real game clock keeps ticking jobs between checks: compare from here
+	RoomX.tick(2.0, false)
+	await wait(0.2)
+	_check("rooms_x: a dark room pauses the job and the animation", is_equal_approx(float(j.left), l0) and RoomX.paused_why(j) == "dark" and anim.cur_frame == 0)
+	Game.s.res.power = pw
+	# switch off: frozen, no catch-up later
+	Features.set_override("features", "rooms_expansion", false)
+	l0 = float(j.left)
+	RoomX.tick(3.0, false)
+	await wait(0.2)
+	_check("rooms_x: switch off freezes the job and holds the rest frame", is_equal_approx(float(j.left), l0) and anim.cur_frame == 0)
+	Features.set_override("features", "rooms_expansion", null)
+	_check("rooms_x: switched back on: no hidden catch-up", is_equal_approx(float(j.left), l0))
+	Features.set_override("features", "room_ambience", false)
+	await wait(0.3)
+	_check("rooms_x: room_ambience off holds the rest frame", anim.cur_frame == 0)
+	Features.set_override("features", "room_ambience", null)
+	# paused game / hidden room: the animation clock stops
+	await wait(0.3)
+	var t0 := anim._t
+	get_tree().paused = true
+	await get_tree().create_timer(0.3, true).timeout
+	var paused_ok := is_equal_approx(anim._t, t0)
+	get_tree().paused = false
+	rv.visible = false
+	t0 = anim._t
+	await wait(0.3)
+	var hidden_ok := is_equal_approx(anim._t, t0)
+	rv.visible = true
+	_check("rooms_x: the animation clock stops while paused and while hidden", paused_ok and hidden_ok)
+	# GOD preview + frame step
+	Dev.rx_anim_preview("rest")
+	await wait(0.2)
+	var rest_ok := anim.cur_frame == 0
+	Dev.rx_anim_preview("active")
+	Dev.rx_anim_step()
+	var f1 := anim.cur_frame
+	Dev.rx_anim_step()
+	_check("rooms_x: GOD rest / active preview and frame step", rest_ok and anim.cur_frame == (f1 + 1) % 4)
+	Dev.rx_anim_preview("")
+	# finish + claim exactly once, after a JSON round trip (ids come back as floats)
+	RoomX.tick(10.0, false)
+	_check("rooms_x: the job finishes and waits to be claimed", bool(j.done) and not bool(j.claimed) and RoomX.claim(int(j.id) + 999).is_empty())
+	Game.s.rx = JSON.parse_string(JSON.stringify(Game.s.rx))
+	var claimed := [0]
+	var cb := func(_j): claimed[0] += 1
+	RoomX.job_claimed.connect(cb)
+	var c1 := RoomX.claim(int(j.id))
+	var c2 := RoomX.claim(int(j.id))
+	RoomX.job_claimed.disconnect(cb)
+	_check("rooms_x: claimed once after a reload, a repeated tap gets nothing", not c1.is_empty() and c2.is_empty() and claimed[0] == 1
+		and RoomX.job_in(slot).is_empty())
+	# demolition drops a running job, no refund, no reward
+	var j2 := RoomX.start_job(slot, "test", 30.0, {"scrap": 10})
+	var scrap_after := float(Game.s.res.scrap)
+	var dropped := [""]
+	var dcb := func(_j, why): dropped[0] = why
+	RoomX.job_dropped.connect(dcb)
+	Game.s.rooms[slot] = {"type": "empty", "level": 1, "job": {}}
+	Game.rooms_changed.emit()
+	RoomX.tick(1.0, false)
+	RoomX.job_dropped.disconnect(dcb)
+	_check("rooms_x: demolishing the room drops its job (no refund)", not j2.is_empty() and RoomX.jobs().is_empty() and dropped[0] == "room gone"
+		and is_equal_approx(float(Game.s.res.scrap), scrap_after))
+	await wait(0.3)
+	_check("rooms_x: the strip goes with the room", rv.anims.is_empty())
+	RoomX.extra.erase("rx_test")
+	Game.s.rooms = keep_rooms
+	Game.s.res = keep_res
+	Game.rooms_changed.emit()
+	Game.resources_changed.emit()
+	await wait(0.2)

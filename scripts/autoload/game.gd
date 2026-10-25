@@ -977,6 +977,7 @@ func _simulate(dt: float, offline: bool) -> void:
 	Modes.tick(dt, offline)
 	Expedition.tick(offline)
 	Inspection.tick(dt, offline)
+	RoomX.tick(dt, offline)
 	_tick_outages(dt, offline)
 	_tick_corrosion(m)
 	# --- solar + rain collector + vault engine part

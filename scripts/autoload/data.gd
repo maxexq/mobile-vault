@@ -476,7 +476,19 @@ const CREW_ROSTER := {
 
 
 func room_def(t: String) -> Dictionary:
-	return ROOMS.get(t, {})
+	if ROOMS.has(t):
+		return ROOMS[t]
+	return RoomX.room_def(t)     # MV-429: the optional expansion rooms register there
+
+
+## every room the build menu offers: the original ten, then the expansion rooms that are switched on (MV-429)
+func buildable() -> Array:
+	return BUILDABLE + RoomX.buildable()
+
+
+## atlas key of a room's 64x52 art
+func room_art(t: String) -> String:
+	return RoomX.art_key(t) if RoomX.is_rx(t) else "room_" + t
 
 
 # ------------------------------------------------------------------ MV-247: raw food (crops + meat)

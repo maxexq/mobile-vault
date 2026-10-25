@@ -448,6 +448,50 @@ func rooms_fill() -> void:
 	Game.rooms_changed.emit()
 
 
+# ------------------------------------------------------------------ MV-429 room expansion
+## put an expansion room (finished, level 1) in the first empty slot; returns the slot or -1
+func rx_build(t: String) -> int:
+	if not RoomX.is_rx(t):
+		return -1
+	for slot in Game.s.rooms.size():
+		if Game.is_slot_unlocked(slot) and str(Game.s.rooms[slot].type) == "empty" and not Game.is_annex(slot):
+			Game.s.rooms[slot] = {"type": t, "level": 1, "job": {}}
+			act("rx build %s" % t, {"slot": slot})
+			Game.rooms_changed.emit()
+			return slot
+	Game.toast.emit("ไม่มีช่องว่างให้สร้าง", "warn")
+	return -1
+
+
+## every running expansion job finishes now (still waits to be claimed)
+func rx_finish_jobs() -> void:
+	for k in RoomX.jobs():
+		RoomX.jobs()[k].left = 0.0
+	act("rx finish jobs", {"n": RoomX.jobs().size()})
+
+
+func rx_drop_jobs() -> void:
+	for k in RoomX.jobs().keys():
+		RoomX.drop(int(RoomX.jobs()[k].id), "god")
+	act("rx drop jobs")
+
+
+## every room animation: "" = live, "rest" = hold the rest frame, "active" = play as if the room were busy;
+## read-only for the save (not cheated)
+func rx_anim_preview(mode: String) -> void:
+	RoomAnim.preview = mode
+	RoomAnim.paused_preview = false
+	Trace.rec("god", "rx anim preview %s" % mode)
+
+
+## stop every room animation's clock and move them all one frame (read-only, not cheated)
+func rx_anim_step() -> void:
+	RoomAnim.paused_preview = true
+	for a in get_tree().get_nodes_in_group("room_anim"):
+		a.frame_step()
+	Trace.rec("god", "rx anim step")
+
+
 func finish_construction() -> void:
 	for slot in Game.s.rooms.size():
 		if Game.is_constructing(slot):

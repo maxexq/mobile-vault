@@ -61,7 +61,7 @@ func refresh() -> void:
 		_grid.remove_child(c)
 		c.queue_free()
 	_grid.columns = 2 if get_viewport_rect().size.x >= 520 else 1
-	for t in Data.BUILDABLE:
+	for t in Data.buildable():
 		_grid.add_child(_card(t))
 	var lv: int = Game.s.vault_level
 	if lv < Data.MAX_VAULT_LEVEL:
@@ -70,7 +70,7 @@ func refresh() -> void:
 			if int(b.req) == lv + 1:
 				next_b = Loc.t(" · ผ่านด่านเข้าสู่ %s") % b.th
 		var new_rooms := []
-		for t in Data.BUILDABLE:
+		for t in Data.buildable():
 			if int(Data.room_def(t).unlock) == lv + 1:
 				new_rooms.append(Data.room_def(t).th)
 		_frame_info.text = Loc.t("Lv.%d → Lv.%d: ห้อง +1, คลังใหญ่ขึ้น, ซ่อมตัวถังเต็ม%s%s") % [lv, lv + 1, next_b, (Loc.t(" · ห้องใหม่: ") + ", ".join(new_rooms)) if not new_rooms.is_empty() else ""]

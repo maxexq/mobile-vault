@@ -203,6 +203,27 @@ func _tab_res() -> void:
 
 
 func _tab_vehicle() -> void:
+	_head("ROOM EXPANSION", "ห้องใหม่ชุดขยาย (MV-428 / MV-429)")
+	var regd: Array = RoomX.DEFS.keys() + RoomX.extra.keys()
+	_note("สวิตช์ rooms_expansion %s · ลงทะเบียนแล้ว %d ห้อง · สร้างได้ตอนนี้ %d · งานค้าง %d · แอนิเมชัน: %s%s" % [
+		"เปิด" if RoomX.on() else "ปิด", regd.size(), RoomX.buildable().size(), RoomX.jobs().size(),
+		"สด" if RoomAnim.preview == "" else RoomAnim.preview, " (หยุดเฟรม)" if RoomAnim.paused_preview else ""])
+	if not regd.is_empty():
+		var rb := []
+		for t in regd:
+			var tt: String = t
+			rb.append(_b(str(RoomX.room_def(tt).get("th", tt)), func(): Dev.rx_build(tt), "green"))
+		_row(rb, "สร้างทันที")
+	for k in RoomX.jobs():
+		var j: Dictionary = RoomX.jobs()[k]
+		var why := RoomX.paused_why(j)
+		_note("งาน #%d %s · %s · %d%%%s%s" % [int(j.id), str(j.room), str(j.kind), int(RoomX.progress(j) * 100.0),
+			" · เสร็จ รอรับ" if bool(j.done) else "", (" · หยุด: " + why) if why != "" and not bool(j.done) else ""])
+	_row([_b("งานเสร็จทันที", func(): Dev.rx_finish_jobs(), "green"), _b("ยกเลิกงานทั้งหมด", func(): Dev.rx_drop_jobs(), "red")], "งาน")
+	_row([_b("สด", func(): Dev.rx_anim_preview(""), "yellow" if RoomAnim.preview == "" else "gray"),
+		_b("ท่าพัก", func(): Dev.rx_anim_preview("rest"), "yellow" if RoomAnim.preview == "rest" else "gray"),
+		_b("ทำงาน", func(): Dev.rx_anim_preview("active"), "yellow" if RoomAnim.preview == "active" else "gray"),
+		_b("เฟรมถัดไป", func(): Dev.rx_anim_step(), "green")], "แอนิเมชัน")
 	_head("CHASSIS", "เปลี่ยนรถทันที (ห้องที่ยังพอดีอยู่ครบ)")
 	var tb := []
 	for t in Data.TIER_ORDER:
