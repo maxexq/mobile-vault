@@ -1320,3 +1320,12 @@ func announce_forget_seen() -> void:
 	Announce.seen.clear()
 	Save.write_key(Announce.SEEN_KEY, Announce.SEEN_PATH, "{}")
 	Announce.collect()
+
+
+## MV-422: demonstrate the real confirmation UI without deleting anything.
+func confirm_preview() -> void:
+	Trace.rec("god", "confirmation preview")
+	var panel := get_tree().get_first_node_in_group("confirm_dialog") as ConfirmPanel
+	if panel == null:
+		return
+	panel.request(panel.get_parent() as Control, Loc.t("ทดสอบหน้าต่างยืนยัน"), Loc.t("นี่คือตัวอย่างเท่านั้น ยืนยันแล้วจะแสดงข้อความ ไม่มีข้อมูลถูกลบ"), Loc.t("ยืนยันตัวอย่าง"), func(): Game.toast.emit(Loc.t("ยืนยันตัวอย่างแล้ว ไม่มีข้อมูลถูกลบ"), "good"))

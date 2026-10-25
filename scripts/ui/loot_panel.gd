@@ -348,12 +348,9 @@ func _build_detail(item: Dictionary, equipped: bool) -> void:
 		acts2.add_child(lk)
 		var sv2 := Loot.salvage_value(item)
 		var sal := UIKit.button(Loc.t("แยก +%d") % sv2.components, "red", "cog")
+		sal.name = "SalvageButton"
 		sal.disabled = item.lock
-		var uid3: int = item.uid
-		sal.pressed.connect(func():
-			Loot.salvage(uid3)
-			detail_uid = -1
-			refresh())
+		sal.pressed.connect(func(): _request_salvage(item))
 		acts2.add_child(sal)
 	_list.add_child(acts2)
 
@@ -424,11 +421,8 @@ func _build_forge() -> void:
 		var b := UIKit.button("%d" % (15 * (r + 1)), "yellow", "cog")
 		b.disabled = c.size() < 3 or float(Game.s.res.scrap) < 15 * (r + 1)
 		var rr: int = r
-		b.pressed.connect(func():
-			var out := Loot.synthesize(rr)
-			if not out.is_empty():
-				Game.toast.emit(Loc.t("หลอมสำเร็จ! ได้ %s [%s]") % [Loot.item_name(out), Loot.rarity(int(out.rar)).th], "biome" if int(out.rar) >= 3 else "good")
-			refresh())
+		b.name = "Synthesize%d" % r
+		b.pressed.connect(func(): _request_synthesize(rr))
 		h.add_child(b)
 		_list.add_child(row)
 	_list.add_child(UIKit.header("BULK SALVAGE", Loc.t("แยกทีละมาก (ข้ามของล็อก)")))
@@ -436,10 +430,8 @@ func _build_forge() -> void:
 	for r in 3:
 		var b := UIKit.button("≤ %s" % Loot.rarity(r).th, "red", "cog")
 		var rr: int = r
-		b.pressed.connect(func():
-			var t := Loot.salvage_bulk(rr)
-			Game.toast.emit(Loc.t("แยก %d ชิ้น ได้ %d ชิ้นส่วน + %d เศษเหล็ก") % [t.count, t.components, t.scrap], "good")
-			refresh())
+		b.name = "BulkSalvage%d" % r
+		b.pressed.connect(func(): _request_bulk_salvage(rr))
 		bh.add_child(b)
 	_list.add_child(bh)
 	_list.add_child(UIKit.header("AUTO SALVAGE", Loc.t("แยกอัตโนมัติเมื่อดรอป")))
@@ -448,8 +440,82 @@ func _build_forge() -> void:
 	for opt in AUTO_SALV:
 		var b2 := UIKit.button(Loc.t(opt[1]), "yellow" if cur == int(opt[0]) else "gray")
 		var val: int = opt[0]
-		b2.pressed.connect(func():
-			Game.s.combat.auto_salvage = val
-			refresh())
+		b2.pressed.connect(func(): _request_auto_salvage(val))
 		ah.add_child(b2)
 	_list.add_child(ah)
+
+
+func _gear_available(targets: Array) -> bool:
+	for target in targets:
+		var found := false
+		for item in Loot.stash():
+			if is_same(item, target) and not item.lock:
+				found = true
+				break
+		if not found:
+			return false
+	return true
+
+
+func _request_salvage(item: Dictionary) -> void:
+	var value := Loot.salvage_value(item)
+	ConfirmPanel.ask(self, Loc.t("แยกอุปกรณ์"), Loc.t("%s จะหายไปถาวร ได้ %d ชิ้นส่วน และ %d เศษเหล็ก ย้อนคืนไม่ได้") % [Loot.item_name(item), value.components, value.scrap], Loc.t("ยืนยันแยกอุปกรณ์"), func():
+		Loot.salvage(int(item.uid))
+		detail_uid = -1
+		refresh(), func(): return _gear_available([item]))
+
+
+func _request_bulk_salvage(rar: int) -> void:
+	var targets: Array = []
+	var ids: Array = []
+	var components := 0
+	var scrap := 0
+	for item in Loot.stash():
+		if int(item.rar) <= rar and not item.lock:
+			targets.append(item)
+			ids.append(int(item.uid))
+			var value := Loot.salvage_value(item)
+			components += int(value.components)
+			scrap += int(value.scrap)
+	if targets.is_empty():
+		Game.toast.emit(Loc.t("ไม่มีอุปกรณ์ที่แยกได้"), "info")
+		return
+	ConfirmPanel.ask(self, Loc.t("แยกอุปกรณ์หลายชิ้น"), Loc.t("อุปกรณ์ไม่ล็อกระดับ ≤ %s จำนวน %d ชิ้นจะหายไปถาวร ได้ %d ชิ้นส่วน และ %d เศษเหล็ก ย้อนคืนไม่ได้") % [Loot.rarity(rar).th, targets.size(), components, scrap], Loc.t("ยืนยันแยก %d ชิ้น") % targets.size(), func():
+		var total := Loot.salvage_bulk(rar, ids)
+		Game.toast.emit(Loc.t("แยก %d ชิ้น ได้ %d ชิ้นส่วน + %d เศษเหล็ก") % [total.count, total.components, total.scrap], "good")
+		refresh(), func(): return _gear_available(targets))
+
+
+func _same_synthesis(rar: int, targets: Array) -> bool:
+	var current := Loot.synth_candidates(rar)
+	if current.size() < 3 or not _gear_available(targets):
+		return false
+	for i in 3:
+		if not is_same(current[i], targets[i]):
+			return false
+	return true
+
+
+func _request_synthesize(rar: int) -> void:
+	var targets := Loot.synth_candidates(rar).slice(0, 3)
+	if targets.size() < 3:
+		return
+	var names: Array = []
+	for item in targets:
+		names.append(Loot.item_name(item))
+	ConfirmPanel.ask(self, Loc.t("หลอมอุปกรณ์"), Loc.t("ใช้ %d เศษเหล็ก และทำลายอุปกรณ์ 3 ชิ้นนี้เพื่อสุ่มของระดับ %s ย้อนคืนไม่ได้:\n%s") % [15 * (rar + 1), Loot.rarity(rar + 1).th, "\n".join(names)], Loc.t("ยืนยันหลอม 3 ชิ้น"), func():
+		var out := Loot.synthesize(rar)
+		if not out.is_empty():
+			Game.toast.emit(Loc.t("หลอมสำเร็จ! ได้ %s [%s]") % [Loot.item_name(out), Loot.rarity(int(out.rar)).th], "biome" if int(out.rar) >= 3 else "good")
+		refresh(), func(): return _same_synthesis(rar, targets))
+
+
+func _request_auto_salvage(value: int) -> void:
+	var state := Game.s
+	var apply := func():
+		Game.s.combat.auto_salvage = value
+		refresh()
+	if value > int(Game.s.combat.get("auto_salvage", -1)):
+		ConfirmPanel.ask(self, Loc.t("เปิดแยกอัตโนมัติ"), Loc.t("อุปกรณ์ที่ดรอปใหม่ระดับ ≤ %s จะถูกแยกเป็นวัสดุทันทีและเก็บคืนไม่ได้ ของที่อยู่ในคลังตอนนี้ยังอยู่") % Loot.rarity(value).th, Loc.t("เปิดแยกอัตโนมัติ"), apply, func(): return is_same(Game.s, state))
+	else:
+		apply.call()

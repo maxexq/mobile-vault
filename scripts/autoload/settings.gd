@@ -6,6 +6,7 @@ extends Node
 
 signal changed(key: String)
 signal import_failed(reason: String)
+signal import_ready(text: String)
 
 const KEY := "mobile_vault_settings_v1"
 const FILE_PATH := "user://settings.json"
@@ -230,7 +231,10 @@ func _finish_import(text: String) -> void:
 	if why != "":
 		import_failed.emit(why)
 		return
-	apply_import(text)
+	if Features.on("confirm_actions"):
+		import_ready.emit(text)
+	else:
+		apply_import(text)
 
 
 ## erases progress (settings stay) and goes back to the title screen

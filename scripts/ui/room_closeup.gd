@@ -98,9 +98,8 @@ func refresh() -> void:
 		_build_site(r, def)
 		_build_workers(def)
 		var cancel := UIKit.button(Loc.t("ยกเลิกการก่อสร้าง (คืนเศษเหล็กครึ่งหนึ่ง)"), "red", "close")
-		cancel.pressed.connect(func():
-			Game.demolish_room(slot)
-			refresh())
+		cancel.name = "CancelConstructionButton"
+		cancel.pressed.connect(_request_demolish)
 		_content.add_child(cancel)
 		return
 	if Game.is_constructing(slot):
@@ -384,9 +383,7 @@ func _build_upgrade(r: Dictionary, def: Dictionary) -> void:
 		var d := UIKit.button(Loc.t("รื้อ"), "red", "close")
 		d.name = "DemolishButton"
 		d.disabled = short >= 0
-		d.pressed.connect(func():
-			Game.demolish_room(slot)
-			refresh())
+		d.pressed.connect(_request_demolish)
 		h.add_child(d)
 	_content.add_child(h)
 	if short >= 0:
@@ -442,12 +439,33 @@ func _build_large(r: Dictionary, def: Dictionary) -> void:
 		sp.disabled = short >= 0
 		if short >= 0:
 			v.add_child(UIKit.wrap_label(Game.beds_short_text(short), UIKit.FS_SMALL, UIKit.C_GOLD))
-		sp.pressed.connect(func():
-			Game.split_room(slot)
-			refresh())
+		sp.pressed.connect(_request_split)
 		v.add_child(sp)
 	_content.add_child(p)
 	_update_buttons()
+
+
+func _request_demolish() -> void:
+	var target := slot
+	var room: Dictionary = Game.s.rooms[target]
+	var site := Game.is_site(target)
+	var level := int(room.level)
+	var span := Game.room_span(target)
+	var title := Loc.t("ยกเลิกการก่อสร้าง") if site else Loc.t("รื้อห้อง")
+	var refund := float(Data.room_def(room.type).cost) * 0.5 * span
+	var detail := Loc.t("%s Lv.%d · %d ช่อง\nห้องและงานที่กำลังทำจะหายไป ลูกเรือจะว่างงาน ได้เศษเหล็กคืน %.1f ย้อนคืนไม่ได้") % [Data.room_def(room.type).th, level, span, refund]
+	ConfirmPanel.ask(self, title, detail, title, func():
+		Game.demolish_room(target)
+		refresh(), func(): return slot == target and target < Game.s.rooms.size() and is_same(Game.s.rooms[target], room) and Game.is_site(target) == site and int(room.level) == level and Game.room_span(target) == span)
+
+
+func _request_split() -> void:
+	var target := slot
+	var room: Dictionary = Game.s.rooms[target]
+	var span := Game.room_span(target)
+	ConfirmPanel.ask(self, Loc.t("แยกห้องใหญ่"), Loc.t("%s Lv.%d จะแยกเป็น %d ห้อง โบนัสห้องใหญ่จะหายไป ไม่มีวัสดุคืน") % [Data.room_def(room.type).th, int(room.level), span], Loc.t("ยืนยันแยกห้อง"), func():
+		Game.split_room(target)
+		refresh(), func(): return slot == target and target < Game.s.rooms.size() and is_same(Game.s.rooms[target], room) and Game.room_span(target) == span)
 
 
 func _build_empty() -> void:
