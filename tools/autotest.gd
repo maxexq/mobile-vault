@@ -105,6 +105,11 @@ func _run() -> void:
 		_checkpoint_test()
 		_finish()
 		return
+	if "--only=engine_detail" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _engine_detail_test()
+		_finish()
+		return
 	if "--only=vehicle_detail" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _vehicle_detail_test()
@@ -790,6 +795,7 @@ func _run() -> void:
 	await _pity_test()
 	await _boss_intro_test()
 	await _vehicle_detail_test()
+	await _engine_detail_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -4497,4 +4503,65 @@ func _vehicle_detail_test() -> void:
 	Dev.set_tier(was_tier)
 	Dev.set_trailers(was_tr)
 	Mods.mods_changed.emit()
+	await wait(0.2)
+
+
+## MV-388 phase 2: engine-room block detail (healthy idle / run only), fan + hose (half speed parked, held when
+## broken), hot-vent wisps replace the old steam (max 2), broken keeps the old smoke, every switch off
+func _engine_detail_test() -> void:
+	var ok := true
+	for t in ["van", "bus", "rig", "train"]:
+		ok = ok and Atlas.has("decal_engine_%s_block" % t)
+	for k in ["prop_engine_fan_idle_3", "prop_engine_hose_idle_3", "fx_engine_heat_vent_5"]:
+		ok = ok and Atlas.has(k)
+	_check("engine detail: 4 block decals + fan / hose / vent strips in the atlas", ok)
+	var was_tier := Game.tier()
+	var was_trav: bool = Game.s.traveling
+	var e := EngineBay.st()
+	var was_heat := float(e.get("heat", 40.0))
+	var was_cond := float(e.get("cond", 100.0))
+	Dev.set_tier("rig")
+	await wait(0.2)
+	var cv: CabView = main.vehicle.cab_view
+	Game.s.traveling = false
+	Dev.engine_set("heat", 40.0)
+	Dev.engine_set("cond", 100.0)
+	await wait(0.4)
+	_check("engine detail: parked healthy = idle, block detail on (%s)" % EngineBay.state_key(), EngineBay.state_key() == "idle" and cv._block.visible)
+	_check("engine detail: fan + hose turn, the fan at half speed parked", cv.fan.visible and cv.fan.is_playing()
+		and is_equal_approx(cv.fan.speed_scale, 0.5) and cv.hose.visible and cv.hose.is_playing())
+	_check("engine detail: no steam or wisp on a healthy engine", not cv._steam.emitting and cv.vents_active() == 0)
+	Dev.engine_set("heat", 115.0)
+	await wait(0.4)
+	_check("engine detail: hot = block detail off, wisps replace the old steam (%d)" % cv.vents_active(), EngineBay.state_key() == "hot"
+		and not cv._block.visible and not cv._steam.emitting and cv.vents_active() >= 1)
+	cv.vent_now()
+	cv.vent_now()
+	cv.vent_now()
+	_check("engine detail: at most two wisps at once", cv.vents_active() == 2)
+	await shot("engine_detail_hot")
+	Dev.vehicle_ambience_switch(false)
+	await wait(0.1)
+	_check("engine detail: ambience off = old steam back, no fan / hose / wisps", cv._steam.emitting and not cv.fan.visible
+		and not cv.hose.visible and cv.vents_active() == 0)
+	Dev.vehicle_ambience_switch(true)
+	Dev.engine_set("heat", 40.0)
+	Dev.engine_set("cond", 0.0)
+	await wait(0.4)
+	_check("engine detail: broken = old dark smoke, fan held on frame 0, no detail (%s)" % EngineBay.state_key(), EngineBay.state_key() == "broken"
+		and cv._steam.emitting and not cv.fan.is_playing() and cv.fan.frame == 0 and not cv._block.visible and cv.vents_active() == 0)
+	Dev.engine_set("cond", 100.0)
+	Features.set_override("features", "room_ambience", false)
+	await wait(0.1)
+	_check("engine detail: room_ambience off hides the fan and hose", not cv.fan.visible and not cv.hose.visible)
+	Features.set_override("features", "room_ambience", null)
+	Dev.vehicle_detail_switch(false)
+	await wait(0.1)
+	_check("engine detail: vehicle_detail off hides the block detail", not cv._block.visible)
+	Features.set_override("features", "vehicle_detail", null)
+	Features.set_override("features", "vehicle_ambience", null)
+	Dev.engine_set("heat", was_heat)
+	Dev.engine_set("cond", was_cond)
+	Game.s.traveling = was_trav
+	Dev.set_tier(was_tier)
 	await wait(0.2)
