@@ -5,7 +5,7 @@
 | สภาพแวดล้อม | branch | ใครใช้ | URL (Vercel) | Supabase |
 |---|---|---|---|---|
 | **production** | `main` | ผู้เล่นจริง | `https://apocarlypse-mobile-vault.vercel.app/` | โปรเจกต์ **prod** (ของเดิม) |
-| **UAT** | `uat` | เทสแบบเปิด (ผู้เล่นทดสอบ) | `https://apocarlypse-mobile-vault-git-uat-<ทีม>.vercel.app/` | โปรเจกต์ **test** |
+| **UAT** | `uat` | เทสแบบเปิด (ผู้เล่นทดสอบ alpha / beta) | `https://apocarlypse-mobile-vault-git-uat-<ทีม>.vercel.app/` | โปรเจกต์ **test** |
 | **staging** | `staging` | เทสภายใน (ทีม) | `https://apocarlypse-mobile-vault-git-staging-<ทีม>.vercel.app/` | โปรเจกต์ **test** |
 | **dev** | branch งาน / PR preview / เครื่องตัวเอง | นักพัฒนา | URL preview ของแต่ละ PR | โปรเจกต์ **test** |
 
@@ -18,13 +18,17 @@
 
 1. งานใหม่: แตก branch `mv-<n>-...` จาก `staging` แล้วเปิด PR เข้า `staging` (Autotest ต้องเขียว)
 2. merge แล้วเทสบน URL staging ตั๋ว Plane → **Awaiting Verify**
-3. พร้อมเปิดให้ผู้เล่นทดสอบ: เปิด PR `staging` → `uat` แล้ว **merge แบบ merge commit** (ไม่ squash)
-4. พร้อมขึ้นจริง: bump เวอร์ชันใน PR `uat` → `main` (`python tools/release.py bump ...`) merge แบบ merge commit แล้วรัน Release workflow ตั๋วที่ขึ้นแล้ว → **Done**
+3. พร้อมเปิดให้ผู้เล่นทดสอบ (alpha / beta): เปิด PR `staging` → `uat` พร้อม bump เวอร์ชันทดสอบ (`python tools/release.py bump alpha` หรือ `beta`) แล้ว **merge แบบ merge commit** (ไม่ squash) ส่งลิงก์ URL ของ uat ให้ผู้เล่นทดสอบ
+4. พร้อมขึ้นจริง: bump เป็น `rc` หรือ `stable` ใน PR `uat` → `main` merge แบบ merge commit แล้วรัน Release workflow ตั๋วที่ขึ้นแล้ว → **Done**
 5. hotfix: แตกจาก `main` → PR เข้า `main` → แล้วเปิด PR `main` → `uat` → `staging` ให้ไหลกลับลงมา
 
 ## ตั้งค่าครั้งแรก (Parames ทำ ทีละขั้น)
 
-### 1. GitHub: สร้าง branch และกฎป้องกัน
+### 1. GitHub: สร้าง branch และกฎป้องกัน (ทำแล้ว 2026-10-26, MV-421)
+สถานะตอนนี้: มี `staging` และ `uat` แล้ว (แตกจาก main), branch เริ่มต้นของ repo = `staging`, ลบ branch อัตโนมัติหลัง merge
+และมี ruleset 2 ชุด: **Protect main, uat, staging** (ต้องผ่าน PR, เช็ก **autotest** ต้องเขียว, branch ต้องอัปเดตตาม base,
+ห้าม force push / ลบ) และ **Promotions use merge commits: main, uat** (merge ได้แบบ merge commit อย่างเดียว)
+ขั้นตอนด้านล่างเก็บไว้เป็นบันทึกว่าตั้งอย่างไร
 1. สร้าง branch จาก main ปัจจุบัน (ทำครั้งเดียว):
    ```
    git fetch origin
