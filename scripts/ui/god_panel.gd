@@ -512,7 +512,7 @@ func _tab_sys() -> void:
 		_note("ผิดพลาดล่าสุด: " + Telemetry.last_error)
 	_row([_b("ส่ง log ตอนนี้", func(): Dev.logs_flush(), "green"), _b("ส่ง error ทดสอบ", func(): Dev.logs_test_error(), "yellow")])
 	_head("GAMEANALYTICS", "สถิติบน GameAnalytics (MV-423)")
-	_note("สถานะ: %s · โปรเจกต์ %s · คิว %d · ส่งแล้ว %d · error ที่ส่งรอบนี้ %d/%d%s" % [Analytics.status(), BuildInfo.cloud_project(),
+	_note("สถานะ: %s · โปรเจกต์ %s · เซ็นโดย %s · คิว %d · ส่งแล้ว %d · error ที่ส่งรอบนี้ %d/%d%s" % [Analytics.status(), BuildInfo.cloud_project(), Analytics.mode(),
 		Analytics.queue.size(), Analytics.sent_total, Analytics.errors_sent, Analytics.ERRORS_MAX,
 		"" if Analytics.last_error == "" else " · ผิดพลาดล่าสุด: " + Analytics.last_error])
 	_row([_b("ส่ง event ทดสอบ (Test:GodMode)", func(): Dev.ga_test_event(), "green")])

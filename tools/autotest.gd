@@ -4928,6 +4928,12 @@ func _analytics_test() -> void:
 	codes.assign([400])
 	Analytics.flush()
 	_check("analytics: 400 drops it (never resend bad data)", Analytics.queue.is_empty() and Analytics.last_error.begins_with("400"))
+	codes.assign([502])
+	Analytics.design("Test:Down")
+	Analytics.flush()
+	_check("analytics: 502 / 5xx keeps the batch (signer or GameAnalytics down)", Analytics.queue.size() == 1 and Analytics.last_error == "server 502")
+	codes.assign([200])
+	Analytics.flush()
 	# offline: nothing is lost, even across a reload
 	codes.assign([0])
 	Analytics.design("Offline:One")
@@ -4971,6 +4977,12 @@ func _analytics_test() -> void:
 	Analytics.design("Test:SwitchOff")
 	_check("analytics: switch off = nothing queued", Analytics.queue.is_empty())
 	Features.set_override("features", "game_analytics", null)
+	# MV-426: no secret in the build: unsigned, through the signing function on the game's own site
+	Analytics.set_keys(SANDBOX_GK, "")
+	Analytics.design("Test:Proxy")
+	Analytics.flush()
+	_check("analytics: without a secret the batch goes unsigned via /api/ga", Analytics.configured() and sent[-1].auth == ""
+		and Analytics.mode() == "via /api/ga" and Analytics.queue.is_empty())
 	Analytics.set_keys("", "")
 	_check("analytics: no keys for this environment = off", not Analytics.active() and Analytics.status().begins_with("no keys"))
 	Analytics.transport = Callable()

@@ -2,9 +2,11 @@ extends Node
 ## GameAnalytics dashboards (MV-423) through its REST Collection API v2, no SDK or addon: sessions, map progression,
 ## a small fixed set of design events and errors, so retention / funnels / progression charts come for free.
 ## The Supabase player logs (Telemetry, MV-116) and the Discord error alerts (MV-171) stay as they are.
-##  * keys: cloud_config.json "analytics": {"prod": {"game_key", "secret_key"}, "test": {...}}, picked by
-##    BuildInfo.cloud_project() like the Supabase keys (players -> prod, staging / uat / previews -> test). No keys for
-##    this environment = off. GameAnalytics' own SDKs ship both keys inside the game too; they only sign events.
+##  * keys: cloud_config.json "analytics": {"prod": {"game_key"}, "test": {...}}, picked by BuildInfo.cloud_project()
+##    like the Supabase keys (players -> prod, staging / uat / previews -> test). No game key for this environment = off.
+##  * the secret key is never in the build (MV-426: the repo is public and the build bundles cloud_config.json): on the
+##    web the game posts to /api/ga on its own site (api/ga.mjs, a Vercel function), which signs with the secret from the
+##    Vercel environment. A "secret_key" in a local cloud_config.json still signs here, for desktop tests only.
 ##  * privacy: same as the player logs: nothing before the one-time notice (Cloud.meta.log_notice), off when the
 ##    player turns telemetry off (Settings > ความเป็นส่วนตัว). The user id is a random id for this browser, not the
 ##    player id or the Supabase user.
@@ -33,6 +35,7 @@ const ID_OK := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -
 
 var game_key := ""
 var secret_key := ""
+var proxy := ""                 # MV-426: path of the signing function on the page's own site ("/api/ga")
 var enabled := true             # the server's init answer can switch collection off
 var queue: Array = []
 var sent_total := 0
@@ -75,7 +78,12 @@ func _ready() -> void:
 
 # =================================================================== state
 func configured() -> bool:
-	return game_key != "" and secret_key != ""
+	return game_key != "" and (secret_key != "" or (proxy != "" and (OS.has_feature("web") or transport.is_valid())))
+
+
+## how events get signed (GOD)
+func mode() -> String:
+	return "signed here (local secret)" if secret_key != "" else ("via %s" % proxy if proxy != "" else "-")
 
 
 ## the build, the keys, the server and the player allow it (the privacy notice may still be due)
@@ -92,7 +100,7 @@ func status() -> String:
 	if not Features.on("game_analytics"):
 		return "switch off"
 	if not configured():
-		return "no keys for %s" % BuildInfo.cloud_project()
+		return "no keys for %s" % BuildInfo.cloud_project() if game_key == "" else "no signer (desktop without a local secret)"
 	if not enabled:
 		return "disabled by server"
 	if not bool(Settings.get_value("telemetry")):
@@ -110,6 +118,7 @@ func _is_test_run() -> bool:
 func _load_keys() -> void:
 	game_key = ""
 	secret_key = ""
+	proxy = ""
 	if not FileAccess.file_exists(Cloud.CONFIG_PATH):
 		return
 	var d = JSON.parse_string(FileAccess.get_file_as_string(Cloud.CONFIG_PATH))
@@ -117,12 +126,13 @@ func _load_keys() -> void:
 		return
 	var k = d.analytics.get(BuildInfo.cloud_project())
 	if k is Dictionary:
-		set_keys(str(k.get("game_key", "")), str(k.get("secret_key", "")))
+		set_keys(str(k.get("game_key", "")), str(k.get("secret_key", "")), str(k.get("proxy", "/api/ga")))
 
 
-func set_keys(gk: String, sk: String) -> void:
+func set_keys(gk: String, sk: String, px: String = "/api/ga") -> void:
 	game_key = gk.strip_edges()
 	secret_key = sk.strip_edges()
+	proxy = px.strip_edges()
 
 
 func _load_meta() -> void:
@@ -320,8 +330,9 @@ func flush() -> void:
 	_send("events", JSON.stringify(batch), batch)
 
 
+## MV-426: without a local secret the body goes unsigned to the signing function on this site (auth = "")
 func _send(route: String, body: String, batch: Array) -> void:
-	var auth := hmac_auth(body, secret_key)
+	var auth := hmac_auth(body, secret_key) if secret_key != "" else ""
 	if transport.is_valid():
 		_result(route, int(transport.call(route, body, auth)), "", batch)
 		return
@@ -329,11 +340,20 @@ func _send(route: String, body: String, batch: Array) -> void:
 		return
 	_busy = true
 	_inflight = [route, batch]
-	var err := _http.request("%s/v2/%s/%s" % [HOST, game_key, route], PackedStringArray(["Authorization: " + auth,
-		"Content-Type: application/json"]), HTTPClient.METHOD_POST, body)
+	var headers := PackedStringArray(["Content-Type: application/json"])
+	var target := "%s/v2/%s/%s" % [HOST, game_key, route]
+	if auth != "":
+		headers.append("Authorization: " + auth)
+	else:
+		target = "%s%s?route=%s&game=%s" % [_origin(), proxy, route, game_key.uri_encode()]
+	var err := _http.request(target, headers, HTTPClient.METHOD_POST, body)
 	if err != OK:
 		_busy = false
 		_result(route, 0, "request error %d" % err, batch)
+
+
+func _origin() -> String:
+	return str(JavaScriptBridge.eval("location.origin", true)) if OS.has_feature("web") else ""
 
 
 func _on_done(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
@@ -344,7 +364,8 @@ func _on_done(result: int, code: int, _headers: PackedStringArray, body: PackedB
 	_result(route, code if result == HTTPRequest.RESULT_SUCCESS else 0, body.get_string_from_utf8().left(300), batch)
 
 
-## code 0 = no answer (offline) or 413: the batch stays queued (smaller next time on 413). 200 / 400 / 401 ...: done
+## code 0 = no answer (offline), 429 / 5xx (GameAnalytics or the signing function struggling, 502 = unreachable) or 413:
+## the batch stays queued (smaller next time on 413). 200 / 400 / 401 / 403 ...: done
 func _result(route: String, code: int, text: String, batch: Array) -> void:
 	if route == "init":
 		var d = JSON.parse_string(text) if text != "" else null
@@ -354,8 +375,8 @@ func _result(route: String, code: int, text: String, batch: Array) -> void:
 		elif code != 0:
 			last_error = "init %d" % code
 		return
-	if code == 0 or code == 413:
-		last_error = "offline" if code == 0 else "413 too large"
+	if code == 0 or code == 413 or code == 429 or code >= 500:
+		last_error = "offline" if code == 0 else ("413 too large" if code == 413 else "server %d" % code)
 		if code == 413:
 			_batch_max = maxi(5, _batch_max / 2)
 		return
