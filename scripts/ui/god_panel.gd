@@ -256,6 +256,15 @@ func _tab_crew() -> void:
 	_row([_b("สุข 100", func(): Dev.happy_all(100.0)), _b("สุข 20", func(): Dev.happy_all(20.0)), _b("สุข 0", func(): Dev.happy_all(0.0), "red")], "ทุกคน")
 	_row([_b("หมา", func(): Dev.add_pet("dog")), _b("แมว", func(): Dev.add_pet("cat")), _b("ไก่", func(): Dev.add_pet("hen")), _b("ล้าง", func(): Dev.clear_pets())],
 		"สัตว์เลี้ยง %d" % (Game.s.get("pets", []) as Array).size())
+	_head("BARKS", "พูดตามสถานการณ์ (MV-427)")
+	var m = get_tree().current_scene
+	_note("สวิตช์ barks %s · เว้นซ้ำ %.0f วิ · ล่าสุด: %s" % ["เปิด" if Features.on("barks") else "ปิด", Features.num("barks.cooldown", 12.0),
+		str(m.chatter.last_bark).replace("|", ": ") if m and m.get("chatter") and str(m.chatter.last_bark) != "" else "-"])
+	var bk := [_b("สุ่ม", func(): Dev.bark(), "green")]
+	for k in Lore.BARKS:
+		var kk: String = k
+		bk.append(_b(kk, func(): Dev.bark(kk), "gray"))
+	_row(bk)
 	_head("BUILDERS", "ช่างก่อสร้าง (หมวกเหลือง) + trait ด้านช่าง")
 	var bb := [_b("ช่างธรรมดา", func(): Dev.spawn_builder(""), "green")]
 	for t in ["engineer", "quick_hands", "architect", "clumsy"]:

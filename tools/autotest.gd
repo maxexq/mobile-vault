@@ -126,6 +126,11 @@ func _run() -> void:
 		await _outbox_test()
 		_finish()
 		return
+	if "--only=barks" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _barks_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -836,6 +841,7 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _barks_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -5095,3 +5101,105 @@ func _outbox_test() -> void:
 	Outbox._lanes.erase(L)
 	Outbox.reset(SB)
 	Save.wipe()
+
+## MV-427: situational lines: every moment has lines in the right voice, the right person says them, cooldown / gap /
+## bubble cap keep a fight readable, nothing over an event pop-up or with the switch off, "raid won" only after a raid
+## nobody lost, and a badly hurt hero speaks up
+func _barks_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var ch: Chatter = main.chatter
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 427
+	var missing: Array = ch.BARK_RULES.keys().filter(func(k): return k != "weather" and (Lore.BARKS.get(k, []) as Array).is_empty())
+	_check("barks: every moment has lines (%s)" % ", ".join(missing), missing.is_empty())
+	var stray := []
+	for bio in Lore.BARKS_PERSONAL:
+		for k in Lore.BARKS_PERSONAL[bio]:
+			if not Lore.BARKS.has(k):
+				stray.append("%s.%s" % [bio, k])
+	_check("barks: personal lines only for real moments (%s)" % ", ".join(stray), stray.is_empty() and Lore.BARKS_PERSONAL.keys().all(func(b): return Lore.BIOS.has(b)))
+	var mark := {"name": "จ่ามาร์ค", "id": -99}
+	var own := false
+	for i in 30:
+		own = own or (Lore.BARKS_PERSONAL.mark.raid_start as Array).has(Lore.pick_bark("raid_start", mark, rng))
+	_check("barks: a named character uses their own voice", own and Lore.bio_key(mark) == "mark")
+	_check("barks: weather change uses the weather lines", (Lore.LINES_WEATHER.rain as Array).has(Lore.pick_bark("weather:rain", {}, rng))
+		and Lore.pick_bark("no_such_moment", {}, rng) == "")
+	# live, through the real chatter layer
+	var reset := func():
+		ch._cool = {}
+		ch._bark_gap = 0.0
+		for b in ch._bubbles.duplicate():
+			ch._free_bubble(b)
+	reset.call()
+	var cands: Array = ch._candidates()
+	_check("barks: someone in view to talk (%d)" % cands.size(), not cands.is_empty())
+	var who: Array = cands[0]
+	_check("barks: the named person says it", ch.bark("hurt", int(who[0])) and ch._bubbles.size() == 1 and ch._bubbles[0].actor == who[1]
+		and ch.last_bark.begins_with("hurt|"))
+	ch._t = 999.0
+	ch.bark("site", -1, "", true)
+	_check("barks: a second line goes to someone else, the first stays", ch._bubbles.size() == (2 if cands.size() > 1 else 1)
+		and ch._bubbles[0].actor == who[1])
+	await wait(0.4)     # bubbles fade in / out over 0.15-0.2 s
+	var r0 := Rect2((ch._bubbles[0].node as Node2D).position, ch._bubbles[0].size)
+	_check("barks: two bubbles never cover each other", ch._bubbles.size() < 2
+		or not r0.intersects(Rect2((ch._bubbles[1].node as Node2D).position, ch._bubbles[1].size)))
+	await shot("barks_hurt")
+	ch._t = 5.0
+	ch._bark_gap = 0.0
+	_check("barks: same moment again waits for the cooldown", not ch.bark("hurt", int(who[0])))
+	ch._bark_gap = 0.0
+	ch._cool = {}
+	ch.bark("site")
+	ch._bark_gap = 0.0
+	ch.bark("built")
+	ch._bark_gap = 0.0
+	ch.bark("new_area")
+	ch._bark_gap = 0.0
+	ch.bark("level_up")
+	_check("barks: never more than %d bubbles" % ch.BARK_MAX, ch._bubbles.size() <= ch.BARK_MAX)
+	reset.call()
+	_check("barks: a gap of %.1f s between any two" % ch.BARK_GAP, ch.bark("site") and not ch.bark("built"))
+	reset.call()
+	Game.active_event = "cache"
+	_check("barks: quiet while an event pop-up is open", not ch.bark("site", -1, "", true))
+	Game.active_event = ""
+	Features.set_override("features", "barks", false)
+	_check("barks: switch off = no barks", not ch.bark("site", -1, "", true))
+	Features.set_override("features", "barks", null)
+	# raid won only when nobody was wiped out
+	reset.call()
+	ch._on_phase("raid")
+	reset.call()
+	ch._on_phase("quiet")
+	var won := ch.last_bark.begins_with("raid_won|")
+	reset.call()
+	ch.last_bark = ""
+	ch._on_phase("raid")
+	ch._on_wiped()
+	reset.call()
+	ch.last_bark = ""
+	ch._on_phase("quiet")
+	_check("barks: 'raid won' after a clean raid, not after a wipe", won and not ch.last_bark.begins_with("raid_won|"))
+	# a badly hurt hero speaks up (the hit carries the hero's slot)
+	reset.call()
+	var keep_heroes: Array = Combat.heroes.duplicate(true)
+	Combat.heroes = [{"slot": 0, "did": int(who[0]), "hp": 80.0, "max": 100.0, "alive": true}]
+	ch.last_bark = ""
+	ch._on_hit("hero", 0, 5.0, false)
+	var calm := ch.last_bark == ""
+	Combat.heroes[0].hp = 20.0
+	ch._on_hit("hero", 0, 5.0, false)
+	_check("barks: a hero below 35% HP says a hurt line, a scratch doesn't", calm and ch.last_bark.begins_with("hurt|"))
+	Combat.heroes = keep_heroes
+	# GOD
+	reset.call()
+	_check("barks: GOD 'say it now' works for every moment", Lore.BARKS.keys().all(func(k):
+		ch._cool = {}
+		ch._bark_gap = 0.0
+		return Dev.bark(k) == k))
+	reset.call()

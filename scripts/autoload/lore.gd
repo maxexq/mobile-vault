@@ -142,6 +142,47 @@ const LINES_NIGHT := ["ดาวคืนนี้เยอะจัง", "ว�
 const LINES_PET := ["ข้าวตัง! คืนรองเท้ามา!", "ข้าวตังเห่าอีกแล้ว มีอะไรแน่ ๆ", "ใครให้ขนมข้าวตังอีกแล้ว อ้วนแล้วนะ"]
 
 
+## MV-427: situational lines ("barks"), said when something happens instead of at random (Chatter.bark). Generic
+## crew voice is ฉัน/เรา; each named character has their own lines below (docs/glossary_th.md "Voice").
+const BARKS := {
+	# fights (raids on the roof deck)
+	"raid_warn": ["มีอะไรตามหลังรถมา!", "ฝุ่นตลบทางท้าย... พวกมันมาแล้ว", "ได้ยินเสียงเครื่องยนต์ไม่คุ้นหู",
+		"ดับไฟท้ายก่อน! อย่าให้มันเห็นเรา", "ใครอยู่ใกล้บันได ขึ้นไปประจำที่!"],
+	"raid_start": ["มาแล้ว! ประจำตำแหน่ง!", "ยิงตัวที่ใกล้รถก่อน!", "อย่าให้มันขึ้นถึงตัวรถ!",
+		"อยู่เป็นกลุ่มไว้ อย่าแตกแถว", "ถ้ารอดคืนนี้ ฉันจะนอนสามวัน"],
+	"raid_won": ["ไปหมดแล้ว... ทุกคนยังอยู่ไหม", "เช็กกระสุน แล้วนับหัวกัน", "รอดไปอีกรอบ",
+		"ใครเจ็บ ไปห้องพยาบาลเลยนะ", "เก็บของที่มันทิ้งไว้ด้วย"],
+	"boss": ["ตัวนั้นใหญ่ผิดปกติ!", "อะไรน่ะ... นั่นมันตัวอะไร", "เล็งจุดอ่อน! อย่ายิงมั่ว",
+		"ตัวนี้ไม่ใช่เล่น ๆ แล้ว", "ตั้งหลักก่อน รอให้มันเข้ามาในระยะ"],
+	"hurt": ["โดนเข้าให้แล้ว!", "แผลนี้... ยังยืนไหว", "ใครก็ได้ ช่วยคุ้มกันที!", "เลือดออกเยอะ แต่ยังไหว",
+		"อึก... ยังไม่ตายง่าย ๆ หรอก"],
+	"kill": ["ล้มไปหนึ่ง!", "ตัวต่อไป!", "นอนนิ่ง ๆ ไปเลย", "อีกกี่ตัวเนี่ย", "เก็บได้แล้ว!"],
+	"healed": ["ค่อยยังชั่ว ขอบคุณนะ", "แผลปิดแล้ว ไปต่อ", "หายเจ็บแล้ว พร้อมลุย"],
+	"van_hit": ["มันข่วนตัวรถ!", "รถโดนอีกแล้ว!", "ได้ยินเสียงเหล็กบุบไหม!", "ตัวถังรับไม่ไหวแล้วนะ!"],
+	"tag_in": ["หลบไป ฉันเอง!", "เปลี่ยนตัว! ไปพักเถอะ", "ถึงตาฉันแล้ว"],
+	"wiped": ["ทีมบนดาดฟ้าล้มหมดแล้ว!", "ใครก็ได้ ขึ้นไปช่วยข้างบนที!", "ปิดประตูให้แน่น!"],
+	# exploring
+	"site": ["ตรงนั้นน่าค้นนะ", "ตึกนั่นยังไม่มีใครเข้าไปแน่ ๆ", "จอดตรงนี้ ส่งคนลงไปดูกัน", "ข้างในอาจมีของเหลืออยู่"],
+	"expedition_out": ["กลับมาให้ครบนะ!", "อย่าเก็บของจนลืมดูทาง", "เราจะรอตรงนี้ ไม่ไปไหน", "เจออะไรดี ๆ เอามาฝากด้วย"],
+	"expedition_ok": ["กลับมาแล้ว! ได้อะไรมาบ้าง", "ครบทุกคน โล่งอก", "ของเต็มกระเป๋าเลย"],
+	"expedition_fail": ["กลับมาได้ก็บุญแล้ว", "ใครเจ็บ ไปพักก่อน", "คราวหน้าต้องไปกันให้มากกว่านี้"],
+	# the road and the vehicle
+	"new_area": ["อากาศเปลี่ยนแล้ว เข้าพื้นที่ใหม่", "ไม่เคยมาไกลขนาดนี้มาก่อน", "ระวังตัวด้วย ที่นี่เราไม่รู้จัก",
+		"แผนที่บอกว่ามีทางต่อ... หวังว่านะ"],
+	"built": ["เสร็จแล้ว! ตะปูไม่เหลือสักตัว", "ห้องใหม่ กลิ่นสีใหม่", "ออกมาดีกว่าที่คิดไว้อีก", "ใครจะย้ายเข้าก่อน"],
+	"level_up": ["รถเราใหญ่ขึ้นทุกวัน", "มีที่ให้คนเพิ่มอีกแล้ว", "จากรถผุ ๆ กลายเป็นบ้านแล้วนะเนี่ย"],
+}
+## the same moments in each named character's own voice (bio key, see BIOS); picked over the generic lines when present
+const BARKS_PERSONAL := {
+	"mark": {"raid_start": ["ประจำที่! ยิงตามสั่งผม", "ผู้บัญชาการ ทุกคนพร้อมครับ"], "hurt": ["แผลแค่นี้ ผมเคยเจอหนักกว่า"],
+		"raid_won": ["นับหัว... ครบครับ"], "expedition_out": ["กลับมาให้ครบ นั่นคือคำสั่ง"]},
+	"leo": {"kill": ["เข้าเป้า! ยายต้องภูมิใจ"], "boss": ["ตัวนั้นหนังขายได้ราคาดีแน่"], "site": ["ฉันได้กลิ่นของมีค่า"]},
+	"ton": {"van_hit": ["อย่าทำ MAMMOTH ของฉันนะ!"], "new_area": ["MAMMOTH ไหวอยู่แล้ว ไปต่อ"], "built": ["อย่าลืมเดินสายไฟให้ดีล่ะ"]},
+	"bob": {"raid_start": ["ข้าจะทอดพวกแกทั้งหมด!"], "expedition_ok": ["วัตถุดิบใหม่! คืนนี้ข้าจะเนรมิต!"]},
+	"clara": {"raid_won": ["ใครเจ็บ มาหาฉันนะทุกคน"], "wiped": ["อดทนไว้ ฉันกำลังไป!"], "hurt": ["ไม่เป็นไร... ฉันพันแผลตัวเองได้"]},
+	"bruno": {"raid_start": ["มาเลย"], "kill": ["หนึ่ง"], "hurt": ["ไม่เจ็บ"]},
+}
+
 func _ready() -> void:
 	Game.biome_changed.connect(func(_i: int, instant: bool) -> void: sync(not instant))
 
@@ -240,6 +281,30 @@ func bio(d: Dictionary) -> Dictionary:
 # ------------------------------------------------------------------ chatter
 const RECENT_LINES := 12
 var _recent_lines: Array = []    # last lines said by anyone, so they don't come straight back
+
+
+## MV-427: a line for this moment (BARKS kind, or "weather:<id>" for a weather change), in this dweller's own voice when
+## they have one (they use it 2 times in 3); "" if the kind has no lines. Shares the recent-lines memory with pick_line.
+func pick_bark(kind: String, d: Dictionary, rng: RandomNumberGenerator) -> String:
+	var arr: Array = []
+	if kind.begins_with("weather:"):
+		arr = LINES_WEATHER.get(kind.substr(8), [])
+	else:
+		arr = BARKS.get(kind, [])
+		var own: Array = [] if not d.has("name") else (BARKS_PERSONAL.get(bio_key(d), {}) as Dictionary).get(kind, [])
+		if not own.is_empty() and (arr.is_empty() or rng.randf() < 0.67):
+			arr = own
+	if arr.is_empty():
+		return ""
+	var line := str(arr[rng.randi() % arr.size()])
+	for attempt in 3:
+		if not _recent_lines.has(line):
+			break
+		line = str(arr[rng.randi() % arr.size()])
+	_recent_lines.append(line)
+	while _recent_lines.size() > RECENT_LINES:
+		_recent_lines.pop_front()
+	return line
 
 
 ## a context-aware idle line for this dweller ("" if nothing to say)
