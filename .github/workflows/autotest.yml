@@ -70,6 +70,10 @@ jobs:
       - name: Error spike alert tests
         run: bash tools/test_error_spike.sh
 
+      # GameAnalytics signing function (MV-426): api/ga.mjs against a fake GameAnalytics, no network
+      - name: GameAnalytics proxy tests
+        run: node tools/ga_proxy_test.mjs
+
       - name: Cache Godot
         id: godot-cache
         if: steps.scope.outputs.godot == 'true'

@@ -60,7 +60,8 @@
 6. Project Settings → API → คัดลอก **Project URL** และ **anon / publishable key** (ห้ามใช้ service_role)
 
 ### 4. `cloud_config.json` บนเครื่องที่ export (git-ignore ไม่ขึ้น git)
-> MV-423: ใส่คีย์ GameAnalytics ไว้ในไฟล์เดียวกันได้ที่ `"analytics": {"prod": {"game_key", "secret_key"}, "test": {...}}` (สร้างเกม 2 เกมใน GameAnalytics: ของจริง + ทดสอบ) ดูตัวอย่างใน `cloud_config.example.json` ไม่ใส่ = ไม่ส่งสถิติ
+> MV-423 / MV-426: ใส่ **game key** ของ GameAnalytics ไว้ในไฟล์เดียวกันที่ `"analytics": {"prod": {"game_key"}, "test": {"game_key"}}` (สร้างเกม 2 เกมใน GameAnalytics: ของจริง + ทดสอบ) ดูตัวอย่างใน `cloud_config.example.json` ไม่ใส่ = ไม่ส่งสถิติ
+> **ห้ามใส่ secret key ในไฟล์นี้** เพราะไฟล์นี้ถูกรวมเข้าไปในบิลด์ และ repo เป็นสาธารณะ ให้ใส่ใน Vercel → Project Settings → Environment Variables แทน (ทุก environment): `GA_GAME_KEY_PROD`, `GA_SECRET_PROD`, `GA_GAME_KEY_TEST`, `GA_SECRET_TEST` แล้ว `api/ga.mjs` จะเซ็นให้
 
 เปลี่ยนเป็นรูปแบบใหม่ (ดู `cloud_config.example.json`):
 ```json
