@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Confirmation windows explain what will be lost before room demolition, construction cancellation, gear salvage/synthesis, save replacement/reset and other irreversible actions (MV-422).
 - The crew now speaks up when things happen: raid warnings, a boss showing up, someone badly hurt, a kill, the van taking hits, the expedition team leaving and coming back, a new area, finished rooms; the main characters say it in their own voice, and bubbles no longer cover each other (MV-427)
 
 ### Changed

@@ -546,6 +546,7 @@ func _tab_sys() -> void:
 	_head("SETTINGS", "การตั้งค่า")
 	_note("ขนาดเซฟ %.1f KB · FPS %s · ภาษา %s" % [Settings.save_size_bytes() / 1024.0, str(Settings.get_value("fps")), str(Settings.get_value("lang"))])
 	_row([_b("คืนค่าเริ่มต้น", Dev.settings_reset)])
+	_row([_b("ทดสอบหน้าต่างยืนยัน", Dev.confirm_preview, "red", true)])
 
 
 func _tab_features() -> void:

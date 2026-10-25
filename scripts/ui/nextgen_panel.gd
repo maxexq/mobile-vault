@@ -191,10 +191,28 @@ func _build_crew() -> void:
 		vh.add_child(tb)
 	_list.add_child(vh)
 	var go := UIKit.button(Loc.t("สร้างพาหนะคันใหม่!"), "red", "hammer")
-	go.pressed.connect(func():
-		var picks := carry.duplicate()
-		forced = false
-		is_open = false
-		visible = false
-		Meta.next_generation(picks, tier_pick))
+	go.name = "NextGenerationButton"
+	go.pressed.connect(_request_next_generation)
 	_list.add_child(go)
+
+
+func _request_next_generation() -> void:
+	var picks := carry.duplicate()
+	var tier := tier_pick
+	var state := Game.s
+	var names: Array = []
+	for did in picks:
+		var d := Game.dweller_by_id(int(did))
+		if not d.is_empty():
+			names.append(str(d.name))
+	ConfirmPanel.ask(self, Loc.t("สร้างพาหนะคันใหม่!"), Loc.t("รถและห้องปัจจุบันจะถูกแทนที่ เก็บไว้เฉพาะลูกเรือที่เลือกพร้อมอาวุธ และ %d%% ของเศษเหล็ก/ชิ้นส่วน อุปกรณ์อื่นจะหายไป ย้อนคืนไม่ได้\nผู้รอดชีวิตที่เลือก: %s") % [int(Meta.carry_res_ratio() * 100), ", ".join(names) if not names.is_empty() else Loc.t("ไม่มี")], Loc.t("ยืนยันขึ้นรุ่นถัดไป"), func():
+		forced = false
+		close()
+		Meta.next_generation(picks, tier), func(): return is_same(Game.s, state) and carry == picks and tier_pick == tier and _picks_present(picks))
+
+
+func _picks_present(picks: Array) -> bool:
+	for did in picks:
+		if Game.dweller_by_id(int(did)).is_empty():
+			return false
+	return true

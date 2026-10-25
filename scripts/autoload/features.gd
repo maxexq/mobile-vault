@@ -34,6 +34,7 @@ const TIMEOUT_SEC := 10.0
 
 ## every switch the game knows; the remote file cannot invent new ones
 const FEATURES := {
+	"confirm_actions": "หน้าต่างยืนยันก่อนลบหรือแทนที่ข้อมูล (MV-422)",
 	"industrial_parallax": "ฉากนิคมอุตสาหกรรมแบบใหม่ (MV-369): ฉากหลังยาว ท้องฟ้าตามเวลาในเกม พระอาทิตย์/พระจันทร์ ควันและฝุ่นพิกเซล (ปิด = ฉากเดิม)",
 	"road_events": "อีเว้นต์สุ่มบนถนน",
 	"raids": "ศัตรูบุกรถ (บอสด่านตรวจยังขวางทางเสมอ)",
