@@ -356,6 +356,9 @@ func _tab_fight() -> void:
 		b.add_theme_color_override("font_color", Loot.rarity(rr).col)
 		lb.append(b)
 	_row(lb)
+	_row([_b("ดรอปถัดไปได้มหากาพย์+", func(): Dev.pity_next(3), "yellow"), _b("ดรอปถัดไปได้ตำนาน+", func(): Dev.pity_next(4), "yellow"),
+		_b("รีเซ็ตตัวนับ", func(): Dev.pity_reset())],
+		"การันตี (MV-47) อีก %d / %d ดรอป%s" % [Loot.pity_left(3), Loot.pity_left(4), "" if Features.on("loot_pity") else " · ปิดอยู่"])
 
 
 func _tab_world() -> void:
