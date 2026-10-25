@@ -56,9 +56,12 @@ Environments (MV-112, `docs/environments.md`): `staging` = internal test, `uat` 
 `main` = production (only what players have). Each branch deploys its own Vercel URL; one build
 serves all of them and picks its environment from the host name (`config/environments.json`).
 
-- **Feature work branches from and PRs into `staging`.** Until `staging` exists on origin
-  (`git ls-remote --heads origin staging` prints nothing), use `main` instead everywhere below.
-- `git pull origin staging` before starting. Never push to `staging`, `uat` or `main` directly.
+- **Feature work branches from and PRs into `staging`** (the default branch since MV-421).
+- `git pull origin staging` before starting. Never push to `staging`, `uat` or `main` directly: a
+  GitHub ruleset (MV-421) blocks it anyway. All three need a PR, a green **autotest** check and a
+  branch that is up to date with its base; no force push or deletion; `main` and `uat` accept merge
+  commits only. Merged branches are deleted automatically.
+- **Alpha / beta testers play on `uat`** (its Vercel URL, test Supabase). `main` is production.
 - Promotion is a PR `staging` → `uat`, then `uat` → `main`, merged with a merge commit (not
   squash). Only when Parames asks; Parames merges them.
 - Hotfix: branch from `main`, PR into `main`, then PRs `main` → `uat` → `staging` so the fix
@@ -69,7 +72,8 @@ serves all of them and picks its environment from the host name (`config/environ
   only with `python tools/release.py bump <alpha|beta|rc|stable|patch|minor|major>`, which also
   updates the web shell and `CHANGELOG.md`; add a line under `[Unreleased]` in `CHANGELOG.md` for
   player-visible changes. Releases: Actions → Release → Run workflow on main (README "Versioning & releases").
-  Version bumps belong in the promotion to `main`, not in feature PRs.
+  Version bumps belong in promotion PRs, never in feature PRs: `alpha` / `beta` in the PR
+  `staging` → `uat` (what testers get), `rc` / `stable` in the PR `uat` → `main`.
 
 ### Opening the PR (Claude Code CLI)
 
