@@ -105,6 +105,10 @@ func _run() -> void:
 		_checkpoint_test()
 		_finish()
 		return
+	if "--only=env_micro" in OS.get_cmdline_user_args():
+		_env_micro_test()
+		_finish()
+		return
 	if "--only=idle_motion" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _idle_motion_test()
@@ -802,6 +806,7 @@ func _run() -> void:
 	await _vehicle_detail_test()
 	await _engine_detail_test()
 	await _idle_motion_test()
+	_env_micro_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -4634,3 +4639,22 @@ func _idle_motion_test() -> void:
 	Dev.weather(was_w)
 	Mods.mods_changed.emit()
 	await wait(0.2)
+
+
+## MV-388 phase 4: the eight environment micro sprites are in the atlas at their spec sizes (the living-background
+## owner, MV-370 / MV-371, places them; nothing in the game uses them yet)
+func _env_micro_test() -> void:
+	var specs := {"prop_env_torn_ribbon": [16, 20, 4], "fx_env_puddle_ripple": [24, 6, 4], "prop_env_scrap_can": [16, 8, 4],
+		"prop_env_grass_sway": [12, 12, 4], "prop_env_reed_sway": [12, 18, 4], "fx_env_snow_scud": [24, 8, 6],
+		"prop_env_loose_cable": [12, 20, 4], "fx_env_swamp_bubble": [12, 8, 4]}
+	var ok := true
+	for id in specs:
+		var sp: Array = specs[id]
+		for i in int(sp[2]):
+			var r = Atlas.regions.get("%s_%d" % [id, i])
+			if r == null or int(r[2]) != int(sp[0]) or int(r[3]) != int(sp[1]):
+				ok = false
+				print("[autotest] env micro wrong: %s_%d %s" % [id, i, str(r)])
+		if Atlas.regions.has("%s_%d" % [id, int(sp[2])]):
+			ok = false
+	_check("env micro: 8 environment strips in the atlas at their spec sizes and frame counts", ok)

@@ -545,3 +545,162 @@ def gen_backgrounds():
         road(name, cfg)
     from .industrial_bg import generate
     generate()
+
+# ------------------------------------------------------------------ MV-388 phase 4: environment micro ambience
+# Small roadside atlas sprites for the living-background owner (MV-370 / MV-371) to place on the road repeat.
+# Drawn here, packed into the atlas by gen_env_micro() (called before pack_atlas); nothing places them yet.
+def prop_env_torn_ribbon():
+    """4 frames 16x20, 2 fps: a stake with a knot; only the torn cloth moves (1-2 px)"""
+    tails = [[(9, 3), (10, 3), (11, 4), (12, 4), (13, 5)], [(9, 3), (10, 4), (11, 4), (12, 5), (13, 5)],
+             [(9, 3), (10, 3), (11, 3), (12, 4), (13, 4)], [(9, 4), (10, 4), (11, 5), (12, 5), (13, 6)]]
+    out = []
+    for f in range(4):
+        img = new(16, 20)
+        vline(img, 7, 2, 18, OL)                            # stake
+        vline(img, 8, 2, 18, c("wood1"))
+        px(img, 8, 3, c("gray3"))                           # knot (fixed)
+        px(img, 9, 2, c("red1"))
+        for i, (x, y) in enumerate(tails[f]):
+            px(img, x, y, c("red1") if i < 3 else c("red0"))
+            px(img, x, y + 1, c("red0") if i < 2 else CLEAR)
+        out.append(img)
+    return out
+
+
+def fx_env_puddle_ripple():
+    """4 frames 24x6, 4 fps once: a still dark puddle, one thin ring grows then fades; the last frame is the still
+    puddle again so the puddle never flashes off"""
+    out = []
+    for f in range(4):
+        img = new(24, 6)
+        ellipse(img, 1, 1, 22, 5, c("gray1"))
+        hline(img, 6, 2, 8, c("blue1"))                     # sky glint, dull
+        if f in (1, 2):
+            rx, ry = (3, 1) if f == 1 else (6, 1)
+            for k in range(0, 24, 1 if f == 1 else 3):      # the wider ring is broken up: it is fading
+                a = k / 24 * math.tau
+                px(img, round(11.5 + rx * math.cos(a)), round(3 + ry * math.sin(a)), c("gray4") if f == 1 else c("gray3"))
+        out.append(img)
+    return out
+
+
+def prop_env_scrap_can():
+    """4 frames 16x8, 3 fps once: a crushed can rocks (<=3 px) and comes back to rest in the last frame"""
+    shifts = [0, 2, 3, 0]
+    out = []
+    for f, dx in enumerate(shifts):
+        img = new(16, 8)
+        x = 5 + dx
+        tilt = f in (1, 2)
+        rect(img, x, 3 if not tilt else 2, 6, 5 if not tilt else 6, OL)
+        rect(img, x + 1, 4 if not tilt else 3, 4, 3 if not tilt else 4, c("gray3"))
+        hline(img, x + 1, 4 if not tilt else 3, 4, c("gray4"))
+        px(img, x + 2, 5 if not tilt else 4, c("gray1"))    # the dent
+        px(img, x + 4, 6, c("orange1"))                     # rust
+        out.append(img)
+    return out
+
+
+def prop_env_grass_sway():
+    """4 frames 12x12, 2 fps: a tuft of 4 blade clusters on a fixed root row; tips move at most 1 px"""
+    blades = [(2, 6, -1), (4, 9, 0), (7, 10, 0), (9, 7, 1)]   # (root x, height, lean)
+    sway = [0, 1, 0, -1]
+    out = []
+    for f in range(4):
+        img = new(12, 12)
+        hline(img, 1, 11, 10, c("wood1"))                   # root row (fixed)
+        for i, (bx, h, lean) in enumerate(blades):
+            for k in range(h):
+                y = 10 - k
+                x = bx + (lean if k > h // 2 else 0) + (sway[(f + i) % 4] if k >= h - 2 else 0)
+                px(img, x, y, c("green2") if k > h - 3 else c("green1"))
+            px(img, bx + 1, 10, c("green0"))
+        out.append(img)
+    return out
+
+
+def prop_env_reed_sway():
+    """4 frames 12x18, 2 fps: three fixed reed stems, muted seed heads; only the top third bends 1-2 px"""
+    stems = [(3, 15), (6, 17), (9, 13)]
+    bend = [0, 1, 2, 1]
+    out = []
+    for f in range(4):
+        img = new(12, 18)
+        for i, (sx, h) in enumerate(stems):
+            b = bend[(f + i) % 4]
+            for k in range(h):
+                y = 17 - k
+                x = sx + (b if k > h * 2 // 3 else 0) - (1 if k > h * 2 // 3 and b == 2 and k < h - 1 else 0)
+                px(img, x, y, c("green1") if k < h - 3 else c("wood1"))
+            top = 17 - (h - 1)
+            px(img, sx + b, top, c("wood2"))                # seed head
+            px(img, sx + b, top + 1, c("wood1"))
+            px(img, sx, 17, c("green0"))
+        hline(img, 2, 17, 9, OL)
+        out.append(img)
+    return out
+
+
+def fx_env_snow_scud():
+    """6 frames 24x8, 4 fps once: two low powder clusters slide (<=8 px) then break into stepped pixels"""
+    out = []
+    for f in range(6):
+        img = new(24, 8)
+        for (cx, cy) in ((4, 6), (12, 5)):
+            x = cx + min(8, f * 2)
+            n = 5 - max(0, f - 2) * 2                       # pixels left in the cluster
+            pts = [(0, 0), (1, 0), (2, 1), (1, 1), (-1, 1)][:max(0, n)]
+            for i, (dx, dy) in enumerate(pts):
+                px(img, x + dx + (i if f > 3 else 0), cy + dy, c("snow2") if i == 0 else c("snow1") if f < 4 else c("snow0"))
+        out.append(img)
+    return out
+
+
+def prop_env_loose_cable():
+    """4 frames 12x20, 2 fps: a broken bracket (fixed, top) with one sagging cable loop; the free end moves 1 px"""
+    ends = [0, 1, 0, -1]
+    out = []
+    for f, dx in enumerate(ends):
+        img = new(12, 20)
+        rect(img, 1, 0, 6, 3, OL)                           # bracket
+        hline(img, 2, 1, 4, c("gray4"))
+        px(img, 6, 3, c("gray3"))                           # snapped arm
+        for y in range(3, 12):                              # down and round the loop
+            px(img, 4 + (1 if 6 < y < 10 else 0), y, c("gray2"))
+        for x, y in ((6, 12), (7, 13), (7, 14), (6, 15), (5, 15)):
+            px(img, x, y, c("gray2"))
+        for y in range(16, 19):                             # free end
+            px(img, 5 + (dx if y > 16 else 0), y, c("gray2"))
+        px(img, 5 + dx, 19, c("gray4"))                     # bare copper gone dull
+        out.append(img)
+    return out
+
+
+def fx_env_swamp_bubble():
+    """4 frames 12x8, 3 fps once: a dark gas blister rises 1 px, pops into two ring fragments, the puddle settles"""
+    out = []
+    for f in range(4):
+        img = new(12, 8)
+        ellipse(img, 1, 4, 10, 4, c("teal0"))               # static dark puddle
+        hline(img, 3, 5, 5, c("green0"))
+        if f == 0:
+            rect(img, 5, 4, 2, 1, c("green1"))
+        elif f == 1:
+            rect(img, 5, 3, 2, 2, c("green1"))
+            px(img, 5, 3, c("gray3"))
+        elif f == 2:
+            px(img, 3, 3, c("gray3"))
+            px(img, 8, 3, c("gray3"))
+            px(img, 4, 4, c("green1"))
+            px(img, 7, 4, c("green1"))
+        out.append(img)
+    return out
+
+
+def gen_env_micro():
+    for name, fn in (("prop_env_torn_ribbon", prop_env_torn_ribbon), ("fx_env_puddle_ripple", fx_env_puddle_ripple),
+                     ("prop_env_scrap_can", prop_env_scrap_can), ("prop_env_grass_sway", prop_env_grass_sway),
+                     ("prop_env_reed_sway", prop_env_reed_sway), ("fx_env_snow_scud", fx_env_snow_scud),
+                     ("prop_env_loose_cable", prop_env_loose_cable), ("fx_env_swamp_bubble", fx_env_swamp_bubble)):
+        for i, img in enumerate(fn()):
+            add(f"{name}_{i}", img)

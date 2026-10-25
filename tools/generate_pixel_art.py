@@ -32,6 +32,7 @@ def main():
     ui.gen_particles()
     ui.gen_combat_props()
     ui.gen_ui_frames()
+    bg.gen_env_micro()        # MV-388 phase 4: atlas sprites for the living backgrounds
     pack_atlas()
     bg.gen_backgrounds()
     events.gen_events()
