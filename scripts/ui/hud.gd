@@ -74,6 +74,7 @@ var _god_btn: Button
 var tutorial_overlay: TutorialOverlay
 var tip_card: TipCard
 var settings_panel: SettingsPanel
+var confirmation: ConfirmPanel
 var _settings_btn: Button
 signal zoom_pressed
 signal xray_toggled(on: bool)
@@ -197,6 +198,8 @@ func _ready() -> void:
 	tip_card = TipCard.new()
 	tip_card.hud = self
 	add_child(tip_card)
+	confirmation = ConfirmPanel.new()
+	add_child(confirmation)
 
 
 func _set_hud_visible(v: bool) -> void:
@@ -878,6 +881,8 @@ func _touch_pass_later(n) -> void:
 
 
 func any_modal_open() -> bool:
+	if confirmation != null and confirmation.is_open:
+		return true
 	for k in panels:
 		if panels[k].is_open:
 			return true
@@ -890,6 +895,8 @@ func _sync_god_btn() -> void:
 
 
 func _unhandled_key_input(e: InputEvent) -> void:
+	if confirmation.is_open:
+		return
 	if Dev.unlocked and e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_F1 or e.keycode == KEY_QUOTELEFT):
 		if panels.god.is_open:
 			panels.god.close()

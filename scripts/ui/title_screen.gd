@@ -190,8 +190,14 @@ func _layout() -> void:
 
 # ------------------------------------------------------------------ start
 func _new_run() -> void:
-	Modes.pending = {}
-	_go(true)
+	auto_continue = false
+	var start := func():
+		Modes.pending = {}
+		_go(true)
+	if Save.has_save():
+		ConfirmPanel.ask(self, Loc.t("เริ่มการเดินทางใหม่  NEW RUN"), Loc.t("การเริ่มใหม่จะลบรถ ลูกเรือ ของ และความคืบหน้าปัจจุบันทั้งหมด ย้อนคืนไม่ได้"), Loc.t("เริ่มใหม่และลบเซฟเดิม"), start)
+	else:
+		start.call()
 
 
 func _go(new_game: bool) -> void:
