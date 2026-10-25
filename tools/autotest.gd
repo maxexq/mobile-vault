@@ -58,6 +58,12 @@ func _run() -> void:
 	await wait(0.3)
 	main.hud.title_screen._go(true)
 	await wait(2.5)
+	_button_skin_contract_test()
+	if "--only=buttons" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _button_skin_menu_test()
+		_finish()
+		return
 	if "--only=background" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _industrial_background_test()
@@ -820,6 +826,96 @@ func _run() -> void:
 
 ## god mode actions for the newer systems (tutorial, construction, builders, squad, forge, event deck,
 ## encounters, strangers, cloud, settings) + every tab renders
+## MV-418: real controls retain the old geometry even though the nine-slice caps grow.
+func _button_skin_contract_test() -> void:
+	var fixture := Control.new()
+	fixture.theme = UIKit.theme()
+	fixture.visible = false
+	add_child(fixture)
+	var old_image := Image.create(10, 10, false, Image.FORMAT_RGBA8)
+	old_image.fill(UIKit.C_BG2)
+	var old_texture := ImageTexture.create_from_image(old_image)
+	for key in ["green", "yellow", "gray", "blue", "red", "orange"]:
+		var b := UIKit.button("สร้าง / Build", key, "hammer")
+		fixture.add_child(b)
+		var complete := true
+		for state in UIKit.BUTTON_STATES:
+			var style := b.get_theme_stylebox(state) as StyleBoxTexture
+			var down: bool = state in ["pressed", "hover_pressed"]
+			var expected: String = "btn_disabled" if state == "disabled" else str(UIKit.BTN_TEX[key]) + ("_pressed" if down else ("_hover" if state == "hover" else ""))
+			complete = complete and style.texture.get_size() == Vector2(24, 24) and style.texture.resource_path.ends_with("/" + expected + ".png")
+			complete = complete and style.texture_margin_left == 6 and style.texture_margin_top == 6 and style.texture_margin_right == 6 and style.texture_margin_bottom == 6
+		_check("buttons: %s routes every state to its own family" % key, complete)
+		for sample in ["+", "", "สร้าง / Build", "รายละเอียด / Details"]:
+			b.text = sample
+			var actual := b.get_combined_minimum_size()
+			var saved := {}
+			for state in UIKit.BUTTON_STATES:
+				var style := b.get_theme_stylebox(state) as StyleBoxTexture
+				saved[state] = style
+				var legacy := style.duplicate() as StyleBoxTexture
+				legacy.texture = old_texture
+				legacy.set_texture_margin_all(3)
+				b.add_theme_stylebox_override(state, legacy)
+			_check("buttons: %s '%s' keeps the legacy minimum size" % [key, sample], actual == b.get_combined_minimum_size())
+			for state in UIKit.BUTTON_STATES:
+				b.add_theme_stylebox_override(state, saved[state])
+		# Settings and toggled HUD controls restyle the same node without rebuilding it.
+		UIKit.style_button(b, "yellow")
+		UIKit.style_button(b, key)
+		_check("buttons: restyled %s keeps its pressed and disabled faces" % key,
+			b.get_theme_stylebox("pressed").texture == UIKit.button_style(key, "pressed").texture
+			and b.get_theme_stylebox("disabled").texture == UIKit.ui_tex("btn_disabled"))
+		b.free()
+	var inherited := Button.new()
+	fixture.add_child(inherited)
+	_check("buttons: theme defaults and node overrides use the same pressed face", inherited.get_theme_stylebox("pressed").texture == UIKit.ui_tex("btn_pressed"))
+	_check("buttons: pressed and disabled labels remain readable", inherited.get_theme_color("font_pressed_color") == UIKit.C_WHITE
+		and inherited.get_theme_color("font_hover_pressed_color") == UIKit.C_WHITE and inherited.get_theme_color("font_disabled_color") == UIKit.C_DIM)
+	var choice := ChoiceButton.new("สร้างห้องนี้ / Build this room", "BUILD", "120 scrap", "red")
+	fixture.add_child(choice)
+	choice.disabled = true
+	_check("buttons: wrapped choices share the coloured pressed skin and remain disabled", choice.button.disabled
+		and choice.button.get_theme_stylebox("pressed").texture == UIKit.ui_tex("btn_red_pressed"))
+	fixture.free()
+
+
+## Focused captures of the original menus; this does not replace the full touch checks.
+func _button_skin_menu_test() -> void:
+	var previous_lang: String = str(Settings.get_value("lang"))
+	var previous_tips: bool = bool(Settings.get_value("tips"))
+	var previous_size := DisplayServer.window_get_size()
+	var previous_english = Features.layers.dev.get("features", {}).get("english")
+	var previous_raids = Features.layers.dev.get("features", {}).get("raids")
+	Settings.set_value("tips", false)
+	Features.set_override("features", "english", true)
+	Features.set_override("features", "raids", false)
+	Game.s.res.scrap = 500.0
+	for size_case in [[Vector2i(720, 1280), "portrait"], [Vector2i(1600, 1200), "landscape"]]:
+		DisplayServer.window_set_size(size_case[0])
+		await wait(0.6)
+		_check("buttons: captures use the requested %s resolution" % size_case[1], DisplayServer.window_get_size() == size_case[0])
+		for language in ["th", "en"]:
+			Settings.set_value("lang", language)
+			await wait(0.2)
+			for key in ["build", "dwellers", "inventory", "settings"]:
+				_no_events()
+				if key == "settings": main.hud.open_settings("game")
+				else: main.hud.open_panel(key)
+				await wait(0.4)
+				var panel: ModalPanel = main.hud.panels[key]
+				var vp: Vector2 = main.hud.get_viewport_rect().size
+				_check("buttons: %s/%s/%s keeps the original floating window" % [size_case[1], language, key], panel.box.size.x < vp.x and panel.box.size.y < vp.y)
+				await shot("buttons_%s_%s_%s" % [size_case[1], language, key])
+				panel.close()
+				await wait(0.25)
+	Features.set_override("features", "english", previous_english)
+	Features.set_override("features", "raids", previous_raids)
+	Settings.set_value("lang", previous_lang)
+	Settings.set_value("tips", previous_tips)
+	DisplayServer.window_set_size(previous_size)
+
+
 func _god_update_test() -> void:
 	var god = main.hud.panels.god
 	# tutorial: replay, jump to a step, skip
@@ -4225,7 +4321,9 @@ func _col_diff(im: Image, a: int, b: int) -> float:
 ## into food (and stops when they run out or the pantry is full); recipes use sensible inputs; switch off = old game
 ## MV-378: a save load turns the biome into a float; the beaten warlord must still open the checkpoint
 func _checkpoint_test() -> void:
-	var keep := {"biome": Game.s.biome, "km": Game.s.km, "vault_level": Game.s.vault_level, "beaten": (Game.s.combat.boss_beaten as Dictionary).duplicate()}
+	var keep := {"biome": Game.s.biome, "km": Game.s.km, "vault_level": Game.s.vault_level, "beaten": (Game.s.combat.boss_beaten as Dictionary).duplicate(), "warlord_cd": Combat.warlord_cd}
+	# Earlier boss tests can leave a retry cooldown; this fixture models a fresh load.
+	Combat.warlord_cd = 0.0
 	Game.s.biome = 0.0     # as JSON.parse_string hands it back
 	Game.s.km = Data.biome_start_km(1)
 	Game.s.vault_level = maxi(int(Game.s.vault_level), int(Data.biome(1).req))
@@ -4243,6 +4341,7 @@ func _checkpoint_test() -> void:
 	Game.s.km = float(keep.km)
 	Game.s.vault_level = int(keep.vault_level)
 	Game.s.combat.boss_beaten = keep.beaten
+	Combat.warlord_cd = float(keep.warlord_cd)
 	Combat.wave_changed.emit()
 
 
