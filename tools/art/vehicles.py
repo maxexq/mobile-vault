@@ -339,21 +339,159 @@ def train_bogies(img):
 
 
 def rail_wheel_frames():
+    """MV-391: 20x20 rail wheel, 4 phases: steel flange, four spokes over dark recessed gaps (a quarter turn
+    over the loop), oily rust hub, one short fixed highlight on the upper flange."""
     out = []
     for f in range(4):
         w = new(20, 20)
         ellipse(w, 0, 0, 20, 20, OL)
-        ellipse(w, 1, 1, 18, 18, c("gray3"))
-        ellipse(w, 3, 3, 14, 14, c("gray2"))
+        ellipse(w, 1, 1, 18, 18, c("gray3"))          # flange
+        ellipse(w, 3, 3, 14, 14, OL)
+        ellipse(w, 4, 4, 12, 12, c("gray1"))          # recessed gaps
         for k in range(4):
             a = k / 4 * math.tau + f * math.tau / 16
-            line(w, 10, 10, round(10 + 6 * math.cos(a)), round(10 + 6 * math.sin(a)), c("gray4"))
+            ex, ey = round(9.5 + 6 * math.cos(a)), round(9.5 + 6 * math.sin(a))
+            line(w, 10, 10, ex, ey, c("gray3"))
+            line(w, 9, 9, round(9.5 + 5 * math.cos(a)) - 1, round(9.5 + 5 * math.sin(a)) - 1, c("gray4"))
         ellipse(w, 7, 7, 6, 6, OL)
         ellipse(w, 8, 8, 4, 4, c("orange1"))
-        a = f * math.tau / 4
-        rect(w, round(9 + 5 * math.cos(a)), round(9 + 5 * math.sin(a)), 2, 2, c("gray5"))
+        px(w, 10, 10, c("gray1"))                     # oil on the hub
+        hline(w, 5, 2, 3, c("gray5"))                 # fixed upper highlight
         out.append(w)
     return out
+
+
+# ------------------------------------------------------------------ MV-388 shell details (rig-detail-idle-concept-v1)
+# Each one is also its own atlas sprite (micro-asset spec id). The static ones are baked into the shells once,
+# after weathering and before the exterior copy, so the cut-away and closed views both carry them.
+def decal_car_pillar_wear():
+    """6x52: chip clusters, one short rust run, two rivet accents on a body pillar (columns 1-4 are paint)"""
+    img = new(6, 52)
+    for (x, y) in ((2, 7), (3, 7), (2, 8)):                 # chip cluster 1 (bare metal under paint)
+        px(img, x, y, c("gray3"))
+    px(img, 3, 8, c("ol1"))
+    for (x, y) in ((3, 19), (4, 19), (3, 20)):              # chip cluster 2
+        px(img, x, y, c("gray4"))
+    px(img, 4, 20, c("ol1"))
+    for (x, y) in ((1, 33), (2, 33), (2, 34)):              # chip cluster 3
+        px(img, x, y, c("gray3"))
+    px(img, 1, 34, c("ol1"))
+    for (x, y) in ((3, 45), (4, 45)):                       # chip cluster 4
+        px(img, x, y, c("gray4"))
+    for yy in range(35, 41):                                # rust run below cluster 3
+        px(img, 2, yy, c("orange2") if yy < 37 else c("orange1"))
+    px(img, 3, 36, c("orange1"))
+    for y in (13, 27):                                      # rivet accents
+        px(img, 2, y, c("gray4"))
+        px(img, 3, y + 1, OL)
+    return img
+
+
+def decal_car_weld_patch():
+    """12x8 bolted repair plate on the chassis band with a short weld bead on its right edge"""
+    img = new(12, 8)
+    rect(img, 0, 0, 11, 8, OL)
+    rect(img, 1, 1, 9, 6, c("gray3"))
+    hline(img, 1, 1, 9, c("gray4"))
+    vline(img, 1, 1, 6, c("gray4"))
+    px(img, 1, 1, c("gray5"))
+    hline(img, 2, 6, 8, c("gray2"))
+    px(img, 6, 4, c("orange1"))                             # rust under the plate
+    px(img, 7, 5, c("orange2"))
+    for bx in (3, 8):                                       # bolts
+        px(img, bx, 3, c("gray5"))
+        px(img, bx + 1, 4, c("gray1"))
+    for y in range(1, 7):                                   # weld bead
+        px(img, 11, y, c("gray4") if y % 2 else c("orange1"))
+    return img
+
+
+def decal_car_tank_detail():
+    """54x12 overlay on the fuel tank box (58..111, 272..283): straps at local x=12/28/42, a seam, low soot"""
+    img = new(54, 12)
+    for x in (12, 28, 42):
+        px(img, x, 1, c("gray5"))
+        vline(img, x, 2, 9, c("gray2"))
+        vline(img, x + 1, 1, 10, OL)
+        px(img, x - 1, 6, c("gray3"))                       # strap buckle
+    hline(img, 18, 5, 6, c("gray2"))                        # weld seam
+    px(img, 20, 5, c("gray4"))
+    for (x, y, k) in ((3, 9, "gray1"), (4, 10, "gray1"), (5, 10, "gray2"), (22, 10, "gray1"), (23, 9, "gray2"),
+                      (34, 10, "gray1"), (35, 10, "gray1"), (47, 9, "gray2"), (48, 10, "gray1")):
+        px(img, x, y, c(k))                                 # soot clusters
+    px(img, 13, 8, c("orange1"))                            # rust where the straps bite
+    px(img, 29, 9, c("orange2"))
+    px(img, 43, 8, c("orange1"))
+    return img
+
+
+def prop_car_leaf_spring():
+    """32x10 stock leaf spring: three stepped leaves, shackle brackets at both ends, central axle clamp"""
+    img = new(32, 10)
+    for (x, y, w) in ((2, 3, 28), (5, 5, 22), (9, 7, 14)):
+        rect(img, x, y, w, 2, OL)
+        hline(img, x + 1, y, w - 2, c("gray4") if y == 3 else c("gray3"))
+    px(img, 3, 3, c("gray5"))
+    for bx in (0, 29):                                      # shackle brackets bolted to the chassis
+        rect(img, bx, 0, 3, 5, OL)
+        vline(img, bx + 1, 0, 4, c("gray2"))
+        px(img, bx + 1, 3, c("orange1"))
+    rect(img, 14, 2, 4, 8, OL)                              # axle clamp + U-bolt
+    vline(img, 15, 3, 6, c("gray4"))
+    vline(img, 16, 3, 6, c("gray2"))
+    px(img, 15, 3, c("gray5"))
+    px(img, 16, 8, c("orange2"))
+    return img
+
+
+def decal_car_lamp_cage():
+    """2x6 protective strip over the left columns of the nose lamp: four corner fasteners, open middle"""
+    img = new(2, 6)
+    for (x, y) in ((0, 0), (1, 0), (0, 5), (1, 5)):
+        px(img, x, y, OL)
+    px(img, 0, 1, c("gray4"))
+    px(img, 0, 4, c("gray2"))
+    px(img, 1, 1, c("orange1"))
+    return img
+
+
+def decal_train_bogie_detail():
+    """44x6 overlay inside a 46px train bogie beam: two spring recesses, four bolts, a rust seam"""
+    img = new(44, 6)
+    for x in (10, 30):                                      # spring recesses
+        rect(img, x, 1, 4, 4, OL)
+        hline(img, x + 1, 2, 2, c("gray1"))
+        hline(img, x + 1, 4, 2, c("gray2"))
+    for x in (3, 6, 37, 40):                                # bolt groups
+        px(img, x, 1, c("gray5"))
+        px(img, x, 2, c("gray1"))
+    hline(img, 17, 4, 9, c("orange1"))                      # rust seam
+    px(img, 20, 4, c("orange2"))
+    px(img, 24, 3, c("gray4"))
+    return img
+
+
+PILLAR_WEAR = decal_car_pillar_wear()
+WELD_PATCH = decal_car_weld_patch()
+TANK_DETAIL = decal_car_tank_detail()
+LAMP_CAGE = decal_car_lamp_cage()
+BOGIE_DETAIL = decal_train_bogie_detail()
+# where the cage sits on the nose lamp: (cut-away after cut_cab, closed shell); the train is excluded
+LAMP_CAGE_AT = {"van": ((0, 210), (0, 210)), "bus": ((0, 222), (0, 224)), "rig": ((0, 228), (0, 230))}
+
+
+def shell_details(img, floors, trailer, tier=""):
+    """bake the static MV-388 details once into a weathered shell (before exterior() copies it)"""
+    xs = (16, 218) if trailer else (38, 248)
+    for fb in range(floors):
+        for x in xs:
+            paste(img, PILLAR_WEAR, x, 210 - 56 * fb)
+    paste(img, WELD_PATCH, 136 if trailer else 138, 262)
+    if tier in ("van", "bus", "rig"):
+        paste(img, TANK_DETAIL, 58, 272)
+    if tier == "train":
+        for bx in (7, 141):
+            paste(img, BOGIE_DETAIL, bx, 276)
 
 
 # ------------------------------------------------------------------ assemble
@@ -479,13 +617,26 @@ def rails_strip():
 def gen_vehicles():
     for tier, cfg in TIERS.items():
         shell = T.weather(gen_tier(tier), len(tier) * 11)
-        add(f"ext_{tier}", exterior(shell, cfg["floors"], COLS, cfg["paint"], tier))
+        shell_details(shell, cfg["floors"], False, tier)
+        ext = exterior(shell, cfg["floors"], COLS, cfg["paint"], tier)
         EB.cut_cab(shell, tier)          # v4.6: the cab's bottom floor is the walk-in engine room
+        if tier in LAMP_CAGE_AT:
+            paste(shell, LAMP_CAGE, *LAMP_CAGE_AT[tier][0])
+            paste(ext, LAMP_CAGE, *LAMP_CAGE_AT[tier][1])
+        add(f"ext_{tier}", ext)
         add(f"veh_{tier}", shell)
     for kind in ("trailer", "wagon"):
         sh = T.weather(gen_trailer(kind), len(kind) * 5)
+        shell_details(sh, 2, True)
         add(f"veh_{kind}", sh)
         add(f"ext_{kind}", exterior(sh, 2, TRAILER_COLS, "orange" if kind == "trailer" else "gray", kind))
+    # MV-388: the details as their own sprites (micro-asset ids); the leaf spring is placed at runtime by Vehicle
+    add("decal_car_pillar_wear", PILLAR_WEAR)
+    add("decal_car_weld_patch", WELD_PATCH)
+    add("decal_car_tank_detail", TANK_DETAIL)
+    add("prop_car_leaf_spring", prop_car_leaf_spring())
+    add("decal_car_lamp_cage", LAMP_CAGE)
+    add("decal_train_bogie_detail", BOGIE_DETAIL)
     for i, f in enumerate(rail_wheel_frames()):
         add(f"rwheel_{i}", f)
     save(rails_strip(), OUT_BG + "/rails.png")

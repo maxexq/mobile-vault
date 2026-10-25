@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Changed
+- More detailed vehicles: new tyre tread and rims on road, off-road and rail wheels, chipped and rusty pillars, weld patches, fuel-tank straps, a caged front lamp, riveted train bogies and leaf springs over the wheels (MV-388)
 - Bosses make an entrance: they drop in with a dust burst and a roar, a WARNING band shows the checkpoint warlord's name, and elites flash gold when they appear (MV-387)
 - Bad-luck protection for gear: after 40 drops without an Epic or better, the next one is guaranteed Epic+, and after 150 without a Legendary the next is Legendary+. The gear tab shows how close you are (MV-47)
 - The industrial map has a wider layered background, dithered sky colours driven by game time, moving sun and moon, subtle chimney smoke, drifting dust and small amber lights (MV-369)

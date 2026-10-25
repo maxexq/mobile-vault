@@ -29,7 +29,8 @@
     "announce": true,
     "raw_food": true,
     "loot_pity": true,
-    "boss_intro": true
+    "boss_intro": true,
+    "vehicle_detail": true
   },
   "events": {},
   "tune": {}

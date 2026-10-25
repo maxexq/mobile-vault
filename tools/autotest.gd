@@ -105,6 +105,11 @@ func _run() -> void:
 		_checkpoint_test()
 		_finish()
 		return
+	if "--only=vehicle_detail" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _vehicle_detail_test()
+		_finish()
+		return
 	if "--only=boss_intro" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _boss_intro_test()
@@ -784,6 +789,7 @@ func _run() -> void:
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
+	await _vehicle_detail_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -4432,3 +4438,63 @@ func _boss_intro_test() -> void:
 	await _wait_for(func(): return not intro.visible, 4.0)
 	Dev.kill_enemies()
 	await wait(0.4)
+
+
+## MV-388 phase 1: wheel redraws keep their sizes / phases, the static shell details are in the atlas, leaf springs
+## sit over every road wheel (main + trailers), give way to the coil-overs and the tracks, none on rails, switch off
+func _vehicle_detail_test() -> void:
+	var v: Vehicle = main.vehicle
+	var sizes := {"wheel_0": [32, 32], "wheel_3": [32, 32], "bwheel_0": [32, 32], "bwheel_3": [32, 32], "rwheel_0": [20, 20],
+		"rwheel_3": [20, 20], "decal_car_pillar_wear": [6, 52], "decal_car_weld_patch": [12, 8], "decal_car_tank_detail": [54, 12],
+		"prop_car_leaf_spring": [32, 10], "decal_car_lamp_cage": [2, 6], "decal_train_bogie_detail": [44, 6]}
+	var ok := true
+	for k in sizes:
+		var r = Atlas.regions.get(k)
+		if r == null or int(r[2]) != int(sizes[k][0]) or int(r[3]) != int(sizes[k][1]):
+			ok = false
+			print("[autotest] detail sprite wrong: %s %s" % [k, str(r)])
+	_check("vehicle detail: wheels + 6 detail sprites at their spec sizes", ok and Atlas.wheel_frames(false).get_frame_count("default") == 4
+		and Atlas.rail_wheel_frames().get_frame_count("default") == 4)
+	var was_mods: Dictionary = Game.s.mods.duplicate(true)
+	var was_tier := Game.tier()
+	var was_tr := Game.trailers()
+	for id in ["suspension", "tracks"]:
+		Game.s.mods[id] = 0
+	var cab_crew: int = Game.s.dwellers.filter(func(d): return int(d.room) == Data.CAB_SLOT).size()
+	Dev.set_tier("rig")
+	Dev.set_trailers(0)
+	await wait(0.2)
+	_check("god: changing tier / trailers keeps the cab crew in the cab (%d)" % cab_crew,
+		Game.s.dwellers.filter(func(d): return int(d.room) == Data.CAB_SLOT).size() == cab_crew)
+	_check("vehicle detail: a leaf spring over each of the rig's 3 road wheels (%d)" % v.leaf_springs(), v.leaf_springs() == 3)
+	Dev.set_trailers(1)
+	await wait(0.2)
+	_check("vehicle detail: + 2 on a trailer (%d)" % v.leaf_springs(), v.leaf_springs() == 5)
+	await shot("vehicle_detail_rig")
+	Game.s.mods["tracks"] = 1
+	Mods.mods_changed.emit()
+	await wait(0.1)
+	_check("vehicle detail: tracks hide the rear springs (%d)" % v.leaf_springs(), v.leaf_springs() == 3)
+	Game.s.mods["tracks"] = 0
+	Game.s.mods["suspension"] = 1
+	Mods.mods_changed.emit()
+	await wait(0.1)
+	_check("vehicle detail: coil-overs replace the main springs, trailer keeps its own (%d)" % v.leaf_springs(), v.leaf_springs() == 2)
+	Game.s.mods["suspension"] = 0
+	Mods.mods_changed.emit()
+	Dev.vehicle_detail_switch(false)
+	await wait(0.1)
+	_check("vehicle detail: switch off = no springs", v.leaf_springs() == 0)
+	Dev.vehicle_detail_switch(true)
+	await wait(0.1)
+	_check("vehicle detail: switch back on", v.leaf_springs() == 5)
+	Dev.set_tier("train")
+	await wait(0.2)
+	_check("vehicle detail: none on the train or its wagons (%d)" % v.leaf_springs(), v.leaf_springs() == 0)
+	await shot("vehicle_detail_train")
+	Features.set_override("features", "vehicle_detail", null)
+	Game.s.mods = was_mods
+	Dev.set_tier(was_tier)
+	Dev.set_trailers(was_tr)
+	Mods.mods_changed.emit()
+	await wait(0.2)

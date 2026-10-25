@@ -218,6 +218,8 @@ func _tab_vehicle() -> void:
 	_row(vb, "Vault Lv")
 	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
+	_row([_b("แหนบช่วงล่าง: " + ("เปิด" if Features.on("vehicle_detail") else "ปิด"), func(): Dev.vehicle_detail_switch(not Features.on("vehicle_detail")),
+		"green" if Features.on("vehicle_detail") else "red")], "รายละเอียดรถ MV-388 (ล้อ/สนิม/แผ่นปะอบในภาพแล้ว)")
 	_head("ENGINE BAY", "ห้องเครื่อง · %s %d°C สภาพ %d%%" % [EngineBay.t().th, int(EngineBay.heat()), int(EngineBay.cond())])
 	_row([_b("ระบบห้องเครื่อง: " + ("เปิด" if EngineBay.on() else "ปิด (ดีเซลเดิม)"), func(): Dev.engine_bay_switch(not EngineBay.on()),
 		"green" if EngineBay.on() else "red", true)], "สวิตช์")

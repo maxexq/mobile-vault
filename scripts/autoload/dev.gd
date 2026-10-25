@@ -306,10 +306,10 @@ func set_tier(t: String) -> void:
 				d.room = -1
 	while main_part.size() < new_main:
 		main_part.append({"type": "empty", "level": 1, "job": {}})
-	# dwellers working in trailers move with their rooms
+	# dwellers working in trailers move with their rooms (the cab crew, slot Data.CAB_SLOT, stays put)
 	var shift := new_main - old_main
 	for d in Game.s.dwellers:
-		if int(d.room) >= old_main:
+		if int(d.room) >= old_main and int(d.room) != Data.CAB_SLOT:
 			d.room = int(d.room) + shift
 	main_part.append_array(trailer_part)
 	Game.s.rooms = main_part
@@ -327,7 +327,7 @@ func set_trailers(n: int) -> void:
 	while cur > n:
 		var start: int = Game.s.rooms.size() - Data.TRAILER_SLOTS
 		for d in Game.s.dwellers:
-			if int(d.room) >= start:
+			if int(d.room) >= start and int(d.room) != Data.CAB_SLOT:
 				d.room = -1
 		Game.s.rooms = Game.s.rooms.slice(0, start)
 		cur -= 1
@@ -363,6 +363,11 @@ func set_hull(frac: float) -> void:
 func engine_bay_switch(v: bool) -> void:
 	feature_set("engine_bay", v)
 	EngineBay._changed()
+
+
+## MV-388: the vehicle_detail switch for this tester (leaf springs over the road wheels)
+func vehicle_detail_switch(v: bool) -> void:
+	feature_set("vehicle_detail", v)
 
 
 func engine_set(key: String, v: float) -> void:
