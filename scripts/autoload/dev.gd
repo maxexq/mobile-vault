@@ -630,6 +630,26 @@ func spawn_mob(id: String, n: int) -> void:
 	act("spawn %s x%d" % [id, n])
 
 
+## MV-387: n elites of this biome's mobs (real enemies, so their entrance plays)
+func spawn_elites(n: int) -> void:
+	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	var q := []
+	for i in n:
+		q.append({"t": 0.2 + i * 0.6, "mob": mobs[i % mobs.size()], "lvl": Combat.enemy_level(), "elite": true, "no_mutate": true})
+	Combat.debug_spawn(q, false)
+	act("spawn elites x%d" % n)
+
+
+## MV-387: play the warlord / boss / elite entrance without spawning anything (a stand-in enemy, id -1)
+func entrance_preview(kind: String) -> void:
+	var bd: Dictionary = Combat.boss_def(Combat.biome_id())
+	var e := {"id": -1, "lvl": Combat.warlord_level() if kind == "warlord" else Combat.enemy_level(), "kind": "walk",
+		"boss": kind != "elite", "warlord": kind == "warlord", "elite": kind == "elite",
+		"name": ("บอสด่านตรวจ: " if kind == "warlord" else "") + str(bd.get("th", "?"))}
+	Combat.entrance.emit(e)
+	act("entrance preview " + kind)
+
+
 func kill_enemies() -> void:
 	for e in Combat.enemies:
 		e.hp = 0.0

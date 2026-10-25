@@ -28,7 +28,8 @@
     "crew_roster_20": true,
     "announce": true,
     "raw_food": true,
-    "loot_pity": true
+    "loot_pity": true,
+    "boss_intro": true
   },
   "events": {},
   "tune": {}
