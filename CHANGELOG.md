@@ -10,6 +10,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Fixed
 - The engine room's "park to rest" button works again when the engine is already cool; it now holds until you tap "set off again" (MV-419)
+- You can no longer tear down (or split) living quarters when your crew would end up with fewer beds than people; the button says how many beds would be left (MV-420)
 
 ### Changed
 - Buttons use worn painted-steel faces with small fasteners and matching hover, pressed and disabled states; existing windows, layouts, fonts and hit areas stay the same (MV-418)
