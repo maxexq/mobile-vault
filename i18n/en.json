@@ -1321,6 +1321,7 @@
  "ห้องพยาบาล +40% · ฮีลแรงขึ้น 25%": "",
  "ห้องพัก": "",
  "ห้องพักบนรถเต็ม": "",
+ "ห้องพักไม่พอ: ลูกเรือ %d คน จะเหลือที่นอน %d ที่ (สร้างห้องพักอื่นก่อน)": "Not enough beds: %d crew, only %d beds would be left (build other quarters first)",
  "ห้องยังทำงานตามปกติระหว่างอัปเกรด": "The room keeps working during the upgrade",
  "ห้องยังทำงานแบบแยกห้อง โบนัสห้องใหญ่เริ่มเมื่อเสร็จ": "The rooms keep working separately; the large-room bonus starts when it's done",
  "ห้องวิจัย/วิทยุ/โรงช่าง +35% · XP +20%": "",
