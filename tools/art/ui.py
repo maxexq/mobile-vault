@@ -300,6 +300,58 @@ def _cut(img, r=1):
         px(img, x, y, CLEAR)
 
 
+# MV-418: the reviewed worn-steel faces. These are nine-slice textures, not
+# larger controls: UIKit keeps the original content margins and hit areas.
+BUTTON_FAMILIES = {
+    "btn": ("green2", "green3", "green1"),
+    "btn_amber": ("yellow1", "yellow2", "yellow0"),
+    "btn_gray": ("gray2", "gray3", "gray1"),
+    "btn_cyan": ("blue1", "blue2", "blue0"),
+    "btn_red": ("red1", "red2", "red0"),
+}
+
+
+def button_skin(stem, state):
+    """24x24, 6 px nine-slice caps; wear never enters the stretched centre."""
+    face, hi, lo = BUTTON_FAMILIES[stem]
+    if state == "hover":
+        face, hi = hi, "gray5"
+    elif state == "pressed":
+        face, hi = lo, "ol0"
+    elif state == "disabled":
+        face, hi, lo = "gray1", "gray2", "ol0"
+    b = new(24, 24)
+    rect(b, 0, 0, 24, 24, c("ol0"))
+    rect(b, 1, 1, 22, 22, c("gray3"))
+    rect(b, 2, 2, 20, 20, c("ol0"))
+    rect(b, 3, 3, 18, 18, c(face))
+    hline(b, 3, 3, 18, c(hi))
+    hline(b, 3, 20, 18, c(lo))
+    hline(b, 1, 1, 22, c("gray6" if state == "hover" else "gray4"))
+    for x in (3, 18):
+        for y in (3, 18):
+            rect(b, x, y, 3, 3, c("ol0"))
+            rect(b, x, y, 2, 2, c("gray3" if state == "disabled" else "gray4"))
+            if state != "disabled":
+                px(b, x, y, c("gray6"))
+    if state != "disabled":
+        px(b, 5, 1, c("orange2"))
+        hline(b, 18, 22, 2, c("orange1"))
+        px(b, 20, 21, c("orange2"))
+    for x, y in ((0, 0), (1, 0), (0, 1), (23, 0), (22, 0), (23, 1),
+                 (0, 23), (1, 23), (0, 22), (23, 23), (22, 23), (23, 22)):
+        px(b, x, y, CLEAR)
+    return b
+
+
+def gen_button_skins():
+    for stem in BUTTON_FAMILIES:
+        for state in ("normal", "hover", "pressed"):
+            _save_ui(button_skin(stem, state), stem + ("" if state == "normal" else "_" + state))
+    # The disabled face is identical for every family.
+    _save_ui(button_skin("btn", "disabled"), "btn_disabled")
+
+
 def gen_ui_frames():
     # window: 16x16, margin 5 -- soot outline, riveted steel border with rust, inner bevel, near-black inside
     p = new(16, 16)
@@ -333,34 +385,7 @@ def gen_ui_frames():
     _cut(p)
     _save_ui(p, "card")
 
-    # buttons 10x10 (margin 3): metal plate with a painted face, bevel + 1px dark lip
-    def btn(fill, hi, lo, name, line=BR):
-        b = new(10, 10)
-        rect(b, 0, 0, 10, 10, line)
-        rect(b, 1, 1, 8, 8, fill)
-        hline(b, 1, 1, 8, hi)
-        vline(b, 1, 1, 7, hi)
-        hline(b, 1, 8, 8, lo)
-        vline(b, 8, 2, 7, lo)
-        _cut(b)
-        _save_ui(b, name)
-
-    def ramp(r, i, hover=False):
-        n = len(RAMPS[r]) - 1
-        j = min(i + (1 if hover else 0), n)
-        return c(f"{r}{j}"), c(f"{r}{min(j + 1, n)}"), c(f"{r}{max(j - 1, 0)}")
-    btn(*ramp("green", 2), "btn")
-    btn(*ramp("green", 2, True), "btn_hover")
-    btn(c("gray1"), c("gray0"), c("gray2"), "btn_pressed")
-    btn(hx("1a1a1c"), hx("222224"), hx("121214"), "btn_disabled", line=c("gray2"))
-    btn(*ramp("yellow", 1), "btn_amber")
-    btn(*ramp("yellow", 1, True), "btn_amber_hover")
-    btn(*ramp("gray", 2), "btn_gray")
-    btn(*ramp("gray", 2, True), "btn_gray_hover")
-    btn(*ramp("blue", 2), "btn_cyan")
-    btn(*ramp("blue", 2, True), "btn_cyan_hover")
-    btn(*ramp("red", 1), "btn_red")
-    btn(*ramp("red", 1, True), "btn_red_hover")
+    gen_button_skins()
     # tab on / off (8x8, bottom open)
     t = new(8, 8)
     rect(t, 0, 0, 8, 8, BR)

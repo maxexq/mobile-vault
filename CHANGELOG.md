@@ -13,6 +13,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - You can no longer tear down (or split) living quarters when your crew would end up with fewer beds than people; the button says how many beds would be left (MV-420)
 
 ### Changed
+- Buttons use worn painted-steel faces with small fasteners and matching hover, pressed and disabled states; existing windows, layouts, fonts and hit areas stay the same (MV-418)
 - The vehicle moves a little even when parked: the roof flag waves, a rear chain sways, a mudflap flutters in the wind, the exhaust puffs instead of smoking non-stop (electric and fusion engines stay clean), and rain drips off the roof (MV-388)
 - The engine room comes alive: a turning cooling fan, a quivering coolant hose, detailed engine castings, and wisps of steam when the engine runs hot (MV-388)
 - More detailed vehicles: new tyre tread and rims on road, off-road and rail wheels, chipped and rusty pillars, weld patches, fuel-tank straps, a caged front lamp, riveted train bogies and leaf springs over the wheels (MV-388)
