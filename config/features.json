@@ -14,6 +14,7 @@
     "google_login": true,
     "player_id": true,
     "cloud_logs": true,
+    "game_analytics": true,
     "portrait_fit": true,
     "env_badge": true,
     "tutorial_tips": true,

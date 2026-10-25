@@ -511,6 +511,11 @@ func _tab_sys() -> void:
 	if Telemetry.last_error != "":
 		_note("ผิดพลาดล่าสุด: " + Telemetry.last_error)
 	_row([_b("ส่ง log ตอนนี้", func(): Dev.logs_flush(), "green"), _b("ส่ง error ทดสอบ", func(): Dev.logs_test_error(), "yellow")])
+	_head("GAMEANALYTICS", "สถิติบน GameAnalytics (MV-423)")
+	_note("สถานะ: %s · โปรเจกต์ %s · คิว %d · ส่งแล้ว %d · error ที่ส่งรอบนี้ %d/%d%s" % [Analytics.status(), BuildInfo.cloud_project(),
+		Analytics.queue.size(), Analytics.sent_total, Analytics.errors_sent, Analytics.ERRORS_MAX,
+		"" if Analytics.last_error == "" else " · ผิดพลาดล่าสุด: " + Analytics.last_error])
+	_row([_b("ส่ง event ทดสอบ (Test:GodMode)", func(): Dev.ga_test_event(), "green")])
 	_head("ANTI-CHEAT", "กันโกง (MV-174)")
 	var seen := "ยังไม่รู้ (คลาวด์ยังไม่ตอบ)" if Cloud.server_seen <= 0.0 else Time.get_datetime_string_from_unix_time(int(Cloud.server_seen + 7 * 3600), true)
 	_note("เซิร์ฟเวอร์รับเซฟล่าสุด: %s · เวลาจำลองสะสม %.1f ชม. · ถูกจำกัดความถี่ %d ครั้ง%s" % [seen,

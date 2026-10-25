@@ -1070,6 +1070,13 @@ func cloud_forget() -> void:
 	Cloud.sync()
 
 
+## MV-423: GameAnalytics: one test design event now, and send the queue; read-only for the save (not cheated)
+func ga_test_event() -> void:
+	Trace.rec("god", "gameanalytics test event", {"queued": Analytics.queue.size()})
+	Analytics.design("Test:GodMode")
+	Analytics.flush()
+
+
 ## player logs (MV-116): send the queued trace entries now; read-only for the save (not cheated)
 func logs_flush() -> bool:
 	Trace.rec("god", "logs flush", {"queued": Telemetry.pending().size()})

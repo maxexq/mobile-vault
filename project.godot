@@ -44,6 +44,7 @@ Loc="*res://scripts/autoload/loc.gd"
 Cloud="*res://scripts/autoload/cloud.gd"
 Telemetry="*res://scripts/autoload/telemetry.gd"
 Announce="*res://scripts/autoload/announce.gd"
+Analytics="*res://scripts/autoload/analytics.gd"
 
 [display]
 

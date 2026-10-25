@@ -10,5 +10,15 @@
       "anon_key": "YOUR-TEST-ANON-OR-PUBLISHABLE-KEY",
       "site_url": "https://YOUR-STAGING-URL.vercel.app/"
     }
+  },
+  "analytics": {
+    "prod": {
+      "game_key": "YOUR-GAMEANALYTICS-PROD-GAME-KEY",
+      "secret_key": "YOUR-GAMEANALYTICS-PROD-SECRET-KEY"
+    },
+    "test": {
+      "game_key": "YOUR-GAMEANALYTICS-TEST-GAME-KEY",
+      "secret_key": "YOUR-GAMEANALYTICS-TEST-SECRET-KEY"
+    }
   }
 }

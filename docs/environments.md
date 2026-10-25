@@ -60,6 +60,8 @@
 6. Project Settings → API → คัดลอก **Project URL** และ **anon / publishable key** (ห้ามใช้ service_role)
 
 ### 4. `cloud_config.json` บนเครื่องที่ export (git-ignore ไม่ขึ้น git)
+> MV-423: ใส่คีย์ GameAnalytics ไว้ในไฟล์เดียวกันได้ที่ `"analytics": {"prod": {"game_key", "secret_key"}, "test": {...}}` (สร้างเกม 2 เกมใน GameAnalytics: ของจริง + ทดสอบ) ดูตัวอย่างใน `cloud_config.example.json` ไม่ใส่ = ไม่ส่งสถิติ
+
 เปลี่ยนเป็นรูปแบบใหม่ (ดู `cloud_config.example.json`):
 ```json
 {
