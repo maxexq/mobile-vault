@@ -204,6 +204,11 @@ func start(id: String, ids: Array, sup: Dictionary) -> bool:
 		return false
 	if active() or ids.size() < min_team():
 		return false
+	for did in ids:
+		var bd := Game.dweller_by_id(int(did))
+		if not bd.is_empty() and Crew.refuses(bd):     # MV-127: Broken crew won't go out
+			Crew.refuse_toast(bd)
+			return false
 	var cost := {}
 	for k in sup:
 		if int(sup[k]) > 0:

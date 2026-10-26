@@ -136,6 +136,11 @@ func _run() -> void:
 		await _outbox_test()
 		_finish()
 		return
+	if "--only=morale" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _morale_test()
+		_finish()
+		return
 	if "--only=hull_warning" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _hull_warning_test()
@@ -532,7 +537,8 @@ func _run() -> void:
 	Game.s.rooms[es].type = "medical"
 	_check("weight grows with rooms", es >= 0 and Haul.weight() > w0 and Haul.capacity() > float(Game.vehicle_def().engine))
 	Game.s.rooms[es].type = "empty"
-	# morale: strike then theft + desertion
+	# morale: strike then theft + desertion (the legacy rules, morale_v2 off; v2 is _morale_test)
+	Features.set_override("features", "morale_v2", false)
 	var grumpy := Game._add_dweller({"name": "ทดสอบหนี", "variant": "dw_raider_black", "str": 3, "int": 3, "agi": 3, "lvl": 1})
 	grumpy.happy = 5.0
 	for i in 12:
@@ -543,6 +549,7 @@ func _run() -> void:
 		Crew.morale_tick(grumpy, 10.0, false)
 	Crew.flush_deserters()
 	_check("morale: deserter steals and leaves", not Game.s.dwellers.has(grumpy) and float(Game.s.res.food) < food0)
+	Features.set_override("features", "morale_v2", null)
 	# pets live on the vehicle
 	var adopt := Game.resolve_event("stray_cat", 0, [])
 	_check("adopt a pet", adopt.ok and Game.has_pet("cat"))
@@ -883,6 +890,7 @@ func _run() -> void:
 	await _flee_guard_test()
 	await _barks_test()
 	await _hull_warning_test()
+	await _morale_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -6114,4 +6122,169 @@ func _hull_warning_test() -> void:
 	Settings.set_value("shake", keep_shake)
 	Game.s.hull = keep_hull
 	Game.s.res.scrap = keep_scrap
+	await wait(0.3)
+
+
+## MV-127 morale v2: Depressed (slower work, hysteresis) → Broken (no work, quarters, refuses orders, squad freed) →
+## leaves only at night without stealing; recovery sends them back to their room; talk (best INT talker, gain, talker
+## off work, pair cooldown, frozen with the switch off); the dossier talk button; switch off = old rules; GOD
+func _morale_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_dw: Array = Game.s.dwellers.duplicate(true)
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	var keep_res: Dictionary = Game.s.res.duplicate(true)
+	var keep_squad: Array = (Game.s.get("squad", []) as Array).duplicate()
+	var keep_tod = Game.s.get("tod", 0.5)
+	Features.set_override("features", "morale_v2", true)
+	# a room to work in and finished quarters
+	var work := -1
+	var quarters := -1
+	for i in Game.s.rooms.size():
+		var t := str(Game.s.rooms[i].type)
+		if t == "quarters" and quarters < 0 and not Game.is_site(i):
+			quarters = i
+		elif work < 0 and Data.BUILDABLE.has(t) and t != "quarters" and t != "engine" and Game.room_cells(i).size() == 1 and not Game.is_site(i):
+			work = i
+	if quarters < 0:
+		for i in Game.s.rooms.size():
+			if i != work and Game.is_slot_unlocked(i) and str(Game.s.rooms[i].type) == "empty" and not Game.is_annex(i):
+				Game.s.rooms[i] = {"type": "quarters", "level": 1, "job": {}, "build": {}}
+				quarters = i
+				break
+	_check("morale: setup (work %d, quarters %d)" % [work, quarters], work >= 0 and quarters >= 0)
+	while Game.s.dwellers.size() < 3:
+		Game.recruit_random()
+	var sad: Dictionary = Game.s.dwellers[0]
+	var pal: Dictionary = Game.s.dwellers[1]
+	var pal2: Dictionary = Game.s.dwellers[2]
+	for d in [sad, pal, pal2]:
+		d.away_until = 0.0
+		d.erase("exp")
+		for k in ["mood", "mood_room", "talk_t", "strike", "strike_t", "desert_t", "desert_warn"]:
+			d.erase(k)
+		d.happy = 70.0
+		d.room = -1
+	for i in (Game.s.get("squad", []) as Array).size():
+		Game.s.squad[i] = -1
+	Game.s.erase("morale")
+	sad.room = work
+	pal.int = 9
+	pal2.int = 3
+	Game.rooms_changed.emit()
+	# --- Depressed: slower, with a gap before it clears
+	var full := Crew.room_mult(work)
+	sad.happy = 30.0
+	Crew.morale_tick(sad, 1.0, false)
+	_check("morale: below 35 = Depressed, works at 70%", Crew.is_depressed(sad) and is_equal_approx(Crew.work_mult(sad), 0.7)
+		and Crew.room_mult(work) < full and Game.room_workers(work).has(sad))
+	sad.happy = 38.0
+	Crew.morale_tick(sad, 1.0, false)
+	var held: bool = Crew.is_depressed(sad)
+	sad.happy = 43.0
+	Crew.morale_tick(sad, 1.0, false)
+	_check("morale: stays Depressed until 42, then clears", held and Crew.mood(sad) == "")
+	# --- Broken after 90 s under 20: no work, into the quarters, squad freed, refuses orders
+	Game.set_squad(0, int(sad.id))
+	sad.happy = 10.0
+	for i in 8:
+		Crew.morale_tick(sad, 10.0, false)
+	var not_yet: bool = not Crew.is_broken(sad)
+	Crew.morale_tick(sad, 15.0, false)
+	_check("morale: Broken only after 90 s under 20", not_yet and Crew.is_broken(sad) and bool(sad.strike))
+	_check("morale: Broken = in the quarters, out of the squad, not working", int(sad.room) == quarters and Game.squad_role(sad) < 0
+		and not Game.room_workers(quarters).has(sad))
+	_check("morale: Broken refuses room / squad / Saloon orders", not Game.assign(sad, work) and int(sad.room) == quarters
+		and (func(): Game.set_squad(0, int(sad.id)); return Game.squad_role(sad) < 0).call() and Saloon.diner_block(sad) != "")
+	# --- leaves only at night, after the wait, without stealing
+	Game.s.tod = 0.5
+	var food0 := float(Game.s.res.food)
+	for i in 30:
+		Crew.morale_tick(sad, 10.0, false)
+	Crew.flush_deserters()
+	var day_stays: bool = Game.s.dwellers.has(sad) and bool(sad.get("desert_warn", false))
+	var sad_copy := sad.duplicate(true)
+	Game.s.tod = 0.0
+	Crew.morale_tick(sad, 1.0, false)
+	Crew.flush_deserters()
+	_check("morale: a Broken crew member warned in the day leaves at night with nothing stolen", day_stays and not Game.s.dwellers.has(sad)
+		and is_equal_approx(float(Game.s.res.food), food0))
+	# bring them back for the rest
+	Game.s.dwellers.append(sad_copy)
+	sad = sad_copy
+	Game.s.tod = 0.5
+	# --- talk: best INT talker, gain, talker off work, pair cooldown
+	pal.room = work
+	sad.desert_t = 0.0
+	_check("morale: the best talker is the highest INT one", int(Crew.best_talker(sad).id) == int(pal.id) and Crew.talk_block(sad) == "")
+	var h0 := float(sad.happy)
+	var gain: float = Crew.talk(int(sad.id))
+	_check("morale: talking gives %.1f happiness (more with INT 9)" % gain, gain > 10.0 and is_equal_approx(float(sad.happy), h0 + gain))
+	_check("morale: the talker is off work for a minute", Crew.busy(pal) and not Game.room_workers(work).has(pal))
+	_check("morale: the same pair waits; someone else talks next", Crew.talker_block(pal, sad) != "" and not Crew.best_talker(sad).is_empty()
+		and int(Crew.best_talker(sad).id) != int(pal.id))
+	Features.set_override("features", "morale_v2", false)
+	var t0 := float(pal.talk_t)
+	Crew.morale_v2_global_tick(30.0)
+	_check("morale: talk timers freeze with the switch off", is_equal_approx(float(pal.talk_t), t0))
+	Features.set_override("features", "morale_v2", true)
+	Crew.morale_v2_global_tick(61.0)
+	_check("morale: the talker goes back to work after the talk", not Crew.busy(pal) and Game.room_workers(work).has(pal))
+	# --- recovery: back to the room they had when it has a seat, idle when it is full
+	for o in Game.s.dwellers:
+		if o != sad and int(o.room) == work:
+			o.room = -1
+	sad.mood_room = work
+	sad.happy = 31.0
+	Crew.morale_tick(sad, 1.0, false)
+	_check("morale: from 30 Broken ends: back to their old room, still Depressed", not Crew.is_broken(sad) and not bool(sad.strike)
+		and int(sad.room) == work and Crew.is_depressed(sad))
+	Dev.mood_force(sad, "broken")
+	sad.mood_room = work
+	pal.room = work
+	pal2.room = work
+	sad.happy = 31.0
+	Crew.morale_tick(sad, 1.0, false)
+	_check("morale: a full old room = they recover idle, nobody is pushed out", not Crew.is_broken(sad) and int(sad.room) == -1
+		and int(pal.room) == work and int(pal2.room) == work)
+	pal.room = -1
+	pal2.room = -1
+	# --- the dossier talk button
+	Dev.talk_reset()
+	Dev.mood_force(sad, "depressed")
+	main.hud.open_panel("dwellers")
+	(main.hud.panels.dwellers as DwellersPanel).manage(int(sad.id))
+	await wait(0.4)
+	var tb: Button = main.hud.panels.dwellers.find_child("TalkButton", true, false)
+	_check("morale: the dossier shows the talk button", tb != null and not tb.disabled)
+	await shot("morale_dossier")
+	var h1 := float(sad.happy)
+	if tb:
+		tb.pressed.emit()
+		await wait(0.3)
+	_check("morale: talking from the dossier lifts them", float(sad.happy) > h1)
+	main.hud.panels.dwellers.close()
+	await wait(0.3)
+	# --- switch off: the old strike rules, no mood
+	Features.set_override("features", "morale_v2", false)
+	_check("morale: switch off = no stages, no refusals", Crew.mood(sad) == "" and not Crew.refuses(sad) and is_equal_approx(Crew.work_mult(sad), 1.0))
+	Features.set_override("features", "morale_v2", true)
+	# --- GOD
+	Dev.mood_force(sad, "broken")
+	var gb: bool = Crew.is_broken(sad)
+	Dev.mood_force(sad, "")
+	_check("morale: GOD sets Broken and back to fine", gb and Crew.mood(sad) == "" and not bool(sad.get("strike", false)))
+	Features.set_override("features", "morale_v2", null)
+	Game.s.dwellers = keep_dw
+	Game.s.rooms = keep_rooms
+	Game.s.res = keep_res
+	if Game.s.has("squad"):
+		Game.s.squad = keep_squad
+	Game.s.tod = keep_tod
+	Game.s.erase("morale")
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.squad_changed.emit()
 	await wait(0.3)

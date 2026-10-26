@@ -313,6 +313,8 @@ func _tab_crew() -> void:
 	_note("โบกรถ (MV-244): สวิตช์ stop_for_strangers %s · %s · สร้างคนแปลกหน้าตอนรถวิ่ง = รถจอดและเปิดหน้าต่างตรวจเอง" % [
 		"เปิด" if Features.on("stop_for_strangers") else "ปิด", "รถจอดรับคนอยู่" if Inspection.halting() else "ไม่ได้จอดรับใคร"])
 	_head("CREW", "ทีละคน")
+	if Crew.v2():
+		_row([_b("ล้างคูลดาวน์คุยปลอบใจ", func(): Dev.talk_reset())], "ขวัญ v2 (MV-127)")
 	for d in Game.s.dwellers:
 		var dd: Dictionary = d
 		var tags := []
@@ -320,6 +322,10 @@ func _tab_crew() -> void:
 			tags.append("ออกสำรวจ")
 		if Crew.is_striking(dd):
 			tags.append("ประท้วง")
+		if Crew.mood(dd) != "":
+			tags.append(str(Crew.MOOD_TH[Crew.mood(dd)]))
+		if Crew.busy(dd):
+			tags.append("กำลังคุยปลอบใจ")
 		_list.add_child(UIKit.label("%s Lv%d · HP %d · สุข %d %s" % [dd.name, dd.lvl, int(dd.hp), int(dd.happy), " · ".join(tags)], UIKit.FS_SMALL, UIKit.C_TEXT))
 		var tl := []
 		for t in Crew.traits(dd):
@@ -329,6 +335,10 @@ func _tab_crew() -> void:
 			_b("ตาย", func(): Dev.kill(dd), "red")])
 		_row([_b("เลิกเป็นช่าง" if Crew.is_builder(dd) else "เป็นช่าง", func(): Dev.toggle_builder(dd), "yellow" if Crew.is_builder(dd) else "gray"),
 			_b("สุ่ม trait ใหม่", func(): Dev.reroll_traits(dd))])
+		if Crew.v2():
+			_row([_b("ปกติ", func(): Dev.mood_force(dd, ""), "green"), _b("หดหู่", func(): Dev.mood_force(dd, "depressed"), "yellow"),
+				_b("ใจสลาย", func(): Dev.mood_force(dd, "broken"), "red"), _b("ลงรถคืนนี้", func(): Dev.mood_force(dd, "leaving"), "red"),
+				_b("คุยปลอบใจ", func(): Crew.talk(int(dd.id)), "blue")], "ขวัญ (MV-127)")
 
 
 ## MV-170: every named crew sprite (any animation) + portrait, and a button that boards that one

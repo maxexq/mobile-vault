@@ -681,6 +681,42 @@ func force_strike(d: Dictionary) -> void:
 	Game.rooms_changed.emit()
 
 
+## MV-127 morale v2: put a crew member in a mood stage now ("" = fine, "depressed", "broken"; "leaving" = Broken and
+## leaves at the next night)
+func mood_force(d: Dictionary, stage: String) -> void:
+	if Crew.is_broken(d) and stage != "broken" and stage != "leaving":
+		Crew._clear_broken(d, true)
+	match stage:
+		"":
+			d.happy = 75.0
+			d["mood"] = ""
+			d["strike_t"] = 0.0
+		"depressed":
+			d.happy = 30.0
+			d["mood"] = Crew.MOOD_DEPRESSED
+			d["strike_t"] = 0.0
+		"broken", "leaving":
+			d.happy = 10.0
+			if not Crew.is_broken(d):
+				Crew._set_broken(d, true)
+			if stage == "leaving":
+				d["desert_t"] = Features.num("morale.leave_sec", 180.0)
+				d["desert_warn"] = true
+	act("mood %s = %s" % [d.name, stage])
+	Game.dwellers_changed.emit()
+	Game.rooms_changed.emit()
+
+
+## every talk timer and pair cooldown ends now
+func talk_reset() -> void:
+	for d in Game.s.dwellers:
+		d.erase("talk_t")
+	if Game.s.get("morale") is Dictionary:
+		(Game.s.morale as Dictionary)["talk_cd"] = {}
+	act("talk reset")
+	Game.rooms_changed.emit()
+
+
 func desert_now(d: Dictionary) -> void:
 	act("desert " + str(d.name))
 	Crew.desert(d)

@@ -137,6 +137,45 @@ func _pick_gear(did: int, slot: String) -> void:
 		hud.open_loot_equipped(it, did)
 
 
+## MV-127: the crew member's mood stage and the talk button (morale_v2)
+func _build_mood(d: Dictionary) -> void:
+	if not Crew.v2():
+		return
+	var m := Crew.mood(d)
+	if m == Crew.MOOD_OK and not Crew.busy(d):
+		return
+	var p := UIKit.panel(UIKit.C_BG2, UIKit.C_RED if m == Crew.MOOD_BROKEN else UIKit.C_ORANGE)
+	var v := UIKit.vbox(2)
+	p.add_child(v)
+	var txt := ""
+	match m:
+		Crew.MOOD_DEPRESSED:
+			txt = Loc.t("หดหู่ (ความสุข %d) · ทำงานได้ %d%%") % [int(d.happy), int(round(Crew.work_mult(d) * 100.0))]
+		Crew.MOOD_BROKEN:
+			txt = Loc.t("ใจสลาย (ความสุข %d) · นั่งร้องไห้ ไม่ทำงาน ไม่รับคำสั่ง") % int(d.happy)
+			if d.get("desert_warn", false):
+				txt += Loc.t(" · อาจลงจากรถคืนนี้!")
+	if Crew.busy(d):
+		txt = Loc.t("กำลังคุยปลอบใจเพื่อนอยู่ อีก %s") % Game.fmt_time(float(d.talk_t)) if txt == "" else txt
+	v.add_child(UIKit.wrap_label(txt, UIKit.FS_SMALL, UIKit.C_RED if m == Crew.MOOD_BROKEN else UIKit.C_ORANGE))
+	if m == Crew.MOOD_OK:
+		_list.add_child(p)
+		return
+	var why := Crew.talk_block(d)
+	var talker := Crew.best_talker(d)
+	var b := UIKit.button(Loc.t("ให้ %s คุยปลอบใจ (+%d)") % [talker.name, int(Crew.talk_gain(talker))] if why == "" else Loc.t("คุยปลอบใจ: %s") % Loc.t(why),
+		"green", "chat")
+	b.name = "TalkButton"
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.disabled = why != ""
+	var did := int(d.id)
+	b.pressed.connect(func():
+		Crew.talk(did)
+		refresh())
+	v.add_child(b)
+	_list.add_child(p)
+
+
 func _build_manage(d: Dictionary) -> void:
 	set_title("%s / %s" % ["DOSSIER LV%d" % d.lvl, d.name])
 	var back := UIKit.button(Loc.t("< กลับ"), "gray")
@@ -200,6 +239,7 @@ func _build_manage(d: Dictionary) -> void:
 		_list.add_child(ib)
 	if float(d.rads) > 5.0:
 		_list.add_child(UIKit.label(Loc.t("รังสีสะสม %d") % int(d.rads), UIKit.FS_SMALL, UIKit.C_ORANGE))
+	_build_mood(d)
 	var sk := UIKit.hbox(4)
 	var skl := UIKit.label("SKILLS %s" % (Loc.t("(%d แต้มว่าง)") % Skills.points_free(d) if Skills.points_free(d) > 0 else ""), UIKit.FP, UIKit.C_GOLD, true)
 	skl.size_flags_vertical = Control.SIZE_SHRINK_CENTER

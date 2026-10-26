@@ -327,7 +327,9 @@ func _build_production(r: Dictionary, def: Dictionary) -> void:
 	if Game.room_dark(slot):
 		v.add_child(UIKit.wrap_label(Loc.t("ไฟดับ! ห้องมืดสนิท ผลิตได้น้อยลง — ช่างเครื่องซ่อมได้เร็วขึ้น") if not Game.blackout() else Loc.t("แบตเตอรี่หมด! ทั้งรถมืด"), UIKit.FS_SMALL, UIKit.C_RED))
 	for d in Game.room_occupants(slot):
-		if d.get("strike", false):
+		if Crew.is_broken(d):
+			v.add_child(UIKit.wrap_label(Loc.t("%s ใจสลาย นั่งร้องไห้ (ความสุข %d) · แตะชื่อในเมนูลูกเรือเพื่อคุยปลอบใจ") % [d.name, int(d.happy)], UIKit.FS_SMALL, UIKit.C_RED))
+		elif d.get("strike", false):
 			v.add_child(UIKit.wrap_label(Loc.t("%s ประท้วงหยุดงาน (ความสุข %d)") % [d.name, int(d.happy)], UIKit.FS_SMALL, UIKit.C_RED))
 	if Env.prod_mult() < 0.99:
 		v.add_child(UIKit.wrap_label(Loc.t("หนาวจัด! ผลิตได้ x%.2f (ต้องการเชื้อเพลิง)") % Env.prod_mult(), UIKit.FS_SMALL, UIKit.C_RED))
