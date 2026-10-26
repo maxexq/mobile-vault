@@ -2074,16 +2074,40 @@ func event_decide_sec(id: String) -> float:
 
 
 ## index of the choice taken on time-out: a choice marked "auto": true, else the first affordable one in AUTO_ORDER
+## (never one that is closed right now, MV-243: no fleeing when the vehicle can't move)
 func event_auto_choice(id: String) -> int:
 	var chs: Array = Data.EVENTS[id].choices
 	for i in chs.size():
-		if bool(chs[i].get("auto", false)) and (not chs[i].has("cost") or can_afford(chs[i].cost)):
+		if bool(chs[i].get("auto", false)) and (not chs[i].has("cost") or can_afford(chs[i].cost)) and choice_block(chs[i]) == "":
 			return i
 	for a in AUTO_ORDER:
 		for i in chs.size():
-			if str(chs[i].action) == a and (not chs[i].has("cost") or can_afford(chs[i].cost)):
+			if str(chs[i].action) == a and (not chs[i].has("cost") or can_afford(chs[i].cost)) and choice_block(chs[i]) == "":
 				return i
 	return 0
+
+
+## MV-243: why the vehicle can't pull away right now ("" = it can): the same reasons that stop it on the road
+## (expedition out / parked at a site, no power, broken hull, waiting out a stop, engine resting / stalled / in a
+## parked job, checkpoint, wrecked). The open event itself doesn't count: fleeing is what ends it.
+func drive_block() -> String:
+	if not Features.on("flee_guard"):
+		return ""
+	return blocked_reason()
+
+
+## MV-243: why this event choice can't be taken right now ("" = it can). Only fleeing needs the vehicle to move.
+func choice_block(ch: Dictionary) -> String:
+	if str(ch.get("action", "")) == "flee":
+		var why := drive_block()
+		if why != "":
+			return "รถออกตัวไม่ได้: %s" % why
+	return ""
+
+
+## MV-243: nobody aboard to send out (everyone is on an expedition): a fight is the crew bracing inside instead
+func nobody_aboard() -> bool:
+	return not s.dwellers.any(func(d): return not is_away(d))
 
 
 ## the two strongest crew who are aboard: who goes out when a fight is picked for the commander
@@ -2100,6 +2124,9 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 	var ch: Dictionary = ev.choices[choice_idx]
 	var danger := event_danger(id)
 	var res := {"ok": true, "text": ""}
+	var blocked := choice_block(ch)
+	if blocked != "":
+		return {"ok": false, "text": blocked}
 	match ch.action:
 		"fight":
 			var team := []
@@ -2107,29 +2134,36 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 				var dd := dweller_by_id(int(did))
 				if not dd.is_empty():
 					team.append(dd)
-			if team.is_empty():
-				return {"ok": false, "text": "ต้องเลือกผู้ป้องกันอย่างน้อย 1 คน"}
-			var power := armory_bonus()
-			for d in team:
-				power += dweller_power(d)
-			if has_item("ammo", 3):
-				power += 4.0
-				add_item("ammo", -3)
-			var need := 8.0 + danger * 6.0
-			var roll := rng.randf_range(0.75, 1.25)
-			if power * roll >= need:
-				var got := give_rewards(_scale_reward(ch.get("reward", {})))
-				for d in team:
-					d.hp = maxf(5.0, float(d.hp) - rng.randf_range(2, 8) * danger)
-					d.xp = float(d.xp) + 4.0 * danger
-				res.text = "ชนะ! ทีมป้องกันขับไล่ศัตรูได้สำเร็จ\nได้รับ: %s" % got
-			else:
-				for d in team:
-					d.hp = maxf(5.0, float(d.hp) - rng.randf_range(10, 20) * danger)
-				var hd := rng.randf_range(6, 12) * danger
-				s.hull = maxf(0.0, float(s.hull) - hd)
+			if team.is_empty() and nobody_aboard() and Features.on("flee_guard"):
+				# MV-243: nobody to send out and (often) no way to drive off: the vehicle takes the hit
+				var hb := rng.randf_range(6, 12) * danger
+				s.hull = maxf(0.0, float(s.hull) - hb)
 				res.ok = false
-				res.text = "แพ้... ทีมบาดเจ็บหนัก ตัวถังเสียหาย -%d%%\n(พลังทีม %.0f vs อันตราย %.0f)" % [int(hd), power * roll, need]
+				res.text = "ไม่มีใครอยู่บนรถ ทำได้แค่ปิดประตูตั้งรับ... ตัวถังเสียหาย -%d%%" % int(hb)
+			elif team.is_empty():
+				return {"ok": false, "text": "ต้องเลือกผู้ป้องกันอย่างน้อย 1 คน"}
+			else:
+				var power := armory_bonus()
+				for d in team:
+					power += dweller_power(d)
+				if has_item("ammo", 3):
+					power += 4.0
+					add_item("ammo", -3)
+				var need := 8.0 + danger * 6.0
+				var roll := rng.randf_range(0.75, 1.25)
+				if power * roll >= need:
+					var got := give_rewards(_scale_reward(ch.get("reward", {})))
+					for d in team:
+						d.hp = maxf(5.0, float(d.hp) - rng.randf_range(2, 8) * danger)
+						d.xp = float(d.xp) + 4.0 * danger
+					res.text = "ชนะ! ทีมป้องกันขับไล่ศัตรูได้สำเร็จ\nได้รับ: %s" % got
+				else:
+					for d in team:
+						d.hp = maxf(5.0, float(d.hp) - rng.randf_range(10, 20) * danger)
+					var hd := rng.randf_range(6, 12) * danger
+					s.hull = maxf(0.0, float(s.hull) - hd)
+					res.ok = false
+					res.text = "แพ้... ทีมบาดเจ็บหนัก ตัวถังเสียหาย -%d%%\n(พลังทีม %.0f vs อันตราย %.0f)" % [int(hd), power * roll, need]
 		"flee":
 			var pw := float(s.res.power) * 0.2
 			s.res.power = float(s.res.power) - pw

@@ -141,6 +141,11 @@ func _run() -> void:
 		await _barks_test()
 		_finish()
 		return
+	if "--only=flee_guard" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _flee_guard_test()
+		_finish()
+		return
 	if "--only=flagged" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _flagged_test()
@@ -857,8 +862,9 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
-	await _barks_test()
 	await _flagged_test()
+	await _flee_guard_test()
+	await _barks_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -5470,6 +5476,107 @@ func _barks_test() -> void:
 		return Dev.bark(k) == k))
 	reset.call()
 
+
+## MV-243: "เร่งเครื่องหนี" is closed (with the reason) whenever the vehicle can't pull away, for every reason
+## blocked_reason() knows; resolve_event refuses it, a time-out fights instead, and with nobody aboard the fight
+## becomes "brace inside" so the event can always end
+func _flee_guard_test() -> void:
+	_no_events()
+	var ep = main.hud.event_popup
+	if Game.active_event != "":
+		Game.cancel_event()
+		ep.close()
+	var keep := {"stall": float(Game.s.stall), "hull": float(Game.s.hull), "power": float(Game.s.res.power),
+		"wrecked": Game.s.get("wrecked", false), "away": Game.s.dwellers.map(func(d): return float(d.away_until))}
+	Game.s.stall = 0.0
+	Game.s.hull = maxf(50.0, float(Game.s.hull))
+	Game.s.res.power = maxf(50.0, float(Game.s.res.power))
+	var fi := _qte_index("wolves", "flee")
+	var fight := _qte_index("wolves", "fight")
+	var flee: Dictionary = Data.EVENTS.wolves.choices[fi]
+	_check("flee guard: free road = flee open (%s)" % Game.blocked_reason(), Game.drive_block() == "" and Game.choice_block(flee) == ""
+		and Game.event_auto_choice("wolves") == fi)
+	# every reason the vehicle can't move closes it, and a time-out picks the fight instead
+	var cases := {
+		"waiting out a stop": func(on: bool): Game.s.stall = 45.0 if on else 0.0,
+		"no power": func(on: bool): Game.s.res.power = 0.0 if on else maxf(50.0, float(keep.power)),
+		"hull broken": func(on: bool): Game.s.hull = 0.0 if on else maxf(50.0, float(keep.hull)),
+		"engine resting": func(on: bool):
+			EngineBay.st().resting = on
+			EngineBay.st().rest_hold = false,
+		"wrecked": func(on: bool): Game.s.wrecked = on,
+	}
+	for why in cases:
+		cases[why].call(true)
+		var blk := Game.choice_block(flee)
+		_check("flee guard: %s -> flee closed (%s)" % [why, blk], blk.begins_with("รถออกตัวไม่ได้") and Game.drive_block() != ""
+			and Game.event_auto_choice("wolves") == fight)
+		cases[why].call(false)
+	var site: String = Expedition.SITES.keys()[0]
+	Expedition.arrive(site)
+	_check("flee guard: parked at a site -> flee closed", Game.choice_block(flee) != "" and Expedition.at_site() == site)
+	Expedition.skip_site()
+	_check("flee guard: open again once it can drive", Game.choice_block(flee) == "" and Game.event_auto_choice("wolves") == fi)
+	_check("flee guard: the stray dog's 'drive away' is no longer called flee", not Data.EVENTS.stray_dog.choices.any(func(c): return str(c.th) == "เร่งเครื่องหนี"))
+	# the game refuses it, not only the button
+	Game.s.stall = 45.0
+	Game.trigger_event("wolves")
+	await wait(0.3)
+	var p0 := float(Game.s.res.power)
+	var r: Dictionary = Game.resolve_event("wolves", fi, [])
+	_check("flee guard: resolve refuses flee, the event stays, no power spent", not r.ok and str(r.text).begins_with("รถออกตัวไม่ได้")
+		and Game.active_event == "wolves" and is_equal_approx(float(Game.s.res.power), p0))
+	# the pop-up shows it closed with the reason
+	ep.refresh()
+	await wait(0.1)
+	var btns: Array = ep.find_children("*", "", true, false).filter(func(n): return n is ChoiceButton)
+	var texts: Array = ep.find_children("*", "Label", true, false).map(func(l): return str(l.text))
+	_check("flee guard: pop-up button closed, reason shown", btns.size() == Data.EVENTS.wolves.choices.size() and bool(btns[fi].disabled)
+		and not bool(btns[fight].disabled) and texts.any(func(t): return t.contains("รถออกตัวไม่ได้")))
+	await shot("flee_guard_closed")
+	# a time-out sends the crew to fight
+	Settings.set_value("event_timer", "normal")
+	ep.decide_total = 2.0
+	ep.decide_left = 0.1
+	ep.since_input = 0.0
+	await wait(0.5)
+	_check("flee guard: time-out fights instead of fleeing", Game.active_event == ""
+		and Trace.entries.any(func(e): return str(e.msg).begins_with("time out wolves -> #%d fight" % fight)))
+	ep.close()
+	Settings.set_value("event_timer", "off")
+	await wait(0.2)
+	# nobody aboard: the fight is "brace inside", the hull takes it, the event ends
+	for d in Game.s.dwellers:
+		d.away_until = 9e9
+	Game.s.hull = 100.0
+	Game.trigger_event("wolves")
+	await wait(0.3)
+	ep._choice = fight
+	ep.refresh()
+	await wait(0.1)
+	var brace: Array = ep.find_children("*", "Button", true, false).filter(func(b): return str(b.text).contains("ปิดประตูตั้งรับ"))
+	_check("flee guard: nobody aboard -> 'brace' button, not a dead 'send team'", Game.nobody_aboard() and brace.size() == 1 and not brace[0].disabled)
+	await shot("flee_guard_brace")
+	r = Game.resolve_event("wolves", fight, [])
+	_check("flee guard: bracing ends the event and costs hull", Game.active_event == "" and float(Game.s.hull) < 100.0
+		and str(r.text).contains("ปิดประตูตั้งรับ"))
+	ep.close()
+	await wait(0.2)
+	for i in Game.s.dwellers.size():
+		Game.s.dwellers[i].away_until = keep.away[i]
+	# switch off = the old behaviour
+	Features.set_override("features", "flee_guard", false)
+	Game.s.stall = 45.0
+	_check("flee guard: switch off = flee always open", Game.choice_block(flee) == "" and Game.event_auto_choice("wolves") == fi)
+	Features.set_override("features", "flee_guard", null)
+	Game.s.stall = keep.stall
+	Game.s.hull = keep.hull
+	Game.s.res.power = keep.power
+	Game.s.wrecked = keep.wrecked
+	Game.dwellers_changed.emit()
+	Game.travel_changed.emit()
+
+
 ## MV-244: a stranger who turns up while the vehicle drives flags it down: it parks, the door window opens by itself
 ## (once), "drive past" leaves them and lets it go, as does any other answer or them giving up; never when it was
 ## already parked, during offline catch-up, or with the switch off
@@ -5497,7 +5604,8 @@ func _flagged_test() -> void:
 		and Game.blocked_reason() == "จอดรับคนแปลกหน้า" and not Game.is_moving() and Game.speed_factor() == 0.0)
 	await wait(0.6)
 	var door = main.hud.panels.door
-	_check("flagged: the door window opens by itself", door.is_open)
+	_check("flagged: the door window opens by itself (modal %s, confirm %s, event %s, encounter %s, title %s)" % [main.hud.any_modal_open(),
+		main.hud.confirmation.is_open, main.hud.event_popup.is_open, main.hud.encounter_popup.is_open, main.hud.title_screen.visible], door.is_open)
 	var past: Array = door.find_children("*", "Button", true, false).filter(func(b): return str(b.text).contains("ขับผ่าน"))
 	_check("flagged: the window offers 'drive past'", past.size() == 1)
 	await shot("flagged_door")
