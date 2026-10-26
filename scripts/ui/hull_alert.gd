@@ -123,7 +123,7 @@ func _process(delta: float) -> void:
 		if _lbl.text != txt:
 			_lbl.text = txt
 		var missing := Game.hull_max() - float(Game.s.hull)
-		var cost := int(ceil(missing * 0.6))
+		var cost := Game.repair_cost()     # MV-541: same price as the build menu's full repair
 		var ft := Loc.t("ซ่อม %d") % cost
 		if _fix.text != ft:
 			_fix.text = ft

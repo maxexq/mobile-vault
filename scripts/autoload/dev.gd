@@ -353,6 +353,19 @@ func set_vault(n: int) -> void:
 	Game.travel_changed.emit()
 
 
+## MV-541: pay for a repair like the player does (part 1.0 = full, 0.25 = the chunk button)
+func repair(part: float) -> void:
+	var c := Game.repair_cost(part)
+	var ok := Game.repair_hull(part)
+	act("repair %d%% for %d scrap: %s" % [roundi(part * 100.0), c, "ok" if ok else "no"])
+
+
+## MV-541: session override of the hull_repair_v2 switch
+func hull_repair_v2(on: bool) -> void:
+	Features.set_override("features", "hull_repair_v2", on)
+	act("hull repair v2 %s" % ("on" if on else "off"))
+
+
 func set_hull(frac: float) -> void:
 	Game.s.hull = Game.hull_max() * frac
 	act("hull %d%%" % int(frac * 100))
