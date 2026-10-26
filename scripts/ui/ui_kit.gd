@@ -484,21 +484,42 @@ static func pop(c: Control) -> void:
 static func gear_tile(item: Dictionary, slot: String, px: int = 32) -> Button:
 	var b := Button.new()
 	px = maxi(px, 28)
+	var empty := item.is_empty()
+	var steel := Features.on("gear_slot_style")
+	if steel:
+		px = GearFx.native_width(px)       # MV-473: the frame and light are drawn for 28 / 30 / 32 / 36 / 40
 	b.custom_minimum_size = Vector2(px, px)
 	b.focus_mode = Control.FOCUS_NONE
-	var empty := item.is_empty()
-	var col: Color = Loot.rar_color(item) if not empty else C_LINE_DARK
-	for st in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
-		var sb := nine("tile", 2, Vector4(2, 2, 2, 2))
-		sb.modulate_color = col if st != "hover" else col.lightened(0.3)
-		if st == "pressed":
-			sb.modulate_color = Color.WHITE
-		b.add_theme_stylebox_override(st, sb)
+	if steel:
+		# the approved riveted steel frame; feedback is a small change of light on the metal, never a rarity tint
+		var frame := Atlas.tex("ui_gear_slot_frame" + ("" if px == 32 else "_%d" % px))
+		for st in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
+			var tb := StyleBoxTexture.new()
+			tb.texture = frame
+			tb.modulate_color = {"hover": Color(1.18, 1.18, 1.18), "pressed": Color(0.78, 0.78, 0.78), "hover_pressed": Color(0.85, 0.85, 0.85),
+				"disabled": Color(0.6, 0.6, 0.6)}.get(st, Color.WHITE)
+			b.add_theme_stylebox_override(st, tb)
+		if not empty:
+			var fx := GearFx.new()
+			fx.name = "GearFx"
+			b.add_child(fx)
+			fx.setup(int(item.get("rar", 0)), px)
+	else:
+		var col: Color = Loot.rar_color(item) if not empty else C_LINE_DARK
+		for st in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
+			var sb := nine("tile", 2, Vector4(2, 2, 2, 2))
+			sb.modulate_color = col if st != "hover" else col.lightened(0.3)
+			if st == "pressed":
+				sb.modulate_color = Color.WHITE
+			b.add_theme_stylebox_override(st, sb)
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	var ic := icon_rect(Loot.item_icon(item) if not empty else Loot.SLOT_ICON.get(slot, "gear"), 16)
 	ic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if empty:
-		ic.modulate = Color(C_LINE_DIM, 0.6)
+		if steel:
+			ic.material = _empty_slot_material()       # a quiet grey silhouette, no rarity
+		else:
+			ic.modulate = Color(C_LINE_DIM, 0.6)
 	b.add_child(ic)
 	if not empty:
 		if int(item.plus) > 0:
@@ -518,6 +539,35 @@ static func gear_tile(item: Dictionary, slot: String, px: int = 32) -> Button:
 			b.add_child(lk)
 	b.pressed.connect(func(): pop(b))
 	return b
+
+
+static var _empty_mat: ShaderMaterial
+const GEAR_AURA := 6      # MV-473: how far an aura may paint outside its slot
+
+
+## spacing next to equipment tiles: at least GEAR_AURA when auras can show, so one slot's light never covers another
+## slot, a label or a scroll edge; the old spacing otherwise
+static func gear_gap(old: int) -> int:
+	return maxi(old, GEAR_AURA) if Features.on("gear_slot_style") and GearFx.presentation() == "aura" else old
+
+
+## a margin round a block of equipment tiles so the auras at its edges aren't clipped by the scrolling list
+static func gear_pad(c: Control) -> Control:
+	if gear_gap(0) == 0:
+		return c
+	var m := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		m.add_theme_constant_override("margin_" + side, GEAR_AURA)
+	m.size_flags_horizontal = c.size_flags_horizontal
+	m.add_child(c)
+	return m
+
+
+static func _empty_slot_material() -> ShaderMaterial:
+	if _empty_mat == null:
+		_empty_mat = ShaderMaterial.new()
+		_empty_mat.shader = load("res://shaders/gear_empty.gdshader")
+	return _empty_mat
 
 
 ## coloured item title "ไรเฟิลล่าสัตว์ +2"

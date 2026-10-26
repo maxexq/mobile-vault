@@ -114,11 +114,12 @@ func _role_card(i: int) -> Control:
 	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sl.custom_minimum_size.x = 100
 	v.add_child(sl)
-	var gh := UIKit.hbox(2)
+	var gh := UIKit.hbox(UIKit.gear_gap(2))
 	for slot in Loot.HERO_SLOTS:
 		var it := Loot.equipped_on(d, slot)
 		var tile := UIKit.gear_tile(it, slot, 30)
-		tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# MV-473: the steel frame is drawn for its width: keep it, don't stretch the tile
+		tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not Features.on("gear_slot_style") else Control.SIZE_SHRINK_BEGIN
 		tile.tooltip_text = Loot.SLOT_TH[slot]
 		var sl2: String = slot
 		var did2: int = did
@@ -128,7 +129,7 @@ func _role_card(i: int) -> Control:
 			else:
 				_hud().open_loot_equipped(it, did2))
 		gh.add_child(tile)
-	v.add_child(gh)
+	v.add_child(UIKit.gear_pad(gh))
 	return p
 
 
