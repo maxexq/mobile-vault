@@ -50,7 +50,8 @@
     "boss_intro": true,
     "vehicle_detail": true,
     "vehicle_ambience": true,
-    "enemy_size": true
+    "enemy_size": true,
+    "cozy_roof": true
   },
   "events": {},
   "tune": {}

@@ -453,17 +453,135 @@ static func touch_pass_all(n: Node) -> void:
 		touch_pass_all(ch)
 
 
-static func stat_bar(stat: String, value: int) -> HBoxContainer:
+## MV-518: one colour per stat everywhere (bars, chips, room tags), always shown in this order
+const STAT_ORDER := ["str", "agi", "int"]
+const STAT_COLOR := {"str": C_ORANGE, "agi": C_GOLD, "int": C_BLUE}
+const STAT_MAX := 10
+
+
+## the stat(s) a crew member is best at (ties: all of them); [] if every stat is the same
+static func best_stats(d: Dictionary) -> Array:
+	var hi := 0
+	for st in STAT_ORDER:
+		hi = maxi(hi, int(d.get(st, 0)))
+	var out := STAT_ORDER.filter(func(st): return int(d.get(st, 0)) == hi)
+	return [] if out.size() == STAT_ORDER.size() else out
+
+
+## rooms whose work uses this stat (the build menu's rooms, by name)
+static func stat_rooms(stat: String) -> Array:
+	var out := []
+	for t in Data.buildable():
+		if str(Data.room_def(t).get("stat", "")) == stat:
+			out.append(str(Data.room_def(t).th))
+	return out
+
+
+## one stat: icon, coloured name, the number, a 10-step bar (one segment per point) and, for the crew member's best
+## stat, a gold outline + "ถนัด" tag (MV-518: easy to read at a glance)
+static func stat_bar(stat: String, value: int, best: bool = false) -> Control:
+	var col: Color = STAT_COLOR.get(stat, C_GREEN)
 	var h := hbox(3)
-	var l := label(stat.to_upper() + " " + str(value), FP, C_DIM, true)
-	l.custom_minimum_size.x = 40
+	h.name = "Stat_" + stat
+	h.add_child(icon_rect(stat, 12))
+	var l := label(stat.to_upper(), FP, col, true)
+	l.custom_minimum_size.x = 22
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(l)
-	var p := progress({"str": C_ORANGE, "int": C_BLUE, "agi": C_GOLD}.get(stat, C_GREEN), 4)
-	p.value = value / 10.0
-	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	h.add_child(p)
+	var n := label(str(value), FP, C_WHITE if best else C_TEXT, true)
+	n.name = "Value"
+	n.custom_minimum_size.x = 12
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(n)
+	var seg := hbox(1)
+	seg.name = "Segments"
+	seg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for i in STAT_MAX:
+		var r := ColorRect.new()
+		r.custom_minimum_size = Vector2(4, 5)
+		r.color = col if i < value else C_LINE_DARK
+		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		seg.add_child(r)
+	h.add_child(seg)
+	if not best:
+		return h
+	var tag := label(Loc.t("ถนัด"), FS_SMALL, C_GOLD)
+	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(tag)
+	var p := panel(C_BG2, C_GOLD)
+	p.name = "BestStat_" + stat
+	p.add_child(h)
+	return p
+
+
+## all three stats as bars, best one marked
+static func stat_bars(d: Dictionary) -> VBoxContainer:
+	var v := vbox(1)
+	var best := best_stats(d)
+	for st in STAT_ORDER:
+		v.add_child(stat_bar(st, int(d.get(st, 0)), best.has(st)))
+	return v
+
+
+## compact stats for a list row: icon + number per stat in the stat colour, the best one boxed in gold
+static func stat_chips(d: Dictionary) -> HBoxContainer:
+	var h := hbox(2)
+	h.name = "StatChips"
+	var best := best_stats(d)
+	for st in STAT_ORDER:
+		var c := hbox(1)
+		c.add_child(icon_rect(st, 10))
+		var n := label(str(int(d.get(st, 0))), FP, STAT_COLOR[st], true)
+		n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		c.add_child(n)
+		if best.has(st):
+			var p := panel(C_BG2, C_GOLD)
+			p.name = "BestChip_" + st
+			p.add_child(c)
+			h.add_child(p)
+		else:
+			h.add_child(c)
 	return h
+
+
+## what the crew member's equipment adds, as "+N name" in green ("ไม่มีอุปกรณ์" when nothing is worn). Gear never
+## changes STR / AGI / INT: it adds fighting numbers, so they are shown apart from the stats.
+static func gear_text(d: Dictionary) -> String:
+	var items := []
+	for slot in Loot.HERO_SLOTS:
+		var it := Loot.equipped_on(d, slot)
+		if not it.is_empty():
+			items.append(it)
+	if items.is_empty():
+		return ""
+	var parts := []
+	var w := Loot.equipped_on(d, "weapon")
+	if not w.is_empty():
+		parts.append(Loc.t("ดาเมจ %.0f") % Loot.base_stat(w, "dmg"))
+	var hp := Loot.sum_key(items, "hp")
+	var df := Loot.sum_key(items, "def")
+	for it in items:
+		if Loot.base(it).has("hp"):
+			hp += Loot.base_stat(it, "hp")
+		if Loot.base(it).has("def"):
+			df += Loot.base_stat(it, "def")
+	if hp >= 1.0:
+		parts.append(Loc.t("+%d พลังชีวิต") % int(hp))
+	if df >= 0.1:
+		parts.append(Loc.t("+%.1f ป้องกัน") % df)
+	for k in ["dmg", "aspd", "crit", "dodge", "regen", "lifesteal"]:
+		var v := Loot.sum_key(items, k)
+		if v > 0.0:
+			parts.append(Loot.affix_text({"k": k, "v": v}))
+	return " · ".join(parts)
+
+
+static func gear_line(d: Dictionary) -> Label:
+	var t := gear_text(d)
+	var l := wrap_label((Loc.t("จากอุปกรณ์: ") + t) if t != "" else Loc.t("จากอุปกรณ์: ไม่มีอุปกรณ์"), FS_SMALL, C_GREEN if t != "" else C_DIM)
+	l.name = "GearLine"
+	return l
 
 
 static func skulls(n: int) -> HBoxContainer:

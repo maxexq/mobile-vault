@@ -40,6 +40,11 @@ const FLAG_POS := Vector2(115, 4)         # relative to a 4-floor roof (in _roof
 const CHAIN_POS := Vector2(266, 263)      # + rear_shift()
 const PUFF_GAP := 1.0                     # x the spec ranges: driving 0.8-1.4 s, parked idle 2.5-4 s (tune vehicle.puff_gap)
 const DRIP_GAP := 4.5                     # s between roof drips in rain on average (3-6 s, tune vehicle.drip_gap)
+## MV-462 cozy roof (switch cozy_roof): roof parts in _roof_root (4-floor roof-local, = truck.ROOF_PARTS); off =
+## roof_legacy_<tier>, the old planters / tank / dish lifted out of the shell, at ROOF_LEGACY_X
+const ROOF_PARTS := {"prop_roof_planter_tray": [Vector2(40, 21), Vector2(54, 21)],
+	"prop_roof_water_tank": [Vector2(150, 16)], "prop_roof_satellite_dish": [Vector2(156, 0)]}
+const ROOF_LEGACY_X := 38
 
 var body: Node2D
 var room_views: Array[RoomView] = []
@@ -74,6 +79,7 @@ var _exteriors: Node2D
 var _rooms_root: Node2D
 var _mods_root: Node2D
 var _roof_root: Node2D
+var _roof_parts: Node2D          # MV-462: under the solar panels, rebuilt by _sync_roof
 var pets_root: Node2D
 var _bump_t := 0.0
 var _bump := 0.0
@@ -140,6 +146,8 @@ func _ready() -> void:
 	body.add_child(_seams_root)
 	_roof_root = Node2D.new()
 	body.add_child(_roof_root)
+	_roof_parts = Node2D.new()
+	_roof_root.add_child(_roof_parts)
 	for x in SOLAR_X:
 		var s := Sprite2D.new()
 		s.texture = Atlas.tex("solar_2")
@@ -199,7 +207,10 @@ func _ready() -> void:
 		else:
 			_refresh_mods())
 	Meta.generation_started.connect(func(_g): rebuild())
-	Features.changed.connect(_sync_detail)
+	Features.changed.connect(func():
+		_sync_detail()
+		_sync_roof()
+		_refresh_mods())
 	add_to_group("vehicle_fx")
 	rebuild()
 
@@ -232,6 +243,7 @@ func rebuild() -> void:
 		for w in vd.wheels:
 			_add_wheel(Vector2(w[0], w[1]), false)
 	_roof_root.position = Vector2(0, dy)
+	_sync_roof()
 	smoke.position = Vector2(vd.chimney[0], vd.chimney[1])
 	headlight.position = Vector2(vd.headlight[0], vd.headlight[1])
 	tracks.position = Vector2(TRACKS_X.get(tier, 202), 284)
@@ -263,6 +275,7 @@ func _add_sprite(parent: Node, region: String, pos: Vector2) -> Sprite2D:
 	s.texture = Atlas.tex(region)
 	s.centered = false
 	s.position = pos
+	s.set_meta("region", region)     # MV-462: lets autotest / GOD read what is drawn
 	parent.add_child(s)
 	return s
 
@@ -490,7 +503,8 @@ func _refresh_mods() -> void:
 		_mod_sprite("mod_roof_turret_%d" % mini(tur, 3), Vector2(200, ROOF_Y + dy - 18))
 	var deck := Mods.level("roof_deck")
 	if deck > 0:
-		_mod_sprite("mod_roof_deck_%d" % mini(deck, 3), Vector2(ROOF_DECK_X, ROOF_Y + dy - 60))
+		var deck_art := "mod_roof_deck_cozy_%d" if Features.on("cozy_roof") else "mod_roof_deck_%d"
+		_mod_sprite(deck_art % mini(deck, 3), Vector2(ROOF_DECK_X, ROOF_Y + dy - 60))
 	for k in mini(Mods.level("fuel_tanks"), 3):
 		var fy := 140 - 24 * k
 		if fy > roof_y() + 6:
@@ -530,6 +544,28 @@ func _refresh_mods() -> void:
 			w.visible = not rear_wheels.has(w.position)
 			w.sprite_frames = Atlas.wheel_frames(off)
 	_sync_detail()
+
+
+## MV-462: the cozy roof parts (water tank, dish, two planter trays) or, with cozy_roof off, the old ones
+func _sync_roof() -> void:
+	for ch in _roof_parts.get_children():
+		_roof_parts.remove_child(ch)
+		ch.queue_free()
+	if not Features.on("cozy_roof"):
+		_add_sprite(_roof_parts, "roof_legacy_" + tier, Vector2(ROOF_LEGACY_X, 0))
+		return
+	for region in ROOF_PARTS:
+		for pos in ROOF_PARTS[region]:
+			_add_sprite(_roof_parts, region, pos)
+
+
+## the atlas regions drawn now on the roof parts (roof=true) or as exterior mods (autotest)
+func sprite_regions(roof: bool) -> Array:
+	var out := []
+	for ch in (_roof_parts if roof else _mods_root).get_children():
+		if not ch.is_queued_for_deletion() and ch.has_meta("region"):
+			out.append(str(ch.get_meta("region")))
+	return out
 
 
 ## MV-388: a stock leaf spring above every road wheel (main vehicle + trailers). Not on rails; the main vehicle's
