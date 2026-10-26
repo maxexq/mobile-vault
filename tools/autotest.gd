@@ -6904,11 +6904,11 @@ func _trait_cards_test() -> void:
 	var cook := TraitCard.new()
 	cook.size = Vector2(170, 60)
 	add_child(cook)
-	cook.setup("cook")
+	cook.setup("cook", -1)
 	var glut := TraitCard.new()
 	glut.size = Vector2(170, 60)
 	add_child(glut)
-	glut.setup("glutton")
+	glut.setup("glutton", -1)
 	await wait(0.2)
 	var g_lbls: Array = glut.find_children("*", "Label", true, false).map(func(l): return l.text)
 	_check("trait cards: untiered = no tier label; a benefit gets the accent only, a trade-off the still crimson edge",
@@ -6917,6 +6917,26 @@ func _trait_cards_test() -> void:
 		and g_lbls.has(Loc.t(TraitCard.COST.glutton)) and g_lbls.has(Loc.t(TraitCard.UPSIDE.glutton)))
 	cook.queue_free()
 	glut.queue_free()
+	# --- MV-497 tiers: every trait classified, mythic kept free, trade-offs at most rare, the switch falls back
+	var unlisted := Crew.TRAITS.keys().filter(func(t): return Crew.trait_tier(t) < 0 or Crew.trait_tier(t) > 4)
+	var harsh := Crew.TRAITS.keys().filter(func(t): return Crew.TRAITS[t].get("bad", false) and Crew.trait_tier(t) > 2)
+	_check("trait tiers: all %d traits classified common..legendary %s, trade-offs at most rare %s" % [Crew.TRAITS.size(), unlisted, harsh],
+		unlisted.is_empty() and harsh.is_empty() and Crew.TRAIT_TIERS.size() == Crew.TRAITS.size())
+	_check("trait tiers: architect and lucky legendary, cook uncommon, afraid of the dark the harshest trade-off",
+		Crew.trait_tier("architect") == 4 and Crew.trait_tier("lucky") == 4 and Crew.trait_tier("cook") == 1
+		and Crew.trait_tier("afraid_dark") == 2 and Crew.trait_tier("grumpy") == 0)
+	var tiered := TraitCard.new()
+	tiered.size = Vector2(170, 60)
+	add_child(tiered)
+	tiered.setup("cook")
+	Dev.trait_tiers(false)
+	var off_ok := Crew.trait_tier("cook") == -1 and Crew.trait_tier("architect") == -1
+	Dev.trait_tiers(true)
+	await wait(0.2)
+	_check("trait tiers: a classified card shows its tier label and the tier light; switch off = untiered",
+		tiered.find_child("Tier", true, false) != null and TraitFx.mode_for(false, tiered.tier) in ["anim", "still"] and off_ok)
+	tiered.queue_free()
+	Features.set_override("features", "trait_tiers", null)
 	var arch := TraitCard.new()
 	arch.custom_minimum_size.x = 160
 	add_child(arch)

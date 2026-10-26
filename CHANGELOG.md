@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Changed
+- Crew trait cards now show how valuable a trait is: Common, Uncommon, Rare, Epic or Legendary, with a light that grows with the tier (Architect and Lucky are Legendary). Downsides glow harder the more they hurt, with Fears the Dark the harshest (MV-497)
+
 ## [4.7.0-alpha.3] - 2026-10-26
 
 ### Merged pull requests

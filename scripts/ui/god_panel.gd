@@ -325,6 +325,8 @@ func _trait_cards_preview() -> void:
 		var mm: String = m[0]
 		modes.append(_b(m[1], func(): Dev.trait_preview(mm), "yellow" if TraitFx.preview == mm else "gray"))
 	modes.append(_b("เฟรมถัดไป", func(): Dev.trait_step(), "green"))
+	var tiers_on := Features.on("trait_tiers")
+	modes.append(_b("ระดับ: เปิด" if tiers_on else "ระดับ: ปิด", func(): Dev.trait_tiers(not tiers_on), "yellow" if tiers_on else "gray"))
 	_row(modes, "แสง · เฟรม %d/16" % (TraitFx.current_phase() + 1))
 	var g := GridContainer.new()
 	g.name = "TraitCardPreview"
@@ -346,7 +348,15 @@ func _trait_cards_preview() -> void:
 		m.add_theme_constant_override("margin_" + side, 6)
 	m.add_child(g)
 	_list.add_child(m)
-	_note("ซ้าย: ข้อดี (พ่อครัว) ทั่วไป..ปฐมกาล · ขวา: ข้อเสีย (กินจุ) · แถวล่าง: ยังไม่จัดระดับ (ค่าเริ่มต้นตอนนี้) และข้อความยาว")
+	_note("ซ้าย: ข้อดี (พ่อครัว) ทั่วไป..ปฐมกาล · ขวา: ข้อเสีย (กินจุ) · แถวล่าง: ยังไม่จัดระดับ (สวิตช์ trait_tiers ปิด) และข้อความยาว")
+	var by_tier := {}
+	for t in Crew.TRAIT_TIERS:
+		var k := "%s%s" % ["!" if Crew.TRAITS[t].get("bad", false) else "", Loot.RARITY[int(Crew.TRAIT_TIERS[t])].en]
+		by_tier[k] = by_tier.get(k, []) + [str(Crew.TRAITS[t].en)]
+	var lines := []
+	for k in by_tier:
+		lines.append("%s: %s" % [k, ", ".join(by_tier[k])])
+	_note("ระดับนิสัย (MV-497, ! = ข้อเสีย) · " + " · ".join(lines))
 
 
 func _tab_crew() -> void:

@@ -565,6 +565,12 @@ func trait_preview(mode: String) -> void:
 	Trace.rec("god", "trait preview %s" % mode)
 
 
+## MV-497: show the trait tiers or the untiered fallback (session override of the trait_tiers switch, read-only)
+func trait_tiers(on: bool) -> void:
+	Features.set_override("features", "trait_tiers", on)
+	Trace.rec("god", "trait tiers %s" % ("on" if on else "off"))
+
+
 ## hold every trait card light and move it one phase (read-only)
 func trait_step() -> void:
 	TraitFx.frame_step()
