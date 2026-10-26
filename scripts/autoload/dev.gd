@@ -580,6 +580,12 @@ func trait_preview(mode: String) -> void:
 	Trace.rec("god", "trait preview %s" % mode)
 
 
+## MV-497: show the trait tiers or the untiered fallback (session override of the trait_tiers switch, read-only)
+func trait_tiers(on: bool) -> void:
+	Features.set_override("features", "trait_tiers", on)
+	Trace.rec("god", "trait tiers %s" % ("on" if on else "off"))
+
+
 ## hold every trait card light and move it one phase (read-only)
 func trait_step() -> void:
 	TraitFx.frame_step()
@@ -1129,6 +1135,35 @@ func toggle_builder(d: Dictionary) -> void:
 	_make_builder(d, not Crew.is_builder(d))
 	act("builder %s = %s" % [d.name, Crew.is_builder(d)])
 	Game.dwellers_changed.emit()
+
+
+## MV-516: roll n made-up recruits with the current trait odds (nobody is added) and keep the shares for GOD:
+## % of recruits with at least one trait of each tier, and with a downside
+var last_trait_roll := {}
+
+
+func trait_roll_test(n: int = 1000) -> Dictionary:
+	var has_tier := [0, 0, 0, 0, 0]
+	var bad := 0
+	for i in n:
+		var d := {}
+		Crew.roll_traits(d)
+		var seen := {}
+		for t in d.traits:
+			if Crew.TRAITS[t].get("bad", false):
+				seen["bad"] = true
+			else:
+				seen[clampi(int(Crew.TRAIT_TIERS.get(t, 0)), 0, 4)] = true
+		for k in seen:
+			if str(k) == "bad":
+				bad += 1
+			else:
+				has_tier[int(k)] += 1
+	last_trait_roll = {"n": n, "bad": 100.0 * bad / n}
+	for i in 5:
+		last_trait_roll[Crew.TIER_NAMES[i]] = 100.0 * has_tier[i] / n
+	Trace.rec("god", "trait roll test %s" % [last_trait_roll])
+	return last_trait_roll
 
 
 func reroll_traits(d: Dictionary) -> void:

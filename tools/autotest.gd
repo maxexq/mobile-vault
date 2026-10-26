@@ -7094,11 +7094,11 @@ func _trait_cards_test() -> void:
 	var cook := TraitCard.new()
 	cook.size = Vector2(170, 60)
 	add_child(cook)
-	cook.setup("cook")
+	cook.setup("cook", -1)
 	var glut := TraitCard.new()
 	glut.size = Vector2(170, 60)
 	add_child(glut)
-	glut.setup("glutton")
+	glut.setup("glutton", -1)
 	await wait(0.2)
 	var g_lbls: Array = glut.find_children("*", "Label", true, false).map(func(l): return l.text)
 	_check("trait cards: untiered = no tier label; a benefit gets the accent only, a trade-off the still crimson edge",
@@ -7107,6 +7107,48 @@ func _trait_cards_test() -> void:
 		and g_lbls.has(Loc.t(TraitCard.COST.glutton)) and g_lbls.has(Loc.t(TraitCard.UPSIDE.glutton)))
 	cook.queue_free()
 	glut.queue_free()
+	# --- MV-497 tiers: every trait classified, mythic kept free, trade-offs at most rare, the switch falls back
+	var unlisted := Crew.TRAITS.keys().filter(func(t): return Crew.trait_tier(t) < 0 or Crew.trait_tier(t) > 4)
+	var harsh := Crew.TRAITS.keys().filter(func(t): return Crew.TRAITS[t].get("bad", false) and Crew.trait_tier(t) > 2)
+	_check("trait tiers: all %d traits classified common..legendary %s, trade-offs at most rare %s" % [Crew.TRAITS.size(), unlisted, harsh],
+		unlisted.is_empty() and harsh.is_empty() and Crew.TRAIT_TIERS.size() == Crew.TRAITS.size())
+	_check("trait tiers: architect and lucky legendary, cook uncommon, afraid of the dark the harshest trade-off",
+		Crew.trait_tier("architect") == 4 and Crew.trait_tier("lucky") == 4 and Crew.trait_tier("cook") == 1
+		and Crew.trait_tier("afraid_dark") == 2 and Crew.trait_tier("grumpy") == 0)
+	var tiered := TraitCard.new()
+	tiered.size = Vector2(170, 60)
+	add_child(tiered)
+	tiered.setup("cook")
+	Dev.trait_tiers(false)
+	var off_ok := Crew.trait_tier("cook") == -1 and Crew.trait_tier("architect") == -1
+	Dev.trait_tiers(true)
+	await wait(0.2)
+	_check("trait tiers: a classified card shows its tier label and the tier light; switch off = untiered",
+		tiered.find_child("Tier", true, false) != null and TraitFx.mode_for(false, tiered.tier) in ["anim", "still"] and off_ok)
+	tiered.queue_free()
+	Features.set_override("features", "trait_tiers", null)
+	# --- MV-516 roll odds: seeded 4000 recruits land on the approved shares; off = every trait even; named crew fixed
+	Crew.rng.seed = 51600
+	var on_r := Dev.trait_roll_test(4000)
+	var want := {"common": 47.7, "uncommon": 42.8, "rare": 25.9, "epic": 10.7, "legendary": 2.9, "bad": 22.6}
+	var off_by := []
+	for k in want:
+		if absf(float(on_r[k]) - want[k]) > (1.5 if k == "legendary" else 3.0):
+			off_by.append("%s %.1f" % [k, on_r[k]])
+	_check("trait odds: weighted roll matches the approved shares %s" % [off_by], off_by.is_empty())
+	_check("trait odds: legendary weight 1 vs common 10, a trade-off 5",
+		Crew.trait_weight("architect") == 1.0 and Crew.trait_weight("quick_hands") == 10.0 and Crew.trait_weight("afraid_dark") == 5.0)
+	Features.set_override("features", "trait_roll_weights", false)
+	Crew.rng.seed = 51601
+	var off_r := Dev.trait_roll_test(4000)
+	var even := Crew.trait_weight("architect") == 1.0 and Crew.trait_weight("quick_hands") == 1.0
+	Features.set_override("features", "trait_roll_weights", null)
+	_check("trait odds: switch off = every trait equally likely (legendary %.1f%%, was 13.8%%)" % float(off_r.legendary),
+		even and absf(float(off_r.legendary) - 13.8) < 3.0)
+	var mark := {"lore": "mark"}
+	Crew.roll_traits(mark)
+	_check("trait odds: named crew keep their fixed traits (%s)" % [mark.traits], mark.traits == Crew.FIXED.mark)
+	Crew.rng.randomize()
 	var arch := TraitCard.new()
 	arch.custom_minimum_size.x = 160
 	add_child(arch)
