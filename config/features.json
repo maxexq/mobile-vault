@@ -21,6 +21,7 @@
     "env_badge": true,
     "barks": true,
     "tutorial_tips": true,
+    "stop_for_strangers": true,
     "flee_guard": true,
     "event_timer": true,
     "engine_bay": true,

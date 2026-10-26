@@ -281,6 +281,8 @@ func _tab_crew() -> void:
 			sb.append(_b(str(Inspection.KINDS[k].th), func(): Dev.stranger(kid, gid), "green" if k == "human" else "red"))
 		_row(sb, str(Inspection.GRADES[g].th))
 	_row([_b("ล้างคิว", func(): Dev.stranger_clear(), "red")])
+	_note("โบกรถ (MV-244): สวิตช์ stop_for_strangers %s · %s · สร้างคนแปลกหน้าตอนรถวิ่ง = รถจอดและเปิดหน้าต่างตรวจเอง" % [
+		"เปิด" if Features.on("stop_for_strangers") else "ปิด", "รถจอดรับคนอยู่" if Inspection.halting() else "ไม่ได้จอดรับใคร"])
 	_head("CREW", "ทีละคน")
 	for d in Game.s.dwellers:
 		var dd: Dictionary = d
