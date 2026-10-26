@@ -142,6 +142,7 @@ func _ready() -> void:
 	hud.build_placement_requested.connect(_enter_placement)
 	hud.build_placement_cancelled.connect(_exit_placement)
 	hud.room_closeup.closed.connect(_close_closeup)
+	hud.room_closeup.focus_changed.connect(_on_closeup_focus)
 	hud.title_screen.start_requested.connect(_on_start)
 	hud.layout_changed.connect(_fit_camera)
 	hud.zoom_pressed.connect(cycle_zoom)
@@ -593,11 +594,23 @@ func _apply_zoom(t: float) -> void:
 		camera.position = to.pos
 
 
-func _run_zoom(_opening: bool) -> void:
+func _run_zoom(_opening: bool, time: float = 0.5) -> void:
 	if _zoom_tw:
 		_zoom_tw.kill()
 	_zoom_tw = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_zoom_tw.tween_method(_apply_zoom, 0.0, 1.0, 0.5)
+	_zoom_tw.tween_method(_apply_zoom, 0.0, 1.0, time)
+
+
+## MV-482: the close-up panel changed height (its room area moved): glide the camera so the room stays centred in it.
+## While the opening zoom still runs it already aims at the new target every step.
+func _on_closeup_focus() -> void:
+	if _closeup_slot < 0 or (_zoom_tw and _zoom_tw.is_running()):
+		return
+	var to := _closeup_target()
+	if camera.position.distance_to(to.pos) < 0.5 and is_equal_approx(camera.zoom.x, float(to.zoom)):
+		return
+	_zoom_from = {"pos": camera.position, "zoom": camera.zoom.x}
+	_run_zoom(true, ModalPanel.FIT_TIME)
 
 
 func _close_closeup() -> void:

@@ -10,6 +10,7 @@ extends ModalPanel
 ## progress and hands out the finished supper (Saloon).
 
 signal build_requested(slot: int, room_type: String)
+signal focus_changed      # MV-482: the room's area moved (the panel's height changed): Main re-centres the camera
 
 var slot := -1
 var mode := "main"           # main | assign | supper
@@ -44,14 +45,35 @@ func _portrait() -> bool:
 	return vp.y >= vp.x
 
 
-## screen area reserved for the zoomed-in room
+## MV-482: the zoomed room's area. Portrait: everything between the visible top bar and the panel, which docks at the
+## bottom at its content height, so the room sits centred in the free space and nothing covers it. Landscape: the left
+## part of the screen, beside the panel (MV-266: on a narrow screen the room gives up width so the panel fits).
 func focus_rect() -> Rect2:
 	var vp := get_viewport_rect().size
 	if _portrait():
-		return Rect2(8, 26, vp.x - 16, floorf(vp.y * 0.3))
-	# MV-266: on a narrow landscape screen the room gives up width so the panel gets at least what its content needs
+		var top := _top_y()
+		var bottom := box.position.y - 4.0 if is_open and box != null and box.size.y > 0.0 else top + _room_h()
+		return Rect2(8, top, vp.x - 16, maxf(_room_h(), bottom - top))
 	var need := maxf(PANEL_MIN_W, _content_min_w())
 	return Rect2(4, 4, floorf(minf(vp.x * 0.46, vp.x - need - 12.0)), vp.y - 8)
+
+
+## where the room area starts: under the HUD's top bar (only the resource row shows during a close-up)
+func _top_y() -> float:
+	var hud := get_parent() as HUD
+	if hud and hud._top and hud._top.visible:
+		return floorf(hud._top.position.y + hud._top.size.y + 4.0)
+	return 26.0
+
+
+## the portrait zoom (whole number, 2-3 as before) and the room height it needs, frame included
+func _room_zoom() -> int:
+	var vp := get_viewport_rect().size
+	return clampi(int(minf((vp.x - 16.0) / float(Vehicle.ROOM_SIZE.x), vp.y * 0.3 / float(Vehicle.ROOM_SIZE.y))), 2, 3)
+
+
+func _room_h() -> float:
+	return float(Vehicle.ROOM_SIZE.y * _room_zoom()) + 12.0
 
 
 ## the width the panel's content needs (not the box's own custom minimum, which _layout sets from the focus rect)
@@ -61,22 +83,36 @@ func _content_min_w() -> float:
 	return (box.get_child(0) as Control).get_combined_minimum_size().x + box.get_theme_stylebox("panel").get_minimum_size().x
 
 
+## the panel is never taller than what leaves the whole zoomed room visible
+func max_height() -> float:
+	var vp := get_viewport_rect().size
+	if _portrait():
+		return floorf(vp.y - _top_y() - _room_h() - 8.0)
+	return floorf(vp.y - 8.0)
+
+
 func _layout() -> void:
 	var vp := get_viewport_rect().size
-	var f := focus_rect()
-	var sz: Vector2
-	if _portrait():
-		var z := clampi(int(minf(f.size.x / 80.0, f.size.y / 52.0)), 2, 3)
-		var room_bottom := f.get_center().y + 26.0 * z + 6.0
-		sz = Vector2(vp.x - 8, vp.y - room_bottom - 4)
-		box.position = Vector2(4, floorf(room_bottom))
-	else:
-		sz = Vector2(vp.x - f.end.x - 8, vp.y - 8)
-		box.position = Vector2(floorf(f.end.x + 4), 4)
-	sz = sz.floor()
+	var w := vp.x - 8.0 if _portrait() else vp.x - focus_rect().end.x - 8.0
+	if _fit_tw:
+		_fit_tw.kill()
+	var sz := Vector2(w, fit_target()).floor()
 	box.custom_minimum_size = sz
 	box.size = sz
-	_recenter.call_deferred()        # MV-266: never past a screen edge
+	_recenter()
+
+
+## docked: portrait at the bottom, landscape on the right and vertically centred; kept inside the screen
+func _recenter() -> void:
+	if box == null:
+		return
+	var vp := get_viewport_rect().size
+	if _portrait():
+		box.position = Vector2(4, floorf(vp.y - box.size.y - 4.0))
+	else:
+		box.position = Vector2(floorf(focus_rect().end.x + 4.0), floorf((vp.y - box.size.y) * 0.5))
+	box.position = box.position.clamp(Vector2.ZERO, (vp - box.size).max(Vector2.ZERO)).floor()
+	focus_changed.emit()
 
 
 func open_slot(s: int) -> void:

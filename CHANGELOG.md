@@ -17,6 +17,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Changed
 - Smoother play: the game does its economy maths 20 times a second instead of on every frame and much more cheaply, so busy vehicles hold 60 FPS, and Settings now offers 30 / 60 / 120 FPS (120 on high-refresh screens) (MV-113)
+- Windows are as tall as what they show (no empty space at the bottom) and grow or shrink smoothly when their content changes. Zooming into a room now shows the whole room with nothing on top of it, centred on phones above the room panel (MV-482)
 - Anonymous play statistics (maps reached, rooms built, events, play time) now also go to GameAnalytics so we can see how the game is played; the privacy notice and the Settings switch cover it, and turning it off stops both (MV-423)
 
 ### Fixed

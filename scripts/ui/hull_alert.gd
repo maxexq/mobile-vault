@@ -116,7 +116,7 @@ func _process(delta: float) -> void:
 	stage = st
 	_t += delta
 	_strip_t = maxf(0.0, _strip_t - delta)
-	var show := stage >= DANGER or (stage == WARN and _strip_t > 0.0)
+	var show := (stage >= DANGER or (stage == WARN and _strip_t > 0.0)) and not (get_parent() as HUD)._closeup_on     # MV-482: not over the close-up panel
 	_strip.visible = show
 	if show:
 		var txt := impact(stage) % int(round(ratio() * 100.0))
