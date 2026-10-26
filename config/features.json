@@ -55,7 +55,8 @@
     "cozy_roof": true,
     "driver_cab": true,
     "audio_ambience": true,
-    "audio_sfx": true
+    "audio_sfx": true,
+    "audio_bgm": true
   },
   "events": {},
   "tune": {}

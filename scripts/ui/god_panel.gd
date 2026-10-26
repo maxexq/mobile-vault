@@ -746,8 +746,8 @@ func _tab_sound() -> void:
 	_head("SOUND", "เสียง (MV-536)")
 	var amb := "เปิด" if Sound.ambience_on() else "ปิด"
 	var fx := "เปิด" if Sound.sfx_on() else "ปิด"
-	_note("สวิตช์ audio_ambience: %s · audio_sfx: %s · แตะจอแล้ว: %s · พื้นที่ตอนนี้: %s · อากาศ: %s · เสียงล่าสุด: %s" % [
-		amb, fx, "ใช่" if Sound.unlocked else "ยัง", Sound.want_bed(), Sound.want_weather() if Sound.want_weather() != "" else "-", Sound.last_sfx if Sound.last_sfx != "" else "-"])
+	_note("สวิตช์ audio_ambience: %s · audio_sfx: %s · audio_bgm: %s · แตะจอแล้ว: %s · พื้นที่ตอนนี้: %s · อากาศ: %s · เสียงล่าสุด: %s" % [
+		amb, fx, "เปิด" if Sound.bgm_on() else "ปิด", "ใช่" if Sound.unlocked else "ยัง", Sound.want_bed(), Sound.want_weather() if Sound.want_weather() != "" else "-", Sound.last_sfx if Sound.last_sfx != "" else "-"])
 	var beds := []
 	for b in Data.BIOMES:
 		var id: String = b.id
@@ -763,6 +763,8 @@ func _tab_sound() -> void:
 		var id: String = g
 		gs.append(_b(id, func(): Dev.sound_preview("group", id)))
 	_row(gs, "เอฟเฟกต์")
+	_row([_b("เพลงหน้าแรก (โลไฟ)", func(): Dev.sound_preview("bgm"), "yellow" if Sound.preview.has("bgm") else "gray"),
+		_b(("ปิด" if Sound.bgm_on() else "เปิด") + "เพลง", func(): Dev.feature_set("audio_bgm", not Sound.bgm_on()))], "เพลง")
 	_row([_b("กลับเสียงตามเกม", func(): Dev.sound_preview("clear"), "green"),
 		_b(("ปิด" if Sound.ambience_on() else "เปิด") + "เสียงบรรยากาศ", func(): Dev.feature_set("audio_ambience", not Sound.ambience_on())),
 		_b(("ปิด" if Sound.sfx_on() else "เปิด") + "เสียงเอฟเฟกต์", func(): Dev.feature_set("audio_sfx", not Sound.sfx_on()))])
