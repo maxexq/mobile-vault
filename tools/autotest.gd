@@ -166,6 +166,11 @@ func _run() -> void:
 		await _morale_test()
 		_finish()
 		return
+	if "--only=audio" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _audio_test()
+		_finish()
+		return
 	if "--only=hull_warning" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _hull_warning_test()
@@ -961,6 +966,7 @@ func _run() -> void:
 	await _flee_guard_test()
 	await _barks_test()
 	await _hull_warning_test()
+	await _audio_test()
 	await _morale_test()
 	await _responsive_test()
 	await _perf_test()
@@ -5155,6 +5161,32 @@ func _vehicle_detail_test() -> void:
 			print("[autotest] detail sprite wrong: %s %s" % [k, str(r)])
 	_check("vehicle detail: wheels + 6 detail sprites at their spec sizes", ok and Atlas.wheel_frames(false).get_frame_count("default") == 4
 		and Atlas.rail_wheel_frames().get_frame_count("default") == 4)
+	# MV-528: the van-reference fittings are their own sprites and are baked into the cut-away and closed shells
+	var fit := {"decal_vehicle_pillar_joint": [[38, 204, "van bus rig"], [218, 148, "trailer wagon"]],
+		"decal_vehicle_roof_seam": [[216, 148, "van"], [216, 92, "bus"], [216, 36, "rig train"], [206, 148, "trailer wagon"]],
+		"decal_vehicle_fuel_cap": [[74, 274, "van bus rig"]], "decal_van_door_hardware": [[16, 185, "van"]],
+		"decal_bus_service_vent": [[20, 182, "bus"]], "decal_rig_door_latch": [[26, 214, "rig"]],
+		"decal_train_access_hinges": [[10, 118, "train"]]}
+	var sheet: Image = Atlas.sheet.get_image()
+	var baked := 0
+	var fit_ok := true
+	for k in fit:
+		var fr = Atlas.regions.get(k)
+		if fr == null:
+			fit_ok = false
+			continue
+		var part := sheet.get_region(Rect2i(int(fr[0]), int(fr[1]), int(fr[2]), int(fr[3])))
+		for at in fit[k]:
+			for t in str(at[2]).split(" "):
+				for pre in ["veh_", "ext_"]:
+					var sr = Atlas.regions[pre + t]
+					var got := sheet.get_region(Rect2i(int(sr[0]) + int(at[0]), int(sr[1]) + int(at[1]), int(fr[2]), int(fr[3])))
+					if got.get_data() == part.get_data():
+						baked += 1
+					else:
+						fit_ok = false
+						print("[autotest] MV-528 fitting not baked: %s on %s%s" % [k, pre, t])
+	_check("vehicle detail: 7 van-reference fittings baked into every shell (%d placements)" % baked, fit_ok and baked == 36)
 	var was_mods: Dictionary = Game.s.mods.duplicate(true)
 	var was_tier := Game.tier()
 	var was_tr := Game.trailers()
@@ -6368,6 +6400,115 @@ func _saloon_restore(res: Dictionary, rooms: Array, dw: Array, squad: Array, rx)
 
 ## MV-250: hull warning stages (50 / 25 / 10 %), hysteresis, one alert per worse stage, red frame + strip, the
 ## strip's repair button, shake only with the setting on, switch off = nothing
+## MV-536: buses + settings, every stream loads (beds loop), biome / weather crossfade, thunder, effects from game
+## signals and button taps, the switches off = silence, GOD previews
+func _audio_test() -> void:
+	_no_events()
+	var keep_biome := int(Game.s.biome)
+	var keep_weather := str(Game.s.weather)
+	Features.set_override("tune", "audio.fade_sec", 0.3)
+	for b in ["Music", "Ambience", "SFX", "UI"]:
+		_check("audio: bus %s exists and sends to Master" % b, AudioServer.get_bus_index(b) > 0 and AudioServer.get_bus_send(AudioServer.get_bus_index(b)) == &"Master")
+	var keep_amb = Settings.get_value("ambience")
+	var keep_ui = Settings.get_value("ui")
+	Settings.set_value("ambience", 0.4)
+	Settings.set_value("ui", 0.3)
+	_check("audio: ambience / ui volume settings drive their buses", absf(AudioServer.get_bus_volume_linear(AudioServer.get_bus_index("Ambience")) - 0.4) < 0.01
+		and absf(AudioServer.get_bus_volume_linear(AudioServer.get_bus_index("UI")) - 0.3) < 0.01)
+	Settings.set_value("ambience", keep_amb)
+	Settings.set_value("ui", keep_ui)
+	var missing := []
+	var not_looping := []
+	for id in Sound.all_ids():
+		var st := Sound.stream(id)
+		if st == null:
+			missing.append(id)
+		elif Sound._is_loop(id) and (not st is AudioStreamWAV or (st as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_DISABLED):
+			not_looping.append(id)
+	_check("audio: all %d sounds load %s" % [Sound.all_ids().size(), missing], missing.is_empty())
+	_check("audio: every bed / weather layer loops %s" % [not_looping], not_looping.is_empty())
+	_check("audio: unlocked on desktop (web waits for the first tap)", Sound.unlocked)
+	# biome bed + engine
+	Dev.goto_biome(0)
+	await wait(0.8)
+	_check("audio: industrial bed plays in biome 1", Sound.is_playing("industrial") and float(Sound.layer("industrial").cur) > 0.5)
+	_check("audio: engine layer runs while the game runs", Sound.is_playing("engine") or Sound._engine_now() == "off")
+	Dev.goto_biome(1)
+	await wait(0.05)
+	_check("audio: biome change crossfades (desert up, industrial down)", float(Sound.layer("desert").target) > 0.0 and float(Sound.layer("industrial").target) == 0.0)
+	await wait(0.8)
+	_check("audio: after the fade only the desert bed plays", Sound.is_playing("desert") and not Sound.is_playing("industrial"))
+	# weather
+	Game.force_weather("rain")
+	await wait(0.8)
+	_check("audio: rain layer plays", Sound.is_playing("rain") and float(Sound.layer("rain").cur) > 0.5)
+	Game.force_weather("snow")
+	await wait(0.05)
+	_check("audio: weather change crossfades (snow up, rain down)", float(Sound.layer("snow").target) > 0.0 and float(Sound.layer("rain").target) == 0.0)
+	await wait(0.8)
+	_check("audio: after the fade rain is silent", not Sound.is_playing("rain") and Sound.is_playing("snow"))
+	Game.force_weather("clear")
+	await wait(0.8)
+	var any_weather := false
+	for w in Sound.WEATHER_SOUNDS:
+		any_weather = any_weather or Sound.is_playing(w)
+	_check("audio: clear sky = no weather layer", not any_weather)
+	Game.force_weather("storm")
+	Sound._thunder_in = 0.0
+	var thunder := int(Sound.played.get("thunder_1", 0)) + int(Sound.played.get("thunder_2", 0))
+	await wait(0.3)
+	_check("audio: a storm rolls thunder", int(Sound.played.get("thunder_1", 0)) + int(Sound.played.get("thunder_2", 0)) > thunder)
+	# effects from game signals and buttons
+	var before := Sound.played.duplicate()
+	Combat.hit.emit("van", 0, 5.0, false)
+	Game.construction_finished.emit(0, "build")
+	Game.toast.emit("test", "good")
+	var b := UIKit.button("tap", "gray")
+	add_child(b)
+	await wait(0.05)
+	b.pressed.emit()
+	b.queue_free()
+	var grew := func(id): return int(Sound.played.get(id, 0)) > int(before.get(id, 0))
+	_check("audio: van hit / room done / good toast / button tap make their sounds", grew.call("hit_metal") and grew.call("build_done") and grew.call("toast_good") and grew.call("tap"))
+	await wait(0.1)
+	_check("audio: the same effect is rate limited", Sound.sfx("loot", 0.0) and not Sound.sfx("loot", 0.0))
+	# switches off = silence
+	Features.set_override("features", "audio_ambience", false)
+	Features.set_override("features", "audio_sfx", false)
+	await wait(0.9)
+	var any := false
+	for id in Sound.layers:
+		any = any or Sound.is_playing(id)
+	_check("audio: audio_ambience off = every bed and weather layer silent", not any)
+	await wait(0.1)
+	_check("audio: audio_sfx off = no effect plays", not Sound.sfx("demolish") and not Sound.ui("tap"))
+	Features.set_override("features", "audio_ambience", null)
+	Features.set_override("features", "audio_sfx", null)
+	# GOD previews
+	Dev.sound_preview("weather", "acid_rain")
+	await wait(0.8)
+	_check("audio: GOD weather preview plays acid rain over the bed", Sound.is_playing("acid_rain") and Sound.is_playing(Sound.want_bed()))
+	Dev.sound_preview("bed", "metro")
+	await wait(0.8)
+	_check("audio: GOD bed preview plays the metro bed alone", Sound.is_playing("metro") and not Sound.is_playing("acid_rain") and not Sound.is_playing("desert") and Sound.want_weather() == "")
+	var n_ui := int(Sound.played.get("confirm", 0))
+	Dev.sound_preview("group", "ui")
+	await wait(1.0)
+	_check("audio: GOD effect group plays its sounds in turn", int(Sound.played.get("confirm", 0)) > n_ui)
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "sound"
+	main.hud.panels.god.refresh()
+	await wait(0.4)
+	await shot("god_sound")
+	main.hud.panels.god.close()
+	Dev.sound_preview("clear")
+	Features.set_override("tune", "audio.fade_sec", null)
+	Dev.goto_biome(keep_biome)
+	Game.force_weather(keep_weather)
+	await wait(0.4)
+	_check("audio: back to the game's own bed after the preview", Sound.preview.is_empty() and Sound.want_bed() == str(Data.biome(keep_biome).id))
+
+
 func _hull_warning_test() -> void:
 	_no_events()
 	if Game.active_event != "":

@@ -11,11 +11,11 @@ signal import_ready(text: String)
 const KEY := "mobile_vault_settings_v1"
 const FILE_PATH := "user://settings.json"
 const IMPORT_PATH := "user://import_save.json"     # desktop import source
-const BUSES := ["Music", "SFX"]
+const BUSES := ["Music", "Ambience", "SFX", "UI"]     # MV-536: Sound plays beds on Ambience, effects on SFX, taps on UI
 ## [id, name shown in its own language]; English is offered while the Features switch "english" is on (MV-151)
 const LANGS := [["th", "ไทย"], ["en", "English"]]
 const DEFAULTS := {
-	"master": 0.8, "music": 0.7, "sfx": 0.8, "mute": false,
+	"master": 0.8, "music": 0.7, "ambience": 0.7, "sfx": 0.8, "ui": 0.6, "mute": false,
 	"lang": "th",
 	"ui_scale": "auto",      # auto (largest whole scale) | small (one step smaller: more room)
 	"zoom": "auto",          # camera default: auto | wide | normal
@@ -125,7 +125,7 @@ func reset_defaults() -> void:
 
 func _apply(k: String) -> void:
 	match k:
-		"master", "music", "sfx", "mute":
+		"master", "music", "ambience", "sfx", "ui", "mute":
 			_apply_audio()
 		"lang":
 			pass      # Loc (MV-151) sets the locale: it also checks the "english" switch
