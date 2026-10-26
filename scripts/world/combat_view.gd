@@ -55,6 +55,41 @@ var _road_zombies: Array = []
 var last_entrance := ""          # MV-387: kind of the last entrance played (warlord | boss | elite), for tests
 
 
+## MV-517: monsters drawn bigger, whole-number scale per kind (true pixels, Nearest). Humanoid raiders use the
+## crew's sprite sheet and stay one step smaller so they still read as people. A sprite that would not fit the
+## fight zone behind the truck (FIGHT_W wide: the rear deck to the camera's right edge) steps down.
+const ENEMY_SCALE := {"normal": 2.0, "elite": 3.0, "boss": 3.0, "warlord": 3.0}
+const FIGHT_BEHIND := 124.0    # = main._fit_camera: the camera frames the convoy + this much road behind it
+const FIGHT_W := 148.0
+const FIGHT_H := 160.0
+
+
+static func size_kind(e: Dictionary) -> String:
+	if e.get("warlord", false):
+		return "warlord"
+	if e.get("boss", false):
+		return "boss"
+	return "elite" if e.get("elite", false) else "normal"
+
+
+## whole-number scale for an enemy whose sprite frame is w x h art px
+static func enemy_scale(e: Dictionary, w: float, h: float) -> int:
+	if not Features.on("enemy_size"):
+		return 1
+	var k := size_kind(e)
+	var s := int(Features.num("enemy_size." + k, ENEMY_SCALE[k]))
+	if str(e.get("sprite", "")).begins_with("dw_"):
+		s -= 1
+	while s > 1 and (w * s > FIGHT_W or h * s > FIGHT_H):
+		s -= 1
+	return maxi(1, s)
+
+
+## right edge of the fight zone (view space): the camera's right edge at rest
+static func fight_right() -> float:
+	return Vehicle.MAIN_W + rear_shift + FIGHT_BEHIND
+
+
 static func sim_to_view(p: Vector2) -> Vector2:
 	var x := VIEW_DECK_X + rear_shift + (p.x - SIM_DECK_X) * X_K
 	var y := VIEW_GROUND_Y - (Combat.GROUND_Y - p.y) * 0.9
@@ -188,7 +223,7 @@ func _process(delta: float) -> void:
 	for e in Combat.enemies:
 		var n: EnemyActor = enemy_nodes.get(int(e.id))
 		if n:
-			n.target = sim_to_view(Vector2(float(e.x), float(e.y)))
+			n.target = n.place(sim_to_view(Vector2(float(e.x), float(e.y))))
 			n.hp_ratio = float(e.hp) / maxf(1.0, float(e.max))
 			n.stunned = float(e.stun) > 0.0
 			n.visible = not e.get("burrowed", false)
@@ -647,6 +682,8 @@ func _tick_ram(delta: float) -> void:
 			z.sprite_frames = sf
 			z.centered = false
 			z.offset = Vector2(-6, -20)
+			var zs := enemy_scale({}, 12.0, 20.0)
+			z.scale = Vector2(zs, zs)
 			z.play("walk")
 			z.z_index = 6
 			var fp := vehicle.to_global(Vector2(-90 - randf_range(0, 30), ROAD_SURFACE))
@@ -692,9 +729,28 @@ class EnemyActor extends Node2D:
 	var _t := 0.0
 	var _flash := 0.0
 	var _base_mod := Color.WHITE
+	var size := 1             # MV-517: whole-number sprite scale (CombatView.enemy_scale)
+	var _grow := 0.0          # how far the centre moves back so the front edge stays put
+	var _right := 0.0         # sprite's right edge from the node (scaled)
 
 	func height() -> float:
 		return _h
+
+	func width() -> float:
+		return _w
+
+	## view position of the simulated enemy -> node position: shifted back by the growth and, for a scaled sprite,
+	## kept inside the fight zone behind the truck so a big boss never hangs off the right of the screen
+	func place(view: Vector2) -> Vector2:
+		var p := view + Vector2(_grow, 0)
+		if size > 1:
+			p.x = minf(p.x, CombatView.fight_right() - _right)
+		return p
+
+	## the drawn sprite in this node's parent space (for tests)
+	func sprite_rect() -> Rect2:
+		var tex := spr.sprite_frames.get_frame_texture("walk", 0)
+		return Rect2(position + spr.offset * float(size), Vector2(tex.get_size()) * float(size))
 
 	func setup(e: Dictionary) -> void:
 		is_boss = e.boss
@@ -722,6 +778,15 @@ class EnemyActor extends Node2D:
 			_w = float(r[2])
 			_h = float(r[3])
 			spr.offset = Vector2(-floorf(_w / 2.0), -_h) if e.kind != "air" else Vector2(-floorf(_w / 2.0), -floorf(_h / 2.0))
+		# MV-517: whole-number scale; the front edge (facing the truck) stays where it was, the body grows backwards
+		size = CombatView.enemy_scale(e, float(sf.get_frame_texture("walk", 0).get_width()), float(sf.get_frame_texture("walk", 0).get_height()))
+		spr.scale = Vector2(size, size)
+		_grow = -spr.offset.x * float(size - 1)
+		_right = (float(sf.get_frame_texture("walk", 0).get_width()) + spr.offset.x) * float(size)
+		_w *= size
+		_h *= size
+		position = place(position)
+		target = position
 		spr.sprite_frames = sf
 		spr.play("walk")
 		spr.frame = randi() % 2
@@ -731,7 +796,8 @@ class EnemyActor extends Node2D:
 		spr.modulate = _base_mod
 		z_index = 5 if e.kind != "air" else 6
 		if is_boss:
-			z_index = 7
+			# MV-517: a scaled-up boss stands behind the smaller mobs so they don't vanish inside it
+			z_index = 7 if size == 1 else 4
 
 	func flash() -> void:
 		_flash = 0.07

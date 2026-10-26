@@ -225,6 +225,11 @@ func _run() -> void:
 		await _boss_intro_test()
 		_finish()
 		return
+	if "--only=enemy_size" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _enemy_size_test()
+		_finish()
+		return
 	if "--only=pity" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _pity_test()
@@ -903,6 +908,7 @@ func _run() -> void:
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
+	await _enemy_size_test()
 	await _vehicle_detail_test()
 	await _engine_detail_test()
 	await _idle_motion_test()
@@ -4861,6 +4867,109 @@ func _wait_for(cond: Callable, max_s: float) -> void:
 	while t < max_s and not cond.call():
 		await wait(0.02)
 		t += 0.02
+
+
+## MV-517: monsters drawn bigger: whole-number scale per kind for every mob / boss sprite, boss > elite > normal,
+## raiders from the crew sheet one step smaller, everything fits the fight zone, the GOD lineup on screen at its stop
+## spots (hp bar + crown included), tune steps down when too big, switch off = the old size
+func _enemy_size_test() -> void:
+	var cv: CombatView = main.combat_view
+	_no_events()
+	Dev.kill_enemies()
+	await wait(0.4)
+	var dims := func(sprite: String) -> Vector2:
+		if sprite.begins_with("dw_"):
+			return Vector2(Atlas.DW_W, Atlas.DW_H)
+		var r: Array = Atlas.regions[sprite + "_0"]
+		return Vector2(float(r[2]), float(r[3]))
+	var whole := true
+	var grows := true
+	var fits := true
+	var people := true
+	var max_elite := Vector2.ZERO
+	var max_normal := Vector2.ZERO
+	for id in Combat.MOBS:
+		var sp: String = Combat.MOBS[id].sprite
+		var d: Vector2 = dims.call(sp)
+		var sn := CombatView.enemy_scale({"sprite": sp}, d.x, d.y)
+		var se := CombatView.enemy_scale({"sprite": sp, "elite": true}, d.x, d.y)
+		whole = whole and sn >= 1 and se >= 1
+		grows = grows and se > sn
+		fits = fits and d.x * se <= CombatView.FIGHT_W and d.y * se <= CombatView.FIGHT_H
+		if sp.begins_with("dw_"):
+			people = people and sn == 1 and se == 2
+		else:
+			people = people and sn == 2 and se == 3
+		max_elite = max_elite.max(d * se)
+		max_normal = max_normal.max(d * sn)
+	var min_boss := Vector2(INF, INF)
+	var boss_kinds := true
+	for bd in Combat.BOSSES.values() + Combat.WAVE_BOSSES.values():
+		var d: Vector2 = dims.call(str(bd.sprite))
+		var sb := CombatView.enemy_scale({"sprite": bd.sprite, "boss": true}, d.x, d.y)
+		var sw := CombatView.enemy_scale({"sprite": bd.sprite, "boss": true, "warlord": true}, d.x, d.y)
+		whole = whole and sb >= 1 and sw >= sb
+		fits = fits and d.x * sw <= CombatView.FIGHT_W and d.y * sw <= CombatView.FIGHT_H
+		boss_kinds = boss_kinds and sb == 3 and sw == 3
+		min_boss = min_boss.min(d * sb)
+	_check("enemy size: whole-number scales, normal x2 / elite x3 / boss + warlord x3, raiders one step smaller", whole and people and boss_kinds)
+	_check("enemy size: every elite bigger than the same mob as a normal", grows)
+	_check("enemy size: smallest boss %s taller and wider than the biggest elite %s" % [min_boss, max_elite],
+		min_boss.x > max_elite.x and min_boss.y > max_elite.y and max_elite.y > Atlas.DW_H)
+	_check("enemy size: every kind fits the fight zone (%dx%d)" % [CombatView.FIGHT_W, CombatView.FIGHT_H], fits)
+	# the GOD lineup: a normal, an elite and the boss, real enemies
+	main.set_zoom_mode("auto")
+	Dev.enemy_size_preview("lineup")
+	await _wait_for(func(): return cv.enemy_nodes.size() >= 3, 4.0)
+	await wait(0.6)
+	var by_kind := {}
+	for e in Combat.enemies:
+		var node = cv.enemy_nodes.get(int(e.id))
+		if node:
+			by_kind[CombatView.size_kind(e)] = [e, node]
+	_check("enemy size: GOD lineup spawns normal + elite + boss", by_kind.has("normal") and by_kind.has("elite") and by_kind.has("boss"))
+	var sizes_ok := by_kind.size() == 3
+	var on_screen := true
+	var vp: Vector2 = main.vp_size()
+	var view := Rect2(main.camera.get_screen_center_position() - vp * 0.5, vp)
+	for k in by_kind:
+		var e: Dictionary = by_kind[k][0]
+		var node = by_kind[k][1]
+		sizes_ok = sizes_ok and node.z_index == (4 if node.is_boss else 5) and node.spr.scale == Vector2(node.size, node.size) and node.size == {"normal": 2, "elite": 3, "boss": 3}[k]
+		# where it ends up: its stop spot behind the truck, hp bar (+ crown for a boss) above the head
+		var stop: Vector2 = node.place(CombatView.sim_to_view(Vector2(float(e.stop_x), float(e.y))))
+		var r: Rect2 = node.sprite_rect()
+		r.position += stop - node.position
+		r = r.expand(r.position + Vector2(0, -(25.0 if node.is_boss else 6.0)))
+		var g := Rect2(cv.to_global(r.position), r.size)
+		var ok := view.encloses(g) and r.end.x <= CombatView.fight_right() + 0.5
+		if not ok:
+			print("[autotest] enemy size: %s at %s off the view %s" % [k, g, view])
+		on_screen = on_screen and ok
+	_check("enemy size: lineup drawn at x2 / x3 / x3", sizes_ok)
+	_check("enemy size: lineup at its stop spots stays on screen (view %s)" % view, on_screen)
+	await shot("enemy_size_lineup")
+	# too big for the fight zone: a x4 boss steps down instead of hanging off the screen
+	Features.set_override("tune", "enemy_size.boss", 4.0)
+	var wide_boss := CombatView.enemy_scale({"sprite": "boss_scorpion", "boss": true}, 48.0, 28.0)
+	Features.set_override("tune", "enemy_size.boss", null)
+	Features.set_override("tune", "enemy_size.normal", 3.0)
+	var tuned := CombatView.enemy_scale({"sprite": "en_rat"}, 16.0, 10.0)
+	Features.set_override("tune", "enemy_size.normal", null)
+	_check("enemy size: tune enemy_size.* (x4 boss steps down to %d, normal x%d)" % [wide_boss, tuned], wide_boss == 3 and tuned == 3)
+	# switch off = the old size, road zombies included
+	Dev.kill_enemies()
+	await wait(0.4)
+	Features.set_override("features", "enemy_size", false)
+	Dev.enemy_size_preview("normal")
+	await _wait_for(func(): return cv.enemy_nodes.size() >= 1, 3.0)
+	var off_ok := cv.enemy_nodes.size() >= 1
+	for node in cv.enemy_nodes.values():
+		off_ok = off_ok and node.size == 1 and node.spr.scale == Vector2.ONE
+	_check("enemy size: switch off = original size", off_ok and CombatView.enemy_scale({"boss": true}, 48.0, 48.0) == 1)
+	Features.set_override("features", "enemy_size", null)
+	Dev.kill_enemies()
+	await wait(0.4)
 
 
 ## MV-387: boss / warlord / elite entrances: the HUD band with the name, drop-in + landing in the world, elites
