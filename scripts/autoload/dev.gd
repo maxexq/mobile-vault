@@ -688,6 +688,17 @@ func world_offline(minutes: float) -> void:
 	Game.travel_changed.emit()
 
 
+## MV-515: open the world map screen on a known test world (turns the switch on for this tester; GOD only)
+func world_screen(seed_text: String = "TEST-515") -> void:
+	Features.set_override("features", "seeded_world_map", true)
+	if WorldMap.world().is_empty() or str(WorldMap.world().seed) != seed_text:
+		WorldMap.create(seed_text)
+	act("world screen %s" % seed_text)
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud:
+		hud.open_panel("map")
+
+
 func world_cancel() -> void:
 	WorldMap.cancel_trip()
 	Trace.rec("god", "world cancel trip")

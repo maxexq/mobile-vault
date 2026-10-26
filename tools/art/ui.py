@@ -799,3 +799,207 @@ def gen_trait_cards():
     sheet.save(os.path.join(TRAIT_MASK_DIR, "fx_trait_masks.png"), optimize=True)
     with open(os.path.join(TRAIT_MASK_DIR, "fx_trait_masks.json"), "w") as f:
         json.dump(regions, f, indent=0, sort_keys=True)
+
+
+# ------------------------------------------------------------------ MV-500 / MV-501..513: seeded world map art
+## Native map pieces for the seeded world map screen (approved preview tools/art/micro/previews/seeded-map-v1).
+## Every piece uses only its spec's palette names, binary alpha and whole pixels; terrain tiles are 16x16 repeats on
+## the preview's 4px cluster grid and wrap seamlessly; roads are drawn by the game (not here). Deterministic: a fixed
+## seed per piece, so a full regeneration gives the same pixels.
+
+def _wrap_rect(img, x, y, w, h, col):
+    ## a rect that wraps across the 16x16 tile edges (keeps repeat tiles seamless)
+    for yy in range(y, y + h):
+        for xx in range(x, x + w):
+            img.putpixel((xx % 16, yy % 16), col)
+
+
+def _ground(name, base, clusters, seed):
+    ## clusters: [(colour, count, (w, h))] placed on the 4px grid (+0..1 px offset), wrapping
+    img = new(16, 16, c(base))
+    r = random.Random(seed)
+    for col, n, (w, h) in clusters:
+        for i in range(n):
+            x = r.randrange(0, 16, 4) + r.randrange(0, 2)
+            y = r.randrange(0, 16, 4) + r.randrange(0, 2)
+            _wrap_rect(img, x, y, w, h, c(col))
+    add(name, img)
+
+
+def ui_map_ground_industrial():
+    # soot concrete, a few darker cracks, sparse 2-4px rust roof / wall fragments; no lit windows
+    _ground("ui_map_ground_industrial", "gray3", [("gray2", 5, (4, 2)), ("gray4", 3, (2, 2)), ("ol0", 2, (1, 2)),
+        ("orange1", 2, (3, 2)), ("orange1", 1, (2, 3))], 501)
+
+
+def ui_map_ground_desert():
+    # dusty sand with a few stepped 1px dune ridges (light over dark), no gold glints
+    img = new(16, 16, c("sand2"))
+    for (x, y, n) in [(1, 3, 5), (9, 7, 6), (3, 12, 5)]:
+        for i in range(n):
+            img.putpixel(((x + i) % 16, (y - (i // 2)) % 16), c("sand3"))
+            img.putpixel(((x + i) % 16, (y + 1 - (i // 2)) % 16), c("sand1"))
+    for (x, y) in [(13, 1), (6, 15), (14, 11)]:
+        _wrap_rect(img, x, y, 2, 1, c("sand1"))
+    add("ui_map_ground_desert", img)
+
+
+def ui_map_ground_forest():
+    # coarse olive canopy clusters with tiny dark trunks; no bright grass carpet
+    img = new(16, 16, c("green1"))
+    r = random.Random(503)
+    for (x, y) in [(0, 0), (8, 2), (4, 8), (12, 10), (0, 12)]:
+        _wrap_rect(img, x + r.randrange(0, 2), y, 4, 3, c("green2"))
+        _wrap_rect(img, x + 1, y, 2, 1, c("green3"))
+        _wrap_rect(img, x + 2, y + 3, 1, 1, c("wood0"))
+    for (x, y) in [(6, 5), (14, 6), (10, 14)]:
+        _wrap_rect(img, x, y, 2, 2, c("green0"))
+    add("ui_map_ground_forest", img)
+
+
+def ui_map_ground_swamp():
+    # dark oxidised water / moss, sparse reed clusters; no blanket radioactive glow
+    img = new(16, 16, c("teal1"))
+    for (x, y, w) in [(0, 2, 6), (8, 6, 5), (2, 11, 7), (11, 13, 4)]:
+        _wrap_rect(img, x, y, w, 2, c("teal0"))
+    for (x, y) in [(5, 0), (13, 4), (7, 9), (1, 14)]:
+        _wrap_rect(img, x, y, 3, 2, c("teal2"))
+    for (x, y) in [(10, 1), (4, 6), (14, 10)]:
+        img.putpixel((x % 16, y % 16), c("teal3"))
+        img.putpixel((x % 16, (y + 1) % 16), c("wood0"))
+        img.putpixel(((x + 1) % 16, (y + 1) % 16), c("wood0"))
+    add("ui_map_ground_swamp", img)
+
+
+def ui_map_ground_tundra():
+    # dirty blue-gray snow with a few stepped rock / ice caps; no bright white surface
+    img = new(16, 16, c("snow1"))
+    for (x, y, w) in [(1, 1, 5), (9, 5, 4), (3, 9, 6), (12, 13, 4)]:
+        _wrap_rect(img, x, y, w, 1, c("snow2"))
+    for (x, y) in [(6, 3), (13, 9), (2, 13)]:
+        _wrap_rect(img, x, y, 3, 2, c("snow0"))
+        _wrap_rect(img, x + 1, y - 1, 1, 1, c("snow3"))
+    add("ui_map_ground_tundra", img)
+
+
+def ui_map_ground_metro():
+    # dense, low-contrast ruined roof rectangles with short alley gaps (cooler and tidier than industrial rubble)
+    img = new(16, 16, c("gray2"))
+    for (x, y, w, h) in [(0, 0, 7, 5), (8, 0, 6, 4), (0, 7, 4, 7), (6, 6, 9, 4), (6, 12, 5, 3), (13, 11, 3, 4)]:
+        _wrap_rect(img, x, y, w, h, c("gray3"))
+        _wrap_rect(img, x + 1, y + 1, max(1, w - 3), 1, c("sky2"))
+    for (x, y) in [(4, 3), (11, 2), (9, 8), (2, 11)]:
+        img.putpixel((x, y), c("gray1"))
+    for (x, y) in [(15, 5), (5, 15)]:
+        img.putpixel((x, y), c("ol0"))
+    add("ui_map_ground_metro", img)
+
+
+def ui_map_fog_dither():
+    # 4px stepped dither clusters, alternating opaque / clear, quiet repeat
+    img = new(16, 16)
+    for gy in range(4):
+        for gx in range(4):
+            if (gx + gy) % 2 == 0:
+                rect(img, gx * 4, gy * 4, 4, 4, c("gray1" if (gx * 3 + gy) % 3 else "gray2"))
+    add("ui_map_fog_dither", img, q=False)
+
+
+def ui_map_landmark_frame():
+    # 27x27: 2px soot surround, 1px gray6 rim, dark 23x23 panel at (2,2); the 16x16 icon slot at (5,5) stays panel
+    img = new(27, 27)
+    rect(img, 0, 0, 27, 27, c("ol0"))
+    rect(img, 2, 2, 23, 23, c("gray6"))
+    rect(img, 3, 3, 21, 21, c("gray1"))
+    add("ui_map_landmark_frame", img, q=False)
+
+
+def _disc(img, cx, cy, r, col):
+    for y in range(img.size[1]):
+        for x in range(img.size[0]):
+            if (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r:
+                img.putpixel((x, y), col)
+
+
+def ui_map_road_stop():
+    # stepped 12x12 stop at (2,2) with a 2px soot surround, muted gray5 centre, thin cream3 edge
+    img = new(16, 16)
+    _disc(img, 8, 8, 8, c("ol0"))
+    _disc(img, 8, 8, 6, c("cream3"))
+    _disc(img, 8, 8, 5, c("gray5"))
+    add("ui_map_road_stop", img, q=False)
+
+
+def ui_map_selection_ring():
+    # 33x33: only the outer 2px stepped amber rim; the central 27x27 stays clear
+    img = new(33, 33)
+    rect(img, 0, 0, 33, 33, c("yellow0"))
+    rect(img, 1, 1, 31, 31, c("lamp1"))
+    rect(img, 2, 2, 29, 29, CLEAR)
+    for (x, y) in [(0, 0), (32, 0), (0, 32), (32, 32)]:
+        img.putpixel((x, y), CLEAR)          # stepped corners
+    add("ui_map_selection_ring", img, q=False)
+
+
+def fx_map_vehicle_marker():
+    # 22x16 compact vehicle pictogram (preview drawCar footprint): body, cab, roof, one lamp pixel fixed; only two
+    # small wheel tread marks change between frames (frame 0 = parked)
+    for f in range(4):
+        img = new(22, 16)
+        rect(img, 1, 3, 20, 10, c("ol0"))              # soot outline block
+        rect(img, 2, 4, 13, 6, c("green1"))            # box body
+        rect(img, 3, 5, 11, 1, c("cream1"))            # roof stripe
+        rect(img, 15, 6, 5, 4, c("teal1"))             # cab
+        rect(img, 16, 7, 2, 1, c("cream1"))            # windscreen
+        img.putpixel((19, 9), c("lamp2"))              # headlamp
+        rect(img, 2, 10, 18, 2, c("ol0"))              # chassis / wheel line
+        for wx in (5, 16):
+            rect(img, wx - 1, 11, 3, 2, c("ol0"))
+            img.putpixel((wx - 1 + f % 3, 12), c("orange2"))   # the tread mark steps along
+        add("fx_map_vehicle_marker_%d" % f, img, q=False)
+
+
+def fx_map_suspect_ping():
+    # 33x33 overlay at 2 fps; central 27x27 clear. 0 dim, 1 upper corner tick, 2 opposite corner tick, 3 dim
+    for f in range(4):
+        img = new(33, 33)
+        for (x, y) in [(0, 0), (32, 0), (0, 32), (32, 32)]:
+            img.putpixel((x, y), c("yellow0"))         # dim corner dots (all phases)
+        if f == 1:
+            rect(img, 0, 0, 3, 1, c("lamp1"))
+            rect(img, 0, 0, 1, 3, c("yellow1"))
+        elif f == 2:
+            rect(img, 30, 32, 3, 1, c("lamp1"))
+            rect(img, 32, 30, 1, 3, c("yellow1"))
+        add("fx_map_suspect_ping_%d" % f, img, q=False)
+
+
+def fx_map_event_beacon():
+    # 16x16 badge at 2 fps: steady dark-red backing with a stepped amber rim tick that walks round; centre 8x10 clear
+    # for the separate steady "!" glyph
+    ticks = [(3, 1), (13, 4), (11, 14), (1, 11)]
+    for f in range(4):
+        img = new(16, 16)
+        rect(img, 1, 1, 14, 14, c("ol0"))
+        rect(img, 2, 2, 12, 12, c("red0"))
+        # the centre 8x10 stays plain backing: the game draws the steady "!" on top
+        tx, ty = ticks[f]
+        rect(img, tx, ty, 2, 1, c("lamp1"))
+        img.putpixel((tx, ty + 1 if ty < 8 else ty - 1), c("yellow1"))
+        add("fx_map_event_beacon_%d" % f, img, q=False)
+
+
+def gen_world_map():
+    ui_map_ground_industrial()
+    ui_map_ground_desert()
+    ui_map_ground_forest()
+    ui_map_ground_swamp()
+    ui_map_ground_tundra()
+    ui_map_ground_metro()
+    ui_map_fog_dither()
+    ui_map_landmark_frame()
+    ui_map_road_stop()
+    ui_map_selection_ring()
+    fx_map_vehicle_marker()
+    fx_map_suspect_ping()
+    fx_map_event_beacon()
