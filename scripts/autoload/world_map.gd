@@ -13,8 +13,14 @@ extends Node
 ##    the checkpoint sits on that road (phase 2 drives it).
 ##  * km: inside a region a road's length follows its drawn length, scaled so crossing the region is about that
 ##    biome's old length (Data.BIOMES.length); border roads take the mean of both regions. Tune world.km_scale.
+## Phase 2 (MV-130): driving. drive_to(stop) commits a validated route (selecting a stop alone does nothing); the
+## trip (world.trip: route, road index, km done on that road, destination) is saved, so park / resume / reload carry on
+## from the same spot with no free distance. Game drives it with its normal speed / power / fuel / scrap / event rules
+## (step()); entering a region switches the biome; an unvisited landmark parks the vehicle once through the normal
+## expedition flow (offline: drives past, as before); the vehicle waits before a closed border road (Game.at_checkpoint:
+## the warlord / peaceful toll work as today) and parks at the destination; the exit = lap + 1 in a new world.
 ## Switch seeded_world_map (off = the old itinerary; off in config until the map screen ships). GOD → โลก → WORLD MAP.
-## Autotest --only=world_map.
+## Autotest --only=world_map, --only=world_travel.
 
 signal world_changed
 
@@ -134,7 +140,7 @@ static func generate(seed_text: String, lap: int = 0) -> Dictionary:
 		"x": mini(CANVAS.x - 8, int(far.x) + 22), "y": mini(CANVAS.y - 8, int(far.y) + 18)}
 	nodes.append(ex)
 	by_id[ex.id] = ex
-	_link(edges, by_id, far.id, ex.id, 0, -1, r)
+	_link(edges, by_id, far.id, ex.id, int(regions[n_reg - 1].req), n_reg - 1, r)   # needs the last warlord
 	for e in edges:
 		_set_km(e, by_id)
 	return {"v": 1, "gen": GEN_VERSION, "seed": sd, "lap": lap, "regions": regions, "nodes": nodes, "edges": edges,
@@ -290,3 +296,174 @@ func summary() -> String:
 		return "ยังไม่มีโลก" if on() else "สวิตช์ seeded_world_map ปิด"
 	return "seed %s · v%d · รอบ %d · %d จุด · %d ถนน · อยู่ที่ %s" % [w.seed, int(w.gen), int(w.lap) + 1,
 		(w.nodes as Array).size(), (w.edges as Array).size(), str(w.at)]
+
+
+# =================================================================== phase 2 (MV-130): driving along the roads
+func trip() -> Dictionary:
+	var t = world().get("trip", {})
+	return t if t is Dictionary else {}
+
+
+func driving() -> bool:
+	return not trip().is_empty()
+
+
+func edge(id: String) -> Dictionary:
+	for e in world().get("edges", []):
+		if str(e.id) == id:
+			return e
+	return {}
+
+
+## where the vehicle is: the stop it is at, or the stop it left on the current road
+func here() -> String:
+	var t := trip()
+	if t.is_empty():
+		return str(world().get("at", "start"))
+	return str(t.ids[int(t.i)])
+
+
+## why the vehicle can't set off for this stop ("" = it can)
+func drive_block(dest: String) -> String:
+	if not on() or world().is_empty():
+		return "แผนที่โลกปิดอยู่"
+	if node(dest).is_empty():
+		return "ไม่มีจุดนี้"
+	var from := _route_start()
+	if dest == from and float(trip().get("prog", 0.0)) <= 0.0:
+		return "อยู่ที่นี่แล้ว"
+	if route(from, dest, int(Game.s.vault_level)).is_empty():
+		return "ไปไม่ถึง: ต้องอัปเกรด Mobile Vault ก่อน"
+	return ""
+
+
+## mid-road a new destination starts from the end of the current road (no turning round for free distance)
+func _route_start() -> String:
+	var t := trip()
+	if t.is_empty() or float(t.prog) <= 0.0:
+		return here()
+	return str(t.ids[int(t.i) + 1])
+
+
+## commit a route to dest; true when it starts. Mid-road the current road is finished first.
+func drive_to(dest: String) -> bool:
+	if drive_block(dest) != "":
+		return false
+	var t := trip()
+	var keep_edge := ""
+	var keep_prog := 0.0
+	var from := _route_start()
+	if not t.is_empty() and float(t.prog) > 0.0:
+		keep_edge = str(t.edges[int(t.i)])
+		keep_prog = float(t.prog)
+	var rt := route(from, dest, int(Game.s.vault_level))
+	var ids: Array = rt.ids.duplicate()
+	var eids: Array = rt.edges.duplicate()
+	if keep_edge != "":
+		ids.push_front(str(t.ids[int(t.i)]))
+		eids.push_front(keep_edge)
+	world()["trip"] = {"ids": ids, "edges": eids, "i": 0, "prog": keep_prog, "dest": dest}
+	Trace.rec("travel", "drive to %s" % dest, {"from": ids[0], "stops": ids.size(), "km": rt.km})
+	world_changed.emit()
+	Game.travel_changed.emit()
+	return true
+
+
+func cancel_trip() -> void:
+	var t := trip()
+	if t.is_empty() or float(t.prog) > 0.0:
+		return       # mid-road it finishes the road first (drive_to its end)
+	world().erase("trip")
+	world_changed.emit()
+	Game.travel_changed.emit()
+
+
+## the road the trip is about to take is a closed border road: the vehicle waits here (the checkpoint)
+func at_gate() -> bool:
+	var t := trip()
+	if t.is_empty() or float(t.prog) > 0.0:
+		return false
+	return _gate_closed(edge(str(t.edges[int(t.i)])), str(t.ids[int(t.i)]), str(t.ids[int(t.i) + 1]))
+
+
+## the Vault level the border road ahead needs (0 = none ahead)
+func gate_ahead() -> int:
+	var t := trip()
+	if t.is_empty():
+		return 0
+	var e := edge(str(t.edges[int(t.i)]))
+	return int(e.get("gate", 0)) if _forward(e, str(t.ids[int(t.i)]), str(t.ids[int(t.i) + 1])) else 0
+
+
+## leaving a region over its border road (or out through the exit) needs that region's warlord + the next Vault level
+func _forward(e: Dictionary, from: String, to: String) -> bool:
+	if int(e.get("boss", -1)) < 0:
+		return false
+	return int(node(to).biome) > int(node(from).biome) or str(node(to).type) == "exit"
+
+
+func _gate_closed(e: Dictionary, from: String, to: String) -> bool:
+	if not _forward(e, from, to):
+		return false
+	var boss := int(e.boss)
+	var beaten := Combat.boss_beaten(boss)
+	return not beaten or int(Game.s.vault_level) < int(e.gate)
+
+
+## drive km along the trip; returns the km actually driven. Stops for good at an unvisited landmark (parked), a
+## closed border road, the destination or the exit (lap + 1).
+func step(km: float, offline: bool) -> float:
+	var used := 0.0
+	while km > 0.0:
+		var t := trip()
+		if t.is_empty() or at_gate():
+			break
+		var e := edge(str(t.edges[int(t.i)]))
+		var left := float(e.km) - float(t.prog)
+		if km < left:
+			t.prog = float(t.prog) + km
+			used += km
+			break
+		used += left
+		km -= left
+		t.prog = 0.0
+		t.i = int(t.i) + 1
+		if _arrive(str(t.ids[int(t.i)]), offline):
+			break
+	return used
+
+
+## reached a stop; true = stop driving for this step (parked / destination / new world)
+func _arrive(id: String, offline: bool) -> bool:
+	var w := world()
+	var n := node(id)
+	var t := trip()
+	w.at = id
+	w.visited[id] = true
+	if int(n.biome) != int(Game.s.biome):
+		Game.s.biome = int(n.biome)
+		Game.s.km = Data.biome_start_km(int(n.biome))
+		Game.biome_changed.emit(int(Game.s.biome), offline)
+		if not offline:
+			Game.toast.emit("เข้าสู่ %s / %s" % [Data.biome(Game.s.biome).th, Data.biome(Game.s.biome).en], "biome")
+	if str(n.type) == "exit":
+		Trace.rec("travel", "world exit", {"lap": int(Game.s.lap)})
+		Game._finish_lap()
+		return true
+	var last := id == str(t.dest)
+	if last:
+		w.erase("trip")
+		if not offline:
+			Game.toast.emit("ถึงปลายทางแล้ว รถจอดรอคำสั่ง", "info")
+	elif int(t.i) >= (t.ids as Array).size() - 1:
+		w.erase("trip")
+	Trace.rec("travel", "arrived %s" % id, {"dest": last})
+	world_changed.emit()
+	if n.has("site") and not Expedition.is_done(str(n.site)):
+		Expedition.arrive(str(n.site))
+		if offline:
+			Expedition.skip_site()   # nobody there to send a team: drive on, as on the old road
+		else:
+			Game.toast.emit("พบสถานที่สำคัญ: %s! รถจอด — ส่งทีมสำรวจหรือขับผ่าน" % Expedition.SITES[n.site].th, "biome")
+			return true
+	return last
