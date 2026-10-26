@@ -419,3 +419,208 @@ def gen_ui_frames():
     _save_ui(t, "bubble_tail")
     t = new(4, 4); rect(t, 0, 0, 4, 4, c("gray2")); rect(t, 1, 1, 2, 2, hx("0c0c0e")); _save_ui(t, "bar_bg")
     t = new(4, 1); px(t, 0, 0, c("gray3")); px(t, 1, 0, c("gray3")); _save_ui(t, "dash")
+
+
+# ------------------------------------------------------------------ MV-473 equipment slots (approved v1 steel + v3 light)
+# One riveted worn-steel frame per tile width (MV-474) and six rarity light loops (MV-475..480). The light is a MASK:
+# three grey codes (gray2 / gray4 / gray6 = faint / lit / hot) that the game colours at runtime with the approved
+# per-rarity emission and hot colours (UIKit / gear_fx.gdshader), so the atlas keeps the master palette. The masks
+# follow the approved preview helper (tools/art/gear_slots/build_preview.py, cell()): same integer paths, five stepped
+# pulse levels, phase offset (index + rank*2) % 16, highlight lengths, corner lights, particle counts and the Mythic
+# heartbeat, with every edge re-derived for each native width (never a rescaled 32 px animation).
+GEAR_WIDTHS = [28, 30, 32, 36, 40]
+GEAR_RARITIES = ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
+GEAR_PAD = 12          # template padding around the slot in a light-mask cell
+GEAR_PHASES = 16
+GEAR_HOT = 1.25        # strength of the hot / core colour on the same scale as the base emission
+
+
+def _gear_suffix(w):
+    return "" if w == 32 else "_%d" % w
+
+
+def ui_gear_slot_frame(w=32):
+    """MV-474: the approved steel slot at native width w: clipped corners, ol0 outline, top-left bevel, gunmetal band
+    with sparse rust, four bolted corner plates, a dark groove at inset 4 (where the rarity rim lights up) and a dark
+    recessed centre around the 16x16 icon area. Drawn per width: whole-pixel plates and bevels, recomputed spans."""
+    img = new(w, w)
+    rng = random.Random(4730 + w)
+    for y in range(w):
+        for x in range(w):
+            d = min(x, y, w - 1 - x, w - 1 - y)
+            corner = min(x, w - 1 - x) + min(y, w - 1 - y)
+            if corner < 1:
+                continue                                   # clipped corners
+            if d == 0 or corner == 1:
+                col = "ol0"
+            elif d <= 3:
+                # band: light from the top-left
+                if (x == 1 or y == 1) and corner > 2:
+                    col = "gray5"
+                elif x == w - 2 or y == w - 2:
+                    col = "gray2"
+                else:
+                    col = "gray4" if (x + y) % 5 else "gray3"
+            elif d == 4:
+                col = "ol1"                                # the rim groove
+            elif d == 5:
+                col = "ol0" if (x == 5 or y == 5) else "gray2"
+            else:
+                col = "gray1"                              # recess
+            px(img, x, y, c(col))
+    # rust on the band, sparse
+    for _ in range(max(4, w // 5)):
+        side = rng.randrange(4)
+        t = rng.randrange(5, w - 5)
+        k = rng.randrange(2, 4)
+        x, y = [(t, k), (w - 1 - k, t), (t, w - 1 - k), (k, t)][side]
+        px(img, x, y, c("orange1" if rng.random() < 0.6 else "orange2"))
+    # four bolted plates
+    for bx, by in [(1, 1), (w - 4, 1), (1, w - 4), (w - 4, w - 4)]:
+        rect(img, bx, by, 3, 3, c("gray3"))
+        px(img, bx + 1, by + 1, c("gray5"))
+        px(img, bx + 2, by + 2, c("ol1"))
+    return img
+
+
+def _gear_path(vertices):
+    pts = []
+    for (x0, y0), (x1, y1) in zip(vertices, vertices[1:] + vertices[:1]):
+        steps = max(abs(x1 - x0), abs(y1 - y0))
+        for i in range(steps):
+            p = (round(x0 + (x1 - x0) * i / steps), round(y0 + (y1 - y0) * i / steps))
+            if not pts or pts[-1] != p:
+                pts.append(p)
+    return pts
+
+
+def gear_light(rank, index, w=32, aura=True):
+    """light strengths (x, y) -> s for one phase of one rarity at slot width w, in a (w+24)^2 cell with the slot at
+    (12,12). The approved cell() with its colours replaced by strengths: tint(color, a) = a, mix(x, hot, t) moves x
+    towards GEAR_HOT."""
+    px0 = py0 = GEAR_PAD
+    lit = {}
+
+    def put(x, y, s):
+        lit[(x, y)] = s                     # later draws replace earlier ones, as in the preview
+
+    def mix(a, t):
+        return a + (GEAR_HOT - a) * t
+
+    rim = _gear_path([(7, 4), (w - 8, 4), (w - 5, 7), (w - 5, w - 8), (w - 8, w - 5), (7, w - 5), (4, w - 8), (4, 7)])
+    outer = _gear_path([(-1, -3), (w, -3), (w + 3, 0), (w + 3, w - 1), (w, w + 2), (-1, w + 2), (-4, w - 1), (-4, 0)])
+    corners = [(4, 4), (w - 5, 4), (w - 5, w - 5), (4, w - 5)]
+    n = GEAR_PHASES
+    phase = (index + rank * 2) % n
+    pulse = (1 - math.cos(math.tau * phase / n)) / 2
+    pulse = round(pulse * 4) / 4
+    if rank == 5:
+        pulse = [0.25, 0.5, 1, 0.5, 0.25, 0.5, 0.75, 0.5, 0.25, 0, 0, 0, 0, 0, 0, 0.25][phase]
+    if aura:
+        reach = [1, 2, 3, 3, 4, 5][rank]
+        for ring in range(reach, 0, -1):
+            glow = (0.08 + 0.025 * rank + 0.09 * pulse) * (reach - ring + 1) / reach
+            v = [(px0 + 3 - ring, py0 + 1 - ring), (px0 + w - 4 + ring, py0 + 1 - ring),
+                 (px0 + w - 2 + ring, py0 + 3 - ring), (px0 + w - 2 + ring, py0 + w - 4 + ring),
+                 (px0 + w - 4 + ring, py0 + w - 2 + ring), (px0 + 3 - ring, py0 + w - 2 + ring),
+                 (px0 + 1 - ring, py0 + w - 4 + ring), (px0 + 1 - ring, py0 + 3 - ring)]
+            for i, (x, y) in enumerate(_gear_path(v)):
+                if (i + phase + ring) % 3 != 0:
+                    put(x, y, glow)
+    strength = (0.42 + 0.12 * pulse) if rank == 0 else (0.56 + 0.38 * pulse)
+    for x, y in rim:
+        put(px0 + x, py0 + y, strength)
+    head = (phase * len(rim) // n) % len(rim)
+    tails = 3 if rank == 0 else 4 + rank
+    for k in range(tails):
+        x, y = rim[(head - k) % len(rim)]
+        put(px0 + x, py0 + y, mix(strength, (tails - k) / tails * (0.45 if rank == 0 else 0.9)))
+    if rank >= 3:
+        for k in range(4):
+            x, y = rim[(head + len(rim) // 2 - k) % len(rim)]
+            put(px0 + x, py0 + y, mix(strength, (4 - k) / 5))
+        for k, (x, y) in enumerate(corners):
+            put(px0 + x, py0 + y, mix(0.4, 0.25 + 0.55 * ((phase + k * 4) % n) / n))
+    if aura and rank > 0:
+        count = [0, 1, 2, 3, 4, 6][rank]
+        for particle in range(count):
+            if rank >= 4:
+                age = (phase + particle * 5) % n
+                x = px0 + (-3 if particle % 2 == 0 else w + 2) + ((age // 4 + particle) % 2)
+                y = py0 + w - 2 - age * 2
+                size = 2 if rank == 5 and particle % 3 == 0 else 1
+                s = mix(0.35, 1 - age / n)
+            else:
+                x, y = outer[(phase * len(outer) // n + particle * len(outer) // count) % len(outer)]
+                x, y = px0 + x, py0 + y
+                size = 1
+                s = mix(0.5, 0.35 + 0.45 * ((phase + particle) % 4) / 3)
+            for dx in range(size):
+                for dy in range(size):
+                    put(x + dx, y + dy, s)
+        if rank == 5:
+            for shift in (0, len(outer) // 2):
+                for k in range(7):
+                    x, y = outer[(head + shift + k) % len(outer)]
+                    if k % 3 != 2:
+                        put(px0 + x, py0 + y, mix(1.0, (7 - k) / 9))
+    # the item never lights: its 16x16 centre stays empty
+    ix = px0 + (w - 16) // 2
+    iy = py0 + (w - 16) // 2
+    for (x, y) in list(lit):
+        if ix <= x < ix + 16 and iy <= y < iy + 16:
+            del lit[(x, y)]
+    return lit
+
+
+def gear_mask_code(s):
+    """light strength -> mask code: gray2 faint, gray4 lit, gray6 hot (None = dark)"""
+    if s < 0.02:
+        return None
+    if s < 0.45:
+        return "gray2"
+    if s < 0.9:
+        return "gray4"
+    return "gray6"
+
+
+def fx_gear_mask(rank, index, w=32):
+    cell = w + 2 * GEAR_PAD
+    img = new(cell, cell)
+    for (x, y), s in gear_light(rank, index, w).items():
+        code = gear_mask_code(s)
+        if code and 0 <= x < cell and 0 <= y < cell:
+            px(img, x, y, c(code))
+    return img
+
+
+def fx_gear_common(i, w=32):
+    return fx_gear_mask(0, i, w)
+
+
+def fx_gear_uncommon(i, w=32):
+    return fx_gear_mask(1, i, w)
+
+
+def fx_gear_rare(i, w=32):
+    return fx_gear_mask(2, i, w)
+
+
+def fx_gear_epic(i, w=32):
+    return fx_gear_mask(3, i, w)
+
+
+def fx_gear_legendary(i, w=32):
+    return fx_gear_mask(4, i, w)
+
+
+def fx_gear_mythic(i, w=32):
+    return fx_gear_mask(5, i, w)
+
+
+def gen_gear_slots():
+    for w in GEAR_WIDTHS:
+        add("ui_gear_slot_frame" + _gear_suffix(w), ui_gear_slot_frame(w))
+        for rank, name in enumerate(GEAR_RARITIES):
+            for i in range(GEAR_PHASES):
+                add("fx_gear_%s%s_%d" % (name, _gear_suffix(w), i), fx_gear_mask(rank, i, w))

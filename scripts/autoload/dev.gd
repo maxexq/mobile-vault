@@ -535,6 +535,30 @@ func saloon_claim_all() -> void:
 	act("saloon claim all")
 
 
+# ------------------------------------------------------------------ MV-473 equipment slots
+## every gear tile's light: "" = follow the switches, "base" / "neon" / "aura" / "still" (read-only, not cheated)
+func gear_preview(mode: String) -> void:
+	GearFx.preview = mode
+	GearFx.paused_preview = false
+	Trace.rec("god", "gear preview %s" % mode)
+
+
+## hold every light and move it one phase (read-only)
+func gear_step() -> void:
+	GearFx.frame_step()
+	Trace.rec("god", "gear step %d" % GearFx.current_phase())
+
+
+## a preview item that isn't in the stash (no uid used): rarity r in a slot, with +N and lock for showing the badges
+func gear_sample(r: int, slot: String, plus: int = 0, lock: bool = false) -> Dictionary:
+	var base := ""
+	for k in Loot.BASES:
+		if str(Loot.BASES[k].slot) == slot:
+			base = str(k)
+			break
+	return {"uid": -1, "base": base, "slot": slot, "rar": r, "ilvl": 5 + r * 4, "plus": plus, "aff": [], "lock": lock}
+
+
 func finish_construction() -> void:
 	for slot in Game.s.rooms.size():
 		if Game.is_constructing(slot):

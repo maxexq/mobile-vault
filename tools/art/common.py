@@ -352,7 +352,7 @@ def pack_atlas(max_w=2048):
     items = sorted(atlas_items.items(), key=lambda kv: (-kv[1].height, -kv[1].width, kv[0]))
     x = y = 0
     row_h = 0
-    padd = 2
+    padd = 1     # MV-473: nearest filtering never samples a neighbour; 1 px keeps the sheet at 2048 tall
     regions = {}
     for name, im in items:
         if x + im.width + padd > max_w:

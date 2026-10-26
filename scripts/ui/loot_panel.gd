@@ -157,7 +157,7 @@ func _build_grid() -> void:
 	if pick_slot != "":
 		set_title("SELECT %s / %s" % [pick_slot.to_upper(), _owner_name(pick_did)])
 		var cur := _current_equipped()
-		var h := UIKit.hbox(4)
+		var h := UIKit.hbox(UIKit.gear_gap(4))
 		h.add_child(UIKit.label(Loc.t("ใส่อยู่:"), UIKit.FS_SMALL, UIKit.C_DIM))
 		var t := UIKit.gear_tile(cur, pick_slot, 30)
 		t.pressed.connect(func():
@@ -217,9 +217,12 @@ func _build_grid() -> void:
 	# the width _layout gives the window on this screen (MV-266/113): box.size is still stretched by the last build's
 	# grid, so a grid built on a wide screen kept its columns after the screen got narrower and ran past the edge
 	var w := box.custom_minimum_size.x - 24.0
-	grid.columns = maxi(5, int(w / 40.0))
-	grid.add_theme_constant_override("h_separation", 4)
-	grid.add_theme_constant_override("v_separation", 4)
+	var gap := UIKit.gear_gap(4)
+	if gap > 4:
+		w -= 2.0 * UIKit.GEAR_AURA          # gear_pad's margins
+	grid.columns = maxi(5, int((w + gap) / float(36 + gap)))
+	grid.add_theme_constant_override("h_separation", gap)
+	grid.add_theme_constant_override("v_separation", gap)
 	var cur_score := Loot.power_score(_current_equipped()) if pick_slot != "" else 0.0
 	for it in items:
 		var t := UIKit.gear_tile(it, it.slot, 36)
@@ -234,7 +237,7 @@ func _build_grid() -> void:
 			detail_uid = uid
 			refresh())
 		grid.add_child(t)
-	_list.add_child(grid)
+	_list.add_child(UIKit.gear_pad(grid))
 
 
 func _current_equipped() -> Dictionary:

@@ -257,11 +257,11 @@ func _build_manage(d: Dictionary) -> void:
 	_list.add_child(UIKit.header("GEAR", Loc.t("อุปกรณ์ 6 ชิ้น (แตะเพื่อเปลี่ยน)")))
 	var grid := GridContainer.new()
 	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 4)
-	grid.add_theme_constant_override("v_separation", 3)
+	grid.add_theme_constant_override("h_separation", UIKit.gear_gap(4))
+	grid.add_theme_constant_override("v_separation", UIKit.gear_gap(3))
 	for slot in Loot.HERO_SLOTS:
 		var it := Loot.equipped_on(d, slot)
-		var h := UIKit.hbox(3)
+		var h := UIKit.hbox(UIKit.gear_gap(3))
 		h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var tile := UIKit.gear_tile(it, slot, 28)
 		var sl: String = slot
@@ -275,7 +275,7 @@ func _build_manage(d: Dictionary) -> void:
 		cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(cap)
 		grid.add_child(h)
-	_list.add_child(grid)
+	_list.add_child(UIKit.gear_pad(grid))
 	var hs := Combat.hero_stats(d, maxi(0, Game.squad_role(d)))
 	_list.add_child(UIKit.label("DODGE %d%%  LOOT +%d%%  SUPPLY +%d%%" % [int(hs.get("dodge", 0)), int(hs.loot), int(hs.get("supply", 0))], UIKit.FP, UIKit.C_BLUE, true))
 	# --- squad role

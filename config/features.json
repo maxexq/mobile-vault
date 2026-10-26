@@ -26,6 +26,8 @@
     "fixed_sim": true,
     "responsive_scale": true,
     "window_fit": true,
+    "gear_slot_style": true,
+    "gear_slot_vfx": true,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,

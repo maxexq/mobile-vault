@@ -93,6 +93,7 @@ func _note(text: String) -> void:
 
 # ------------------------------------------------------------------ tabs
 func _tab_icons() -> void:
+	_gear_slots_preview()
 	_head("ICON ATLAS", "16x16 / 1x / 2x / 3x")
 	var sizes := []
 	for scale in [1, 2, 3]:
@@ -123,6 +124,37 @@ func _tab_icons() -> void:
 		var label := UIKit.label(key, 9, UIKit.C_DIM)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cell.add_child(label)
+
+
+## MV-473: every rarity at every tile width with real icons, the empty / locked / +N / disabled states, and the
+## presentation (switches / base / neon / aura / still) with frame stepping
+func _gear_slots_preview() -> void:
+	_head("EQUIPMENT SLOTS", "ช่องอุปกรณ์เหล็ก + แสงตามความหายาก (MV-473) · gear_slot_style %s · gear_slot_vfx %s · ตอนนี้ %s" % [
+		"เปิด" if Features.on("gear_slot_style") else "ปิด", "เปิด" if Features.on("gear_slot_vfx") else "ปิด", GearFx.presentation()])
+	var modes := []
+	for m in [["", "ตามสวิตช์"], ["base", "ฐาน"], ["neon", "นีออน"], ["aura", "ออร่า"], ["still", "นิ่ง"]]:
+		var mm: String = m[0]
+		modes.append(_b(m[1], func(): Dev.gear_preview(mm), "yellow" if GearFx.preview == mm else "gray"))
+	_row(modes, "แสดง")
+	_row([_b("เฟรมถัดไป", func(): Dev.gear_step(), "green"), _b("เล่นต่อ", func(): Dev.gear_preview(GearFx.preview), "gray")],
+		"เฟรม %d/16%s" % [GearFx.current_phase() + 1, " (หยุด)" if GearFx.paused_preview else ""])
+	var slots := ["weapon", "armor", "helmet", "boots", "gadget", "backpack"]
+	var grid := GridContainer.new()
+	grid.name = "GearSlotGrid"
+	grid.columns = GearFx.WIDTHS.size()
+	grid.add_theme_constant_override("h_separation", UIKit.gear_gap(6))
+	grid.add_theme_constant_override("v_separation", UIKit.gear_gap(6))
+	for r in 6:
+		for j in GearFx.WIDTHS.size():
+			var w: int = GearFx.WIDTHS[j]
+			grid.add_child(UIKit.gear_tile(Dev.gear_sample(r, slots[(r + j) % slots.size()], r if j % 2 == 0 else 0, r == 2), slots[(r + j) % slots.size()], w))
+	for j in GearFx.WIDTHS.size():
+		var w: int = GearFx.WIDTHS[j]
+		var t := UIKit.gear_tile({} if j < 3 else Dev.gear_sample(j, slots[j]), slots[j], w)
+		t.disabled = j >= 3
+		grid.add_child(t)
+	_list.add_child(UIKit.gear_pad(grid))
+	_note("แถว: ทั่วไป · ดี · หายาก (ล็อก) · มหากาพย์ · ตำนาน · ปฐมกาล · ล่างสุด: ช่องว่าง 3 ขนาด + ปุ่มกดไม่ได้ · คอลัมน์ 28 / 30 / 32 / 36 / 40 px")
 
 
 func _tab_main() -> void:

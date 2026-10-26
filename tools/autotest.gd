@@ -141,6 +141,11 @@ func _run() -> void:
 		await _window_fit_test()
 		_finish()
 		return
+	if "--only=gear_slots" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _gear_slots_test()
+		_finish()
+		return
 	if "--only=perf" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _perf_test()
@@ -909,6 +914,7 @@ func _run() -> void:
 	await _responsive_test()
 	await _perf_test()
 	await _window_fit_test()
+	await _gear_slots_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -2395,7 +2401,8 @@ func _loot_tabs_test() -> void:
 		get_viewport().push_input(mv, true)
 		await wait(0.05)
 		var hov := get_viewport().gui_get_hovered_control()
-		_check("loot tabs: %s tab button is the control under the finger (got %s)" % [from, str(hov.get_path()) if hov else "none"],
+		_check("loot tabs: %s tab button is the control under the finger (got %s; button %s, window %s, open %s)" % [from, str(hov.get_path()) if hov else "none",
+			btn.get_global_rect(), Rect2(inv.box.global_position, inv.box.size), inv.is_open],
 			hov != null and (hov == btn or btn.is_ancestor_of(hov)))
 		get_viewport().push_input(ev, true)
 		await wait(0.15)
@@ -6651,4 +6658,173 @@ func _window_fit_test() -> void:
 	await shot("window_fit_closeup_assign")
 	cu.close()
 	await wait(0.6)
+	Settings.set_value("tips", keep_tips)
+
+
+## MV-473 (MV-474..481): steel equipment slots and the six rarity light loops: atlas sprites (sizes, mask codes,
+## empty item centre, bounded overscan, motion), the tile (frame per width, light only on filled items, old renderer
+## with the switch off), presentations (aura moves, neon / still clip, still / paused / hidden hold), one shared
+## phase, aura clearance in the stash and crew layouts, taps still work, GOD preview
+func _gear_slots_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_tips = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	var sheet: Image = Atlas.sheet.get_image()
+	if sheet.is_compressed():
+		sheet.decompress()
+	# --- atlas: frames per width, 16 masks per rarity per width
+	var frames_ok := true
+	for w in GearFx.WIDTHS:
+		var r: Array = Atlas.regions.get("ui_gear_slot_frame" + ("" if w == 32 else "_%d" % w), [])
+		frames_ok = frames_ok and r.size() == 4 and int(r[2]) == w and int(r[3]) == w
+	_check("gear slots: a steel frame drawn for each width 28/30/32/36/40", frames_ok)
+	var codes := [Color("26262a"), Color("54544e"), Color("9a9684")]
+	var bad := []
+	var moving := 0
+	for rank in 6:
+		for w in GearFx.WIDTHS:
+			var cell: int = w + 24
+			var first := PackedByteArray()
+			var differs := false
+			for p in 16:
+				var key := GearFx.mask_key(rank, w, p)
+				var r: Array = Atlas.regions.get(key, [])
+				if r.size() != 4 or int(r[2]) != cell or int(r[3]) != cell:
+					bad.append("%s size" % key)
+					continue
+				var img := sheet.get_region(Rect2i(int(r[0]), int(r[1]), cell, cell))
+				var ic: int = 12 + (int(w) - 16) / 2
+				for y in cell:
+					for x in cell:
+						var c := img.get_pixel(x, y)
+						if c.a == 0.0:
+							continue
+						if c.a < 1.0 or not codes.any(func(k): return k.is_equal_approx(Color(c.r, c.g, c.b))):
+							bad.append("%s colour" % key)
+						elif x >= ic and x < ic + 16 and y >= ic and y < ic + 16:
+							bad.append("%s item centre" % key)
+						elif x < 12 - UIKit.GEAR_AURA or y < 12 - UIKit.GEAR_AURA or x >= 12 + w + UIKit.GEAR_AURA or y >= 12 + w + UIKit.GEAR_AURA:
+							bad.append("%s overscan" % key)
+				if p == 0:
+					first = img.get_data()
+				elif img.get_data() != first:
+					differs = true
+			if differs:
+				moving += 1
+	_check("gear slots: 480 light masks, three grey codes only, item centre empty, light within 6 px %s" % [bad.slice(0, 4)], bad.is_empty())
+	_check("gear slots: every rarity's light moves at every width (%d / 30)" % moving, moving == 30)
+	# --- the tile
+	var hud: HUD = main.hud
+	var item := Dev.gear_sample(4, "boots", 3, true)
+	var t := UIKit.gear_tile(item, "boots", 36)
+	var e := UIKit.gear_tile({}, "helmet", 28)
+	var sb := t.get_theme_stylebox("normal") as StyleBoxTexture
+	_check("gear slots: a filled tile = 36 px steel frame + one light; an empty one has none", sb != null and sb.texture == Atlas.tex("ui_gear_slot_frame_36")
+		and t.custom_minimum_size == Vector2(36, 36) and t.find_children("*", "GearFx", true, false).size() == 1
+		and e.find_children("*", "GearFx", true, false).is_empty() and e.get_child(0).material != null)
+	t.free()
+	e.free()
+	Features.set_override("features", "gear_slot_style", false)
+	var old := UIKit.gear_tile(item, "boots", 36)
+	var osb := old.get_theme_stylebox("normal") as StyleBoxTexture
+	_check("gear slots: style off = the old tile, no light", osb != null and osb.texture != Atlas.tex("ui_gear_slot_frame_36") and old.find_children("*", "GearFx", true, false).is_empty())
+	old.free()
+	Features.set_override("features", "gear_slot_style", null)
+	# --- presentations on live tiles (GOD preview grid)
+	hud.open_panel("god")
+	var god = hud.panels.god
+	god.tab = "icons"
+	god.refresh()
+	await wait(0.4)
+	var fxs: Array = god.find_children("*", "GearFx", true, false)
+	_check("gear slots: GOD shows every rarity at every width (%d lights)" % fxs.size(), fxs.size() >= 30)
+	await shot("gear_slots_god_aura")
+	var a: GearFx = fxs[fxs.size() - 1]
+	var b: GearFx = fxs[0]
+	var seen := {}
+	for i in 20:
+		await wait(0.05)
+		seen[a.phase] = true
+	_check("gear slots: aura moves through its phases (%d seen) and every tile shares one phase" % seen.size(), seen.size() >= 4 and a.phase == b.phase
+		and not a.clip_contents)
+	Dev.gear_preview("neon")
+	await wait(0.2)
+	_check("gear slots: neon = the same light clipped to the slot", a.clip_contents and a._tex.visible)
+	await shot("gear_slots_god_neon")
+	Features.set_override("features", "gear_slot_vfx", false)
+	Dev.gear_preview("")
+	await wait(0.4)
+	var p0 := a.phase
+	await wait(0.4)
+	_check("gear slots: vfx off = a still rarity rim (phase %d, clipped)" % a.phase, a.phase == 0 and p0 == 0 and a.clip_contents and a._tex.visible)
+	Features.set_override("features", "gear_slot_vfx", null)
+	await wait(0.3)
+	get_tree().paused = true
+	var held := GearFx.current_phase()
+	await get_tree().create_timer(0.4, true).timeout
+	var paused_ok := GearFx.current_phase() == held
+	get_tree().paused = false
+	god.visible = false
+	held = a.phase
+	await wait(0.4)
+	var hidden_ok := a.phase == held
+	god.visible = true
+	_check("gear slots: the light holds while paused and does no work while hidden", paused_ok and hidden_ok)
+	Dev.gear_preview("base")
+	await wait(0.2)
+	_check("gear slots: GOD base = metal only", not a._tex.visible)
+	Dev.gear_step()
+	var s1 := GearFx.current_phase()
+	Dev.gear_step()
+	_check("gear slots: GOD frame step", GearFx.current_phase() == (s1 + 1) % 16)
+	Dev.gear_preview("")
+	god.close()
+	await wait(0.3)
+	# --- clearance and taps in the real stash and crew layouts
+	if Loot.stash().size() < 8:
+		Dev.forge_kit()
+	var loot: LootPanel = hud.panels.inventory
+	loot.tab = "gear"
+	loot.filter = "all"
+	loot.pick_slot = ""
+	loot.detail_uid = -1
+	hud.open_panel("inventory")
+	await wait(0.5)
+	var tiles: Array = loot.find_children("*", "Button", true, false).filter(func(x): return x.find_child("GearFx", false, false) != null)
+	var clash := 0
+	for i in tiles.size():
+		for j in range(i + 1, tiles.size()):
+			var ri := Rect2(tiles[i].global_position, tiles[i].size).grow(UIKit.GEAR_AURA)
+			if ri.intersects(Rect2(tiles[j].global_position, tiles[j].size)):
+				clash += 1
+	_check("gear slots: in the stash no aura reaches another slot (%d tiles)" % tiles.size(), tiles.size() >= 5 and clash == 0)
+	await shot("gear_slots_stash")
+	if not tiles.is_empty():
+		tiles[0].pressed.emit()
+		await wait(0.3)
+	_check("gear slots: tapping a slot still opens the item", loot.detail_uid >= 0)
+	await shot("gear_slots_detail")
+	loot.close()
+	await wait(0.3)
+	var crew: Dictionary = Game.s.dwellers[0]
+	hud.open_panel("dwellers")
+	(hud.panels.dwellers as DwellersPanel).manage(int(crew.id))
+	await wait(0.5)
+	var f28 := Atlas.tex("ui_gear_slot_frame_28")
+	var ct: Array = hud.panels.dwellers.find_children("*", "Button", true, false).filter(func(x):
+		var tsb = x.get_theme_stylebox("normal")
+		return tsb is StyleBoxTexture and tsb.texture == f28)
+	var caps_ok := true
+	for tb in ct:
+		var h: Control = tb.get_parent()
+		if h is BoxContainer and h.get_child_count() > 1:
+			var cap: Control = h.get_child(1)
+			caps_ok = caps_ok and cap.global_position.x - (tb.global_position.x + tb.size.x) >= UIKit.GEAR_AURA - 0.5
+	_check("gear slots: crew gear labels sit clear of the aura (%d slots)" % ct.size(), ct.size() == 6 and caps_ok)
+	await shot("gear_slots_crew")
+	hud.panels.dwellers.close()
+	await wait(0.3)
 	Settings.set_value("tips", keep_tips)

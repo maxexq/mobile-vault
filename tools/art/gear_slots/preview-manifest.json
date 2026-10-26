@@ -1,0 +1,68 @@
+{
+  "status": "Approved by Parames; queued for Claude implementation",
+  "source": "tools/art/micro/previews/equipment-slots-v2-neon-aura/rarity-neon-aura-study.png",
+  "source_sha256": "0024e0de45e01bbf9f9adc7e0a54d86d492d9be1470e893f20845f592914db08",
+  "method": "Fixed crops of image_gen artwork; native-grid emissive overlays and GIF packaging",
+  "main_output": "all-rarities-neon-aura.gif",
+  "individual_outputs": [
+    "common-aura.gif",
+    "uncommon-aura.gif",
+    "rare-aura.gif",
+    "epic-aura.gif",
+    "legendary-aura.gif",
+    "mythic-aura.gif"
+  ],
+  "frames": 16,
+  "durations_ms": [
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130
+  ],
+  "loop_ms": 2000,
+  "slot_preview_native": [
+    32,
+    32
+  ],
+  "effect_cell": [
+    56,
+    56
+  ],
+  "motion": {
+    "common": "Quiet silver pulse and one short travelling rim glint",
+    "uncommon": "Green pulse and one small outside mote",
+    "rare": "Blue/cyan travelling rim highlight and two outside motes",
+    "epic": "Violet opposing rim highlights and three outside motes",
+    "legendary": "Amber rim shimmer, corner light and four rising embers",
+    "mythic": "Crimson double-beat pulse, two broken arcs and six bounded sparks"
+  },
+  "verification": "Seven GIFs have 16 frames and 2000ms loops. All item-core pixels remain identical. Shared palette, bounded effects, integer movement and integer nearest display scale.",
+  "qa": "Review-only animation from the selected generated reference. Exact production 28/32/36px appearance, master-palette mapping, clipping and engine integration are not approved or built.",
+  "scope": "Validated art specs and implementation tickets created. No game implementation, commit, PR or deployment performed.",
+  "tickets": {
+    "epic": "MV-473",
+    "integration": "MV-481",
+    "assets": {
+      "ui_gear_slot_frame": "MV-474",
+      "fx_gear_common": "MV-475",
+      "fx_gear_uncommon": "MV-476",
+      "fx_gear_rare": "MV-477",
+      "fx_gear_epic": "MV-478",
+      "fx_gear_legendary": "MV-479",
+      "fx_gear_mythic": "MV-480"
+    }
+  },
+  "approved_gif_sha256": "4240b7534ef425576f7ce880109abe29bbbc9d91cbc9f7ef3aa52e18a68b5a55"
+}
