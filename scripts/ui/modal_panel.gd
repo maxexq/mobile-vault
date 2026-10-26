@@ -227,6 +227,7 @@ func open() -> void:
 	is_open = true
 	add_to_group("modal_open")
 	_opened_ms = Time.get_ticks_msec()
+	Sound.ui("open")
 	_layout()
 	refresh()
 	_watch_scrolls()

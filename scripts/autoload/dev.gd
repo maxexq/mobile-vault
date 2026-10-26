@@ -1001,6 +1001,24 @@ func entrance_preview(kind: String) -> void:
 	act("entrance preview " + kind)
 
 
+## MV-536 sound previews: listening changes nothing in the run, so they are traced but don't mark the save cheated.
+## kind: bed (a biome id) | weather (a Data.WEATHER id with a sound) | group (Sound.GROUPS) | bgm (the title music)
+## | clear (back to the game)
+func sound_preview(kind: String, id: String = "") -> void:
+	Trace.rec("god", "sound preview %s %s" % [kind, id])
+	match kind:
+		"bed":
+			Sound.preview_bed(id)
+		"weather":
+			Sound.preview_weather(id)
+		"group":
+			Sound.play_group(id)
+		"bgm":
+			Sound.preview_bgm()
+		_:
+			Sound.preview_clear()
+
+
 func kill_enemies() -> void:
 	for e in Combat.enemies:
 		e.hp = 0.0

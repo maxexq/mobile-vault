@@ -29,7 +29,8 @@ P = {
 def icon(name, fn):
     img = new(16, 16)
     fn(img)
-    add("ic_" + name, outline_alpha(img))
+    # MV-524..526: the approved main-stat icons are finished drawings (their dark edge is drawn): no extra ring
+    add("ic_" + name, img if name in icon_details.NATIVE_FINAL else outline_alpha(img))
 
 
 def ic_power(i):

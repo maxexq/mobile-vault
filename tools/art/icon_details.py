@@ -640,7 +640,81 @@ def _mechanical(p, name):
             else:
                 p.line([(10, 8), (14, 8)], 'gray5')
                 p.poly([(12, 6), (14, 8), (12, 10)], 'gray6')
+# MV-524 / MV-525 / MV-526: the approved main-stat icons (STR fist, INT lightbulb, AGI zigzag), stored as the
+# reviewed native pixels (tools/art/micro/previews/main-stat-icons-final/ic_<stat>-native.png) so a regeneration reproduces
+# them exactly. They are finished icons whose dark edge is part of the drawing: ui.icon() ships them without adding
+# the usual soot ring (NATIVE_FINAL), and verify_icons expects the same.
+_NATIVE = {
+    'str': ({'a': 'gray1', 'b': 'ol0', 'c': 'skin0', 'd': 'skin1', 'e': 'skin2', 'f': 'skin3'}, [
+        '................',
+        '......aaa.......',
+        '...cccefdcc.....',
+        '...cfededefcdc..',
+        '...ceededeededa.',
+        '...cdddedeedeea.',
+        '..addecdcdddeda.',
+        '.aefffeeedcddda.',
+        '.afeeeeeedeeecb.',
+        '.aeeedddddeeec..',
+        '..cddccdeeeeec..',
+        '...acddddeeec...',
+        '....acdddddcb...',
+        '....bcdddda.....',
+        '....baaaaab.....',
+        '................',
+    ]),
+    'int': ({'a': 'gray1', 'b': 'gray3', 'c': 'gray5', 'd': 'lamp0', 'e': 'lamp1', 'f': 'ol0', 'g': 'yellow1'}, [
+        '................',
+        '.....aaaaa......',
+        '....bgddddb.....',
+        '...agddddedb....',
+        '...bgdddddeg....',
+        '..agdddddddda...',
+        '..agdddedddda...',
+        '..aggddddddga...',
+        '...aggdddddb....',
+        '....bggggga.....',
+        '.....agdgb......',
+        '.....fabaf......',
+        '.....fbcbf......',
+        '.....fabaf......',
+        '......aaa.......',
+        '................',
+    ]),
+    'agi': ({'a': 'lamp0', 'b': 'ol0', 'c': 'yellow1', 'd': 'yellow2'}, [
+        '................',
+        '.........c......',
+        '........cd......',
+        '.......cad......',
+        '......cadb......',
+        '.....cadb.......',
+        '....cadb........',
+        '....cadcccb.....',
+        '....bcccaac.....',
+        '.......cad......',
+        '......cadc......',
+        '.....cadc.......',
+        '.....adb........',
+        '.....dc.........',
+        '.....b..........',
+        '................',
+    ]),
+}
+NATIVE_FINAL = frozenset(_NATIVE)
+
+
+def _native(name):
+    legend, rows = _NATIVE[name]
+
+    def paint(p):
+        for y, row in enumerate(rows):
+            for x, ch in enumerate(row):
+                if ch != '.':
+                    p.px(x, y, legend[ch])
+    return paint
+
 _APPROVED = dict(power=power, water=water, food=food, scrap=scrap, fuel=fuel, medkit=medkit, rifle=rifle, armor=armor, wrench=wrench, gear=gear, map=map_icon, engine=engine)
+_APPROVED.update({k: _native(k) for k in _NATIVE})   # MV-524..526: replaces the old arm / brain / speed-lines drawings
 _FAMILIES = {_weather: 'rain storm acid ash snow fog sand sun moon', _symbol: 'happy sad pause play close flee up heal agi dodge xp crown rad chat explore signal', _person: 'people str fist int skull eye dog', _paper: 'book blueprint chest seed charm', _medicine: 'pill radaway stimpack thermo supply meat can', _weapon: 'pistol smg shotgun laser ammo sword hammer', _vest: 'jacket mail riot powerframe', _helmet: 'hardhat helmet visor gasmask', _boot: 'boots workboots tacboots jetboots', _pack: 'backpack hikingpack ruck framepack', _mechanical: 'hull shield plates lock zoom chip cog saw spikes plow turret harpoon tesla'}
 NAMES = frozenset(_APPROVED) | frozenset((n for names in _FAMILIES.values() for n in names.split()))
 

@@ -258,22 +258,22 @@
       "original_rgba_sha256": "d21c93141961452997eb1adeacebf19a609c1f54ddfdb99790c0d83d298bec63"
     },
     "ic_agi": {
-      "ticket": "MV-289",
+      "ticket": "MV-526",
       "size": [
         16,
         16
       ],
       "palette": [
         "ol0",
-        "teal0",
-        "teal1",
-        "teal2",
-        "teal3",
-        "gray3",
-        "gray5"
+        "yellow1",
+        "yellow2",
+        "lamp0",
+        "lamp1"
       ],
-      "detail": "Keep the existing twin angular speed/zigzag shape and its direction; strengthen the main stroke and separate the two turns with a clear dark gap.",
-      "original_rgba_sha256": "f5ed3b43dbd68051caf8c71b1b50565c87beda6e0f16e6c8908318f1b9e5fcb3"
+      "detail": "One continuous amber zigzag with two clear angular turns and open cutouts, bold stepped stroke, restrained light edge; the approved native zigzag, pixel-identical.",
+      "original_rgba_sha256": "f5ed3b43dbd68051caf8c71b1b50565c87beda6e0f16e6c8908318f1b9e5fcb3",
+      "approved_rgba_sha256": "851517d93d5673377eb8e86086228f0834ae257d0abe7f8f493350018735b9de",
+      "native_final": true
     },
     "ic_ammo": {
       "ticket": "MV-290",
@@ -879,22 +879,24 @@
       "original_rgba_sha256": "ce015e4fa2a3d7e0a1234b48097f0293a51e22b1f4fd6f272d476ec9166c5cd3"
     },
     "ic_int": {
-      "ticket": "MV-321",
+      "ticket": "MV-525",
       "size": [
         16,
         16
       ],
       "palette": [
         "ol0",
-        "purple0",
-        "purple1",
-        "pink0",
-        "pink1",
-        "pink2",
-        "pink3"
+        "gray1",
+        "gray3",
+        "gray5",
+        "yellow1",
+        "lamp0",
+        "lamp1"
       ],
-      "detail": "Keep the rounded muted pink brain, center cleft and two large fold clusters; avoid tiny wrinkles or detailed anatomy.",
-      "original_rgba_sha256": "19e6f0c081fd41ba12846797389dcb13ec5e2bf2e7ec30d14525e185db93db00"
+      "detail": "Upright amber lightbulb: stepped rounded globe, narrow neck, gray screw base and contact, tiny bright filament; the approved native bulb, pixel-identical.",
+      "original_rgba_sha256": "19e6f0c081fd41ba12846797389dcb13ec5e2bf2e7ec30d14525e185db93db00",
+      "approved_rgba_sha256": "b37e046fe00d2c42d4e83edf19aa36e33fc68e8bc00ee55474b5866e7834d9c0",
+      "native_final": true
     },
     "ic_jacket": {
       "ticket": "MV-322",
@@ -1533,7 +1535,7 @@
       "original_rgba_sha256": "a6fb2e7e54223fa643e67e05709e7387bf90cbd80189bec3f3b6c3d301f9ca17"
     },
     "ic_str": {
-      "ticket": "MV-355",
+      "ticket": "MV-524",
       "size": [
         16,
         16
@@ -1547,8 +1549,10 @@
         "gray1",
         "gray3"
       ],
-      "detail": "Keep the flexed tan arm/biceps symbol with elbow, fist and one muscle shadow; no extra hands, veins or detailed anatomy.",
-      "original_rgba_sha256": "998b38c1a662f6d8d3aa9e398ec0cf40f345bef04a8ac02f101398ecc4c6325f"
+      "detail": "Clenched bare fist: compact knuckle / finger columns, folded thumb, short wrist; the approved native fist, pixel-identical. No dumbbell, flexed arm, glove or open hand.",
+      "original_rgba_sha256": "998b38c1a662f6d8d3aa9e398ec0cf40f345bef04a8ac02f101398ecc4c6325f",
+      "approved_rgba_sha256": "62a8b39aeca0a4eaf0998d9db555f880bbbfb1059ddd9ac5eeef38b313a32fc0",
+      "native_final": true
     },
     "ic_sun": {
       "ticket": "MV-356",
