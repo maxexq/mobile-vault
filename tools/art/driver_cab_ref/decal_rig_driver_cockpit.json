@@ -1,0 +1,73 @@
+{
+  "spec": "micro-asset/1",
+  "id": "decal_rig_driver_cockpit",
+  "title": "Rig driver cab using Viktor crew reference (approved v3)",
+  "why": "Replace the floating generic bust with a seated existing crew member and readable driving controls.",
+  "parent": "veh_rig",
+  "kind": "decal",
+  "size": [
+    17,
+    17
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin1",
+    "skin3",
+    "gray1",
+    "gray3",
+    "gray5",
+    "snow0",
+    "snow2",
+    "cream2",
+    "blue1",
+    "wood1",
+    "lamp1"
+  ],
+  "outline": "ol0",
+  "light": "lamp",
+  "layer": "on_parent",
+  "anchor": {
+    "x": 17,
+    "y": 193,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/vehicles.py",
+    "function": "decal_rig_driver_cockpit"
+  },
+  "feature": null,
+  "replace": false,
+  "priority": "medium",
+  "author": "Codex art analyst",
+  "refs": [
+    "tools/art/micro/previews/driver-detail-v1/rig-driver-viktor-study.png",
+    "tools/art/micro/previews/driver-detail-v1/crew-preview-manifest.json",
+    "tools/art/micro/previews/driver-detail-v1/reference-rig-driver-native.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-viktor-sit-native.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-viktor-sit-left-40x.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-actual-crew.png",
+    "tools/art/crew_roster_20/specs/dw_crew_viktor.json",
+    "tools/art/chars.py",
+    "tools/art/vehicles.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Parames approved preview version 3 on 2026-10-26 ('the last one (3) is ok') and requested this ticket. Match rig-driver-viktor-study.png under tools/art/micro/previews/driver-detail-v1. The generated 1254x1254 study is a visual target, not a production texture: redraw at native size.",
+    "Emit one new fully opaque 17x17 atlas sprite decal_rig_driver_cockpit using only the listed 12 master-palette colors. Keep veh_rig and ext_rig at 280x300.",
+    "Replace only side-window interior x=17..33, y=193..209, inclusive. Anchor (17,193), top-left, in veh_rig pixels. Preserve the existing black frame at x=16/34 and y=192/210; do not enlarge the opening or vehicle.",
+    "Use actual dw_crew_viktor 14x20 sit cell 6 as reference, mirrored to face left. Keep the crew-sized approximately 8x8 head, tiny dark vertical eye, stepped left-projecting nose, gray fur cap, pale skin, gray beard/bone collar, snow-blue coat and narrow torso. Adapt only the arm/upper-body pose needed to drive. Hide the lower body behind the sill instead of shrinking the head.",
+    "Viktor looks left toward the windshield, with one nose projecting left and the cap/head back on the right. His short left-reaching arm and hand meet a small steering wheel. Keep cap, face and hand readable at 1x.",
+    "Completely cover the original bright yellow fill and generic olive bust. Compose dark gray1 interior, compact gray3/gray5 dash and wheel on the left, narrow worn wood1/gray3 seat back on the right, and a tiny lamp1 overhead practical lamp. Add one gray5 or cream2 dial and one lamp1 powered indicator. Saturation belongs only to physical lights; no broad yellow fill or glow.",
+    "Bake the decal at (17,193) into both veh_rig and ext_rig after weathering and before final atlas quantization, and emit the standalone decal. Static art-only change: feature=null, no new driver mechanic, runtime overlay or animation. Do not change the shared driver() helper for other tiers.",
+    "After regeneration, decoded veh_rig/ext_rig pixels outside [17,193,17,17] must match pre-change sprites exactly. Other vehicles, crew strips, all cab_rig state sprites, room holes, engine trim, windshield, exhaust, markers, shell geometry and hit regions retain their artwork and behavior. Compare cropped sprite contents because atlas coordinates can repack.",
+    "Use one-native-pixel soot outlines, flat clusters, binary alpha, nearest filtering and integer placement. No antialiasing, gradients, fine scratches, rotation, fractional scaling or thick framing. Inspect before/after at 1x and nearest 4x/8x.",
+    "Preserve approved target, actual crew/cab crops, prompts, approval manifest and native production source in a tracked reference/source folder with .gdignore when appropriate; tools/art/micro is git-ignored. Record hashes/provenance, and ensure the generator reproduces the accepted result on full regeneration.",
+    "Run micro_asset.py verify for this ticket after generation and verify exact size, palette, opacity and outside-window pixel stability. Show close-ups and in-game rig in cut-away/exterior and day/night. Follow CLAUDE.md required autotest, web export, README/changelog and staging PR workflow; no feature-PR version bump."
+  ],
+  "notes": "Rig v3 approved by Parames on 2026-10-26. User additionally requested crew-based drivers for ALL vehicles. This is the rig child of the four-vehicle art epic. Geometry: top=188; inner window (17,193),17x17. Separate engine room (2,222),33x41. Static art-only change, no driver-assignment mechanic or paid generation. Claude builds; if readability cannot fit, comment and request a decision rather than silently changing geometry.",
+  "plane": "MV-522"
+}

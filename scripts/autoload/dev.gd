@@ -391,6 +391,18 @@ func roof_deck_preview(lv: int) -> void:
 	Game.resources_changed.emit()
 
 
+## MV-519: the driver_cab switch (Viktor's small moves in the driving cab; the seated driver art stays)
+func driver_cab_switch(v: bool) -> void:
+	feature_set("driver_cab", v)
+
+
+## MV-519: one driver move now: "blink", "lamp" (dash indicator flicker) or "wheel" (hand nudges the wheel)
+func driver_cab_preview(kind: String) -> bool:
+	var v = get_tree().get_first_node_in_group("vehicle_fx")
+	act("driver cab " + kind)
+	return v != null and v.driver_act(kind)
+
+
 ## MV-388: the vehicle_ambience switch (engine-room fan / hose / hot vent) and one hot-vent wisp now
 func vehicle_ambience_switch(v: bool) -> void:
 	feature_set("vehicle_ambience", v)
