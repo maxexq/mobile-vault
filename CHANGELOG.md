@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Changed
+- In-game Chakra Petch UI text now renders smoothly at the screen resolution for clearer Thai and English menus. Silkscreen tags and world pixel art retain their crisp pixel edges; a player anti-aliasing setting will come later (MV-540)
+
 ### Fixed
 - Windows no longer slide around when what's inside them changes: the title and the button you just tapped stay where they are, and the room close-up keeps the room still when you switch tabs, so nothing moves under your finger (MV-537)
 
