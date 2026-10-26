@@ -2401,7 +2401,8 @@ func _loot_tabs_test() -> void:
 		get_viewport().push_input(mv, true)
 		await wait(0.05)
 		var hov := get_viewport().gui_get_hovered_control()
-		_check("loot tabs: %s tab button is the control under the finger (got %s)" % [from, str(hov.get_path()) if hov else "none"],
+		_check("loot tabs: %s tab button is the control under the finger (got %s; button %s, window %s, open %s)" % [from, str(hov.get_path()) if hov else "none",
+			btn.get_global_rect(), Rect2(inv.box.global_position, inv.box.size), inv.is_open],
 			hov != null and (hov == btn or btn.is_ancestor_of(hov)))
 		get_viewport().push_input(ev, true)
 		await wait(0.15)
