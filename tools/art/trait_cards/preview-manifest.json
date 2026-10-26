@@ -1,0 +1,58 @@
+{
+  "status": "Animated compact trait-card appearance approved by Parames; queued for implementation",
+  "source": "tools/art/micro/previews/traits-ui-v3-rarity-effects/trait-rarity-positive-negative-preview.png",
+  "source_sha256": "a9c5534d4e63e0cae12ad2d97f38ba9aafdf9d1e91d26bedd0f67118748edcb0",
+  "method": "Existing image_gen card design plus fixed-content native-pixel light-overlay animation packaging",
+  "outputs": [
+    "traits-positive-negative-animated.gif",
+    "beneficial-traits-animated.gif",
+    "trade-off-traits-animated.gif"
+  ],
+  "frames": 16,
+  "durations_ms": [
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130,
+    120,
+    130
+  ],
+  "loop_ms": 2000,
+  "beneficial_motion": "Clean tier-colored stepped pulses, travelling rim highlights and bounded outside motes",
+  "trade_off_motion": "Irregular low-amplitude broken crimson edge flicker, soot gaps and downward embers; no body/text flicker",
+  "verification": "All 12 card interiors remain byte-identical across 16 frames; every card animates; all three GIFs have 16 frames and exactly 2000ms duration; shared palette.",
+  "rarity_model": "These are proposed visual tiers only. Individual trait rarity is not present in current gameplay; no tiers were assigned and no trait effects changed.",
+  "qa": "Animation concept preview, not production sprite sheets. Native geometry, palette mapping, clipping and actual in-game UI need later validation.",
+  "scope": "Validated drafts and new Todo tickets only; no game implementation, production asset, commit, PR or deployment.",
+  "tickets": {
+    "epic": "MV-483",
+    "integration": "MV-498",
+    "classification_design": "MV-497",
+    "art": {
+      "ui_trait_card_frame": "MV-484",
+      "fx_trait_benefit_common": "MV-485",
+      "fx_trait_benefit_uncommon": "MV-486",
+      "fx_trait_benefit_rare": "MV-487",
+      "fx_trait_benefit_epic": "MV-488",
+      "fx_trait_benefit_legendary": "MV-489",
+      "fx_trait_benefit_mythic": "MV-490",
+      "fx_trait_tradeoff_common": "MV-491",
+      "fx_trait_tradeoff_uncommon": "MV-492",
+      "fx_trait_tradeoff_rare": "MV-493",
+      "fx_trait_tradeoff_epic": "MV-494",
+      "fx_trait_tradeoff_legendary": "MV-495",
+      "fx_trait_tradeoff_mythic": "MV-496"
+    }
+  },
+  "approved_gif_sha256": "aef4716a7f17fce183992de844d6380e740363b5d6a5be94d0db66b3cef3df50"
+}

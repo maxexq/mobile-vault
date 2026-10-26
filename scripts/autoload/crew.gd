@@ -75,6 +75,16 @@ func roll_traits(d: Dictionary) -> void:
 	d["traits"] = out
 
 
+## MV-483 / MV-497: the visual tier of each trait card (0 common .. 5 mythic). Explicit and approved only: nothing is
+## inferred from item rarity, the bad flag, the size of a bonus or a roll. Empty until MV-497 is approved; an
+## unlisted trait shows the quiet untiered card. Visual only: no stat, spawn or save uses it.
+const TRAIT_TIERS := {}
+
+
+func trait_tier(t: String) -> int:
+	return int(TRAIT_TIERS.get(t, -1))
+
+
 func traits(d: Dictionary) -> Array:
 	if not d.has("traits"):
 		roll_traits(d)

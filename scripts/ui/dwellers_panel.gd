@@ -212,8 +212,10 @@ func _build_manage(d: Dictionary) -> void:
 	if Crew.ROLES.has(Crew.role(d)):
 		var rd: Dictionary = Crew.ROLES[Crew.role(d)]
 		chips.append({"icon": rd.icon, "th": Loc.t("อาชีพ: ") + str(rd.th), "desc": rd.desc})
-	for t in Crew.traits(d):
-		chips.append(Crew.TRAITS[t])
+	var cards := Features.on("trait_card_style")      # MV-483: traits as compact cards below the role / build chips
+	if not cards:
+		for t in Crew.traits(d):
+			chips.append(Crew.TRAITS[t])
 	chips.append({"icon": "hammer", "th": Loc.t("ความเร็วก่อสร้าง x%.2f") % (Crew.build_speed(d) / 0.6), "desc": Loc.t("เทียบกับคนทั่วไป (STR ช่วยแบกคาน)")})
 	for td in chips:
 		var chip := UIKit.panel(UIKit.C_BG2, UIKit.C_RED if td.get("bad", false) else UIKit.C_LINE_DIM)
@@ -229,6 +231,8 @@ func _build_manage(d: Dictionary) -> void:
 		ch.add_child(cv)
 		tf.add_child(chip)
 	_list.add_child(tf)
+	if cards and not Crew.traits(d).is_empty():
+		_list.add_child(TraitCard.grid(Crew.traits(d), box.custom_minimum_size.x - 24.0))
 	if Crew.is_infected(d):
 		var ib := UIKit.hbox(4)
 		ib.add_child(UIKit.label(Loc.t("ติดเชื้อ %d%% — เสียเลือดเรื่อยๆ ผลิตลดลง") % int(d.infection), UIKit.FS_SMALL, UIKit.C_RED))
