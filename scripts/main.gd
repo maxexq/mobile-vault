@@ -144,6 +144,7 @@ func _ready() -> void:
 	hud.layout_changed.connect(_fit_camera)
 	hud.zoom_pressed.connect(cycle_zoom)
 	hud.xray_toggled.connect(func(on: bool): vehicle.set_xray(on))
+	hud.hull_alert.alerted.connect(func(st: int): shake([0.0, 1.5, 4.0, 5.5][st]))     # MV-250 (4+ also buzzes)
 	hud.tutorial_overlay.main = self
 	Tutorial.hud = hud
 	Tutorial.main = self
