@@ -1,0 +1,60 @@
+{
+  "status": "approved visual reference; production sprites still require native-grid and palette verification",
+  "tool": "built-in image_gen",
+  "crew_reference": "dw_crew_viktor, 14x20 sit frame 6; mirrored left as reference",
+  "target": "veh_rig driving-window interior; source crop [0,184,38,38]",
+  "details": [
+    "Viktor crew identity and proportions",
+    "left-facing driving pose",
+    "dark cab interior",
+    "small dash and steering wheel",
+    "seat back",
+    "small amber practical lamp"
+  ],
+  "files": {
+    "rig-driver-viktor-study.png": {
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "487d32c568ea54d0bdc71914c7a1894e01e49654307d7d9e6ecf2cd64b42679f"
+    },
+    "reference-rig-driver-native.png": {
+      "size": [
+        38,
+        38
+      ],
+      "sha256": "4f964baf7fa6f6824fcd89ca89821f0533ad728dffd4188c7b6aacfe7803b688"
+    },
+    "reference-viktor-sit-native.png": {
+      "size": [
+        14,
+        20
+      ],
+      "sha256": "565d42407485c100187665f3f7f0ccb11d302d46a4ed38222f7823fab1d6101b"
+    },
+    "reference-viktor-sit-left-40x.png": {
+      "size": [
+        560,
+        800
+      ],
+      "sha256": "b94818aeb4cba2d4896cf06b4025b0a2facaaf2d24a13c54aa29f07775671b17"
+    },
+    "reference-actual-crew.png": {
+      "size": [
+        756,
+        620
+      ],
+      "sha256": "c0f60d2de5ed1c997909dc808037cf74c427b4e0a567edffec5de2c066faf767"
+    }
+  },
+  "approval": {
+    "version": 3,
+    "file": "rig-driver-viktor-study.png",
+    "approved_by": "Parames",
+    "date": "2026-10-26",
+    "timezone": "Asia/Bangkok",
+    "user_message": "the last one (3) is ok",
+    "scope": "Visual direction for driver cab: Viktor actual crew reference, left-facing driving pose, dark cabin, wheel/dashboard/seat and small amber lamp."
+  }
+}
