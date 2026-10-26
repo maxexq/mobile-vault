@@ -6327,12 +6327,20 @@ func _responsive_test() -> void:
 	_check("responsive: switch off = the old round-down (768x1024 -> 1)", main.ui_scale_for(Vector2(768, 1024), Vector2(main.PORTRAIT_BASE)) == 1.0)
 	Features.set_override("features", "responsive_scale", null)
 	var hud: HUD = main.hud
-	for sz in RESPONSIVE_SIZES:
-		DisplayServer.window_set_size(sz)
+	var tested := 0
+	# the window's own size first (always real), then every size class. Under xvfb without a window manager (CI) the
+	# OS reports the new size but the viewport never follows: such a size is skipped (logged), not tested at a stale size
+	for sz in [Vector2i.ZERO] + RESPONSIVE_SIZES:
+		if sz != Vector2i.ZERO:
+			DisplayServer.window_set_size(sz)
 		await wait(0.8)
 		var real: Vector2i = DisplayServer.window_get_size()
 		var vp: Vector2 = hud.get_viewport_rect().size
 		var tag := "%dx%d" % [real.x, real.y]
+		if sz != Vector2i.ZERO and (absf(vp.x * main.pixel_scale - real.x) > main.pixel_scale or absf(vp.y * main.pixel_scale - real.y) > main.pixel_scale):
+			print("[autotest] SKIP responsive %s: the window didn't really resize (design %s at %dx), no window manager?" % [tag, vp, int(main.pixel_scale)])
+			continue
+		tested += 1
 		var base := Vector2(main.PORTRAIT_BASE if main.is_portrait() else main.LANDSCAPE_BASE)
 		_check("responsive %s: whole scale %d, design %s at least %d%% of the base" % [tag, int(main.pixel_scale), vp, int(main.SCALE_MIN * 100)],
 			main.pixel_scale == floorf(main.pixel_scale) and vp.x >= base.x * main.SCALE_MIN - 1.0 and vp.y >= base.y * main.SCALE_MIN - 1.0)
@@ -6392,6 +6400,7 @@ func _responsive_test() -> void:
 		await shot("responsive_%s_closeup" % tag)
 		cu.close()
 		await wait(0.5)
+	_check("responsive: at least the window's own size was checked (%d sizes)" % tested, tested >= 1)
 	Settings.set_value("tips", keep_tips)
 	DisplayServer.window_set_size(keep)
 	await wait(0.6)
