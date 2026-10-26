@@ -17,6 +17,7 @@ const MAX_W := 128
 const BARK_COOL := 12.0       # s before the same kind of bark again (tune barks.cooldown)
 const BARK_GAP := 1.5         # s between any two barks
 const BARK_MAX := 3           # bubbles on screen when a bark comes in (idle chatter stops at 2)
+const TALK_GAP := 2.4         # s between two lines of a conversation (MV-430 Saloon)
 const HURT_AT := 0.35         # a hero below this share of HP says a "hurt" line
 ## who says it: "combat" = a fighter on the roof deck, "aboard" = someone inside, "any" = whoever is in view;
 ## chance < 1 for kinds that would otherwise talk over every hit
@@ -39,6 +40,7 @@ var _bark_gap := 0.0
 var _phase := "quiet"         # last Threat phase seen (a raid that ends without a wipe = "raid_won")
 var _wiped := false
 var last_bark := ""           # "<kind>|<line>" of the last bark said (autotest, GOD)
+var last_talk: Array = []     # the last conversation said (autotest)
 static var _tex: Texture2D
 static var _tail: Texture2D
 
@@ -63,6 +65,7 @@ func _ready() -> void:
 	Game.biome_changed.connect(func(_i, instant): if not instant: bark("new_area"))
 	Game.construction_finished.connect(func(slot, _kind): bark("built", _builder(slot)))
 	Game.vault_level_changed.connect(func(_l): if Game.started: bark("level_up"))
+	RoomX.talk.connect(talk)
 
 
 func _process(delta: float) -> void:
@@ -218,6 +221,21 @@ func _on_hit(kind: String, id: int, _amount: float, _crit: bool) -> void:
 				bark("healed", int(h.get("did", -1)))
 		"van":
 			bark("van_hit")
+
+
+## MV-430: a short conversation, one line after another ([[did, line], ...]); whoever is out of view stays quiet
+func talk(lines: Array) -> void:
+	last_talk = lines.duplicate()
+	for i in lines.size():
+		if i > 0:
+			await get_tree().create_timer(TALK_GAP).timeout
+		var did := int(lines[i][0])
+		for c in _candidates():
+			if int(c[0]) == did:
+				while _bubbles.size() >= BARK_MAX:
+					_free_bubble(_bubbles[0])
+				say(c[1], str(lines[i][1]))
+				break
 
 
 func say(actor: Node2D, text: String) -> void:

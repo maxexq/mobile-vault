@@ -156,6 +156,11 @@ func _run() -> void:
 		await _rooms_x_test()
 		_finish()
 		return
+	if "--only=saloon" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _saloon_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -868,6 +873,7 @@ func _run() -> void:
 	await _engine_rest_test()
 	await _quarters_guard_test()
 	await _rooms_x_test()
+	await _saloon_test()
 	await _flagged_test()
 	await _flee_guard_test()
 	await _barks_test()
@@ -5677,7 +5683,13 @@ func _rooms_x_test() -> void:
 	if Game.active_event != "":
 		Game.cancel_event()
 		main.hud.event_popup.close()
-	_check("rooms_x: the foundation registers no room by itself", RoomX.DEFS.is_empty() and Data.buildable() == Data.BUILDABLE)
+	var regs_ok := Data.buildable() == Data.BUILDABLE + RoomX.buildable()
+	for t in RoomX.DEFS:
+		regs_ok = regs_ok and Atlas.has(RoomX.art_key(t)) and not Data.BUILDABLE.has(t) and not Data.MERGEABLE.has(t)
+		for sp in RoomX.anims(t):
+			for f in int(sp.count):
+				regs_ok = regs_ok and Atlas.has("%s_%d" % [sp.prefix, f])
+	_check("rooms_x: every registered room (%d) has its art and strips, single-cell, after the original ten" % RoomX.DEFS.size(), regs_ok)
 	var keep_res: Dictionary = Game.s.res.duplicate(true)
 	var keep_rooms: Array = Game.s.rooms.duplicate(true)
 	Game.s.erase("rx")
@@ -5803,3 +5815,228 @@ func _rooms_x_test() -> void:
 	Game.rooms_changed.emit()
 	Game.resources_changed.emit()
 	await wait(0.2)
+
+
+## MV-430 Salvagers' Saloon (+ MV-440 background, MV-441 steam): art in the atlas, build, seat two diners and pay
+## once, steam only while they eat (rest when dark / off), the cooldown shared by two Saloons, a diner moved away mid-
+## meal gets nothing, everyone goes back to work, claim once after a JSON reload (happiness capped, one bond, the
+## conversation), demolition sends the diners back without a reward, the close-up buttons and GOD.
+func _saloon_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_res: Dictionary = Game.s.res.duplicate(true)
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	var keep_dw: Array = Game.s.dwellers.duplicate(true)
+	var keep_squad: Array = (Game.s.get("squad", []) as Array).duplicate()
+	var keep_rx = (Game.s.rx as Dictionary).duplicate(true) if Game.s.get("rx") is Dictionary else null
+	# --- art: 64x52 background + four 6x8 steam frames in the spec palette, frame 0 empty
+	var sheet: Image = Atlas.sheet.get_image()
+	if sheet.is_compressed():
+		sheet.decompress()
+	var bg: Array = Atlas.regions.get("room_salvagers_saloon", [])
+	_check("saloon: room_salvagers_saloon is 64x52 in the atlas", bg.size() == 4 and int(bg[2]) == 64 and int(bg[3]) == 52)
+	var pal := [Color("3a3a3e"), Color("54544e"), Color("6e6450"), Color("908670")]
+	var frames_ok := true
+	var counts := []
+	for f in 4:
+		var r: Array = Atlas.regions.get("fx_room_saloon_steam_%d" % f, [])
+		if r.size() != 4 or int(r[2]) != 6 or int(r[3]) != 8:
+			frames_ok = false
+			continue
+		var n := 0
+		for y in 8:
+			for x in 6:
+				var c := sheet.get_pixel(int(r[0]) + x, int(r[1]) + y)
+				if c.a == 0.0:
+					continue
+				n += 1
+				frames_ok = frames_ok and c.a == 1.0 and pal.any(func(p): return p.is_equal_approx(Color(c.r, c.g, c.b)))
+		counts.append(n)
+	_check("saloon: steam = 4 frames 6x8, binary alpha, spec palette, rest frame empty, others drawn %s" % [counts],
+		frames_ok and counts.size() == 4 and counts[0] == 0 and counts[1] > 0 and counts[2] > 0 and counts[3] > 0)
+	# --- registry / build menu / switch
+	var def := Data.room_def(Saloon.TYPE)
+	_check("saloon: registered (Lv.%d, %d scrap, %s)" % [int(def.get("unlock", 0)), int(def.get("cost", 0)), def.get("stat", "")],
+		RoomX.is_rx(Saloon.TYPE) and int(def.unlock) == 2 and int(def.cost) == 180 and def.stat == "agi" and is_equal_approx(float(def.power), 0.25)
+		and Data.buildable().has(Saloon.TYPE) and Data.room_art(Saloon.TYPE) == "room_salvagers_saloon")
+	Features.set_override("features", "rooms_expansion", false)
+	_check("saloon: rooms_expansion off = not in the build menu", not Data.buildable().has(Saloon.TYPE))
+	Features.set_override("features", "rooms_expansion", null)
+	# --- a room to work in, two Saloons in freed slots, three crew aboard
+	var work := -1
+	for i in Game.s.rooms.size():
+		var t := str(Game.s.rooms[i].type)
+		if work < 0 and Data.BUILDABLE.has(t) and t != "quarters" and Game.room_cells(i).size() == 1 and not Game.is_constructing(i):
+			work = i
+	for i in Game.s.rooms.size():
+		if i != work and Game.is_slot_unlocked(i) and not Game.is_annex(i) and Game.room_cells(i).size() == 1 				and not str(Game.s.rooms[i].type) in ["engine", "empty", "quarters"]:
+			Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}}
+	for d in Game.s.dwellers:
+		d.room = -1
+	for i in (Game.s.get("squad", []) as Array).size():
+		Game.s.squad[i] = -1
+	while Game.s.dwellers.size() < 3:
+		Game.recruit_random()
+	Game.s.erase("rx")
+	var a := Dev.rx_build(Saloon.TYPE)
+	var b := Dev.rx_build(Saloon.TYPE)
+	_check("saloon: two Saloons built (%d, %d), a room to work in (%d)" % [a, b, work], a >= 0 and b >= 0 and work >= 0)
+	if a < 0 or b < 0 or work < 0:
+		_saloon_restore(keep_res, keep_rooms, keep_dw, keep_squad, keep_rx)
+		return
+	var d1: Dictionary = Game.s.dwellers[0]
+	var d2: Dictionary = Game.s.dwellers[1]
+	var d3: Dictionary = Game.s.dwellers[2]
+	for d in [d1, d2, d3]:
+		d.away_until = 0.0
+		d.erase("exp")
+		d.strike = false
+	d1.room = work
+	d2.room = -1
+	d3.room = work
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	await wait(0.4)
+	var rv = main.vehicle.room_views.filter(func(v): return v.slot == a)[0]
+	_check("saloon: the room shows its art and the steam strip at (22,19)", rv.interior.texture == Atlas.tex("room_salvagers_saloon")
+		and rv.anims.size() == 1 and rv.anims[0].position == Vector2(22, 19) and rv.anims[0].prefix == "fx_room_saloon_steam")
+	var steam: RoomAnim = rv.anims[0]
+	_check("saloon: an empty Saloon holds the empty rest frame", steam.cur_frame == 0)
+	# --- start: pay once, only the diners leave their work
+	Game.s.res.power = maxf(80.0, float(Game.s.res.power))
+	Game.s.res.food = 50.0
+	Game.s.res.water = 50.0
+	var id1 := int(d1.id)
+	var id2 := int(d2.id)
+	var id3 := int(d3.id)
+	_check("saloon: nobody / three people / an unknown id can't start", Saloon.start_block(a, []) != "" and Saloon.start_block(a, [id1, id2, id3]) != ""
+		and Saloon.start_block(a, [999999]) != "")
+	var j := Saloon.start(a, [id1, id2, id2])
+	var again := Saloon.start(a, [id1, id2])
+	_check("saloon: a supper starts and pays 8 food + 4 water once; a second tap is refused", not j.is_empty() and again.is_empty()
+		and is_equal_approx(float(Game.s.res.food), 42.0) and is_equal_approx(float(Game.s.res.water), 46.0) and Saloon.diners(j) == [id1, id2])
+	_check("saloon: the diners sit in the Saloon, the third keeps working", int(d1.room) == a and int(d2.room) == a and int(d3.room) == work
+		and Game.room_workers(work).has(d3) and not Game.room_workers(work).has(d1))
+	_check("saloon: a diner can't sit at the other Saloon meanwhile", Saloon.start_block(b, [id1]) != "" and Saloon.diner_block(d1) != "")
+	await wait(0.6)
+	_check("saloon: steam moves while they eat (frame %d)" % steam.cur_frame, steam.cur_frame != 0 or steam._t > 0.0)
+	await shot("saloon_supper")
+	var pw := float(Game.s.res.power)
+	Game.s.res.power = 0.0
+	await wait(0.3)
+	_check("saloon: a dark Saloon holds the steam at rest", steam.cur_frame == 0 and RoomX.paused_why(j) == "dark")
+	Game.s.res.power = pw
+	Features.set_override("features", "rooms_expansion", false)
+	await wait(0.3)
+	_check("saloon: switch off holds the steam at rest", steam.cur_frame == 0)
+	Features.set_override("features", "rooms_expansion", null)
+	# --- the meal ends: diners back to work, cooldown shared by both Saloons
+	var happy0 := float(d1.happy)
+	d2.happy = 97.0
+	RoomX.tick(Saloon.duration() + 1.0, false)
+	_check("saloon: the meal ends, the diners go back where they came from", bool(j.done) and int(d1.room) == work and int(d2.room) == -1)
+	_check("saloon: no happiness before the claim", is_equal_approx(float(d1.happy), happy0))
+	_check("saloon: both diners are on cooldown in every Saloon (%.0fs)" % Saloon.cd_left(id1), is_equal_approx(Saloon.cd_left(id1), Saloon.cooldown())
+		and Saloon.start_block(b, [id1]) != "" and Saloon.start_block(b, [id2]) != "" and Saloon.start_block(b, [id3]) == "")
+	_check("saloon: an unclaimed supper keeps the table", Saloon.start_block(a, [id3]) != "")
+	# --- claim once after a reload (JSON floats)
+	Game.s.rx = JSON.parse_string(JSON.stringify(Game.s.rx))
+	j = RoomX.job(int(j.id))
+	main.chatter.last_talk = []
+	var l1 := Saloon.claim(int(j.id))
+	var l2 := Saloon.claim(int(j.id))
+	d1 = Game.dweller_by_id(id1)
+	d2 = Game.dweller_by_id(id2)
+	_check("saloon: claimed once: +8 happiness, capped at 100, one bond, a two-line talk", l1.size() == 2 and l2.is_empty()
+		and is_equal_approx(float(d1.happy), minf(100.0, happy0 + 8.0)) and is_equal_approx(float(d2.happy), 100.0) and Saloon.bonds(id1, id2) == 1
+		and main.chatter.last_talk.size() == 2 and int(main.chatter.last_talk[0][0]) == id1)
+	# --- cooldown runs on the game clock, frozen while the switch is off
+	Features.set_override("features", "rooms_expansion", false)
+	var cd0 := Saloon.cd_left(id1)
+	RoomX.tick(60.0, false)
+	_check("saloon: cooldowns freeze with the switch off", is_equal_approx(Saloon.cd_left(id1), cd0))
+	Features.set_override("features", "rooms_expansion", null)
+	RoomX.tick(Saloon.cooldown() + 1.0, false)
+	_check("saloon: the cooldown runs out", Saloon.cd_left(id1) == 0.0 and Saloon.diner_block(d1) == "")
+	# --- stale diner: moved elsewhere mid-meal = no reward; the other one still eats
+	var j2 := Saloon.start(a, [id1, id3])
+	Game.assign(d3, work)
+	RoomX.tick(Saloon.duration() + 1.0, false)
+	var h3 := float(d3.happy)
+	var l3 := Saloon.claim(int(j2.id))
+	_check("saloon: someone moved away mid-meal gets nothing, the other diner eats alone", not j2.is_empty() and l3.size() == 1
+		and int(l3[0][0]) == id1 and is_equal_approx(float(d3.happy), h3) and Saloon.cd_left(id3) == 0.0 and Saloon.bonds(id1, id3) == 0)
+	# --- demolition mid-meal: diners back to work, no reward, no refund
+	Dev.saloon_clear_cd()
+	d1.room = work
+	var food0 := float(Game.s.res.food)
+	var j3 := Saloon.start(a, [id1])
+	var paid := float(Game.s.res.food)
+	var h1 := float(d1.happy)
+	Game.demolish_room(a)
+	RoomX.tick(1.0, false)
+	_check("saloon: demolished mid-meal: the job is gone, the diner is back at work, no refund, no reward", not j3.is_empty() and paid < food0
+		and RoomX.job(int(j3.id)).is_empty() and int(d1.room) == work and is_equal_approx(float(d1.happy), h1)
+		and is_equal_approx(float(Game.s.res.food), paid))
+	# --- close-up: pick two people, start, then claim with the real buttons
+	a = Dev.rx_build(Saloon.TYPE)
+	Dev.saloon_clear_cd()
+	main.open_closeup(a)
+	await wait(0.6)
+	var cu: RoomCloseup = main.hud.room_closeup
+	var pick: Button = cu.find_child("SupperPickButton", true, false)
+	_check("saloon: the close-up offers the supper", pick != null and not pick.disabled)
+	if pick:
+		pick.pressed.emit()
+		await wait(0.3)
+	cu._diners = [id1, id2]
+	cu.refresh()
+	await wait(0.2)
+	var go: Button = cu.find_child("SupperStartButton", true, false)
+	_check("saloon: two diners picked, the start button is live", go != null and not go.disabled)
+	await shot("saloon_pick")
+	if go:
+		go.pressed.emit()
+		await wait(0.3)
+	var j4 := Saloon.supper(a)
+	_check("saloon: started from the close-up", not j4.is_empty() and cu.mode == "main" and Saloon.diners(j4).size() == 2)
+	Dev.rx_finish_jobs()
+	await wait(0.4)
+	var claim_btn: Button = cu.find_child("SupperClaimButton", true, false)
+	_check("saloon: a finished supper shows the claim button", claim_btn != null)
+	if claim_btn:
+		claim_btn.pressed.emit()
+		await wait(0.3)
+	_check("saloon: claimed from the close-up, bond 2 for the pair", Saloon.supper(a).is_empty() and Saloon.bonds(id1, id2) == 2)
+	await shot("saloon_closeup")
+	cu.close()
+	await wait(0.3)
+	# --- GOD
+	Dev.saloon_clear_cd()
+	var gj := Dev.saloon_supper()
+	Dev.rx_finish_jobs()
+	RoomX.tick(0.1, false)
+	Dev.saloon_claim_all()
+	Game.s.rooms[a].level = 3
+	_check("saloon: a Lv.3 Saloon serves supper 30%% faster (%.0fs)" % Saloon.duration(a), is_equal_approx(Saloon.duration(a), Saloon.duration() * 0.7)
+		and is_equal_approx(Saloon.duration(), 90.0))
+	_check("saloon: GOD starts, finishes and claims a supper", not gj.is_empty() and RoomX.jobs().is_empty() and int(Saloon.st().meals) >= 4)
+	_saloon_restore(keep_res, keep_rooms, keep_dw, keep_squad, keep_rx)
+	await wait(0.2)
+
+
+func _saloon_restore(res: Dictionary, rooms: Array, dw: Array, squad: Array, rx) -> void:
+	Game.s.res = res
+	Game.s.rooms = rooms
+	Game.s.dwellers = dw
+	if Game.s.has("squad"):
+		Game.s.squad = squad
+	if rx == null:
+		Game.s.erase("rx")
+	else:
+		Game.s.rx = rx
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()

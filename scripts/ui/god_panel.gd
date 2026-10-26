@@ -220,6 +220,10 @@ func _tab_vehicle() -> void:
 		_note("งาน #%d %s · %s · %d%%%s%s" % [int(j.id), str(j.room), str(j.kind), int(RoomX.progress(j) * 100.0),
 			" · เสร็จ รอรับ" if bool(j.done) else "", (" · หยุด: " + why) if why != "" and not bool(j.done) else ""])
 	_row([_b("งานเสร็จทันที", func(): Dev.rx_finish_jobs(), "green"), _b("ยกเลิกงานทั้งหมด", func(): Dev.rx_drop_jobs(), "red")], "งาน")
+	_note("โรงเตี๊ยม (MV-430): กินไปแล้ว %d มื้อ · ติดคูลดาวน์ %d คน · สายสัมพันธ์ %d คู่" % [int(Saloon.st().get("meals", 0)),
+		(Saloon.st().get("cd", {}) as Dictionary).size(), (Saloon.st().get("bonds", {}) as Dictionary).size()])
+	_row([_b("เริ่มมื้อเย็น", func(): Dev.saloon_supper(), "green"), _b("รับมื้อที่เสร็จ", func(): Dev.saloon_claim_all(), "yellow"),
+		_b("ล้างคูลดาวน์", func(): Dev.saloon_clear_cd(), "gray")], "โรงเตี๊ยม")
 	_row([_b("สด", func(): Dev.rx_anim_preview(""), "yellow" if RoomAnim.preview == "" else "gray"),
 		_b("ท่าพัก", func(): Dev.rx_anim_preview("rest"), "yellow" if RoomAnim.preview == "rest" else "gray"),
 		_b("ทำงาน", func(): Dev.rx_anim_preview("active"), "yellow" if RoomAnim.preview == "active" else "gray"),
