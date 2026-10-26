@@ -376,6 +376,21 @@ func vehicle_detail_switch(v: bool) -> void:
 	feature_set("vehicle_detail", v)
 
 
+## MV-462: the cozy_roof switch (new water tank, dish, planter trays and rest-deck art; off = the old roof)
+func cozy_roof_switch(v: bool) -> void:
+	feature_set("cozy_roof", v)
+
+
+## MV-462: show the roof rest deck at level 0..3 (0 = removed) to preview its art; a tester tool, no cost
+func roof_deck_preview(lv: int) -> void:
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	Game.s.mods["roof_deck"] = clampi(lv, 0, int(Mods.MODS.roof_deck.max))
+	act("roof deck preview Lv%d" % lv)
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+
+
 ## MV-388: the vehicle_ambience switch (engine-room fan / hose / hot vent) and one hot-vent wisp now
 func vehicle_ambience_switch(v: bool) -> void:
 	feature_set("vehicle_ambience", v)

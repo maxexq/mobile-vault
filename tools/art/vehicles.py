@@ -550,6 +550,29 @@ def roof_props(img, floors, tier):
             vline(img, x, r - 4, 4, OL)
 
 
+ROOF_LEGACY_X, ROOF_LEGACY_W = 38, 146     # roof-local box that holds the old planters / tank / dish
+
+
+def split_roof_parts(raw, shells, floors):
+    """MV-462: lift the old planters, water tank and dish out of the finished (weathered) shells. A pixel goes
+    when the roof props draw it only with those parts and nothing drawn later covered it (raw = the shell
+    before weathering). It is replaced by what the props draw without them. Returns the lifted pixels as
+    roof_legacy_<tier> (ROOF_LEGACY_W x 38, at roof-local x=ROOF_LEGACY_X), the switch-off look."""
+    full = T.gen_roof_props(floors, flag=False)
+    bare = T.gen_roof_props(floors, flag=False, parts=False)
+    off = roof_y(floors) - 36
+    legacy = new(ROOF_LEGACY_W, 38)
+    for y in range(38):
+        for x in range(ROOF_LEGACY_X, ROOF_LEGACY_X + ROOF_LEGACY_W):
+            p = full.getpixel((x, y))
+            if p == bare.getpixel((x, y)) or raw.getpixel((x, y + off)) != p:
+                continue
+            legacy.putpixel((x - ROOF_LEGACY_X, y), shells[0].getpixel((x, y + off)))
+            for sh in shells:
+                sh.putpixel((x, y + off), bare.getpixel((x, y)))
+    return legacy
+
+
 def gen_tier(tier):
     cfg = TIERS[tier]
     floors, paint = cfg["floors"], cfg["paint"]
@@ -657,13 +680,15 @@ def rails_strip():
 
 def gen_vehicles():
     for tier, cfg in TIERS.items():
-        shell = T.weather(gen_tier(tier), len(tier) * 11)
+        raw = gen_tier(tier)
+        shell = T.weather(raw.copy(), len(tier) * 11)
         shell_details(shell, cfg["floors"], False, tier)
         ext = exterior(shell, cfg["floors"], COLS, cfg["paint"], tier)
         EB.cut_cab(shell, tier)          # v4.6: the cab's bottom floor is the walk-in engine room
         if tier in LAMP_CAGE_AT:
             paste(shell, LAMP_CAGE, *LAMP_CAGE_AT[tier][0])
             paste(ext, LAMP_CAGE, *LAMP_CAGE_AT[tier][1])
+        add(f"roof_legacy_{tier}", split_roof_parts(raw, [shell, ext], cfg["floors"]))
         add(f"ext_{tier}", ext)
         add(f"veh_{tier}", shell)
     for kind in ("trailer", "wagon"):
