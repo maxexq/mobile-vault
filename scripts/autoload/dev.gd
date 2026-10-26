@@ -492,6 +492,43 @@ func rx_anim_step() -> void:
 	Trace.rec("god", "rx anim step")
 
 
+## MV-430 Saloon: seat up to two crew who can eat now at the first Saloon (one is built if there is none) and start a
+## supper; food / water are topped up to pay for it. Returns the job ({} = couldn't).
+func saloon_supper() -> Dictionary:
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == Saloon.TYPE and not Game.is_constructing(i) and RoomX.job_in(i).is_empty():
+			slot = i
+			break
+	if slot < 0:
+		slot = rx_build(Saloon.TYPE)
+	if slot < 0:
+		return {}
+	var ids := []
+	for d in Game.s.dwellers:
+		if ids.size() < 2 and Saloon.diner_block(d) == "":
+			ids.append(int(d.id))
+	for k in Saloon.cost():
+		Game.s.res[k] = maxf(float(Game.s.res[k]), float(Saloon.cost()[k]) + 1.0)
+	act("saloon supper", {"slot": slot, "n": ids.size()})
+	return Saloon.start(slot, ids)
+
+
+## every crew member may sit down to supper again right away
+func saloon_clear_cd() -> void:
+	(Saloon.st().cd as Dictionary).clear()
+	act("saloon clear cooldowns")
+
+
+## claim every finished supper (happiness, bond and the conversation)
+func saloon_claim_all() -> void:
+	for k in RoomX.jobs().keys():
+		var j: Dictionary = RoomX.jobs()[k]
+		if str(j.kind) == Saloon.KIND and bool(j.done):
+			Saloon.claim(int(j.id))
+	act("saloon claim all")
+
+
 func finish_construction() -> void:
 	for slot in Game.s.rooms.size():
 		if Game.is_constructing(slot):

@@ -18,15 +18,28 @@ extends Node
 ##  * switch rooms_expansion off: new rooms leave the build menu, jobs and their clocks freeze where they are (no
 ##    hidden catch-up when it comes back on), saved rooms and keepsakes stay.
 ## GOD → รถ → ROOM EXPANSION. Autotest --only=rooms_x. Style: docs/art/room-style-reference.md.
+## Rooms so far: salvagers_saloon (MV-430, scripts/rooms/saloon.gd).
 
 signal job_started(job: Dictionary)
 signal job_done(job: Dictionary)
 signal job_claimed(job: Dictionary)
 signal job_dropped(job: Dictionary, why: String)
+## a room's people say something together ([[did, line], ...]): the Saloon's after-supper conversation (Chatter shows it)
+signal talk(lines: Array)
 
 const VERSION := 1
 ## the ten approved rooms register here, one PR each (MV-430..MV-439)
-const DEFS := {}
+const DEFS := {
+	# MV-430: shared supper for one or two crew → happiness, a bond and a short conversation (scripts/rooms/saloon.gd)
+	"salvagers_saloon": {
+		"th": "โรงเตี๊ยมนักคุ้ยซาก", "en": "SALVAGERS' SALOON", "cost": 180, "unlock": 2, "stat": "agi",
+		"produce": {}, "power": 0.25,
+		"effect_th": "มื้อเย็นร่วมกัน 1–2 คน: ความสุข +8 · ผูกพันกันมากขึ้น · เลเวลสูงขึ้นกินเสร็จเร็วขึ้น",
+		"effect_en": "SHARED SUPPER: +HAPPINESS / CREW BONDS",
+		"recipes": [],
+		"anims": [{"prefix": "fx_room_saloon_steam", "count": 4, "fps": 3.0, "loop": true, "rest": 0, "x": 22, "y": 19, "active": "job"}],
+	},
+}
 
 ## tests and GOD previews add rooms at run time (never saved, never in a real build menu unless asked)
 var extra := {}
@@ -168,9 +181,10 @@ func paused_why(j: Dictionary) -> String:
 	return ""
 
 
-func tick(dt: float, _offline: bool) -> void:
+func tick(dt: float, offline: bool) -> void:
 	if Game.s.is_empty() or not (Game.s.get("rx") is Dictionary) or not on():
 		return      # switch off: every job and its clock stays where it is
+	Saloon.tick(dt)     # before the jobs: a cooldown that starts now runs from the end of this tick
 	for k in jobs().keys():
 		var j: Dictionary = jobs()[k]
 		var why := paused_why(j)
@@ -183,7 +197,15 @@ func tick(dt: float, _offline: bool) -> void:
 		if float(j.left) <= 0.0:
 			j.done = true
 			Trace.rec("rooms", "rx job done %s %s" % [j.room, j.kind], {"slot": int(j.slot)})
+			_on_done(j, offline)
 			job_done.emit(j)
+
+
+## the room's own end-of-job step (the job is done but not claimed yet)
+func _on_done(j: Dictionary, offline: bool) -> void:
+	match str(j.kind):
+		Saloon.KIND:
+			Saloon.on_done(j, offline)
 
 
 ## drop a job without reward (the room was demolished / changed, or GOD)
@@ -193,6 +215,8 @@ func drop(id: int, why: String) -> void:
 		return
 	jobs().erase(str(id))
 	Trace.rec("rooms", "rx job dropped %s %s" % [j.room, j.kind], {"why": why})
+	if str(j.kind) == Saloon.KIND:
+		Saloon.on_drop(j)
 	job_dropped.emit(j, why)
 
 
