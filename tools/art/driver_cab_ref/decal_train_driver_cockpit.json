@@ -1,0 +1,78 @@
+{
+  "spec": "micro-asset/1",
+  "id": "decal_train_driver_cockpit",
+  "title": "Train driving cab using Viktor crew reference",
+  "why": "Give the train a seated driver from our actual crew family, matching approved rig v3 while keeping its own cab shape.",
+  "parent": "veh_train",
+  "kind": "decal",
+  "size": [
+    18,
+    14
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin1",
+    "skin3",
+    "gray1",
+    "gray3",
+    "gray5",
+    "snow0",
+    "snow2",
+    "cream2",
+    "blue1",
+    "wood1",
+    "lamp1",
+    "gray4"
+  ],
+  "outline": "ol0",
+  "light": "lamp",
+  "layer": "on_parent",
+  "anchor": {
+    "x": 18,
+    "y": 66,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/vehicles.py",
+    "function": "decal_train_driver_cockpit"
+  },
+  "feature": null,
+  "replace": false,
+  "priority": "medium",
+  "author": "Codex art analyst",
+  "refs": [
+    "tools/art/micro/previews/driver-detail-v1/train-driver-viktor-study.png",
+    "tools/art/micro/previews/driver-detail-v1/other-cabs-manifest.json",
+    "tools/art/micro/previews/driver-detail-v1/reference-train-driver-native.png",
+    "tools/art/micro/previews/driver-detail-v1/other-cab-prompts.json",
+    "tools/art/micro/previews/driver-detail-v1/rig-driver-viktor-study.png",
+    "tools/art/micro/previews/driver-detail-v1/crew-preview-manifest.json",
+    "tools/art/micro/previews/driver-detail-v1/reference-rig-driver-native.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-viktor-sit-native.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-viktor-sit-left-40x.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-actual-crew.png",
+    "tools/art/crew_roster_20/specs/dw_crew_viktor.json",
+    "tools/art/chars.py",
+    "tools/art/vehicles.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Parames requested drivers for all four vehicles and previews of the other cars. Approved family direction: rig v3, Viktor crew identity. The train-driver-viktor-study.png is a new review preview, not a separately approved production texture. Rebuild it on the native grid and show before/after for review; source geometry below takes precedence over generated-image drift.",
+    "Emit one atlas sprite decal_train_driver_cockpit, 18x14 native pixels, using only the listed master colors and binary alpha. Keep veh_train and ext_train at 280x300.",
+    "Footprint x=18..35,y=66..79 inclusive,18x14,fully opaque. This bounds the original slit plus generic torso spill. Keep outer left/right/top window footprint at x18/35,y66 and the hull silhouette. Recompose the visor/interior/sill inside this footprint: top visor at y66..67, dark interior x19..34,y68..78, bottom black sill y79. Remove the old generic green torso spilling below the former sill; do not enlarge beyond this 18x14 footprint. This intentionally cleans the old bust spill and redistributes existing aperture space vertically to fit the crew profile.",
+    "Armored locomotive: mostly head/profile behind the visor, small left hand at wheel/control lever near the sill, and one amber status pixel. Keep the original crew approximately8x8 head; visor may hide the cap top and sill hides lower torso. Reduce instruments to what fits. Gray hull/rivets/rust stay; no new large yellow fill, added exterior lamp or open truck-sized cabin.",
+    "Use actual dw_crew_viktor 14x20 sit cell6, mirrored left, as strict reference: gray fur cap, pale weathered skin, small dark vertical eye, one nose projecting left, gray beard/bone collar, snow-blue jacket, narrow crew torso and soot outline. Adapt only driving arm/upper-body pose. No new generic character, head shrinking, detailed fingers, new resolution or change to the crew atlas.",
+    "Fully replace the old generic olive bust. Use dark gray1 interior, gray3/gray5 wheel/dash, cream2 or gray5 dial, wood1/gray3 seat and lamp1 only on tiny physical light/indicator. Keep head, nose and hand readable at1x. No broad amber backdrop or glow.",
+    "Emit the standalone micro sprite and bake it at its anchor into both veh_train and ext_train after weathering and before final atlas quantization. For the van use its specified polygon alpha mask. Static art-only, feature=null: no runtime overlay, animation or crew-assignment mechanic. Do not globally alter shared driver() behavior.",
+    "Regenerated decoded veh_train/ext_train pixels outside the specified footprint must match their pre-change sprites exactly; for the van, also preserve all pixels outside its window polygon. Preserve other vehicles, all crew strips, all cab_train engine-room state art, rooms, engine bay trim, hit regions and runtime behavior. Compare cropped sprite contents; atlas coordinates may repack.",
+    "Use one-pixel soot outlines, flat clusters, binary alpha, nearest filtering and integer placement; no antialiasing, gradients, fine scratches, fractional scaling, rotation or thick new frame. Show source and result at1x and nearest4x/8x beside approved rig v3.",
+    "Move approved target, new vehicle preview, actual crew/cab crops, prompts, manifests and native production source to a tracked reference/source folder with .gdignore where appropriate; micro/ is git-ignored. Keep hashes/provenance. Full regeneration must reproduce accepted production art.",
+    "Run micro_asset.py verify for this ticket, checking native size/palette/alpha and outside-footprint stability. Review all four vehicles together plus cut-away/exterior and day/night in game. Follow CLAUDE.md required autotest, web export, README/changelog and staging PR workflow; no feature-PR version bump."
+  ],
+  "notes": "Child of the four-vehicle driver-cab art epic. All cabin coordinates come from tools/art/vehicles.py; the driver window is separate from the lower engine room. Rig v3 is the approved visual-family reference. This vehicle preview awaits appearance review. No paid generation or installation. Claude builds and opens PRs; preserve In Progress ticket ownership. If native readability cannot meet the spec, comment and request a decision.",
+  "plane": "MV-523"
+}

@@ -752,8 +752,10 @@ func _tick_outages(dt: float, offline: bool) -> void:
 		o[k] = float(o[k]) - dt * fix
 		if float(o[k]) <= 0.0:
 			o.erase(k)
-			if not offline:
-				toast.emit("ไฟห้อง%sกลับมาแล้ว" % Data.room_def(s.rooms[int(k)].type).th, "good")
+			# the room may be gone (a smaller vehicle, a demolished room): its outage just ends quietly
+			var slot := int(k)
+			if not offline and slot < s.rooms.size() and Data.room_def(s.rooms[slot].type).has("th"):
+				toast.emit("ไฟห้อง%sกลับมาแล้ว" % Data.room_def(s.rooms[slot].type).th, "good")
 				rooms_changed.emit()
 	s["outage"] = o
 	if offline or rng.randf() > dt / 420.0:
