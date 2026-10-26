@@ -136,6 +136,11 @@ func _run() -> void:
 		await _outbox_test()
 		_finish()
 		return
+	if "--only=hull_warning" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _hull_warning_test()
+		_finish()
+		return
 	if "--only=barks" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _barks_test()
@@ -877,6 +882,7 @@ func _run() -> void:
 	await _flagged_test()
 	await _flee_guard_test()
 	await _barks_test()
+	await _hull_warning_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -6040,3 +6046,72 @@ func _saloon_restore(res: Dictionary, rooms: Array, dw: Array, squad: Array, rx)
 	Game.rooms_changed.emit()
 	Game.dwellers_changed.emit()
 	Game.resources_changed.emit()
+
+
+## MV-250: hull warning stages (50 / 25 / 10 %), hysteresis, one alert per worse stage, red frame + strip, the
+## strip's repair button, shake only with the setting on, switch off = nothing
+func _hull_warning_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var ha: HullAlert = main.hud.hull_alert
+	var keep_hull := float(Game.s.hull)
+	var keep_scrap := float(Game.s.res.scrap)
+	var keep_shake = Settings.get_value("shake")
+	_check("hull warning: stage lines 50/25/10 with 5% hysteresis", HullAlert.stage_for(1.0, 0) == 0 and HullAlert.stage_for(0.5, 0) == 1
+		and HullAlert.stage_for(0.3, 0) == 1 and HullAlert.stage_for(0.24, 1) == 2 and HullAlert.stage_for(0.09, 2) == 3
+		and HullAlert.stage_for(0.28, 2) == 2 and HullAlert.stage_for(0.31, 2) == 1 and HullAlert.stage_for(0.56, 1) == 0)
+	var got := []
+	var cb := func(st): got.append(st)
+	ha.alerted.connect(cb)
+	Settings.set_value("shake", true)
+	Dev.hull_warning_preview(0)
+	await wait(0.3)
+	_check("hull warning: full hull = no stage, no strip, no frame", ha.stage == 0 and not ha._strip.visible and ha.pulse_alpha() == 0.0)
+	Dev.hull_warning_preview(1)
+	await wait(0.3)
+	_check("hull warning: under 50% warns once and shows the strip for a while", ha.stage == 1 and got == [1] and ha._strip.visible
+		and ha.pulse_alpha() == 0.0)
+	main._shake = 0.0
+	Dev.hull_warning_preview(2)
+	await wait(0.05)
+	var shook: bool = main._shake > 0.0
+	await wait(0.3)
+	_check("hull warning: under 25% alerts again, shakes, red frame + strip stay", ha.stage == 2 and got == [1, 2] and shook and ha._strip.visible
+		and ha.pulse_alpha() > 0.0)
+	Game.s.hull = Game.hull_max() * 0.27
+	await wait(0.3)
+	Game.s.hull = Game.hull_max() * 0.24
+	await wait(0.3)
+	_check("hull warning: hovering on the 25% line doesn't alert again", ha.stage == 2 and got == [1, 2])
+	Settings.set_value("shake", false)
+	main._shake = 0.0
+	Dev.hull_warning_preview(3)
+	await wait(0.05)
+	var still: bool = is_zero_approx(main._shake)
+	await wait(0.3)
+	_check("hull warning: the HUD hull bar follows the hull (%.2f)" % main.hud.hull_bar.value, is_equal_approx(main.hud.hull_bar.value, HullAlert.ratio()))
+	_check("hull warning: the red frame covers the screen", ha._edge.size.is_equal_approx(main.hud.size) and ha.size.x > 0.0)
+	_check("hull warning: under 10% is critical; no shake with the shake setting off", ha.stage == 3 and got == [1, 2, 3] and still
+		and ha.pulse_alpha() > 0.0 and ha._lbl.text.contains("%d%%" % int(round(HullAlert.ratio() * 100.0))))
+	await shot("hull_warning_critical")
+	Game.s.res.scrap = 0.0
+	await wait(0.2)
+	_check("hull warning: the repair button needs the scrap", ha._fix.disabled)
+	Game.s.res.scrap = 9999.0
+	await wait(0.2)
+	ha._fix.pressed.emit()
+	await wait(0.3)
+	_check("hull warning: repair from the strip fills the hull and clears the warning", is_equal_approx(float(Game.s.hull), Game.hull_max())
+		and ha.stage == 0 and not ha._strip.visible and float(Game.s.res.scrap) < 9999.0)
+	Features.set_override("features", "hull_warning", false)
+	Dev.hull_warning_preview(3)
+	await wait(0.3)
+	_check("hull warning: switch off = no alert, strip or frame", ha.stage == 0 and got == [1, 2, 3] and not ha._strip.visible and ha.pulse_alpha() == 0.0)
+	Features.set_override("features", "hull_warning", null)
+	ha.alerted.disconnect(cb)
+	Settings.set_value("shake", keep_shake)
+	Game.s.hull = keep_hull
+	Game.s.res.scrap = keep_scrap
+	await wait(0.3)

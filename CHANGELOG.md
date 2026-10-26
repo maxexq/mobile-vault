@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- A clear warning before the vehicle breaks down: at 50 %, 25 % and 10 % hull you get a message saying what happens next and a light screen shake; from 25 % the phone buzzes, a red frame pulses round the screen and a strip offers a one-tap repair. The hull bar now drops with every hit and blinks when it's critical (MV-250)
 - New room: the Salvagers' Saloon (Vault Lv.2). Seat one or two crew for a shared supper (8 food, 4 water): they take a break from work, come back happier and closer, and have a little chat afterwards. Steam rises from a cup while they eat (MV-430)
 - Confirmation windows explain what will be lost before room demolition, construction cancellation, gear salvage/synthesis, save replacement/reset and other irreversible actions (MV-422).
 - The crew now speaks up when things happen: raid warnings, a boss showing up, someone badly hurt, a kill, the van taking hits, the expedition team leaving and coming back, a new area, finished rooms; the main characters say it in their own voice, and bubbles no longer cover each other (MV-427)

@@ -30,6 +30,8 @@ var hull_bar: ProgressBar
 var go_btn: Button
 var biome_lbl: Label
 var toast_box: VBoxContainer
+var hull_alert: HullAlert     # MV-250: red frame + strip before the hull breaks
+var _hull_col := Color.TRANSPARENT
 var banner: PanelContainer
 var banner_lbl: Label
 var biome_bar: BiomeBar
@@ -127,6 +129,8 @@ func _ready() -> void:
 	toast_box = UIKit.vbox(2)
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toast_box)
+	hull_alert = HullAlert.new()
+	add_child(hull_alert)
 	_build_banner()
 	resized.connect(_apply_layout)
 
@@ -502,6 +506,7 @@ func _apply_layout() -> void:
 		_view_box.position = Vector2(M, _top.position.y + _top.size.y + 2)
 		boss_bar.position = Vector2(M + 60, _top.position.y + _top.size.y + 2)
 		boss_bar.size = Vector2(vp.x - 52 - M * 2 - 160, 32)
+	hull_alert.place(M, _bottom.position.y, (vp.x - M * 2) if _portrait else minf(360.0, vp.x - 52 - M * 2))
 	# below the boss bar and the toasts that stack under it, in the open sky
 	boss_intro.band_y = roundf(maxf(boss_bar.position.y + BossBar.H + 14.0, vp.y * 0.36))
 	_place_toasts()
@@ -559,6 +564,7 @@ var _combat_t := 0.0
 func _process(d: float) -> void:
 	if not Game.started:
 		return
+	_update_hull_bar()
 	_combat_t -= d
 	if _combat_t <= 0.0:
 		_combat_t = 0.5
@@ -574,6 +580,24 @@ func _process(d: float) -> void:
 		_refresh_hazards()
 		_refresh_expedition()
 		_refresh_door()
+
+
+## MV-250: the hull bar follows every hit (it used to move only on travel events, so combat damage didn't show);
+## the fill style changes only with its colour, and blinks while the hull warning is CRITICAL
+func _update_hull_bar() -> void:
+	if Game.s.is_empty():
+		return
+	var hp := clampf(float(Game.s.hull) / maxf(1.0, Game.hull_max()), 0.0, 1.0)
+	if not is_equal_approx(hull_bar.value, hp):
+		hull_bar.value = hp
+	var col: Color = UIKit.C_GREEN if hp > 0.5 else (UIKit.C_GOLD if hp > 0.25 else UIKit.C_RED)
+	if col != _hull_col:
+		_hull_col = col
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = col
+		hull_bar.add_theme_stylebox_override("fill", fill)
+	var blink := hull_alert.stage >= HullAlert.CRITICAL and int(Time.get_ticks_msec() / 400) % 2 == 1
+	hull_bar.modulate.a = 0.35 if blink else 1.0
 
 
 func _refresh_res() -> void:
@@ -598,11 +622,7 @@ func _refresh_travel() -> void:
 		return
 	var b := Data.biome(Game.s.biome)
 	biome_lbl.text = b.th + ((Loc.t(" ·รอบ%d") % (int(Game.s.lap) + 1)) if int(Game.s.lap) > 0 else "")
-	hull_bar.value = float(Game.s.hull) / Game.hull_max()
-	var fill := StyleBoxFlat.new()
-	var hp := hull_bar.value
-	fill.bg_color = UIKit.C_GREEN if hp > 0.5 else (UIKit.C_GOLD if hp > 0.25 else UIKit.C_RED)
-	hull_bar.add_theme_stylebox_override("fill", fill)
+	_update_hull_bar()
 	go_btn.icon = Atlas.icon("pause" if Game.s.traveling else "play")
 	UIKit.style_button(go_btn, "gray" if Game.s.traveling else "green")
 	_refresh_status()

@@ -358,6 +358,12 @@ func set_hull(frac: float) -> void:
 	act("hull %d%%" % int(frac * 100))
 
 
+## MV-250: drop the hull just under a warning line (1 = warn, 2 = danger, 3 = critical) so that stage's alert fires;
+## 0 = full hull (clears the warning)
+func hull_warning_preview(stage: int) -> void:
+	set_hull(1.0 if stage <= 0 else maxf(0.01, HullAlert.line(stage) - 0.01))
+
+
 # ------------------------------------------------------------------ engine bay (v4.6)
 ## the engine_bay Features switch for this tester (MV-40): off = stock diesel, no heat / wear / rests / jobs
 func engine_bay_switch(v: bool) -> void:

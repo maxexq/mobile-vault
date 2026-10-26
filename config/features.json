@@ -21,6 +21,7 @@
     "env_badge": true,
     "barks": true,
     "tutorial_tips": true,
+    "hull_warning": true,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,
