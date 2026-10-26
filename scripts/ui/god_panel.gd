@@ -482,6 +482,12 @@ func _tab_fight() -> void:
 	_row([_b("วอร์ลอร์ด", func(): Dev.entrance_preview("warlord"), "red", true), _b("บอส", func(): Dev.entrance_preview("boss"), "yellow", true),
 		_b("อีลิท", func(): Dev.entrance_preview("elite"), "gray", true), _b("เรียกอีลิท ×3", func(): Dev.spawn_elites(3), "gray", true)],
 		"เปิดตัวบอส (MV-387)%s" % ("" if Features.on("boss_intro") else " · ปิดอยู่"))
+	_row([_b("เทียบขนาด", func(): Dev.enemy_size_preview("lineup"), "yellow", true), _b("ธรรมดา", func(): Dev.enemy_size_preview("normal"), "gray", true),
+		_b("อีลิท", func(): Dev.enemy_size_preview("elite"), "gray", true), _b("บอส", func(): Dev.enemy_size_preview("boss"), "gray", true),
+		_b("วอร์ลอร์ด", func(): Dev.enemy_size_preview("warlord"), "red", true)],
+		"ขนาดมอนสเตอร์ (MV-517) x%d / x%d / x%d / x%d%s" % [int(Features.num("enemy_size.normal", CombatView.ENEMY_SCALE.normal)),
+		int(Features.num("enemy_size.elite", CombatView.ENEMY_SCALE.elite)), int(Features.num("enemy_size.boss", CombatView.ENEMY_SCALE.boss)),
+		int(Features.num("enemy_size.warlord", CombatView.ENEMY_SCALE.warlord)), "" if Features.on("enemy_size") else " · ปิดอยู่"])
 	_head("MOBS", "เรียกศัตรูทีละชนิด ×3")
 	var mb := []
 	for id in Combat.MOBS:

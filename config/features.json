@@ -48,7 +48,8 @@
     "loot_pity": true,
     "boss_intro": true,
     "vehicle_detail": true,
-    "vehicle_ambience": true
+    "vehicle_ambience": true,
+    "enemy_size": true
   },
   "events": {},
   "tune": {}

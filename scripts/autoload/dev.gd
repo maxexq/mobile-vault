@@ -827,6 +827,29 @@ func spawn_elites(n: int) -> void:
 	act("spawn elites x%d" % n)
 
 
+## MV-517: real enemies at their new size: "normal" / "elite" = one of this biome's mobs, "boss" = this biome's
+## boss as a wave boss, "warlord" = the checkpoint warlord, "lineup" = a normal, an elite and the boss side by side
+func enemy_size_preview(kind: String) -> void:
+	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	var mob: String = mobs[0]
+	for m in mobs:
+		if not str(Combat.MOBS[m].sprite).begins_with("dw_"):
+			mob = m        # a monster, not a raider from the crew sheet
+			break
+	var lvl := Combat.enemy_level()
+	var q := []
+	if kind in ["normal", "lineup"]:
+		q.append({"t": 0.2, "mob": mob, "lvl": lvl, "no_mutate": true})
+	if kind in ["elite", "lineup"]:
+		q.append({"t": 0.9, "mob": mob, "lvl": lvl, "elite": true, "no_mutate": true})
+	if kind in ["boss", "lineup"]:
+		q.append({"t": 1.6, "boss": "boss", "lvl": lvl})
+	if kind == "warlord":
+		q.append({"t": 0.3, "boss": "warlord", "lvl": Combat.warlord_level()})
+	Combat.debug_spawn(q, kind in ["boss", "warlord", "lineup"])
+	act("enemy size preview " + kind)
+
+
 ## MV-387: play the warlord / boss / elite entrance without spawning anything (a stand-in enemy, id -1)
 func entrance_preview(kind: String) -> void:
 	var bd: Dictionary = Combat.boss_def(Combat.biome_id())
