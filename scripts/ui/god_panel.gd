@@ -283,6 +283,10 @@ func _tab_vehicle() -> void:
 		int(HullAlert.line(1) * 100), int(HullAlert.line(2) * 100), int(HullAlert.line(3) * 100)])
 	_row([_b("แหนบช่วงล่าง: " + ("เปิด" if Features.on("vehicle_detail") else "ปิด"), func(): Dev.vehicle_detail_switch(not Features.on("vehicle_detail")),
 		"green" if Features.on("vehicle_detail") else "red")], "รายละเอียดรถ MV-388 (ล้อ/สนิม/แผ่นปะอบในภาพแล้ว)")
+	_row([_b("หลังคาอบอุ่น: " + ("เปิด" if Features.on("cozy_roof") else "ปิด"), func(): Dev.cozy_roof_switch(not Features.on("cozy_roof")),
+		"green" if Features.on("cozy_roof") else "red"), _b("ไม่มี", func(): Dev.roof_deck_preview(0), "gray"),
+		_b("Lv1", func(): Dev.roof_deck_preview(1)), _b("Lv2", func(): Dev.roof_deck_preview(2)), _b("Lv3", func(): Dev.roof_deck_preview(3))],
+		"หลังคา MV-462 · ดาดฟ้าพัก Lv%d" % Mods.level("roof_deck"))
 	_head("ENGINE BAY", "ห้องเครื่อง · %s %d°C สภาพ %d%%" % [EngineBay.t().th, int(EngineBay.heat()), int(EngineBay.cond())])
 	_row([_b("ระบบห้องเครื่อง: " + ("เปิด" if EngineBay.on() else "ปิด (ดีเซลเดิม)"), func(): Dev.engine_bay_switch(not EngineBay.on()),
 		"green" if EngineBay.on() else "red", true)], "สวิตช์")
