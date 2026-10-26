@@ -21,7 +21,11 @@ var margin := 6
 var centered := true        # MV-266: keep the window in the middle of the screen at its real size (the close-up docks)
 var media: PanelContainer   # illustration frame built by the last media_layout()
 ## MV-482: the window is as tall as its content needs (up to the screen; the lists scroll beyond that), so there is no
-## empty space under short content, and a later change of content height slides smoothly (FIT_TIME). A panel whose
+## empty space under short content, and a later change of content height slides smoothly (FIT_TIME). MV-537: with
+## window_still on (the default) nothing slides any more, because a window that moved under the finger made players
+## dizzy: a later change snaps, a centred window keeps its top edge (the title and what was just tapped stay put; it
+## only moves up when it would run off the screen), and a docked one (the room close-up) never shrinks while open,
+## so the room above it doesn't move. A panel whose
 ## body is a canvas without a natural height (the map) sets fit_height = false and keeps the full height.
 var fit_height := true
 const MIN_H := 96.0
@@ -167,13 +171,25 @@ func _apply_fit() -> void:
 	if Time.get_ticks_msec() - _opened_ms < 250 or not is_visible_in_tree():
 		_set_h(want)
 		return
+	if Features.on("window_still"):
+		if not centered and want < box.size.y:
+			return
+		_set_h(want, true)
+		return
 	_fit_tw = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_fit_tw.tween_method(_set_h, box.size.y, want, FIT_TIME)
 
 
-func _set_h(h: float) -> void:
+## keep_top (MV-537): a centred window grows / shrinks below its top edge instead of re-centring
+func _set_h(h: float, keep_top: bool = false) -> void:
+	var top := box.position.y
 	box.custom_minimum_size.y = floorf(h)
 	box.size.y = floorf(h)
+	if keep_top and centered:
+		var vp := get_viewport_rect().size
+		box.position = Vector2(floorf((vp.x - box.size.x) * 0.5), top)
+		box.position = box.position.clamp(Vector2.ZERO, (vp - box.size).max(Vector2.ZERO)).floor()
+		return
 	_recenter()
 
 

@@ -610,6 +610,9 @@ func _on_closeup_focus() -> void:
 	if camera.position.distance_to(to.pos) < 0.5 and is_equal_approx(camera.zoom.x, float(to.zoom)):
 		return
 	_zoom_from = {"pos": camera.position, "zoom": camera.zoom.x}
+	if Features.on("window_still"):
+		_apply_zoom(1.0)        # MV-537: no glide; the panel only changes height when it must (see ModalPanel._apply_fit)
+		return
 	_run_zoom(true, ModalPanel.FIT_TIME)
 
 

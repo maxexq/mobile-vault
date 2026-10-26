@@ -1278,6 +1278,12 @@ func trait_roll_test(n: int = 1000) -> Dictionary:
 	return last_trait_roll
 
 
+## MV-537: windows slide with their content (on = window_still off, the MV-482 look) or stay still (the default); session override
+func window_motion(on: bool) -> void:
+	Features.set_override("features", "window_still", not on)
+	Trace.rec("god", "window motion %s" % ("on" if on else "off"))
+
+
 func reroll_traits(d: Dictionary) -> void:
 	d.erase("traits")
 	Crew.roll_traits(d)
