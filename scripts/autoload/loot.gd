@@ -448,6 +448,10 @@ func synth_candidates(rar: int) -> Array:
 	return out
 
 
+func synth_cost(rar: int) -> Dictionary:
+	return {"components": 15 * (rar + 1)}
+
+
 ## merge the 3 weakest unlocked items of a rarity into 1 item of the next rarity
 func synthesize(rar: int) -> Dictionary:
 	if rar >= RARITY.size() - 1:
@@ -455,8 +459,7 @@ func synthesize(rar: int) -> Dictionary:
 	var c := synth_candidates(rar)
 	if c.size() < 3:
 		return {}
-	var cost := {"scrap": 15 * (rar + 1)}
-	if not Game.pay(cost):
+	if not Game.pay(synth_cost(rar)):
 		return {}
 	var used: Array = c.slice(0, 3)
 	var ilvl := 0

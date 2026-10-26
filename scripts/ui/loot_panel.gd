@@ -59,7 +59,7 @@ func _layout_sig() -> String:
 		"forge":
 			var bits := "forge:%d:" % int(Game.s.combat.get("auto_salvage", -1))
 			for r in range(Loot.RARITY.size() - 1):
-				bits += "1" if float(Game.s.res.scrap) >= 15 * (r + 1) else "0"
+				bits += "1" if Game.can_afford(Loot.synth_cost(r)) else "0"
 			return bits
 	return tab
 
@@ -412,7 +412,7 @@ func _card(icon: String, title: String, amount_key: String, desc: String, use_id
 
 func _build_forge() -> void:
 	set_title(Loc.t("FORGE / เตาหลอม"))
-	_list.add_child(UIKit.wrap_label(Loc.t("หลอมอุปกรณ์ระดับเดียวกัน 3 ชิ้น (ไม่ล็อก ตัวอ่อนสุดก่อน) → 1 ชิ้นระดับสูงขึ้น · การแยกชิ้นส่วนให้ 'ชิ้นส่วน' ไว้ตีบวก")))
+	_list.add_child(UIKit.wrap_label(Loc.t("หลอมอุปกรณ์ระดับเดียวกัน 3 ชิ้น (ไม่ล็อก ตัวอ่อนสุดก่อน) → 1 ชิ้นระดับสูงขึ้น · ใช้ชิ้นส่วนจากการแยกอุปกรณ์เป็นค่าหลอม")))
 	for r in range(Loot.RARITY.size() - 1):
 		var c := Loot.synth_candidates(r)
 		var a: Dictionary = Loot.rarity(r)
@@ -425,8 +425,9 @@ func _build_forge() -> void:
 		l.clip_text = true
 		h.add_child(l)
 		h.add_child(UIKit.label(Loc.t("มี%d") % c.size(), UIKit.FS_SMALL, UIKit.C_DIM))
-		var b := UIKit.button("%d" % (15 * (r + 1)), "yellow", "cog")
-		b.disabled = c.size() < 3 or float(Game.s.res.scrap) < 15 * (r + 1)
+		var cost := Loot.synth_cost(r)
+		var b := UIKit.button("%d" % int(cost.components), "yellow", "cog")
+		b.disabled = c.size() < 3 or not Game.can_afford(cost)
 		var rr: int = r
 		b.name = "Synthesize%d" % r
 		b.pressed.connect(func(): _request_synthesize(rr))
@@ -510,7 +511,7 @@ func _request_synthesize(rar: int) -> void:
 	var names: Array = []
 	for item in targets:
 		names.append(Loot.item_name(item))
-	ConfirmPanel.ask(self, Loc.t("หลอมอุปกรณ์"), Loc.t("ใช้ %d เศษเหล็ก และทำลายอุปกรณ์ 3 ชิ้นนี้เพื่อสุ่มของระดับ %s ย้อนคืนไม่ได้:\n%s") % [15 * (rar + 1), Loot.rarity(rar + 1).th, "\n".join(names)], Loc.t("ยืนยันหลอม 3 ชิ้น"), func():
+	ConfirmPanel.ask(self, Loc.t("หลอมอุปกรณ์"), Loc.t("ใช้ %d ชิ้นส่วน และทำลายอุปกรณ์ 3 ชิ้นนี้เพื่อสุ่มของระดับ %s ย้อนคืนไม่ได้:\n%s") % [int(Loot.synth_cost(rar).components), Loot.rarity(rar + 1).th, "\n".join(names)], Loc.t("ยืนยันหลอม 3 ชิ้น"), func():
 		var out := Loot.synthesize(rar)
 		if not out.is_empty():
 			Game.toast.emit(Loc.t("หลอมสำเร็จ! ได้ %s [%s]") % [Loot.item_name(out), Loot.rarity(int(out.rar)).th], "biome" if int(out.rar) >= 3 else "good")
