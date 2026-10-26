@@ -155,7 +155,9 @@ func _tab_main() -> void:
 	_note(Dev.view_info())
 	if not OS.has_feature("web"):
 		var sizes := [[Vector2i(720, 1280), "มือถือ 720x1280"], [Vector2i(780, 1688), "มือถือ 780x1688"], [Vector2i(1170, 2532), "iPhone 1170x2532"],
-			[Vector2i(1280, 640), "แนวนอน 1280x640"], [Vector2i(1366, 1024), "แท็บเล็ต 1366x1024"]]
+			[Vector2i(1280, 640), "แนวนอน 1280x640"], [Vector2i(1366, 1024), "แท็บเล็ต 1366x1024"],
+			[Vector2i(768, 1024), "แท็บเล็ต 768x1024"], [Vector2i(1024, 768), "โน้ตบุ๊ก 1024x768"], [Vector2i(1366, 768), "โน้ตบุ๊ก 1366x768"],
+			[Vector2i(2560, 1440), "จอใหญ่ 2560x1440"]]     # MV-266
 		var sb := []
 		for it in sizes:
 			var sz: Vector2i = it[0]

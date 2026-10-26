@@ -18,6 +18,8 @@ const TAP_SLOP := 8.0
 const PINCH_STEP := 1.25      # finger distance ratio for one pinch zoom step
 const PORTRAIT_BASE := Vector2i(360, 640)
 const LANDSCAPE_BASE := Vector2i(560, 320)
+const SCALE_UP_AT := 0.6       # MV-266: this far past a whole scale, use the next one ...
+const SCALE_MIN := 0.8         # ... if the design size stays at least this share of the base
 
 var world_vp: SubViewport
 var world_tex: TextureRect
@@ -217,7 +219,7 @@ func is_portrait() -> bool:
 func _on_resize() -> void:
 	var real := Vector2(DisplayServer.window_get_size())
 	var base := Vector2(PORTRAIT_BASE if is_portrait() else LANDSCAPE_BASE)
-	var s := maxf(1.0, floorf(minf(real.x / base.x, real.y / base.y)))
+	var s := ui_scale_for(real, base)
 	if Settings.get_value("ui_scale") == "small":
 		s = maxf(1.0, s - 1.0)
 	var want := Vector2i(int(floorf(real.x / s)), int(floorf(real.y / s)))
@@ -226,6 +228,19 @@ func _on_resize() -> void:
 		get_window().content_scale_size = want
 	pixel_scale = s
 	_apply_world_scale()
+
+
+## MV-266: the whole-number UI scale for a window. Normally the largest S that keeps the design size at least the
+## base (360x640 portrait, 560x320 landscape). Just short of the next step (ratio .6 past it, e.g. a 768x1024 tablet
+## window or a 1024x768 laptop one) the screen would be drawn at a tiny 1x with a huge design area, so it goes one
+## step up as long as the design size stays at least SCALE_MIN of the base.
+static func ui_scale_for(real: Vector2, base: Vector2) -> float:
+	var r := minf(real.x / base.x, real.y / base.y)
+	var s := maxf(1.0, floorf(r))
+	var up := s + 1.0
+	if Features.on("responsive_scale") and r - floorf(r) >= SCALE_UP_AT and real.x / up >= base.x * SCALE_MIN and real.y / up >= base.y * SCALE_MIN:
+		s = up
+	return s
 
 
 ## the world's whole-number scale (screen px per art px) for the current zoom mode: wide pulls back (S-1 ...);
@@ -408,6 +423,7 @@ func _on_setting_changed(key: String) -> void:
 
 
 func _on_features_changed() -> void:
+	_on_resize()        # MV-266: responsive_scale may change the UI scale
 	if world_vp != null and not is_equal_approx(target_ws(), world_scale):
 		_apply_world_scale()
 
