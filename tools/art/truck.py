@@ -261,13 +261,14 @@ def weather(img, seed=7):
     return img
 
 
-def gen_roof_props(floors=4, flag=True):
+def gen_roof_props(floors=4, flag=True, parts=True):
     """everything that stands on the roof (drawn into the shell's top 36px); MV-388: flag=False leaves the
-    flag out, Vehicle animates it (prop_car_flag_idle)"""
+    flag out, Vehicle animates it (prop_car_flag_idle). MV-462: parts=False leaves out the planters, water
+    tank and dish (ROOF_PARTS), which vehicles.split_roof_parts lifts out of the shells into runtime sprites"""
     img = new(TW, 38)
     by = 36
     # planter boxes with veggies
-    for bx in (40, 54):
+    for bx in ((40, 54) if parts else ()):
         rect(img, bx, by - 6, 13, 6, OL)
         rect(img, bx + 1, by - 5, 11, 4, c("wood2"))
         hline(img, bx + 1, by - 5, 11, c("wood3"))
@@ -298,21 +299,22 @@ def gen_roof_props(floors=4, flag=True):
         poly(img, [(115, 4), (126, 5), (122, 7), (125, 9), (115, 10)], c("red1"), OL)
     # water tank on legs + satellite dish on top
     tx, ty, tw, th = 150, by - 20, 32, 14
-    for lx in (tx + 3, tx + tw - 5):
-        rect(img, lx, ty + th, 3, by - ty - th, OL)
-    rect(img, tx, ty, tw, th, OL)
-    rect(img, tx + 1, ty + 1, tw - 2, th - 2, c("teal1"))
-    rect(img, tx + 1, ty + 1, tw - 2, 3, c("teal2"))
-    for bx in (tx + 8, tx + 16, tx + 24):
-        vline(img, bx, ty + 1, th - 2, c("blue2"))
-    for k in range(3):
-        rect(img, tx + 10 + k * 5, ty + 6, 3, 4, c("cream1"))
-    ellipse(img, 158, ty - 12, 12, 12, OL)
-    ellipse(img, 159, ty - 11, 10, 10, c("gray5"))
-    ellipse(img, 161, ty - 9, 6, 6, c("gray4"))
-    line(img, 164, ty - 6, 170, ty - 10, OL)
-    px(img, 170, ty - 10, c("red2"))
-    vline(img, 164, ty - 2, 3, OL)
+    if parts:
+        for lx in (tx + 3, tx + tw - 5):
+            rect(img, lx, ty + th, 3, by - ty - th, OL)
+        rect(img, tx, ty, tw, th, OL)
+        rect(img, tx + 1, ty + 1, tw - 2, th - 2, c("teal1"))
+        rect(img, tx + 1, ty + 1, tw - 2, 3, c("teal2"))
+        for bx in (tx + 8, tx + 16, tx + 24):
+            vline(img, bx, ty + 1, th - 2, c("blue2"))
+        for k in range(3):
+            rect(img, tx + 10 + k * 5, ty + 6, 3, 4, c("cream1"))
+        ellipse(img, 158, ty - 12, 12, 12, OL)
+        ellipse(img, 159, ty - 11, 10, 10, c("gray5"))
+        ellipse(img, 161, ty - 9, 6, 6, c("gray4"))
+        line(img, 164, ty - 6, 170, ty - 10, OL)
+        px(img, 170, ty - 10, c("red2"))
+        vline(img, 164, ty - 2, 3, OL)
     # sandbag nest for the roof gunner
     for (sx, sy) in ((228, by - 6), (237, by - 6), (246, by - 6), (232, by - 10), (241, by - 10)):
         ellipse(img, sx, sy, 10, 6, OL)
@@ -329,6 +331,250 @@ def gen_roof_props(floors=4, flag=True):
     vline(img, 129, 18, by - 18, OL)
     rect(img, 137, 24, 3, 5, c("blue3"))
     return img
+
+
+# ------------------------------------------------------------------ MV-462 cozy roof (micro assets MV-463..471)
+# Each part is its own atlas sprite. The roof parts (tank, dish, planter tray) sit on the 4-floor roof-local
+# coordinates in ROOF_PARTS and replace the baked planters / tank / dish (switch cozy_roof); the deck parts are
+# composed once into mod_roof_deck_cozy_1..3 at the offsets in DECK_PARTS.
+ROOF_PARTS = {"prop_roof_planter_tray": [(40, 21), (54, 21)], "prop_roof_water_tank": [(150, 16)],
+              "prop_roof_satellite_dish": [(156, 0)]}
+DECK_PARTS = {"prop_roof_glass_windbreak": (52, 18), "prop_roof_patched_awning": (0, 12),
+              "prop_roof_bench_blanket": (7, 27), "prop_roof_water_can": (40, 20), "prop_roof_caged_lamp": (46, 12)}
+
+
+def prop_roof_water_tank():
+    """MV-463: 32x20 salvaged teal reservoir, two rusty straps, fill cap, sight gauge, outlet + shut-off on the
+    right; feet at local x=3 and 27 (the old legs), the dish cable lands on the top at local (14,0)"""
+    img = new(32, 20)
+    T = c("teal2")
+    # bolted feet, then the body over them
+    for lx in (3, 27):
+        rect(img, lx, 13, 3, 5, OL)
+        vline(img, lx + 1, 14, 3, c("gray3"))
+        rect(img, lx - 1, 17, 5, 3, OL)
+        hline(img, lx, 18, 3, c("gray3"))
+        px(img, lx + 1, 18, c("orange2"))
+    # body 29 wide with clipped corners: flat teal, dark lower band, one flat top highlight
+    rect(img, 1, 1, 27, 13, OL)
+    rect(img, 0, 2, 29, 11, OL)
+    rect(img, 1, 2, 27, 11, T)
+    rect(img, 2, 1, 25, 1, OL)
+    rect(img, 2, 2, 25, 1, T)
+    hline(img, 3, 3, 13, c("blue4"))
+    rect(img, 1, 10, 27, 3, c("teal1"))
+    hline(img, 2, 13, 25, OL)
+    # fill cap on top
+    rect(img, 9, 0, 4, 2, OL)
+    hline(img, 10, 0, 2, c("gray3"))
+    # two rusty retaining straps with a dark edge
+    for sx in (6, 19):
+        vline(img, sx, 1, 13, c("orange2"))
+        vline(img, sx + 1, 1, 13, OL)
+        px(img, sx, 6, c("ol0"))
+    # tiny inspection patch + rivets
+    rect(img, 11, 5, 4, 3, c("cream1"))
+    px(img, 11, 5, OL)
+    px(img, 14, 7, OL)
+    # sight gauge: soot frame, dark glass, water below a single meniscus
+    rect(img, 23, 3, 4, 9, OL)
+    vline(img, 24, 4, 7, c("blue2"))
+    vline(img, 25, 4, 7, c("blue2"))
+    rect(img, 24, 7, 2, 4, c("blue4"))
+    # outlet pipe + shut-off handle in the reserved right columns
+    rect(img, 28, 8, 4, 3, OL)
+    hline(img, 29, 9, 3, c("gray3"))
+    vline(img, 30, 5, 3, OL)
+    px(img, 29, 5, c("orange2"))
+    # sparse rust under the fittings
+    px(img, 22, 12, c("orange2"))
+    px(img, 9, 2, c("orange2"))
+    px(img, 28, 11, c("orange2"))
+    return img
+
+
+def prop_roof_satellite_dish():
+    """MV-464: 16x17 concave dish, bowl in local x=2..13 y=4..15, feed tip on (14,6), bracket + cable down to
+    the tank at local (8,16); x=14..15 y=0..5 stays free for the MV-460 receive pulse"""
+    img = new(16, 17)
+    # bracket and cable behind the bowl
+    vline(img, 8, 12, 5, OL)
+    line(img, 5, 13, 7, 16, OL)
+    px(img, 6, 14, c("gray4"))
+    # bowl: soot rim, light rim, two shade clusters inside the dish
+    ellipse(img, 2, 4, 12, 12, OL)
+    ellipse(img, 3, 5, 10, 10, c("gray5"))
+    ellipse(img, 4, 5, 9, 9, c("gray4"))
+    ellipse(img, 6, 6, 6, 6, c("gray3"))
+    for (x, y) in ((4, 7), (4, 8), (5, 6), (6, 5)):
+        px(img, x, y, c("gray6"))
+    # feed arm from the bowl centre to the red tip
+    line(img, 9, 9, 13, 6, OL)
+    px(img, 14, 6, c("red2"))
+    return img
+
+
+def prop_roof_planter_tray():
+    """MV-465: 14x17 timber tray (13x6 box at local y=9) with soil, three herb tufts, a strap and an ivy tip
+    hanging one column right over the roof lip"""
+    img = new(14, 17)
+    # herbs (behind the box rim)
+    for (x, top) in ((2, 4), (6, 1), (10, 3)):
+        vline(img, x, top + 3, 9 - top - 3, c("green1"))
+        ellipse(img, x - 2, top, 5, 4, c("green2"), OL)
+        px(img, x - 1, top + 1, c("green3"))
+        ellipse(img, x - 2 + (x % 4 == 2) * 2, top + 3, 4, 3, c("green2"), OL)
+        px(img, x, top + 4, c("green3"))
+    # box: soil strip, plank, highlight, one rusty strap
+    rect(img, 0, 9, 13, 6, OL)
+    hline(img, 1, 10, 11, c("wood1"))
+    rect(img, 1, 11, 11, 3, c("wood2"))
+    hline(img, 1, 11, 11, c("wood3"))
+    hline(img, 2, 13, 4, c("wood1"))
+    vline(img, 8, 10, 4, c("orange2"))
+    # ivy over the right corner and the lip
+    for (x, y) in ((12, 10), (13, 11), (12, 12), (13, 13), (13, 14), (12, 15), (13, 16)):
+        px(img, x, y, c("green2") if y % 2 else c("green3"))
+    px(img, 11, 9, c("green3"))
+    return img
+
+
+def prop_roof_deck_frame():
+    """MV-466: 76x60 timber platform: planks at y=34..38, three stilts (x=3,36,70) on rusty bolted feet,
+    diagonal braces in the two bays, rope rungs on the front stilt; transparent above y=34"""
+    W, H, FY = 76, 60, 34
+    img = new(W, H)
+    for x0, x1 in ((7, 36), (40, 70)):
+        for (a, b) in (((x0, FY + 6), (x1, H - 4)), ((x0, H - 4), (x1, FY + 6))):
+            line(img, a[0], a[1] - 1, b[0], b[1] - 1, OL)
+            line(img, a[0], a[1], b[0], b[1], c("wood1"))
+            line(img, a[0], a[1] + 1, b[0], b[1] + 1, OL)
+    for x in (3, 36, 70):
+        rect(img, x, FY + 3, 4, H - FY - 3, OL)
+        vline(img, x + 1, FY + 4, H - FY - 7, c("wood3"))
+        vline(img, x + 2, FY + 4, H - FY - 7, c("wood2"))
+        rect(img, x - 1, H - 4, 6, 4, OL)
+        hline(img, x, H - 3, 4, c("orange1"))
+        px(img, x + 1, H - 3, c("orange2"))
+        px(img, x + 3, H - 2, c("orange2"))
+    for y in range(FY + 6, H - 1, 4):
+        hline(img, 0, y, 4, c("wood3"))
+    # broad worn planks with a few joints and nail heads
+    rect(img, 0, FY, W, 5, OL)
+    rect(img, 1, FY + 1, W - 2, 3, c("wood3"))
+    hline(img, 1, FY + 1, W - 2, c("wood4"))
+    hline(img, 1, FY + 3, W - 2, c("wood2"))
+    for x in (13, 31, 50, 64):
+        vline(img, x, FY + 1, 3, c("wood0"))
+        px(img, x + 2, FY + 2, c("orange2"))
+    for x in (22, 42, 58):
+        px(img, x, FY + 2, c("wood2"))
+    return img
+
+
+def prop_roof_patched_awning():
+    """MV-467: 38x22 olive canvas lean-to on two posts (local x=2..3 and 33..34 down to y=21), sagging edge,
+    one stitched patch, tied corners"""
+    img = new(38, 22)
+    for x in (2, 33):
+        rect(img, x, 2 if x == 2 else 7, 2, 22 - (2 if x == 2 else 7), OL)
+        vline(img, x + 1, 3 if x == 2 else 8, 18 if x == 2 else 13, c("wood2"))
+    poly(img, [(0, 0), (37, 6), (37, 11), (30, 12), (19, 11), (8, 9), (0, 7)], c("green3"), OL)
+    poly(img, [(1, 1), (36, 7), (36, 8), (1, 2)], c("green4"))
+    for (x0, x1, y) in ((3, 12, 6), (21, 33, 9)):
+        line(img, x0, y, x1, y + 1, c("green2"))
+    # stitched patch (cream with gray stitches)
+    rect(img, 14, 4, 6, 4, c("cream1"))
+    hline(img, 14, 3, 6, c("gray3"))
+    vline(img, 20, 4, 4, c("gray3"))
+    px(img, 16, 5, c("green1"))
+    px(img, 18, 6, c("green1"))
+    # sagging fringe + tied corners
+    for x in range(9, 31, 5):
+        px(img, x, 10 + (x - 9) // 8, c("green1"))
+    for (x, y) in ((0, 1), (37, 7)):
+        px(img, x, y, c("gray3"))
+    px(img, 1, 5, c("gray3"))
+    px(img, 36, 10, c("gray3"))
+    return img
+
+
+def prop_roof_bench_blanket():
+    """MV-468: 24x7 plank bench on two trestles with a folded bone blanket at its left end (seat y=2..4)"""
+    img = new(24, 7)
+    for x in (2, 20):
+        line(img, x - 1, 4, x + 2, 6, OL)
+        line(img, x + 2, 4, x - 1, 6, OL)
+    rect(img, 0, 2, 24, 3, OL)
+    hline(img, 1, 3, 22, c("wood2"))
+    hline(img, 2, 3, 3, c("wood3"))
+    px(img, 12, 3, c("wood1"))
+    # folded blanket: one darker fold, one light edge
+    rect(img, 1, 0, 8, 4, OL)
+    rect(img, 2, 1, 6, 2, c("cream2"))
+    hline(img, 2, 1, 6, c("cream3"))
+    vline(img, 5, 1, 2, c("cream1"))
+    return img
+
+
+def prop_roof_glass_windbreak():
+    """MV-469: 22x16 worn timber frame, one mullion, two muted blue panes with one stepped glint each"""
+    img = new(22, 16)
+    rect(img, 0, 0, 22, 16, OL)
+    rect(img, 1, 1, 20, 14, c("wood2"))
+    for x0 in (2, 12):
+        rect(img, x0, 2, 8, 11, OL)
+        rect(img, x0 + 1, 3, 6, 9, c("blue2"))
+        rect(img, x0 + 1, 8, 6, 4, c("blue3"))
+        px(img, x0 + 2, 5, c("sky3"))
+        px(img, x0 + 3, 4, c("sky3"))
+        px(img, x0 + 4, 3, c("sky3"))
+    hline(img, 1, 1, 20, c("wood1"))
+    for (x, y) in ((1, 14), (20, 14), (20, 1), (10, 14)):
+        px(img, x, y, c("orange2"))
+    return img
+
+
+def prop_roof_caged_lamp():
+    """MV-470: 6x12 caged amber lamp on a short bracket; the body stays in local x>=3 (the can is left of it)"""
+    img = new(6, 12)
+    hline(img, 0, 0, 6, OL)
+    hline(img, 1, 1, 4, c("gray3"))
+    vline(img, 4, 1, 2, OL)
+    rect(img, 3, 3, 3, 9, OL)
+    px(img, 4, 4, c("lamp0"))
+    vline(img, 4, 5, 3, c("lamp1"))
+    px(img, 4, 8, c("lamp0"))
+    for y in (6,):
+        px(img, 3, y, c("gray4"))
+        px(img, 5, y, c("gray4"))
+    hline(img, 3, 10, 3, c("gray3"))
+    return img
+
+
+def prop_roof_water_can():
+    """MV-471: 9x14 tied-down teal water can (handle, fill cap, highlight, rusty band, gray foot), base on y=13"""
+    img = new(9, 14)
+    rect(img, 2, 0, 5, 3, OL)
+    hline(img, 3, 1, 3, CLEAR)
+    px(img, 4, 1, CLEAR)
+    rect(img, 1, 3, 7, 10, OL)
+    rect(img, 0, 4, 9, 8, OL)
+    rect(img, 1, 4, 7, 8, c("teal1"))
+    rect(img, 2, 3, 5, 1, c("teal1"))
+    vline(img, 2, 4, 5, c("teal2"))
+    px(img, 6, 3, c("gray3"))
+    hline(img, 1, 9, 7, c("orange2"))
+    hline(img, 1, 12, 7, c("gray3"))
+    hline(img, 0, 13, 9, OL)
+    return img
+
+
+ROOF_PART_ART = {"prop_roof_water_tank": prop_roof_water_tank, "prop_roof_satellite_dish": prop_roof_satellite_dish,
+                 "prop_roof_planter_tray": prop_roof_planter_tray}
+DECK_PART_ART = {"prop_roof_glass_windbreak": prop_roof_glass_windbreak,
+                 "prop_roof_patched_awning": prop_roof_patched_awning, "prop_roof_bench_blanket": prop_roof_bench_blanket,
+                 "prop_roof_water_can": prop_roof_water_can, "prop_roof_caged_lamp": prop_roof_caged_lamp}
 
 
 def solar_frames():
@@ -678,43 +924,79 @@ def mod_roof_deck():
         px(img, 44, FY - 5, c("yellow2"))
         rect(img, 36, FY - 4, 3, 4, OL)
         px(img, 37, FY - 3, c("green3"))
-        # rear railing (rope lv1, steel lv2+)
-        rc = c("wood3") if lv == 1 else c("gray4")
-        vline(img, W - 2, FY - 12, 12, OL)
-        vline(img, 52, FY - 10, 10, OL)
-        hline(img, 52, FY - 10, W - 52, rc)
-        hline(img, 52, FY - 5, W - 52, rc)
-        if lv >= 2:
-            # sandbag wall at the rear edge (cover for the roof gunner)
-            for row, (y, xs) in enumerate(((FY - 4, range(58, 74, 6)), (FY - 8, range(61, 74, 6)))):
-                for x in xs:
-                    ellipse(img, x - 1, y - 1, 8, 5, OL)
-                    ellipse(img, x, y, 6, 3, c("sand2"))
-                    hline(img, x + 1, y, 4, c("sand3"))
-            # brazier: the only warm light up here
-            rect(img, 50, FY - 4, 6, 4, OL)
-            hline(img, 51, FY - 3, 4, c("gray3"))
-            px(img, 51, FY - 5, c("lamp0"))
-            px(img, 52, FY - 6, c("lamp1"))
-            px(img, 53, FY - 5, c("lamp2"))
-            px(img, 54, FY - 7, c("lamp0"))
-            px(img, 54, FY - 5, c("lamp1"))
-        if lv >= 3:
-            # camo net draped over the lean-to
-            for x in range(1, 37, 2):
-                px(img, x, top - 1 + x // 6 + (x % 4 == 1), c("green3") if x % 3 else c("green1"))
-            # lookout mast + searchlight (beam drawn in game)
-            vline(img, 57, 4, FY - 4, OL)
-            vline(img, 58, 5, FY - 5, c("gray3"))
-            vline(img, 59, 4, FY - 4, OL)
-            for y in range(9, FY - 10, 5):
-                hline(img, 56, y, 5, c("gray4"))
-            rect(img, 52, 0, 12, 7, OL)
-            rect(img, 53, 1, 9, 5, c("gray3"))
-            hline(img, 53, 1, 9, c("gray5"))
-            rect(img, 63, 0, 4, 7, OL)
-            rect(img, 64, 1, 2, 5, c("lamp2"))
+        _deck_railing(img, lv, W, FY)
+        _deck_upgrades(img, lv, top, FY)
         add(f"mod_roof_deck_{lv}", img)
+    mod_roof_deck_cozy()
+
+
+def _deck_railing(img, lv, W, FY):
+    """rear railing (rope lv1, steel lv2+)"""
+    rc = c("wood3") if lv == 1 else c("gray4")
+    vline(img, W - 2, FY - 12, 12, OL)
+    vline(img, 52, FY - 10, 10, OL)
+    hline(img, 52, FY - 10, W - 52, rc)
+    hline(img, 52, FY - 5, W - 52, rc)
+
+
+def _deck_upgrades(img, lv, top, FY):
+    """what the bought deck levels add on top: lv2 sandbags + brazier, lv3 camo net + lookout searchlight"""
+    if lv >= 2:
+        # sandbag wall at the rear edge (cover for the roof gunner)
+        for row, (y, xs) in enumerate(((FY - 4, range(58, 74, 6)), (FY - 8, range(61, 74, 6)))):
+            for x in xs:
+                ellipse(img, x - 1, y - 1, 8, 5, OL)
+                ellipse(img, x, y, 6, 3, c("sand2"))
+                hline(img, x + 1, y, 4, c("sand3"))
+        # brazier: the only warm light up here
+        rect(img, 50, FY - 4, 6, 4, OL)
+        hline(img, 51, FY - 3, 4, c("gray3"))
+        px(img, 51, FY - 5, c("lamp0"))
+        px(img, 52, FY - 6, c("lamp1"))
+        px(img, 53, FY - 5, c("lamp2"))
+        px(img, 54, FY - 7, c("lamp0"))
+        px(img, 54, FY - 5, c("lamp1"))
+    if lv >= 3:
+        # camo net draped over the lean-to
+        for x in range(1, 37, 2):
+            px(img, x, top - 1 + x // 6 + (x % 4 == 1), c("green3") if x % 3 else c("green1"))
+        # lookout mast + searchlight (beam drawn in game)
+        vline(img, 57, 4, FY - 4, OL)
+        vline(img, 58, 5, FY - 5, c("gray3"))
+        vline(img, 59, 4, FY - 4, OL)
+        for y in range(9, FY - 10, 5):
+            hline(img, 56, y, 5, c("gray4"))
+        rect(img, 52, 0, 12, 7, OL)
+        rect(img, 53, 1, 9, 5, c("gray3"))
+        hline(img, 53, 1, 9, c("gray5"))
+        rect(img, 63, 0, 4, 7, OL)
+        rect(img, 64, 1, 2, 5, c("lamp2"))
+
+
+def mod_roof_deck_cozy():
+    """MV-462: the same deck levels built from the cozy parts (switch cozy_roof): timber frame, glass windbreak
+    over the railing, patched canvas (lv2+ keep a corrugated cap above it), bench + blanket, water can, canteen,
+    the bought upgrades, then the caged lamp. Same 76x60 envelope, floor y=34, cot spot and crew positions."""
+    W, FY, top = 76, 34, 12
+    for lv in (1, 2, 3):
+        img = prop_roof_deck_frame()
+        _deck_railing(img, lv, W, FY)
+        for name in ("prop_roof_glass_windbreak", "prop_roof_patched_awning"):
+            paste(img, DECK_PART_ART[name](), *DECK_PARTS[name])
+        if lv >= 2:
+            # corrugated sheet as a cap over the canvas ridge
+            poly(img, [(0, top - 1), (37, top + 5), (37, top + 7), (0, top + 1)], c("gray4"), OL)
+            for x in range(2, 36, 3):
+                px(img, x, top + 1 + x // 6, c("gray5"))
+            for x in range(4, 36, 9):
+                px(img, x, top + 1 + x // 6, c("orange2"))
+        for name in ("prop_roof_bench_blanket", "prop_roof_water_can"):
+            paste(img, DECK_PART_ART[name](), *DECK_PARTS[name])
+        rect(img, 36, FY - 4, 3, 4, OL)
+        px(img, 37, FY - 3, c("green3"))
+        _deck_upgrades(img, lv, top, FY)
+        paste(img, DECK_PART_ART["prop_roof_caged_lamp"](), *DECK_PARTS["prop_roof_caged_lamp"])
+        add(f"mod_roof_deck_cozy_{lv}", img)
 
 
 def gen_mods():
@@ -728,6 +1010,8 @@ def gen_mods():
     mod_rain_catcher()
     mod_heater()
     mod_roof_deck()
+    for name, art in {**ROOF_PART_ART, **DECK_PART_ART, "prop_roof_deck_frame": prop_roof_deck_frame}.items():
+        add(name, art())      # MV-462: every part also on its own (micro_asset.py verify, runtime roof parts)
 
 
 FLAG_PTS = [(0, 0), (11, 1), (7, 3), (10, 5), (0, 6)]     # the old flag polygon, local to (115, 4)

@@ -113,8 +113,9 @@ func _row(d: Dictionary) -> Control:
 	var w := _where(d)
 	v.add_child(UIKit.label("LV%d · %s" % [d.lvl, w[0]], UIKit.FP, w[1], true))
 	h.add_child(v)
-	var st := UIKit.label("S%d I%d A%d" % [d.str, d.int, d.agi], UIKit.FP, UIKit.C_DIM, true)
+	var st := UIKit.stat_chips(d)
 	st.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	st.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(st)
 	var hp := UIKit.progress(UIKit.C_RED if float(d.hp) < float(d.max_hp) * 0.35 else UIKit.C_GREEN, 3)
 	hp.value = float(d.hp) / float(d.max_hp)
@@ -194,10 +195,16 @@ func _build_manage(d: Dictionary) -> void:
 	var xp := UIKit.progress(UIKit.C_GOLD, 3)
 	xp.value = float(d.xp) / Game.xp_needed(int(d.lvl))
 	info.add_child(xp)
-	for st in ["str", "int", "agi"]:
-		info.add_child(UIKit.stat_bar(st, int(d[st])))
+	info.add_child(UIKit.stat_bars(d))
 	top.add_child(info)
 	_list.add_child(top)
+	# MV-518: what the best stat is good for, and what the equipment adds (gear never changes STR / AGI / INT)
+	var best := UIKit.best_stats(d)
+	if not best.is_empty():
+		var rooms := UIKit.stat_rooms(str(best[0]))
+		_list.add_child(UIKit.wrap_label(Loc.t("ถนัด %s%s") % [" / ".join(best.map(func(x): return str(x).to_upper())),
+			(Loc.t(" · เหมาะกับ: ") + ", ".join(rooms)) if not rooms.is_empty() and best.size() == 1 else ""], UIKit.FS_SMALL, UIKit.C_GOLD))
+	_list.add_child(UIKit.gear_line(d))
 	var bc := UIKit.panel()
 	var bv := UIKit.vbox(1)
 	bc.add_child(bv)
