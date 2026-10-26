@@ -20,7 +20,7 @@ function req(query, body, method = "POST") {
 }
 
 // the standard HMAC-SHA256 example (key "key"): hex f7bc83f4...1a3cd8, here in base64 as the Collection API wants it
-check("HMAC-SHA256 base64 matches the standard example", sign("The quick brown fox jumps over the lazy dog", "key") === "97yD9DBThCSxMpjmqm+xQ+9NWaFJRhdZl0edvC0aPNg=");
+check("HMAC-SHA256 base64 matches the standard example", (await sign("The quick brown fox jumps over the lazy dog", "key")) === "97yD9DBThCSxMpjmqm+xQ+9NWaFJRhdZl0edvC0aPNg=");
 check("secret only for our own game keys", secretFor(ENV.GA_GAME_KEY_TEST, ENV) === ENV.GA_SECRET_TEST && secretFor("ffff", ENV) === "");
 
 const sent = [];
@@ -32,7 +32,7 @@ const body = '[{"category":"design","event_id":"Test:Proxy"}]';
 let r = await handle(req(`route=events&game=${ENV.GA_GAME_KEY_TEST}`, body), ENV, fakeGA);
 check("signs the exact body with the matching secret and forwards it", r.status === 200 && sent.length === 1
   && sent[0].url === `https://api.gameanalytics.com/v2/${ENV.GA_GAME_KEY_TEST}/events`
-  && sent[0].body === body && sent[0].headers.Authorization === sign(body, ENV.GA_SECRET_TEST));
+  && sent[0].body === body && sent[0].headers.Authorization === (await sign(body, ENV.GA_SECRET_TEST)));
 check("passes GameAnalytics' answer back", (await r.json()).enabled === true);
 
 r = await handle(req("route=events&game=ffffffffffffffffffffffffffffffff", body), ENV, fakeGA);

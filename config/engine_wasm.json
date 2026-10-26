@@ -1,0 +1,7 @@
+{
+  "_doc": "MV-499: the Godot web engine served from the R2 bucket bound as ENGINE (functions/index.wasm.js). Upload web/index.wasm to this key once per Godot version; CI checks the sha256 so a changed engine isn't shipped against an old upload. docs/hosting-cloudflare.md",
+  "godot": "4.7.2-stable",
+  "r2_key": "godot-4.7.2-stable/index.wasm",
+  "sha256": "fc74679e3b97f76878947fcd4fbe1268cbfa6188182a2e33bbc3f5dc9bfa57d0",
+  "bytes": 39514754
+}

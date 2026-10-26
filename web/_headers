@@ -1,0 +1,7 @@
+# Cloudflare Pages headers (MV-499; the same as vercel.json). index.wasm is served by functions/index.wasm.js.
+/*.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=86400
+/*.pck
+  Content-Type: application/octet-stream
+  Cache-Control: public, max-age=300
