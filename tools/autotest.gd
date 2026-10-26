@@ -225,6 +225,11 @@ func _run() -> void:
 		_env_micro_test()
 		_finish()
 		return
+	if "--only=driver_cab" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _driver_cab_test()
+		_finish()
+		return
 	if "--only=idle_motion" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _idle_motion_test()
@@ -636,6 +641,10 @@ func _run() -> void:
 	await shot("closeup_blackout_torches")
 	main.hud.room_closeup.close()
 	await wait(0.8)
+	# an outage that outlived its room (smaller vehicle / room gone) ends quietly instead of crashing the tick
+	Game.s.outage = {str(Game.s.rooms.size() + 3): 0.01}
+	Game._tick_outages(0.02, false)      # tiny dt: no new random outage gets rolled
+	_check("short circuit: an outage on a room that no longer exists just ends", (Game.s.outage as Dictionary).is_empty())
 	Game.s.outage = {}
 	main.hud.open_panel("garage")
 	await wait(0.6)
@@ -938,6 +947,7 @@ func _run() -> void:
 	await _cozy_roof_test()
 	await _engine_detail_test()
 	await _idle_motion_test()
+	await _driver_cab_test()
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
@@ -5254,6 +5264,65 @@ func _engine_detail_test() -> void:
 ## MV-388 phase 3: roof flag animates (frame 0 when off), rear chain follows the last deck, mudflap behind the
 ## rearmost road tyre (not under tracks, not on rails), exhaust puffs replace the smoke emitter (max 2, none when
 ## broken), roof drips only in rain / storm, switch off restores the old smoke
+## MV-519: Viktor in every driving cab (baked) + the driver_cab micro-animation over the window
+func _driver_cab_test() -> void:
+	var v: Vehicle = main.vehicle
+	var sizes := {"van": [23, 29], "bus": [13, 18], "rig": [17, 17], "train": [18, 14]}
+	var ok := true
+	for t in sizes:
+		for k in ["decal_%s_driver_cockpit" % t, "decal_%s_driver_cockpit_idle_1" % t,
+				"decal_%s_driver_cockpit_idle_2" % t, "decal_%s_driver_cockpit_idle_3" % t]:
+			var r = Atlas.regions.get(k)
+			if r == null or int(r[2]) != int(sizes[t][0]) or int(r[3]) != int(sizes[t][1]):
+				ok = false
+				print("[autotest] driver cab sprite wrong: %s %s" % [k, str(r)])
+	_check("driver cab: 4 cab decals + 3 idle frames each at their spec sizes", ok)
+	var was_tier := Game.tier()
+	var was_tr := Game.trailers()
+	var was_tod: float = float(Game.s.tod)
+	Dev.set_trailers(0)
+	Dev.driver_cab_switch(true)
+	for t in ["van", "bus", "rig", "train"]:
+		Dev.set_tier(t)
+		await wait(0.1)
+		_check("driver cab %s: overlay sits on the baked window (%s)" % [t, str(v.driver_cab.position)],
+			v.driver_cab.position == Vehicle.DRIVER_CAB[t] and not v.driver_cab.visible)
+		var moves := {}
+		for kind in ["blink", "lamp", "wheel"]:
+			var started := Dev.driver_cab_preview(kind)
+			moves[kind] = started and v.driver_cab.visible and int(v.driver_cab.get_meta("frame", 0)) == {"blink": 1, "lamp": 2, "wheel": 3}[kind] 				and v.driver_cab.texture == Atlas.tex("decal_%s_driver_cockpit_idle_%d" % [t, {"blink": 1, "lamp": 2, "wheel": 3}[kind]])
+			if kind == "wheel":
+				await shot("driver_cab_%s_wheel" % t)
+			await wait(0.8)
+			moves[kind] = moves[kind] and not v.driver_cab.visible
+		_check("driver cab %s: blink / lamp / wheel each show their frame, then the baked look (%s)" % [t, str(moves)],
+			not moves.values().has(false))
+		for xr in [true, false]:
+			v.set_xray(xr)
+			for tod in [0.5, 0.0]:
+				Game.s.tod = tod
+				await wait(0.3)
+				await shot("driver_cab_%s_%s_%s" % [t, "cutaway" if xr else "exterior", "day" if tod > 0.0 else "night"])
+		v.set_xray(true)
+	Game.s.tod = was_tod
+	Features.set_override("tune", "vehicle.driver_gap", 1.5)
+	var seen := false
+	for i in 40:
+		await wait(0.1)
+		seen = seen or v.driver_cab.visible
+	_check("driver cab: moves on its own every few seconds", seen)
+	Features.set_override("tune", "vehicle.driver_gap", null)
+	Dev.driver_cab_preview("wheel")
+	Dev.driver_cab_switch(false)
+	await wait(0.1)
+	_check("driver cab: switch off = no overlay and no moves (the seated Viktor stays baked)", not v.driver_cab.visible
+		and not Dev.driver_cab_preview("blink") and not v.driver_cab.visible)
+	Features.set_override("features", "driver_cab", null)
+	Dev.set_tier(was_tier)
+	Dev.set_trailers(was_tr)
+	await wait(0.1)
+
+
 func _idle_motion_test() -> void:
 	var v: Vehicle = main.vehicle
 	var was_tier := Game.tier()

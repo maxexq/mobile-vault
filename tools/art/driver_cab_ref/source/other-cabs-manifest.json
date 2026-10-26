@@ -1,0 +1,31 @@
+{
+  "status": "review previews; rig v3 is approved; these variants follow its visual direction",
+  "tool": "built-in image_gen",
+  "crew_reference": "dw_crew_viktor sit frame 6, mirrored left",
+  "vehicles": {
+    "van": {
+      "file": "van-driver-viktor-study.png",
+      "sha256": "6c09ee1ea7f5ac5f6e66f087ac6307eef5052b759d6a812484a10f1a89ba247e",
+      "size": [
+        1116,
+        1409
+      ]
+    },
+    "bus": {
+      "file": "bus-driver-viktor-study.png",
+      "sha256": "80572343864233136128b7f2458ebaf28a5b4d00328eaf2d6b3ed77e0e65f06f",
+      "size": [
+        1326,
+        1186
+      ]
+    },
+    "train": {
+      "file": "train-driver-viktor-study.png",
+      "sha256": "2f6f428b22c7ce5173775e631a7f1d5c348a20df8222f9ce3ad63c97320d9d4f",
+      "size": [
+        1254,
+        1254
+      ]
+    }
+  }
+}

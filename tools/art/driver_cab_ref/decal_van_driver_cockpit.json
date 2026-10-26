@@ -1,0 +1,79 @@
+{
+  "spec": "micro-asset/1",
+  "id": "decal_van_driver_cockpit",
+  "title": "Van driving cab using Viktor crew reference",
+  "why": "Give the van a seated driver from our actual crew family, matching approved rig v3 while keeping its own cab shape.",
+  "parent": "veh_van",
+  "kind": "decal",
+  "size": [
+    23,
+    29
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin1",
+    "skin3",
+    "gray1",
+    "gray3",
+    "gray5",
+    "snow0",
+    "snow2",
+    "cream2",
+    "blue1",
+    "wood1",
+    "lamp1",
+    "blue2",
+    "blue4"
+  ],
+  "outline": "ol0",
+  "light": "lamp",
+  "layer": "on_parent",
+  "anchor": {
+    "x": 11,
+    "y": 153,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/vehicles.py",
+    "function": "decal_van_driver_cockpit"
+  },
+  "feature": null,
+  "replace": false,
+  "priority": "medium",
+  "author": "Codex art analyst",
+  "refs": [
+    "tools/art/micro/previews/driver-detail-v1/van-driver-viktor-study.png",
+    "tools/art/micro/previews/driver-detail-v1/other-cabs-manifest.json",
+    "tools/art/micro/previews/driver-detail-v1/reference-van-driver-native.png",
+    "tools/art/micro/previews/driver-detail-v1/other-cab-prompts.json",
+    "tools/art/micro/previews/driver-detail-v1/rig-driver-viktor-study.png",
+    "tools/art/micro/previews/driver-detail-v1/crew-preview-manifest.json",
+    "tools/art/micro/previews/driver-detail-v1/reference-rig-driver-native.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-viktor-sit-native.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-viktor-sit-left-40x.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-actual-crew.png",
+    "tools/art/crew_roster_20/specs/dw_crew_viktor.json",
+    "tools/art/chars.py",
+    "tools/art/vehicles.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Parames requested drivers for all four vehicles and previews of the other cars. Approved family direction: rig v3, Viktor crew identity. The van-driver-viktor-study.png is a new review preview, not a separately approved production texture. Rebuild it on the native grid and show before/after for review; source geometry below takes precedence over generated-image drift.",
+    "Emit one atlas sprite decal_van_driver_cockpit, 23x29 native pixels, using only the listed master colors and binary alpha. Keep veh_van and ext_van at 280x300.",
+    "Footprint x=11..33,y=153..181 inclusive,23x29. Clip alpha to the ORIGINAL inner windshield polygon [(23,153),(33,153),(33,181),(11,181)] in shell coordinates. Pixels outside that polygon stay transparent, including the rectangular footprint upper-left wedge. Preserve the original one-pixel black sloping frame and exterior silhouette. Keep cold blue glass and its original reflection in the upper/left window; reserve the lower/right interior for crew and controls. No pasted rectangular box over the sloped glass.",
+    "Seat Viktor near the original driver location (original head x=22,y=166). Keep his standard approximately8x8 head and compact torso, nose/hand left. Put a small low wheel/dash on his left, narrow seat behind his right, one tiny upper-right practical lamp and a single powered indicator. Hide lower body below the existing sill. Keep the van blue and its original slope.",
+    "Use actual dw_crew_viktor 14x20 sit cell6, mirrored left, as strict reference: gray fur cap, pale weathered skin, small dark vertical eye, one nose projecting left, gray beard/bone collar, snow-blue jacket, narrow crew torso and soot outline. Adapt only driving arm/upper-body pose. No new generic character, head shrinking, detailed fingers, new resolution or change to the crew atlas.",
+    "Fully replace the old generic olive bust. Use dark gray1 interior, gray3/gray5 wheel/dash, cream2 or gray5 dial, wood1/gray3 seat and lamp1 only on tiny physical light/indicator. Keep head, nose and hand readable at1x. No broad amber backdrop or glow.",
+    "Emit the standalone micro sprite and bake it at its anchor into both veh_van and ext_van after weathering and before final atlas quantization. For the van use its specified polygon alpha mask. Static art-only, feature=null: no runtime overlay, animation or crew-assignment mechanic. Do not globally alter shared driver() behavior.",
+    "Regenerated decoded veh_van/ext_van pixels outside the specified footprint must match their pre-change sprites exactly; for the van, also preserve all pixels outside its window polygon. Preserve other vehicles, all crew strips, all cab_van engine-room state art, rooms, engine bay trim, hit regions and runtime behavior. Compare cropped sprite contents; atlas coordinates may repack.",
+    "Use one-pixel soot outlines, flat clusters, binary alpha, nearest filtering and integer placement; no antialiasing, gradients, fine scratches, fractional scaling, rotation or thick new frame. Show source and result at1x and nearest4x/8x beside approved rig v3.",
+    "Move approved target, new vehicle preview, actual crew/cab crops, prompts, manifests and native production source to a tracked reference/source folder with .gdignore where appropriate; micro/ is git-ignored. Keep hashes/provenance. Full regeneration must reproduce accepted production art.",
+    "Run micro_asset.py verify for this ticket, checking native size/palette/alpha and outside-footprint stability. Review all four vehicles together plus cut-away/exterior and day/night in game. Follow CLAUDE.md required autotest, web export, README/changelog and staging PR workflow; no feature-PR version bump."
+  ],
+  "notes": "Child of the four-vehicle driver-cab art epic. All cabin coordinates come from tools/art/vehicles.py; the driver window is separate from the lower engine room. Rig v3 is the approved visual-family reference. This vehicle preview awaits appearance review. No paid generation or installation. Claude builds and opens PRs; preserve In Progress ticket ownership. If native readability cannot meet the spec, comment and request a decision.",
+  "plane": "MV-520"
+}
