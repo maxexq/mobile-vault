@@ -200,9 +200,9 @@ func _update_overlay() -> void:
 		if flags[k]:
 			on_flags.append(k)
 	var vp := _layer.get_viewport().get_visible_rect().size
-	_lbl.text = "FPS %d  x%s  draw %d  nodes %d\nwave %d  enemies %d  km %.2f  b%d L%d\nmem %.1f MB  %s" % [
-		Engine.get_frames_per_second(), speed, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
-		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), Combat.wave(), Combat.enemies.size(),
+	_lbl.text = "FPS %d/%d  x%s  draw %d  nodes %d\nsim %.2f+%.2f ms  wave %d  enemies %d  km %.2f  b%d L%d\nmem %.1f MB  %s" % [
+		Engine.get_frames_per_second(), Engine.max_fps, speed, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), float(Game.sim_ms.world), float(Game.sim_ms.crew), Combat.wave(), Combat.enemies.size(),
 		float(Game.s.km), int(Game.s.biome), int(Game.s.get("lap", 0)),
 		Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0, " ".join(on_flags)]
 	_lbl.add_theme_font_override("font", UIKit.font_pixel)

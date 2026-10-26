@@ -135,6 +135,7 @@ func open() -> void:
 	add_to_group("modal_open")
 	_layout()
 	refresh()
+	_layout()        # MV-266: the first pass ran with the last build's content still inside, which can stretch the box
 	# CRT power-on: the frame opens from a bright horizontal line
 	box.modulate = Color(1.8, 2.0, 1.8, 0.0)
 	dim.modulate.a = 0.0

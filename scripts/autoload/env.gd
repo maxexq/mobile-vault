@@ -151,10 +151,13 @@ func rad_pm(d: Dictionary) -> float:
 
 
 func happy_mod(d: Dictionary) -> float:
-	var h := 0.0
 	var fp := freeze_power()
-	if fp > 0.0 and not Crew.has(d, "cold_blooded"):
-		h -= 30.0 * fp
+	return happy_base() - (30.0 * fp if fp > 0.0 and not Crew.has(d, "cold_blooded") else 0.0)
+
+
+## the part of happy_mod that is the same for everyone (MV-113: Game works it out once per tick)
+func happy_base() -> float:
+	var h := 0.0
 	if level("heat") > 0:
 		h -= 4.0
 	if level("ash") > 0 or level("rad") > 0:

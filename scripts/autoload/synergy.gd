@@ -58,8 +58,59 @@ func neighbours(slot: int) -> Array:
 	return out
 
 
-## list of {other, type, th, mult, happy, repair} that apply to `slot` (for the UI and the maths)
+## MV-113: effects() ran neighbours() (every room x every cell) for each crew member's home and each producing room on
+## every frame, over half of Game._simulate. The results only change with the layout, so they are kept per slot until
+## the layout signature (room count, body size, vault level, every room's type and building state) changes. The
+## signature is rebuilt on each call, so a change is never missed, even one made without a signal.
+var _sig := -1
+var _cache := {}
+## during one simulation step the layout hash is worked out once (Game calls sim_begin / sim_end); a room that finishes
+## building or is changed mid-step emits rooms_changed, which refreshes it
+var _frozen := false
+var _frozen_sig := -1
+
+
+func _ready() -> void:
+	Game.rooms_changed.connect(func(): if _frozen: _frozen_sig = _layout_sig())
+
+
+func sim_begin() -> void:
+	if Game.s.is_empty():
+		return
+	_frozen = true
+	_frozen_sig = _layout_sig()
+
+
+func sim_end() -> void:
+	_frozen = false
+
+
+## a cheap hash of everything effects() reads (no string building: this runs on every call)
+func _layout_sig() -> int:
+	var rooms: Array = Game.s.rooms
+	var h: int = rooms.size() * 1000003 + Game.main_slots() * 1009 + int(Game.s.vault_level)
+	for r in rooms:
+		h = (h * 31 + str(r.type).hash()) & 0x7fffffffffff
+		if r.has("build") and r.build is Dictionary and not (r.build as Dictionary).is_empty():
+			h = (h * 31 + str(r.build.get("kind", "")).hash()) & 0x7fffffffffff
+	return h
+
+
+## list of {other, type, th, mult, happy, repair} that apply to `slot` (for the UI and the maths). Callers must not
+## change the returned array (it is the cached copy).
 func effects(slot: int) -> Array:
+	if Game.s.is_empty():
+		return []
+	var sig := _frozen_sig if _frozen else _layout_sig()
+	if sig != _sig:
+		_sig = sig
+		_cache.clear()
+	if not _cache.has(slot):
+		_cache[slot] = _effects(slot)
+	return _cache[slot]
+
+
+func _effects(slot: int) -> Array:
 	var out := []
 	if not Game.has_room(slot):
 		return out
