@@ -20,6 +20,16 @@ var is_open := false
 var margin := 6
 var centered := true        # MV-266: keep the window in the middle of the screen at its real size (the close-up docks)
 var media: PanelContainer   # illustration frame built by the last media_layout()
+## MV-482: the window is as tall as its content needs (up to the screen; the lists scroll beyond that), so there is no
+## empty space under short content, and a later change of content height slides smoothly (FIT_TIME). A panel whose
+## body is a canvas without a natural height (the map) sets fit_height = false and keeps the full height.
+var fit_height := true
+const MIN_H := 96.0
+const FIT_TIME := 0.18
+var _col: VBoxContainer     # the window's column: title plate, divider, body
+var _fit_tw: Tween
+var _fit_queued := false
+var _opened_ms := 0
 
 
 func _ready() -> void:
@@ -37,6 +47,8 @@ func _ready() -> void:
 	add_child(box)
 	var v := UIKit.vbox(4)
 	box.add_child(v)
+	_col = v
+	v.minimum_size_changed.connect(_queue_fit)
 	header = UIKit.hbox(4)
 	var plate := PanelContainer.new()       # rust-red painted title plate
 	plate.add_theme_stylebox_override("panel", UIKit.nine("title", 3, Vector4(5, 2, 3, 2)))
@@ -78,9 +90,90 @@ func _on_backdrop_tap() -> void:
 
 func _layout() -> void:
 	var vp := get_viewport_rect().size
-	var sz := Vector2(minf(max_size.x, vp.x - margin * 2), minf(max_size.y, vp.y - margin * 2)).floor()
+	var sz := Vector2(minf(max_size.x, vp.x - margin * 2), max_height()).floor()
+	if fit_height:
+		sz.y = fit_target()
+	if _fit_tw:
+		_fit_tw.kill()
 	box.custom_minimum_size = sz
 	box.size = sz
+	_recenter()
+
+
+## the tallest the window may be on this screen
+func max_height() -> float:
+	return floorf(minf(max_size.y, get_viewport_rect().size.y - margin * 2))
+
+
+## MV-482: what the content needs: the column's own minimum (a ScrollContainer only asks for a little) plus the full
+## height of every scrolling list, plus the frame. Not box.get_combined_minimum_size(): that includes the size we set.
+func natural_height() -> float:
+	if _col == null:
+		return max_height()
+	var h := _col.get_combined_minimum_size().y + box.get_theme_stylebox("panel").get_minimum_size().y
+	for sc in _col.find_children("*", "ScrollContainer", true, false):
+		var inner := sc as ScrollContainer
+		if inner.get_child_count() == 0 or _in_scroll(inner):
+			continue
+		var c := inner.get_child(0) as Control
+		if c:
+			h += maxf(0.0, c.get_combined_minimum_size().y - inner.get_combined_minimum_size().y)
+	return h
+
+
+## a list inside a ScrollContainer doesn't pass its size up, so each scrolling list is watched directly (once)
+func _watch_scrolls() -> void:
+	for sc in _col.find_children("*", "ScrollContainer", true, false):
+		if sc.get_child_count() == 0:
+			continue
+		var c := sc.get_child(0) as Control
+		if c and not c.minimum_size_changed.is_connected(_queue_fit):
+			c.minimum_size_changed.connect(_queue_fit)
+
+
+func _in_scroll(n: Node) -> bool:
+	var p := n.get_parent()
+	while p and p != box:
+		if p is ScrollContainer:
+			return true
+		p = p.get_parent()
+	return false
+
+
+func fit_target() -> float:
+	if not Features.on("window_fit"):
+		return max_height()        # switch off: the full height, as before
+	return floorf(clampf(natural_height(), minf(MIN_H, max_height()), max_height()))
+
+
+## content changed size: fit the height at the end of the frame (several changes in one frame fit once)
+func _queue_fit() -> void:
+	if not fit_height or not is_open or _fit_queued:
+		return
+	_fit_queued = true
+	_apply_fit.call_deferred()
+
+
+func _apply_fit() -> void:
+	_fit_queued = false
+	if not fit_height or not is_open:
+		return
+	var want := fit_target()
+	if absf(want - box.size.y) < 1.0:
+		return
+	if _fit_tw:
+		_fit_tw.kill()
+	# the first moments after opening (wrapped text still measuring itself) snap; later changes slide
+	if Time.get_ticks_msec() - _opened_ms < 250 or not is_visible_in_tree():
+		_set_h(want)
+		return
+	_fit_tw = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_fit_tw.tween_method(_set_h, box.size.y, want, FIT_TIME)
+
+
+func _set_h(h: float) -> void:
+	box.custom_minimum_size.y = floorf(h)
+	box.size.y = floorf(h)
 	_recenter()
 
 
@@ -133,9 +226,12 @@ func open() -> void:
 	visible = true
 	is_open = true
 	add_to_group("modal_open")
+	_opened_ms = Time.get_ticks_msec()
 	_layout()
 	refresh()
-	_layout()        # MV-266: the first pass ran with the last build's content still inside, which can stretch the box
+	_watch_scrolls()
+	_layout()        # MV-266 / MV-482: again with the new content (the first pass may have measured the last build)
+	_queue_fit()     # and once more after this frame, when wrapped text knows its width
 	# CRT power-on: the frame opens from a bright horizontal line
 	box.modulate = Color(1.8, 2.0, 1.8, 0.0)
 	dim.modulate.a = 0.0

@@ -853,7 +853,8 @@ func _refresh_threat(boss: bool) -> void:
 func set_closeup_mode(on: bool) -> void:
 	if not Game.started:
 		return
-	for c in [_info_row, _route_row, _combat_box, _bottom, _tools]:
+	# MV-482: the view buttons too: they sat on the zoomed room's corner
+	for c in [_info_row, _route_row, _combat_box, _bottom, _tools, _view_box]:
 		c.visible = not on
 	_top.reset_size()
 	_closeup_on = on

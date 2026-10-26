@@ -136,6 +136,11 @@ func _run() -> void:
 		await _outbox_test()
 		_finish()
 		return
+	if "--only=window_fit" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _window_fit_test()
+		_finish()
+		return
 	if "--only=perf" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _perf_test()
@@ -903,6 +908,7 @@ func _run() -> void:
 	await _morale_test()
 	await _responsive_test()
 	await _perf_test()
+	await _window_fit_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -6538,3 +6544,111 @@ func _perf_test() -> void:
 	Game.rooms_changed.emit()
 	Game.dwellers_changed.emit()
 	await wait(0.5)
+
+
+## MV-482: windows are as tall as their content (no empty space, up to the screen), a later change of content height
+## slides there, and the room close-up shows the whole room with nothing over it, centred on portrait screens
+func _window_fit_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var hud: HUD = main.hud
+	var vp: Vector2 = hud.get_viewport_rect().size
+	var keep_tips = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	# --- every window: content height, clamped to the screen
+	var off := []
+	for key in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "engine", "settings"]:
+		_no_events()
+		if key == "settings":
+			hud.open_settings("game")
+		elif key == "skills":
+			hud.open_skills(int(Game.s.dwellers[0].id))
+		else:
+			hud.open_panel(key)
+		await wait(0.5)
+		var p: ModalPanel = hud.panels[key]
+		var want := clampf(p.natural_height(), minf(ModalPanel.MIN_H, p.max_height()), p.max_height())
+		if p.fit_height and absf(p.box.size.y - floorf(want)) > 2.0:
+			off.append("%s %.0f (content %.0f, max %.0f)" % [key, p.box.size.y, p.natural_height(), p.max_height()])
+		if p.box.position.y < -0.5 or p.box.position.y + p.box.size.y > vp.y + 0.5:
+			off.append("%s off screen" % key)
+		p.close()
+		await wait(0.25)
+	_check("window fit: every window is as tall as its content, up to the screen %s" % [off], off.is_empty())
+	Features.set_override("features", "window_fit", false)
+	hud.open_panel("dwellers")
+	await wait(0.5)
+	var full_h: float = hud.panels.dwellers.box.size.y
+	var full_max: float = hud.panels.dwellers.max_height()
+	hud.panels.dwellers.close()
+	await wait(0.25)
+	Features.set_override("features", "window_fit", null)
+	_check("window fit: switch off = the full height as before (%.0f of %.0f)" % [full_h, full_max], absf(full_h - full_max) <= 1.0)
+	# --- the crew list grows: the window slides taller, then back
+	var keep_dw: Array = Game.s.dwellers.duplicate(true)
+	while Game.s.dwellers.size() > 2:
+		Game.s.dwellers.pop_back()
+	Game.dwellers_changed.emit()
+	hud.open_panel("dwellers")
+	await wait(0.6)
+	var dp: ModalPanel = hud.panels.dwellers
+	var h0 := dp.box.size.y
+	for i in 3:
+		Game.recruit_random()
+	Game.dwellers_changed.emit()
+	var seen_between := false
+	for i in 12:
+		await get_tree().process_frame
+		if dp.box.size.y > h0 + 1.0 and dp.box.size.y < dp.fit_target() - 1.0:
+			seen_between = true
+	await wait(0.4)
+	_check("window fit: more crew = the window slides taller (%.0f -> %.0f, in between seen %s)" % [h0, dp.box.size.y, seen_between],
+		dp.box.size.y > h0 + 20.0 and absf(dp.box.size.y - dp.fit_target()) <= 2.0 and seen_between)
+	Game.s.dwellers = keep_dw.duplicate(true)
+	while Game.s.dwellers.size() > 2:
+		Game.s.dwellers.pop_back()
+	Game.dwellers_changed.emit()
+	await wait(0.6)
+	_check("window fit: fewer crew = it shrinks back (%.0f)" % dp.box.size.y, absf(dp.box.size.y - h0) <= 2.0)
+	dp.close()
+	Game.s.dwellers = keep_dw
+	Game.dwellers_changed.emit()
+	await wait(0.3)
+	# --- the room close-up: the whole room, nothing over it, centred on portrait
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if Game.is_slot_unlocked(i) and str(Game.s.rooms[i].type) != "empty" and Game.room_cells(i).size() == 1 and i != Data.CAB_SLOT:
+			slot = i
+			break
+	main.open_closeup(slot)
+	await wait(0.9)
+	var cu: RoomCloseup = hud.room_closeup
+	var r: Rect2 = main.vehicle.slot_global_rect(slot)
+	var a: Vector2 = main.world_to_screen(r.position)
+	var b: Vector2 = main.world_to_screen(r.end)
+	var room := Rect2(a, b - a)
+	var panel := Rect2(cu.box.position, cu.box.size)
+	var top_bar: float = hud._top.position.y + hud._top.size.y
+	_check("window fit: close-up hides the view buttons and the hull strip", not hud._view_box.visible and not hud.hull_alert._strip.visible)
+	_check("window fit: the whole room is on screen, under the top bar, not under the panel (room %s, panel %s)" % [room, panel],
+		room.position.y >= top_bar - 1.0 and room.position.x >= -1.0 and room.end.x <= vp.x + 1.0 and not room.grow(-1.0).intersects(panel))
+	if cu._portrait():
+		var f := cu.focus_rect()
+		_check("window fit: portrait = the room centred above the panel (room %s, area %s)" % [room, f],
+			absf(room.get_center().x - vp.x * 0.5) <= 2.0 and absf(room.get_center().y - f.get_center().y) <= 2.0)
+	await shot("window_fit_closeup")
+	cu.mode = "assign"
+	cu.refresh()
+	await wait(0.8)
+	a = main.world_to_screen(r.position)
+	b = main.world_to_screen(r.end)
+	room = Rect2(a, b - a)
+	panel = Rect2(cu.box.position, cu.box.size)
+	_check("window fit: a shorter panel and the room follows to the middle of the new space (room %s, panel %s)" % [room, panel],
+		not room.grow(-1.0).intersects(panel) and (not cu._portrait() or absf(room.get_center().y - cu.focus_rect().get_center().y) <= 2.0))
+	await shot("window_fit_closeup_assign")
+	cu.close()
+	await wait(0.6)
+	Settings.set_value("tips", keep_tips)
