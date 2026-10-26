@@ -26,6 +26,7 @@
     "fixed_sim": true,
     "responsive_scale": true,
     "window_fit": true,
+    "window_still": true,
     "gear_slot_style": true,
     "gear_slot_vfx": true,
     "trait_card_style": true,

@@ -24,6 +24,7 @@ func _build() -> void:
 	Cloud.status_changed.connect(func(): if is_open and tab == "sys": refresh())
 	Features.changed.connect(func(): if is_open and tab == "feat": refresh())
 	Modes.changed.connect(func(): if is_open and tab == "sys": refresh())
+	closed.connect(func(): if not Sound.preview.is_empty(): Dev.sound_preview("clear"))      # MV-538
 
 
 func refresh() -> void:
@@ -622,6 +623,10 @@ func _tab_world() -> void:
 
 
 func _tab_sys() -> void:
+	var wm := not Features.on("window_still")
+	_head("WINDOWS", "หน้าต่าง (MV-537) · ตอนนี้%s" % ("เลื่อนนุ่มตามเนื้อหา" if wm else "อยู่นิ่ง ขอบบนไม่ขยับ"))
+	_row([_b("อยู่นิ่ง", func(): Dev.window_motion(false), "gray" if wm else "yellow"),
+		_b("เลื่อนนุ่ม (แบบเดิม)", func(): Dev.window_motion(true), "yellow" if wm else "gray")], "เมื่อเนื้อหาเปลี่ยนความสูง")
 	_head("ACCOUNT", "ไอดีถาวร")
 	_note("รุ่นที่ %d · ความยาก %s · บันทึก %d · อนุสรณ์ %d%s" % [Meta.generation(), str(Modes.DIFFS.get(Account.diff(), {}).get("th", Account.diff())),
 		Account.a.get("lore", []).size(), Account.a.get("memorial", []).size(), " · มาจากเซฟเก่า" if Account.a.has("legacy_mode") else ""])

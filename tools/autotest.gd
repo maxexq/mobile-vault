@@ -6523,6 +6523,31 @@ func _audio_test() -> void:
 	await shot("god_sound")
 	main.hud.panels.god.close()
 	Dev.sound_preview("clear")
+	# MV-538: on the industrial map in rain only rain is heard; a GOD weather preview (acid rain) ends with the panel
+	# and a forgotten one times out
+	Dev.goto_biome(0)
+	Game.force_weather("rain")
+	await wait(0.9)
+	var stray := []
+	for w in Sound.WEATHER_SOUNDS:
+		if w != "rain" and (Sound.is_playing(w) or float(Sound.layer(w).cur) > 0.0):
+			stray.append(w)
+	_check("audio: a weather layer is silent unless its weather is active %s" % [stray], stray.is_empty() and Sound.is_playing("rain"))
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "sound"
+	main.hud.panels.god.refresh()
+	await wait(0.3)
+	Dev.sound_preview("weather", "acid_rain")
+	await wait(0.8)
+	_check("audio: GOD acid-rain preview plays while the panel is open", Sound.is_playing("acid_rain"))
+	main.hud.panels.god.close()
+	await wait(1.4)
+	_check("audio: closing GOD ends the preview, acid rain is silent on the industrial map", Sound.preview.is_empty()
+		and not Sound.is_playing("acid_rain") and Sound.is_playing("rain") and Sound.is_playing("industrial"))
+	Dev.sound_preview("weather", "acid_rain")
+	Sound.preview_left = 0.05
+	await wait(1.2)
+	_check("audio: a forgotten GOD preview times out", Sound.preview.is_empty() and not Sound.is_playing("acid_rain"))
 	Features.set_override("tune", "audio.fade_sec", null)
 	Dev.goto_biome(keep_biome)
 	Game.force_weather(keep_weather)
@@ -7037,7 +7062,8 @@ func _window_fit_test() -> void:
 	await wait(0.25)
 	Features.set_override("features", "window_fit", null)
 	_check("window fit: switch off = the full height as before (%.0f of %.0f)" % [full_h, full_max], absf(full_h - full_max) <= 1.0)
-	# --- the crew list grows: the window slides taller, then back
+	# --- the crew list grows: with window_still off (the MV-482 look) the window slides taller, then back
+	Features.set_override("features", "window_still", false)
 	var keep_dw: Array = Game.s.dwellers.duplicate(true)
 	while Game.s.dwellers.size() > 2:
 		Game.s.dwellers.pop_back()
@@ -7064,8 +7090,50 @@ func _window_fit_test() -> void:
 	await wait(0.6)
 	_check("window fit: fewer crew = it shrinks back (%.0f)" % dp.box.size.y, absf(dp.box.size.y - h0) <= 2.0)
 	dp.close()
+	await wait(0.3)
+	# --- MV-537 window_still on (the default): the same change snaps, and the window's top edge stays put
+	Features.set_override("features", "window_still", null)
+	hud.open_panel("dwellers")
+	await wait(0.6)
+	var top0 := dp.box.position.y
+	var h1 := dp.box.size.y
+	for i in 3:
+		Game.recruit_random()
+	Game.dwellers_changed.emit()
+	var slid := false
+	var top_moved := 0.0
+	for i in 12:
+		await get_tree().process_frame
+		if dp.box.size.y > h1 + 1.0 and dp.box.size.y < dp.fit_target() - 1.0:
+			slid = true
+		if dp.box.position.y + dp.box.size.y <= vp.y - 0.5:
+			top_moved = maxf(top_moved, absf(dp.box.position.y - top0))
+	await wait(0.3)
+	_check("window still: more crew = taller at once, no slide, top edge stays (%.0f -> %.0f, top moved %.0f, slid %s)" % [h1, dp.box.size.y, top_moved, slid],
+		dp.box.size.y > h1 + 20.0 and absf(dp.box.size.y - dp.fit_target()) <= 2.0 and not slid and top_moved <= 0.5
+		and dp.box.position.y >= -0.5 and dp.box.position.y + dp.box.size.y <= vp.y + 0.5)
+	dp.close()
 	Game.s.dwellers = keep_dw
 	Game.dwellers_changed.emit()
+	await wait(0.3)
+	# MV-537: a panel that rebuilds itself on a tab switch (the Loot panel calls _layout) keeps its tabs under the finger
+	hud.open_panel("inventory")
+	await wait(0.6)
+	var lp: LootPanel = hud.panels.inventory
+	var tab_y := []
+	var moved_ok := true
+	for t in ["gear", "items", "forge", "gear"]:
+		lp.tab = t
+		lp.refresh()
+		await wait(0.4)
+		var y := lp._tabs.get_global_rect().position.y
+		# it may only move up when the taller tab would otherwise run off the bottom (then it sits on the edge)
+		if not tab_y.is_empty() and absf(y - float(tab_y[-1])) > 0.5 and lp.box.position.y + lp.box.size.y < vp.y - 0.5:
+			moved_ok = false
+		tab_y.append(y)
+	_check("window still: switching Loot tabs leaves the tab row where it was, unless it must stay on screen %s" % [tab_y],
+		moved_ok and absf(float(tab_y[-1]) - float(tab_y[0])) <= 2.0)
+	lp.close()
 	await wait(0.3)
 	# --- the room close-up: the whole room, nothing over it, centred on portrait
 	var slot := -1
@@ -7088,8 +7156,11 @@ func _window_fit_test() -> void:
 	if cu._portrait():
 		var f := cu.focus_rect()
 		_check("window fit: portrait = the room centred above the panel (room %s, area %s)" % [room, f],
-			absf(room.get_center().x - vp.x * 0.5) <= 2.0 and absf(room.get_center().y - f.get_center().y) <= 2.0)
+			absf(room.get_center().x - vp.x * 0.5) <= 2.0 and absf(room.get_center().y - f.get_center().y) <= 4.0)   # the vehicle bobs up to 3 px
 	await shot("window_fit_closeup")
+	# MV-537 (window_still on): switching to the shorter tab keeps the panel's height and the room where it was
+	var cam0: Vector2 = main.camera.position
+	var ph0 := cu.box.size.y
 	cu.mode = "assign"
 	cu.refresh()
 	await wait(0.8)
@@ -7097,9 +7168,24 @@ func _window_fit_test() -> void:
 	b = main.world_to_screen(r.end)
 	room = Rect2(a, b - a)
 	panel = Rect2(cu.box.position, cu.box.size)
-	_check("window fit: a shorter panel and the room follows to the middle of the new space (room %s, panel %s)" % [room, panel],
-		not room.grow(-1.0).intersects(panel) and (not cu._portrait() or absf(room.get_center().y - cu.focus_rect().get_center().y) <= 2.0))
+	_check("window still: a shorter close-up tab keeps the panel height and the room doesn't move (panel %.0f -> %.0f, camera moved %.1f)" % [ph0, cu.box.size.y, main.camera.position.distance_to(cam0)],
+		absf(cu.box.size.y - ph0) <= 1.0 and main.camera.position.distance_to(cam0) <= 0.5 and not room.grow(-1.0).intersects(panel))
 	await shot("window_fit_closeup_assign")
+	# window_still off: the MV-482 look, the panel shrinks and the room glides to the middle of the new space
+	cu.mode = "main"
+	cu.refresh()
+	await wait(0.5)
+	Features.set_override("features", "window_still", false)
+	cu.mode = "assign"
+	cu.refresh()
+	await wait(0.8)
+	a = main.world_to_screen(r.position)
+	b = main.world_to_screen(r.end)
+	room = Rect2(a, b - a)
+	panel = Rect2(cu.box.position, cu.box.size)
+	_check("window fit: still off = a shorter panel and the room follows to the middle of the new space (room %s, panel %s)" % [room, panel],
+		not room.grow(-1.0).intersects(panel) and (not cu._portrait() or absf(room.get_center().y - cu.focus_rect().get_center().y) <= 4.0))
+	Features.set_override("features", "window_still", null)
 	cu.close()
 	await wait(0.6)
 	Settings.set_value("tips", keep_tips)
