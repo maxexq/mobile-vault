@@ -7120,6 +7120,28 @@ func _trait_cards_test() -> void:
 		tiered.find_child("Tier", true, false) != null and TraitFx.mode_for(false, tiered.tier) in ["anim", "still"] and off_ok)
 	tiered.queue_free()
 	Features.set_override("features", "trait_tiers", null)
+	# --- MV-516 roll odds: seeded 4000 recruits land on the approved shares; off = every trait even; named crew fixed
+	Crew.rng.seed = 51600
+	var on_r := Dev.trait_roll_test(4000)
+	var want := {"common": 47.7, "uncommon": 42.8, "rare": 25.9, "epic": 10.7, "legendary": 2.9, "bad": 22.6}
+	var off_by := []
+	for k in want:
+		if absf(float(on_r[k]) - want[k]) > (1.5 if k == "legendary" else 3.0):
+			off_by.append("%s %.1f" % [k, on_r[k]])
+	_check("trait odds: weighted roll matches the approved shares %s" % [off_by], off_by.is_empty())
+	_check("trait odds: legendary weight 1 vs common 10, a trade-off 5",
+		Crew.trait_weight("architect") == 1.0 and Crew.trait_weight("quick_hands") == 10.0 and Crew.trait_weight("afraid_dark") == 5.0)
+	Features.set_override("features", "trait_roll_weights", false)
+	Crew.rng.seed = 51601
+	var off_r := Dev.trait_roll_test(4000)
+	var even := Crew.trait_weight("architect") == 1.0 and Crew.trait_weight("quick_hands") == 1.0
+	Features.set_override("features", "trait_roll_weights", null)
+	_check("trait odds: switch off = every trait equally likely (legendary %.1f%%, was 13.8%%)" % float(off_r.legendary),
+		even and absf(float(off_r.legendary) - 13.8) < 3.0)
+	var mark := {"lore": "mark"}
+	Crew.roll_traits(mark)
+	_check("trait odds: named crew keep their fixed traits (%s)" % [mark.traits], mark.traits == Crew.FIXED.mark)
+	Crew.rng.randomize()
 	var arch := TraitCard.new()
 	arch.custom_minimum_size.x = 160
 	add_child(arch)

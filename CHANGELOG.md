@@ -13,6 +13,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Monsters look bigger and more threatening: normal monsters ×2, elites ×3, bosses and checkpoint warlords ×3, still in crisp whole pixels (MV-517)
 - A cozier roof: a strapped teal water tank with a level gauge, a clearer satellite dish, herb planter trays, and a timber rest deck with a patched canvas, a bench and blanket, a glass windbreak, a water can and a little lamp (MV-462)
 - Crew trait cards now show how valuable a trait is: Common, Uncommon, Rare, Epic or Legendary, with a light that grows with the tier (Architect and Lucky are Legendary). Downsides glow harder the more they hurt, with Fears the Dark the harshest (MV-497)
+- Valuable traits are rarer now: a new survivor is far more likely to bring a Common or Uncommon trait, and only about 1 in 35 brings a Legendary one (Architect or Lucky). Survivors you already have keep their traits, and downsides are as common as before (MV-516)
 
 ## [4.7.0-alpha.3] - 2026-10-26
 
