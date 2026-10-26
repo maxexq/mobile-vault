@@ -1,0 +1,19 @@
+{
+  "min_game": "4.3",
+  "max_game": "",
+  "tz_hours": 7,
+  "features": {
+    "seeded_world_map": true
+  },
+  "events": {},
+  "tune": {},
+  "announce": [
+    {
+      "id": "news-strip-2026-10-25",
+      "text": "ใหม่! แถบข่าวด้านบนจอ ต่อไปข่าวสารและอัปเดตเวอร์ชันใหม่จะแจ้งตรงนี้ ขอบคุณที่ช่วยทดสอบ Apocarlypse ครับ",
+      "text_en": "New! This news strip will tell you about updates and new versions from now on. Thanks for testing Apocarlypse!",
+      "to": "2026-10-31",
+      "repeat_hours": 6
+    }
+  ]
+}
