@@ -211,6 +211,11 @@ func _run() -> void:
 		await _world_travel_test()
 		_finish()
 		return
+	if "--only=world_screen" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_screen_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -936,6 +941,7 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _world_screen_test()
 	await _world_travel_test()
 	await _world_map_test()
 	await _stat_view_test()
@@ -7291,6 +7297,16 @@ func _world_map_test() -> void:
 	var c := WorldMap.generate("RUN-042")
 	_check("world map: same seed = same world, another seed = another", JSON.stringify(a) == JSON.stringify(b) and JSON.stringify(a.nodes) != JSON.stringify(c.nodes)
 		and int(a.gen) == WorldMap.GEN_VERSION)
+	var tight := []
+	for sd in ["ASH-271", "RUN-042", "TRAVEL-1", "SCREEN-1", "TEST-515", "ZED-777", "OAK-123", "Q-9"]:
+		var g := WorldMap.generate(sd)
+		for i in (g.nodes as Array).size():
+			for j in range(i + 1, (g.nodes as Array).size()):
+				var s1: Dictionary = g.nodes[i]
+				var s2: Dictionary = g.nodes[j]
+				if absi(int(s1.x) - int(s2.x)) < 27 and absi(int(s1.y) - int(s2.y)) < 27:
+					tight.append("%s %s/%s" % [sd, s1.id, s2.id])
+	_check("world map: no two stops overlap on the map (%s)" % ", ".join(tight.slice(0, 4)), tight.is_empty())
 	var w := WorldMap.create("ASH-271")
 	_check("world map: six regions, each bordering the next on the 2 x 3 grid", (w.regions as Array).size() == 6 and range(1, 6).all(func(i):
 		var p: Dictionary = w.regions[i - 1]
@@ -7493,3 +7509,90 @@ func _world_travel_test() -> void:
 	Game.resources_changed.emit()
 	Game.biome_changed.emit(int(Game.s.biome), true)
 	await wait(0.3)
+
+## MV-515 (MV-500 phase 3): the world map screen inside the map window: off = the old list; on = the map with one
+## touch target per stop, the vehicle marker on top and pointer-transparent, a destination strip with distance / time
+## and Drive (disabled with the reason for a locked stop), selecting never drives, dragging pans without selecting,
+## and the window stays inside a phone screen
+func _world_screen_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	var snap: Dictionary = Game.s.duplicate(true)
+	var win := get_window().size
+	main.hud.open_panel("map")
+	await wait(0.3)
+	var mp = main.hud.panels.map
+	_check("world screen: switch off = the old route list, no map", not Features.on("seeded_world_map") and not mp.map_view.visible)
+	mp.close()
+	Game.s.vault_level = 1
+	# reopening during the 0.1 s close fade used to hide the new window (fixed in ModalPanel.close)
+	Game.s.traveling = false
+	Dev.world_screen("SCREEN-1")
+	await wait(0.4)
+	var view: WorldMapView = mp.map_view
+	var w := WorldMap.world()
+	_check("world screen: the map shows, one touch target per stop", mp.is_open and mp.visible and view.is_visible_in_tree() and view.find_children("Stop_*", "Button", false, false).size() == (w.nodes as Array).size())
+	var mk: Control = view.get_node("VehicleMarker")
+	_check("world screen: the vehicle marker sits on top and never takes a tap", mk.get_index() == view.get_child_count() - 1 and mk.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	var target := ""
+	for n in w.nodes:
+		if n.has("site") and int(n.biome) == 0 and str(n.id) != WorldMap.here():
+			target = str(n.id)
+			break
+	view.select(target)
+	await wait(0.2)
+	var rt := view.route()
+	_check("world screen: selecting a stop shows it in the strip with distance and time (%s)" % mp._dest_info.text, not rt.is_empty()
+		and mp._dest_title.text == view.label_of(target) and mp._dest_info.text.contains("กม.") and not mp.drive_btn.disabled)
+	_check("world screen: selecting alone never drives", not WorldMap.driving() and not bool(Game.s.traveling))
+	await shot("world_screen_selected")
+	mp.drive_btn.pressed.emit()
+	await wait(0.2)
+	_check("world screen: Drive commits the trip and sets off", WorldMap.driving() and str(WorldMap.trip().dest) == target and bool(Game.s.traveling))
+	var far := ""
+	for n in w.nodes:
+		if int(n.biome) == 5:
+			far = str(n.id)
+	view.select(far)
+	await wait(0.2)
+	_check("world screen: a locked stop can't be driven to and says why (%s)" % mp._dest_note.text, mp.drive_btn.disabled and mp._dest_note.text.contains("Lv."))
+	await shot("world_screen_locked")
+	# a narrow phone: the map pans by drag, a drag never selects, the window stays on screen
+	get_window().size = Vector2i(320, 568)
+	await wait(0.5)
+	var sel0 := view.selected
+	var pan0 := view.pan
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = Vector2(view.size.x * 0.5, 20)
+	view._gui_input(down)
+	var mv := InputEventMouseMotion.new()
+	mv.position = down.position + Vector2(-40, 0)
+	view._gui_input(mv)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = mv.position
+	view._gui_input(up)
+	_check("world screen: on a narrow phone a drag pans the map and selects nothing (pan %s -> %s)" % [pan0, view.pan],
+		view.size.x < WorldMapView.MAP.x and view.pan != pan0 and view.selected == sel0)
+	var vr := get_viewport().get_visible_rect()
+	_check("world screen: the map window stays inside a 320x568 screen", mp.visible and vr.encloses(mp.box.get_global_rect().grow(-1)))
+	await shot("world_screen_narrow")
+	get_window().size = win
+	await wait(0.4)
+	mp.close()
+	Features.set_override("features", "seeded_world_map", null)
+	Game.s = snap
+	Game.travel_changed.emit()
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+	await wait(0.3)
+

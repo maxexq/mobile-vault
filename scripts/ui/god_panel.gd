@@ -544,6 +544,7 @@ func _tab_world() -> void:
 		var rt := WorldMap.route("start", "helios", Data.MAX_VAULT_LEVEL)
 		_note("เส้นทางทดสอบ start → helios: %s" % (("%.1f กม. ผ่าน %d จุด" % [float(rt.km), (rt.ids as Array).size()]) if not rt.is_empty() else "ไปไม่ถึง"))
 	_row([_b("โลกใหม่", func(): Dev.world_new(), "yellow", true), _b("ตรวจ seed", func(): Dev.world_verify(), "green")], "โลก")
+	_row([_b("เปิดแผนที่ (TEST-515)", func(): Dev.world_screen(), "green", true)], "หน้าจอ")
 	if not wm.is_empty():
 		var t := WorldMap.trip()
 		if t.is_empty():
