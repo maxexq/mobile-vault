@@ -1886,6 +1886,7 @@ func demolish_room(slot: int) -> void:
 	var cells := room_cells(slot)
 	_add_res("scrap", float(Data.room_def(r.type).cost) * 0.5 * cells.size())
 	Trace.rec("build", "demolish %s @%d x%d" % [r.type, slot, cells.size()])
+	Sound.sfx("demolish")
 	for c in cells:
 		s.rooms[c] = {"type": "empty", "level": 1, "job": {}, "build": {}}
 		(s.get("outage", {}) as Dictionary).erase(str(c))

@@ -12,7 +12,7 @@ var _log_cat := ""
 var _save_box: TextEdit
 var _crew_anim := "idle"       # MV-170 roster preview: animation every preview sprite plays
 
-const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["icons", "Icons"], ["log", "LOG/เซฟ"]]
+const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["sound", "เสียง"], ["icons", "Icons"], ["log", "LOG/เซฟ"]]
 const SRC_TH := {"code": "ค่าในโค้ด", "default": "ค่าเริ่มต้น", "build": "บิลด์", "remote": "รีโมต", "mode": "โหมดเกม", "dev": "ผู้ทดสอบ"}
 
 
@@ -53,6 +53,7 @@ func refresh() -> void:
 		"world": _tab_world()
 		"feat": _tab_features()
 		"sys": _tab_sys()
+		"sound": _tab_sound()
 		"icons": _tab_icons()
 		"log": _tab_log()
 
@@ -738,6 +739,34 @@ func _tab_sys() -> void:
 	_note("ขนาดเซฟ %.1f KB · FPS %s · ภาษา %s" % [Settings.save_size_bytes() / 1024.0, str(Settings.get_value("fps")), str(Settings.get_value("lang"))])
 	_row([_b("คืนค่าเริ่มต้น", Dev.settings_reset)])
 	_row([_b("ทดสอบหน้าต่างยืนยัน", Dev.confirm_preview, "red", true)])
+
+
+## MV-536: listen to every biome bed, weather layer and effect group without changing the run
+func _tab_sound() -> void:
+	_head("SOUND", "เสียง (MV-536)")
+	var amb := "เปิด" if Sound.ambience_on() else "ปิด"
+	var fx := "เปิด" if Sound.sfx_on() else "ปิด"
+	_note("สวิตช์ audio_ambience: %s · audio_sfx: %s · แตะจอแล้ว: %s · พื้นที่ตอนนี้: %s · อากาศ: %s · เสียงล่าสุด: %s" % [
+		amb, fx, "ใช่" if Sound.unlocked else "ยัง", Sound.want_bed(), Sound.want_weather() if Sound.want_weather() != "" else "-", Sound.last_sfx if Sound.last_sfx != "" else "-"])
+	var beds := []
+	for b in Data.BIOMES:
+		var id: String = b.id
+		beds.append(_b(id, func(): Dev.sound_preview("bed", id), "yellow" if Sound.preview.get("bed", "") == id and not Sound.preview.has("weather") else "gray"))
+	_row(beds, "พื้นที่")
+	var ws := []
+	for w in Sound.WEATHER_SOUNDS:
+		var id: String = w
+		ws.append(_b(id, func(): Dev.sound_preview("weather", id), "yellow" if Sound.preview.get("weather", "") == id else "gray"))
+	_row(ws, "อากาศ")
+	var gs := []
+	for g in Sound.GROUPS:
+		var id: String = g
+		gs.append(_b(id, func(): Dev.sound_preview("group", id)))
+	_row(gs, "เอฟเฟกต์")
+	_row([_b("กลับเสียงตามเกม", func(): Dev.sound_preview("clear"), "green"),
+		_b(("ปิด" if Sound.ambience_on() else "เปิด") + "เสียงบรรยากาศ", func(): Dev.feature_set("audio_ambience", not Sound.ambience_on())),
+		_b(("ปิด" if Sound.sfx_on() else "เปิด") + "เสียงเอฟเฟกต์", func(): Dev.feature_set("audio_sfx", not Sound.sfx_on()))])
+	_note("ปุ่มพื้นที่/อากาศเล่นวนจนกด กลับเสียงตามเกม (ฟังอย่างเดียว เซฟไม่ถูกทำเครื่องหมายโกง) · ปรับดังเบาใน ตั้งค่า > เสียง")
 
 
 func _tab_features() -> void:
