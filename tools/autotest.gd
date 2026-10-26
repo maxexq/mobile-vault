@@ -206,6 +206,11 @@ func _run() -> void:
 		await _world_map_test()
 		_finish()
 		return
+	if "--only=world_migrate" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_migrate_test()
+		_finish()
+		return
 	if "--only=world_travel" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _world_travel_test()
@@ -943,6 +948,7 @@ func _run() -> void:
 	await _quarters_guard_test()
 	await _world_screen_test()
 	await _world_travel_test()
+	await _world_migrate_test()
 	await _world_map_test()
 	await _stat_view_test()
 	await _rooms_x_test()
@@ -7289,7 +7295,10 @@ func _stat_view_test() -> void:
 ## opening never regenerates it, and the switch off makes no world
 func _world_map_test() -> void:
 	var keep = Game.s.get("world")
+	var keep_pos := [int(Game.s.biome), str(Game.s.get("at_site", ""))]
 	Game.s.erase("world")
+	Game.s.biome = 0          # MV-514: a world made mid-run is placed in the run's biome; these checks start at the start
+	Game.s["at_site"] = ""
 	_check("world map: switch off (shipped default) = no world", not Features.on("seeded_world_map") and WorldMap.ensure().is_empty() and not Game.s.has("world"))
 	Features.set_override("features", "seeded_world_map", true)
 	var a := WorldMap.generate("ASH-271")
@@ -7357,10 +7366,151 @@ func _world_map_test() -> void:
 	Dev.world_new("XYZ-001")
 	_check("world map: GOD new world changes the seed", str(WorldMap.world().seed) == "XYZ-001")
 	Features.set_override("features", "seeded_world_map", null)
+	Game.s.biome = keep_pos[0]
+	Game.s["at_site"] = keep_pos[1]
 	if keep == null:
 		Game.s.erase("world")
 	else:
 		Game.s.world = keep
+
+
+## MV-514 (MV-500 phase 4): old biome / km / lap saves move onto the world map by the fixed rule (entry stop /
+## landmark / checkpoint) in every biome, keep everything they had (resources, crew, bosses, Vault, sites, expedition,
+## km, lap), and running the migration again (or after a save round trip) changes nothing. A new lap = a new world;
+## the switch flipped off / on keeps a mid-road trip; old-road progress into another biome re-places the vehicle; a
+## world from a newer build is kept as it is (old road drives); map driving keeps s.km inside the biome.
+func _world_migrate_test() -> void:
+	_no_events()
+	var snap: Dictionary = Game.s.duplicate(true)
+	Features.set_override("features", "seeded_world_map", true)
+	Features.set_override("features", "road_events", false)
+	get_tree().paused = true
+	Game.s.combat.boss_beaten = {"0": true}
+	Game.s.vault_level = 2
+	Game.s.lap = 0
+	Game.s.sites_done = {}
+	Game.s.stall = 0.0
+	Game.s.traveling = true
+	Game.s.hull = maxf(80.0, float(Game.s.hull))
+	Game.s["exp"] = {}
+	var keep := func() -> String:
+		return JSON.stringify([Game.s.res, Game.s.items, Game.s.dwellers.map(func(d): return int(d.id)), Game.s.combat.boss_beaten,
+			Game.s.vault_level, Game.s.sites_done, Game.s.exp, Game.s.get("at_site", ""), Game.s.km, Game.s.biome, Game.s.lap,
+			Game.s.mods, Game.s.stats.km_total, Game.s.gear.size()])
+	# old save in each of the six biomes: placed at the region's entry stop, nothing else touched
+	var each := {}
+	for b in Data.BIOMES.size():
+		Dev.world_legacy("mid", b)
+		var before: String = keep.call()
+		var w := WorldMap.world()
+		var n := WorldMap.node(WorldMap.here())
+		var entry := WorldMap._entry_stop(w, b)
+		var earlier := (w.nodes as Array).filter(func(x): return int(x.biome) < b and str(x.type) != "exit").all(func(x): return w.visited.has(str(x.id)))
+		var once := JSON.stringify(Game.s.world)
+		var again := WorldMap.reconcile()
+		Game.s = JSON.parse_string(JSON.stringify(Game.s))     # save / load round trip (ints come back as floats)
+		var after_load := WorldMap.reconcile()
+		each[b] = int(n.biome) == b and str(w.at) == entry and (b == 0 or str(w.placed.rule) == "entry") and earlier \
+			and again == "" and after_load == "" and JSON.stringify(Game.s.world) == JSON.stringify(JSON.parse_string(once)) and JSON.stringify(JSON.parse_string(keep.call())) == JSON.stringify(JSON.parse_string(before))
+	_check("world migrate: an old save in each of the six biomes lands at that region's entry, twice = unchanged, round trip = unchanged (%s)" % str(each),
+		not each.values().has(false))
+	var mid_b := 2
+	# parked at a landmark (with an expedition out): that landmark's stop, the expedition untouched
+	var first: String = Expedition.biome_sites(mid_b)[0]
+	Game.s["exp"] = {"site": first, "team": [], "sup": {}, "start": Time.get_unix_time_from_system(), "dur": 900.0, "log": [], "seed": 7}
+	var exp_before := JSON.stringify(Game.s.exp)
+	Dev.world_legacy("site", mid_b)
+	_check("world migrate: parked at a landmark with a team out = at that landmark, expedition and stop untouched (%s)" % WorldMap.here(),
+		str(WorldMap.node(WorldMap.here()).get("site", "")) == first and Expedition.at_site() == first and JSON.stringify(Game.s.exp) == exp_before
+		and Expedition.active() and WorldMap.reconcile() == "")
+	Game.s["exp"] = {}
+	Game.s["at_site"] = ""
+	# a landmark already explored this lap: visited on the map, nothing granted
+	var res_before := JSON.stringify(Game.s.res)
+	Dev.world_legacy("done", mid_b)
+	var done_node := WorldMap._site_node(first)
+	_check("world migrate: an explored landmark is visited on the map, no reward (%s)" % done_node, bool(WorldMap.world().visited.get(done_node, false))
+		and Expedition.is_done(first) and JSON.stringify(Game.s.res) == res_before)
+	# standing at the old checkpoint with the warlord alive: the border stop, and the border road still waits for him
+	Game.s.combat.boss_beaten.erase(str(mid_b))
+	Game.s.vault_level = int(Data.biome(mid_b + 1).req)
+	Dev.world_legacy("checkpoint", mid_b)
+	var w2 := WorldMap.world()
+	var exit_stop := WorldMap._exit_stop(w2, mid_b)
+	var over := WorldMap._entry_stop(w2, mid_b + 1)
+	var drove := WorldMap.drive_to(over)
+	_check("world migrate: at the old checkpoint = the border stop; the gate still waits for the warlord (%s -> %s)" % [exit_stop, over],
+		str(w2.placed.rule) == "checkpoint" and str(w2.at) == exit_stop and drove and WorldMap.at_gate() and Game.at_checkpoint()
+		and Game.blocked_reason().begins_with("ด่านตรวจ"))
+	Game.s.combat.boss_beaten[str(mid_b)] = true
+	WorldMap.cancel_trip()
+	# a nonzero lap: a world for that lap
+	Dev.world_legacy("lap", 1)
+	_check("world migrate: a later lap gets a world of that lap (%d)" % int(WorldMap.world().lap), int(WorldMap.world().lap) == int(Game.s.lap)
+		and int(WorldMap.node(WorldMap.here()).biome) == 1 and WorldMap.reconcile() == "")
+	# a new save mid-road, the switch off and on again: the old road keeps s.km in the biome, the trip carries on
+	Game.s.erase("world")
+	Game.s.biome = 0
+	Game.s.km = 0.0
+	Game.s.lap = 0
+	Game.s.vault_level = 1
+	WorldMap.reconcile()
+	var dest := ""
+	for e in WorldMap.edges_of("start"):
+		if int(e.boss) < 0:
+			dest = str(e.c) if str(e.a) == "start" else str(e.a)
+	var started := WorldMap.drive_to(dest)
+	Game.s.res.power = 1000.0
+	Game._simulate(5.0, false)
+	var prog := float(WorldMap.trip().get("prog", 0.0))
+	Game.s = JSON.parse_string(JSON.stringify(Game.s))
+	Features.set_override("features", "seeded_world_map", false)
+	var off_ok := not Game.map_mode() and not Game.at_checkpoint_spot() and float(Game.s.km) < Game.biome_end_km()
+	Game.s.res.power = 1000.0
+	Game._simulate(5.0, false)
+	Features.set_override("features", "seeded_world_map", true)
+	_check("world migrate: switch off mid-road = the old road drives in the same biome; on again = the same trip (%.2f km, %s)" % [prog, str(started)],
+		prog > 0.0 and off_ok and int(Game.s.biome) == 0 and WorldMap.driving() and is_equal_approx(float(WorldMap.trip().prog), prog))
+	# progress on the old road into the next biome while the switch was off: re-placed there, the stale trip dropped
+	Features.set_override("features", "seeded_world_map", false)
+	Game.s.biome = 1
+	Game.s.km = Data.biome_start_km(1) + 1.0
+	Features.set_override("features", "seeded_world_map", true)
+	_check("world migrate: old-road progress into another biome re-places the vehicle (%s)" % WorldMap.here(),
+		int(WorldMap.node(WorldMap.here()).biome) == 1 and not WorldMap.driving() and str(WorldMap.world().placed.rule) == "entry")
+	# map driving keeps s.km inside the biome (so the old road never finds itself past the checkpoint)
+	Game.s.km = Game.biome_end_km() - 0.05
+	var cap_before := float(Game.s.km)
+	var dest2 := ""
+	for e in WorldMap.edges_of(WorldMap.here()):
+		if int(e.boss) < 0:
+			dest2 = str(e.c) if str(e.a) == WorldMap.here() else str(e.a)
+	WorldMap.drive_to(dest2)
+	Game.s.res.power = 1000.0
+	Game._simulate(60.0, false)
+	_check("world migrate: map driving never pushes s.km past the old checkpoint (%.2f)" % float(Game.s.km),
+		WorldMap.driving() or str(WorldMap.world().at) == dest2)
+	_check("world migrate: ... and s.km stays put at the cap (%.2f / %.2f)" % [float(Game.s.km), cap_before],
+		is_equal_approx(float(Game.s.km), cap_before) and float(Game.s.km) < Game.biome_end_km())
+	# a world from a newer build: kept byte for byte, the old road drives
+	Game.s.world.v = 99
+	var newer := JSON.stringify(Game.s.world)
+	_check("world migrate: a newer world version is never overwritten; the old road drives", WorldMap.reconcile() == "unsupported"
+		and JSON.stringify(Game.s.world) == newer and not Game.map_mode())
+	# GOD new world mid-run lands in the current biome
+	Game.s.world.v = 1
+	Dev.world_new("MIG-002")
+	_check("world migrate: a new world mid-run is placed in the current biome", str(WorldMap.world().seed) == "MIG-002"
+		and int(WorldMap.node(WorldMap.here()).biome) == int(Game.s.biome))
+	get_tree().paused = false
+	Features.set_override("features", "seeded_world_map", null)
+	Features.set_override("features", "road_events", null)
+	Game.s = snap
+	Game.travel_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+	Game.biome_changed.emit(int(Game.s.biome), true)
+	await wait(0.3)
 
 
 ## MV-130 (MV-500 phase 2): driving the world map. Driven straight through Game._simulate (the real travel step), with

@@ -51,16 +51,24 @@ func _ready() -> void:
 	rebuild()
 
 
+func _drop(n: Node) -> void:
+	if n.get_parent() == self:
+		remove_child(n)
+	n.queue_free()
+
+
 ## all stop buttons + overlays for the current world (only when the world changes)
 func rebuild() -> void:
+	# detached first: the world can change twice in one frame (MV-514 create + place), and nodes still waiting for
+	# queue_free would keep their names, so the new "Stop_*" / "VehicleMarker" would be renamed
 	for b in _buttons.values():
-		b.queue_free()
+		_drop(b)
 	_buttons.clear()
 	for p in _pings.values():
-		p.queue_free()
+		_drop(p)
 	_pings.clear()
 	if _marker:
-		_marker.queue_free()
+		_drop(_marker)
 		_marker = null
 	var w := WorldMap.world()
 	if w.is_empty():
