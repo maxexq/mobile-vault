@@ -8,6 +8,7 @@ var main: Node
 var out_dir := "user://autotest"
 var n := 0
 var _fails := 0
+var _font_checks_completed := false
 
 
 func _check(label: String, ok: bool) -> void:
@@ -60,6 +61,12 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=fonts" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _smooth_ui_text_test()
+		_check("fonts: rendering and layout checks completed", _font_checks_completed)
+		_finish()
+		return
 	if "--only=confirm" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		if "--confirm-ui-sequence" in OS.get_cmdline_user_args():
@@ -989,6 +996,8 @@ func _run() -> void:
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
+	await _smooth_ui_text_test()
+	_check("fonts: rendering and layout checks completed", _font_checks_completed)
 	_finish()
 
 
@@ -3243,6 +3252,85 @@ func _logs_test() -> void:
 	Cloud.url = ""
 	Cloud.session = {}
 	Cloud.status_changed.emit()
+
+
+## MV-540: check real raster output and live updates, not only the configured enum values.
+func _font_edge_counts(img: Image) -> Vector2i:
+	var counts := Vector2i.ZERO
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var alpha := img.get_pixel(x, y).a
+			if alpha > 0.01:
+				counts.x += 1
+				if alpha < 0.99:
+					counts.y += 1
+	return counts
+
+
+func _smooth_ui_text_test() -> void:
+	var old_override: Variant = Features.layers.dev.get("features", {}).get("smooth_ui_text")
+	var chakra := UIKit.font_main as FontFile
+	var bold := UIKit.font_bold as FontFile
+	var silk := (UIKit.font_pixel as FontVariation).base_font as FontFile
+	_check("fonts: main-window display-resolution oversampling enabled", bool(ProjectSettings.get_setting("gui/fonts/dynamic_fonts/use_oversampling")))
+	var probe := SubViewport.new()
+	probe.size = Vector2i(480, 110)
+	probe.transparent_bg = true
+	probe.oversampling = false
+	probe.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(probe)
+	var label := Label.new()
+	label.text = "ลูกเรือ กำลังเดินทาง\nChakra Petch UI 123"
+	label.position = Vector2(8, 8)
+	label.add_theme_font_override("font", chakra)
+	label.add_theme_font_size_override("font_size", 22)
+	label.add_theme_color_override("font_color", Color.WHITE)
+	probe.add_child(label)
+	Dev.ui_text_preview(false)
+	await wait(0.1)
+	await RenderingServer.frame_post_draw
+	var crisp_image := probe.get_texture().get_image()
+	var crisp_edges := _font_edge_counts(crisp_image)
+	crisp_image.save_png(out_dir + "/font_crisp.png")
+	_check("fonts: rollback renders populated, binary-edged Chakra text", crisp_edges.x > 100 and crisp_edges.y == 0)
+	Dev.ui_text_preview(true)
+	await wait(0.1)
+	await RenderingServer.frame_post_draw
+	var smooth_image := probe.get_texture().get_image()
+	var smooth_edges := _font_edge_counts(smooth_image)
+	smooth_image.save_png(out_dir + "/font_smooth.png")
+	_check("fonts: existing Label gains genuinely antialiased glyph edges live", smooth_edges.x > 100 and smooth_edges.y > 20)
+	_check("fonts: both Chakra weights follow the feature and viewport scale", chakra.antialiasing == TextServer.FONT_ANTIALIASING_GRAY and bold.antialiasing == TextServer.FONT_ANTIALIASING_GRAY and chakra.oversampling == 0.0 and bold.oversampling == 0.0)
+	_check("fonts: Thai fallback still shares the configured Bold face", (UIKit.font_pixel as FontVariation).fallbacks[0] == bold)
+	_check("fonts: Silkscreen keeps native sampling and binary edges", silk.antialiasing == TextServer.FONT_ANTIALIASING_NONE and silk.subpixel_positioning == TextServer.SUBPIXEL_POSITIONING_DISABLED and silk.oversampling == 1.0)
+	label.text = "PIXEL 123 + HP"
+	label.add_theme_font_override("font", UIKit.font_pixel)
+	label.add_theme_font_size_override("font_size", UIKit.FP)
+	await wait(0.1)
+	await RenderingServer.frame_post_draw
+	var pixel_edges := _font_edge_counts(probe.get_texture().get_image())
+	_check("fonts: pixel tags remain binary even with smooth UI enabled", pixel_edges.x > 20 and pixel_edges.y == 0)
+	probe.queue_free()
+	var old_size := get_window().size
+	var old_lang: String = Settings.get_value("lang")
+	var old_english: Variant = Features.layers.dev.get("features", {}).get("english")
+	for screen_size: Vector2i in [Vector2i(720, 1280), Vector2i(1280, 720)]:
+		get_window().size = screen_size
+		await wait(0.4)
+		for lang: String in ["th", "en"]:
+			Dev.lang_set(lang)
+			main.hud.settings_panel.open()
+			await wait(0.2)
+			await shot("smooth_fonts_%dx%d_%s" % [screen_size.x, screen_size.y, lang])
+			_check("fonts: settings fit %s %s" % [screen_size, lang], main.hud.settings_panel.box.position.x >= 0.0 and main.hud.settings_panel.box.position.y >= 0.0 and main.hud.settings_panel.box.get_rect().end.x <= main.hud.size.x and main.hud.settings_panel.box.get_rect().end.y <= main.hud.size.y)
+			main.hud.settings_panel.close()
+	Settings.set_value("lang", old_lang)
+	Features.set_override("features", "english", old_english)
+	Loc.apply()
+	get_window().size = old_size
+	Features.set_override("features", "smooth_ui_text", old_override)
+	await wait(0.2)
+	_font_checks_completed = true
 
 
 func _features_test() -> void:

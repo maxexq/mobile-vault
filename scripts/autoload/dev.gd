@@ -1624,6 +1624,11 @@ func env_preview(e: String) -> void:
 	Features.changed.emit()
 
 
+## MV-540: compare normal UI text rendering with the original pixel-edge text.
+func ui_text_preview(smooth: bool) -> void:
+	feature_set("smooth_ui_text", smooth)
+
+
 # ---- feature switches (Features layer "dev": kept in user://dev.cfg until reset or GOD is hidden)
 func feature_set(key: String, v: Variant) -> void:
 	act("feature %s = %s" % [key, v])
