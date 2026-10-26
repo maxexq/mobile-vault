@@ -206,6 +206,11 @@ func _run() -> void:
 		await _world_map_test()
 		_finish()
 		return
+	if "--only=world_travel" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_travel_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -937,6 +942,7 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _world_travel_test()
 	await _world_map_test()
 	await _stat_view_test()
 	await _rooms_x_test()
@@ -7404,3 +7410,151 @@ func _world_map_test() -> void:
 		Game.s.erase("world")
 	else:
 		Game.s.world = keep
+
+
+## MV-130 (MV-500 phase 2): driving the world map. Driven straight through Game._simulate (the real travel step), with
+## the clock of the real game frozen in between so only the test's steps move the vehicle.
+func _world_travel_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	# the test drives hundreds of real simulation steps (crew, morale, offline catch-up, a lap): the whole save is
+	# put back afterwards so later groups see exactly what they saw before
+	var snap: Dictionary = Game.s.duplicate(true)
+	var keep := {"world": Game.s.get("world"), "biome": int(Game.s.biome), "km": float(Game.s.km), "lap": int(Game.s.lap),
+		"vault": int(Game.s.vault_level), "trav": bool(Game.s.traveling), "beaten": (Game.s.combat.get("boss_beaten", {}) as Dictionary).duplicate(),
+		"done": (Game.s.get("sites_done", {}) as Dictionary).duplicate(), "site": str(Game.s.get("at_site", "")), "stall": float(Game.s.stall)}
+	Features.set_override("features", "seeded_world_map", true)
+	Features.set_override("features", "road_events", false)
+	Game.s.erase("world")
+	Game.s.biome = 0
+	Game.s.lap = 0
+	Game.s.km = 0.0
+	Game.s.stall = 0.0
+	Game.s.traveling = true
+	Game.s.vault_level = 1
+	Game.s["at_site"] = ""
+	Game.s.combat.boss_beaten = {}
+	Game.s.sites_done = {}
+	Game.s.hull = maxf(80.0, float(Game.s.hull))
+	Game.s.res.power = 1000.0
+	WorldMap.create("TRAVEL-1")
+	get_tree().paused = true          # the real clock stops; the test drives Game._simulate itself
+	var drive := func(sec: float, offline: bool = false):
+		var n := int(ceil(sec / 60.0))
+		for i in n:
+			Game.s.res.power = 1000.0
+			Game._simulate(60.0, offline)
+	_check("world travel: no destination = the vehicle waits", Game.blocked_reason() == "เลือกปลายทางบนแผนที่" and not Game.is_moving())
+	# a destination two stops away inside the first region, with a landmark on the way
+	var rt := WorldMap.route("start", "depot", 1)
+	_check("world travel: a route inside the first region", not rt.is_empty() and (rt.ids as Array).size() >= 2)
+	var km0 := float(Game.s.stats.km_total)
+	_check("world travel: choosing a stop alone doesn't move it", not WorldMap.driving() and is_equal_approx(float(Game.s.stats.km_total), km0))
+	_check("world travel: drive commits the route", WorldMap.drive_to("depot") and WorldMap.driving() and Game.is_moving())
+	var parks := 0
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			parks += 1
+			Expedition.skip_site()
+		if not WorldMap.driving():
+			break
+	_check("world travel: arrives at the destination and parks there", str(WorldMap.world().at) == "depot" and not WorldMap.driving()
+		and Game.blocked_reason() == "เลือกปลายทางบนแผนที่")
+	_check("world travel: each landmark on the way parks the vehicle once (%d)" % parks, parks == (rt.ids as Array).filter(func(id): return WorldMap.node(id).has("site")).size())
+	_check("world travel: distance = the route, nothing doubled (%.2f vs %.2f km)" % [float(Game.s.stats.km_total) - km0, float(rt.km)],
+		absf(float(Game.s.stats.km_total) - km0 - float(rt.km)) < 0.05)
+	# reload mid-road: no free distance
+	var back := WorldMap.route("depot", "start", 1)
+	WorldMap.drive_to("start")
+	Game._simulate(5.0, false)
+	var mid := float(WorldMap.trip().get("prog", 0.0))
+	Game.s.world = JSON.parse_string(JSON.stringify(Game.s.world))
+	km0 = float(Game.s.stats.km_total) - mid
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			Expedition.skip_site()
+		if not WorldMap.driving():
+			break
+	_check("world travel: a reload mid-road carries on from the same spot (%.2f km)" % (float(Game.s.stats.km_total) - km0), mid > 0.0
+		and str(WorldMap.world().at) == "start" and absf(float(Game.s.stats.km_total) - km0 - float(back.km)) < 0.05)
+	# the checkpoint: Vault level, then the warlord, then into the next region
+	var j1 := str(Data.biome(1).id) + "_junction"
+	_check("world travel: the next region is out of reach below its Vault level", not WorldMap.drive_to(j1) and WorldMap.drive_block(j1) != "")
+	Game.s.vault_level = 2
+	var far: Dictionary = (WorldMap.world().nodes as Array).filter(func(n): return int(n.biome) == 1)[0]
+	_check("world travel: Vault 2 can route into the next region", WorldMap.drive_to(str(far.id)))
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			Expedition.skip_site()
+		if Game.at_checkpoint() or not WorldMap.driving():
+			break
+	_check("world travel: the vehicle waits at the border road for the warlord", Game.at_checkpoint() and Game.at_checkpoint_spot() and int(Game.s.biome) == 0
+		and Combat._next_req() == 2 and not Game.is_moving())
+	_check("world travel: the warlord is due at the checkpoint", Combat.warlord_due() or Combat.warlord_cd > 0.0)
+	var entered := [-1]
+	var cb := func(i, _inst): entered[0] = i
+	Game.biome_changed.connect(cb)
+	Game.s.combat.boss_beaten["0"] = true
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			Expedition.skip_site()
+		if not WorldMap.driving():
+			break
+	Game.biome_changed.disconnect(cb)
+	_check("world travel: warlord beaten = across the border, into the next biome", not Game.at_checkpoint() and int(Game.s.biome) == 1 and entered[0] == 1
+		and str(WorldMap.world().at) == str(far.id))
+	# offline follows the same road to the same place
+	Game.s.vault_level = 6
+	for b in 6:
+		Game.s.combat.boss_beaten[str(b)] = true
+	var dest := "helios"
+	var rt2 := WorldMap.route(WorldMap.here(), dest, 6)
+	WorldMap.drive_to(dest)
+	km0 = float(Game.s.stats.km_total)
+	for guard in 150:
+		drive.call(600.0, true)
+		if not WorldMap.driving():
+			break
+	_check("world travel: offline reaches the same stop by the same road (%.2f vs %.2f km)" % [float(Game.s.stats.km_total) - km0, float(rt2.km)],
+		str(WorldMap.world().at) == dest and absf(float(Game.s.stats.km_total) - km0 - float(rt2.km)) < 0.05 and Expedition.at_site() == "")
+	_check("world travel: offline drives past landmarks and marks them, as on the old road", rt2.ids.filter(func(id): return WorldMap.node(id).has("site") and id != dest)
+		.all(func(id): return Expedition.is_done(str(WorldMap.node(id).site))))
+	# a new destination mid-road finishes the road first
+	var nb: Dictionary = WorldMap.edges_of(dest)[0]
+	var other: String = str(nb.c) if str(nb.a) == dest else str(nb.a)
+	WorldMap.drive_to(other)
+	Game._simulate(5.0, false)
+	var on_road := str(WorldMap.trip().edges[0])
+	WorldMap.drive_to(dest)
+	_check("world travel: changing the destination mid-road keeps the road under the wheels", str(WorldMap.trip().edges[0]) == on_road
+		and float(WorldMap.trip().prog) > 0.0)
+	for guard in 150:
+		drive.call(600.0)
+		if not WorldMap.driving():
+			break
+	# the exit: lap + 1 in a new world
+	var seed0 := str(WorldMap.world().seed)
+	WorldMap.drive_to("world_exit")
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			Expedition.skip_site()
+		if int(Game.s.lap) == 1:
+			break
+	_check("world travel: the world exit = lap + 1 in a new world, back at the start", int(Game.s.lap) == 1 and str(WorldMap.world().seed) != seed0
+		and int(WorldMap.world().lap) == 1 and str(WorldMap.world().at) == "start" and int(Game.s.biome) == 0)
+	get_tree().paused = false
+	Features.set_override("features", "seeded_world_map", null)
+	Features.set_override("features", "road_events", null)
+	Game.s = snap
+	Game.travel_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+	Game.biome_changed.emit(int(Game.s.biome), true)
+	await wait(0.3)

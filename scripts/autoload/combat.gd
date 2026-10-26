@@ -547,6 +547,8 @@ func mutation_chance() -> float:
 
 
 func _next_req() -> int:
+	if Game.map_mode():
+		return WorldMap.gate_ahead()      # MV-130: the border road ahead on the world map
 	if int(Game.s.biome) >= Data.BIOMES.size() - 1:
 		return 0
 	return int(Data.biome(int(Game.s.biome) + 1).req)

@@ -95,7 +95,8 @@ func at_site() -> String:
 
 func arrive(id: String) -> void:
 	Game.s["at_site"] = id
-	Game.s.km = site_km(id)
+	if not Game.map_mode():
+		Game.s.km = site_km(id)      # the old road; on the world map the vehicle is already at the stop
 	site_reached.emit(id)
 	Game.travel_changed.emit()
 
