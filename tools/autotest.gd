@@ -5475,6 +5475,8 @@ func _barks_test() -> void:
 ## already parked, during offline catch-up, or with the switch off
 func _flagged_test() -> void:
 	_no_events()
+	if main.hud.confirmation.is_open:
+		main.hud.confirmation.close()     # an earlier group's confirmation would (rightly) keep the door window shut
 	if Game.active_event != "":
 		Game.cancel_event()
 		main.hud.event_popup.close()
@@ -5501,6 +5503,10 @@ func _flagged_test() -> void:
 	await shot("flagged_door")
 	var passed0 := int(Inspection.st().stats.get("passed", 0))
 	past[0].pressed.emit()
+	await wait(0.2)
+	_check("flagged: drive past asks first (MV-422 confirmation), nothing happens yet", main.hud.confirmation.is_open
+		and Inspection.halting() and int(Inspection.st().stats.get("passed", 0)) == passed0)
+	main.hud.confirmation.confirm_button.pressed.emit()
 	await wait(0.2)
 	_check("flagged: drive past leaves them and the vehicle goes", Inspection.queue().is_empty() and not Inspection.halting()
 		and Game.blocked_reason() == "" and int(Inspection.st().stats.passed) == passed0 + 1)
