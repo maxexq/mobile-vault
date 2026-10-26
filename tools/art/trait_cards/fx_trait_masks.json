@@ -1,0 +1,1154 @@
+{
+"fx_trait_benefit_common_0": [
+0,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_1": [
+172,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_10": [
+1720,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_11": [
+1892,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_12": [
+2064,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_13": [
+2236,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_14": [
+2408,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_15": [
+2580,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_2": [
+344,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_3": [
+516,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_4": [
+688,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_5": [
+860,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_6": [
+1032,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_7": [
+1204,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_8": [
+1376,
+0,
+172,
+70
+],
+"fx_trait_benefit_common_9": [
+1548,
+0,
+172,
+70
+],
+"fx_trait_benefit_epic_0": [
+0,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_1": [
+172,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_10": [
+1720,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_11": [
+1892,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_12": [
+2064,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_13": [
+2236,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_14": [
+2408,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_15": [
+2580,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_2": [
+344,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_3": [
+516,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_4": [
+688,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_5": [
+860,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_6": [
+1032,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_7": [
+1204,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_8": [
+1376,
+210,
+172,
+70
+],
+"fx_trait_benefit_epic_9": [
+1548,
+210,
+172,
+70
+],
+"fx_trait_benefit_legendary_0": [
+0,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_1": [
+172,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_10": [
+1720,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_11": [
+1892,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_12": [
+2064,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_13": [
+2236,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_14": [
+2408,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_15": [
+2580,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_2": [
+344,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_3": [
+516,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_4": [
+688,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_5": [
+860,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_6": [
+1032,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_7": [
+1204,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_8": [
+1376,
+280,
+172,
+70
+],
+"fx_trait_benefit_legendary_9": [
+1548,
+280,
+172,
+70
+],
+"fx_trait_benefit_mythic_0": [
+0,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_1": [
+172,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_10": [
+1720,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_11": [
+1892,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_12": [
+2064,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_13": [
+2236,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_14": [
+2408,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_15": [
+2580,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_2": [
+344,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_3": [
+516,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_4": [
+688,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_5": [
+860,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_6": [
+1032,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_7": [
+1204,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_8": [
+1376,
+350,
+172,
+70
+],
+"fx_trait_benefit_mythic_9": [
+1548,
+350,
+172,
+70
+],
+"fx_trait_benefit_rare_0": [
+0,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_1": [
+172,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_10": [
+1720,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_11": [
+1892,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_12": [
+2064,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_13": [
+2236,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_14": [
+2408,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_15": [
+2580,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_2": [
+344,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_3": [
+516,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_4": [
+688,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_5": [
+860,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_6": [
+1032,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_7": [
+1204,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_8": [
+1376,
+140,
+172,
+70
+],
+"fx_trait_benefit_rare_9": [
+1548,
+140,
+172,
+70
+],
+"fx_trait_benefit_uncommon_0": [
+0,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_1": [
+172,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_10": [
+1720,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_11": [
+1892,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_12": [
+2064,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_13": [
+2236,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_14": [
+2408,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_15": [
+2580,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_2": [
+344,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_3": [
+516,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_4": [
+688,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_5": [
+860,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_6": [
+1032,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_7": [
+1204,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_8": [
+1376,
+70,
+172,
+70
+],
+"fx_trait_benefit_uncommon_9": [
+1548,
+70,
+172,
+70
+],
+"fx_trait_tradeoff_common_0": [
+0,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_1": [
+172,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_10": [
+1720,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_11": [
+1892,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_12": [
+2064,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_13": [
+2236,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_14": [
+2408,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_15": [
+2580,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_2": [
+344,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_3": [
+516,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_4": [
+688,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_5": [
+860,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_6": [
+1032,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_7": [
+1204,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_8": [
+1376,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_common_9": [
+1548,
+420,
+172,
+70
+],
+"fx_trait_tradeoff_epic_0": [
+0,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_1": [
+172,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_10": [
+1720,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_11": [
+1892,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_12": [
+2064,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_13": [
+2236,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_14": [
+2408,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_15": [
+2580,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_2": [
+344,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_3": [
+516,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_4": [
+688,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_5": [
+860,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_6": [
+1032,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_7": [
+1204,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_8": [
+1376,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_epic_9": [
+1548,
+630,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_0": [
+0,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_1": [
+172,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_10": [
+1720,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_11": [
+1892,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_12": [
+2064,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_13": [
+2236,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_14": [
+2408,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_15": [
+2580,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_2": [
+344,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_3": [
+516,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_4": [
+688,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_5": [
+860,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_6": [
+1032,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_7": [
+1204,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_8": [
+1376,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_legendary_9": [
+1548,
+700,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_0": [
+0,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_1": [
+172,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_10": [
+1720,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_11": [
+1892,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_12": [
+2064,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_13": [
+2236,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_14": [
+2408,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_15": [
+2580,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_2": [
+344,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_3": [
+516,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_4": [
+688,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_5": [
+860,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_6": [
+1032,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_7": [
+1204,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_8": [
+1376,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_mythic_9": [
+1548,
+770,
+172,
+70
+],
+"fx_trait_tradeoff_rare_0": [
+0,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_1": [
+172,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_10": [
+1720,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_11": [
+1892,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_12": [
+2064,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_13": [
+2236,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_14": [
+2408,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_15": [
+2580,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_2": [
+344,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_3": [
+516,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_4": [
+688,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_5": [
+860,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_6": [
+1032,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_7": [
+1204,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_8": [
+1376,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_rare_9": [
+1548,
+560,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_0": [
+0,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_1": [
+172,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_10": [
+1720,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_11": [
+1892,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_12": [
+2064,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_13": [
+2236,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_14": [
+2408,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_15": [
+2580,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_2": [
+344,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_3": [
+516,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_4": [
+688,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_5": [
+860,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_6": [
+1032,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_7": [
+1204,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_8": [
+1376,
+490,
+172,
+70
+],
+"fx_trait_tradeoff_uncommon_9": [
+1548,
+490,
+172,
+70
+]
+}

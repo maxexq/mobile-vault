@@ -314,7 +314,43 @@ func _tab_vehicle() -> void:
 		_b("รังสี +40", func(): Dev.hazards("rads")), _b("ติดเชื้อ", func(): Dev.hazards("infect"))])
 
 
+## MV-483: the twelve approved trait-card profiles on real traits, the unclassified fallbacks, a long text card, and
+## the light live / still / off with frame stepping. Tiers here are a preview only (MV-497 decides the real ones).
+func _trait_cards_preview() -> void:
+	_head("TRAIT CARDS", "การ์ดนิสัย (MV-483)")
+	_note("trait_card_style %s · trait_card_vfx %s · จัดระดับแล้ว %d นิสัย (MV-497)" % [
+		"เปิด" if Features.on("trait_card_style") else "ปิด", "เปิด" if Features.on("trait_card_vfx") else "ปิด", Crew.TRAIT_TIERS.size()])
+	var modes := []
+	for m in [["", "สด"], ["still", "นิ่ง"], ["off", "ไม่มีแสง"]]:
+		var mm: String = m[0]
+		modes.append(_b(m[1], func(): Dev.trait_preview(mm), "yellow" if TraitFx.preview == mm else "gray"))
+	modes.append(_b("เฟรมถัดไป", func(): Dev.trait_step(), "green"))
+	_row(modes, "แสง · เฟรม %d/16" % (TraitFx.current_phase() + 1))
+	var g := GridContainer.new()
+	g.name = "TraitCardPreview"
+	g.columns = 2 if box.custom_minimum_size.x - 36.0 >= TraitCard.MIN_W * 2 + TraitCard.GAP else 1
+	g.add_theme_constant_override("h_separation", TraitCard.GAP)
+	g.add_theme_constant_override("v_separation", TraitCard.GAP)
+	var items := []
+	for r in 6:
+		items.append(["cook", r])
+		items.append(["glutton", r])
+	items += [["cook", -1], ["glutton", -1], ["architect", 4], ["coward", -1]]
+	for it in items:
+		var c := TraitCard.new()
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		g.add_child(c)
+		c.setup(str(it[0]), int(it[1]))
+	var m := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		m.add_theme_constant_override("margin_" + side, 6)
+	m.add_child(g)
+	_list.add_child(m)
+	_note("ซ้าย: ข้อดี (พ่อครัว) ทั่วไป..ปฐมกาล · ขวา: ข้อเสีย (กินจุ) · แถวล่าง: ยังไม่จัดระดับ (ค่าเริ่มต้นตอนนี้) และข้อความยาว")
+
+
 func _tab_crew() -> void:
+	_trait_cards_preview()
 	_row([_b("+1 คน", func(): Dev.recruit(1), "green"), _b("+3 คน", func(): Dev.recruit(3), "green"), _b("รักษาทุกคน", func(): Dev.heal_all())])
 	_row([_b("สุข 100", func(): Dev.happy_all(100.0)), _b("สุข 20", func(): Dev.happy_all(20.0)), _b("สุข 0", func(): Dev.happy_all(0.0), "red")], "ทุกคน")
 	_row([_b("หมา", func(): Dev.add_pet("dog")), _b("แมว", func(): Dev.add_pet("cat")), _b("ไก่", func(): Dev.add_pet("hen")), _b("ล้าง", func(): Dev.clear_pets())],

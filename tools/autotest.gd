@@ -141,6 +141,11 @@ func _run() -> void:
 		await _window_fit_test()
 		_finish()
 		return
+	if "--only=trait_cards" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _trait_cards_test()
+		_finish()
+		return
 	if "--only=gear_slots" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _gear_slots_test()
@@ -915,6 +920,7 @@ func _run() -> void:
 	await _perf_test()
 	await _window_fit_test()
 	await _gear_slots_test()
+	await _trait_cards_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -6831,5 +6837,154 @@ func _gear_slots_test() -> void:
 	_check("gear slots: crew gear labels sit clear of the aura (%d slots)" % ct.size(), ct.size() == 6 and caps_ok)
 	await shot("gear_slots_crew")
 	hud.panels.dwellers.close()
+	await wait(0.3)
+	Settings.set_value("tips", keep_tips)
+
+
+## MV-483 (MV-484..498): compact trait cards and their light. The frame, the 192 canonical masks (codes, content
+## cutout, 4 px bound, motion), the in-game light == those masks at 160x58, real trait values (cost red, upside kept,
+## warning mark), the untiered fallback, cards that grow with their text, the crew dossier (columns, clearance), the
+## switch off = old chips, live / still / paused, the bounded cache, GOD preview
+func _trait_cards_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_tips = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	var fr: Array = Atlas.regions.get("ui_trait_card_frame", [])
+	_check("trait cards: the compact frame is 160x58 in the atlas", fr.size() == 4 and int(fr[2]) == 160 and int(fr[3]) == 58)
+	# --- the canonical masks (reference sheet, not shipped) and the in-game port
+	var sheet := Image.load_from_file(ProjectSettings.globalize_path("res://tools/art/trait_cards/fx_trait_masks.png"))
+	var regions = JSON.parse_string(FileAccess.get_file_as_string("res://tools/art/trait_cards/fx_trait_masks.json"))
+	_check("trait cards: 192 canonical light masks (12 profiles x 16)", sheet != null and regions is Dictionary and regions.size() == 192)
+	if sheet == null or not (regions is Dictionary):
+		return
+	var codes := [Color("26262a"), Color("54544e"), Color("9a9684")]
+	var bad := []
+	var mismatch := []
+	var moving := 0
+	var names := ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
+	for neg in [false, true]:
+		for rank in 6:
+			var first := PackedByteArray()
+			var differs := false
+			for i in 16:
+				var key := "fx_trait_%s_%s_%d" % ["tradeoff" if neg else "benefit", names[rank], i]
+				var r: Array = regions[key]
+				var img := sheet.get_region(Rect2i(int(r[0]), int(r[1]), 172, 70))
+				var lit := TraitFx.light(neg, rank, i, 160, 58, false)
+				for y in 70:
+					for x in 172:
+						var c := img.get_pixel(x, y)
+						var want := TraitFx.level(float(lit.get(Vector2i(x, y), 0.0)))
+						var got := 0
+						if c.a > 0.0:
+							for ci in codes.size():
+								if codes[ci].is_equal_approx(Color(c.r, c.g, c.b)):
+									got = ci + 1
+							if got == 0:
+								bad.append("%s colour" % key)
+							elif x >= 10 and x < 162 and y >= 10 and y < 60:
+								bad.append("%s content" % key)
+							elif x < 2 or y < 2 or x >= 170 or y >= 68:
+								bad.append("%s bound" % key)
+						if got != want and mismatch.size() < 4:
+							mismatch.append("%s %d,%d mask %d game %d" % [key, x, y, got, want])
+				if i == 0:
+					first = img.get_data()
+				elif img.get_data() != first:
+					differs = true
+			if differs:
+				moving += 1
+	_check("trait cards: masks use only the three codes, never light the content, stay within 4 px %s" % [bad.slice(0, 3)], bad.is_empty())
+	_check("trait cards: all 12 profiles move (%d)" % moving, moving == 12)
+	_check("trait cards: the in-game light matches the approved masks pixel for pixel %s" % [mismatch], mismatch.is_empty())
+	# --- real cards
+	var cook := TraitCard.new()
+	cook.size = Vector2(170, 60)
+	add_child(cook)
+	cook.setup("cook")
+	var glut := TraitCard.new()
+	glut.size = Vector2(170, 60)
+	add_child(glut)
+	glut.setup("glutton")
+	await wait(0.2)
+	var g_lbls: Array = glut.find_children("*", "Label", true, false).map(func(l): return l.text)
+	_check("trait cards: untiered = no tier label; a benefit gets the accent only, a trade-off the still crimson edge",
+		cook.find_child("Tier", true, false) == null and TraitFx.mode_for(false, cook.tier) == "accent" and TraitFx.mode_for(true, glut.tier) == "still")
+	_check("trait cards: a trade-off shows the warning, its red cost and keeps its upside (%s)" % [g_lbls], glut.find_child("Warning", true, false) != null
+		and g_lbls.has(Loc.t(TraitCard.COST.glutton)) and g_lbls.has(Loc.t(TraitCard.UPSIDE.glutton)))
+	cook.queue_free()
+	glut.queue_free()
+	var arch := TraitCard.new()
+	arch.custom_minimum_size.x = 160
+	add_child(arch)
+	arch.setup("architect", 4)
+	await wait(0.3)
+	arch.size = arch.get_combined_minimum_size()
+	await wait(0.2)
+	_check("trait cards: a long description grows the card (%s) and its light follows (%s)" % [arch.size, arch.fx.size],
+		arch.size.y > 58.0 and arch.fx.size == arch.size + Vector2(12, 12) and arch.find_child("Tier", true, false) != null
+		and arch.fx.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	var ph := {}
+	for i in 12:
+		await wait(0.06)
+		ph[arch.fx.phase] = true
+	_check("trait cards: a classified card's light moves (%d phases seen)" % ph.size(), ph.size() >= 4)
+	get_tree().paused = true
+	var held := TraitFx.current_phase()
+	await get_tree().create_timer(0.4, true).timeout
+	var paused_ok := TraitFx.current_phase() == held
+	get_tree().paused = false
+	Features.set_override("features", "trait_card_vfx", false)
+	await wait(0.4)
+	var still_ok := arch.fx.phase == 0
+	Features.set_override("features", "trait_card_vfx", null)
+	_check("trait cards: the light holds while paused, and stands still with trait_card_vfx off", paused_ok and still_ok)
+	arch.queue_free()
+	_check("trait cards: the light cache stays bounded (%d)" % TraitFx._cache.size(), TraitFx._cache.size() <= TraitFx.CACHE_MAX)
+	# --- the crew dossier
+	var hud: HUD = main.hud
+	var crew: Dictionary = {}
+	for d in Game.s.dwellers:
+		if Crew.traits(d).size() >= 2:
+			crew = d
+			break
+	if crew.is_empty():
+		crew = Game.s.dwellers[0]
+		crew["traits"] = ["cook", "glutton"]
+	hud.open_panel("dwellers")
+	(hud.panels.dwellers as DwellersPanel).manage(int(crew.id))
+	await wait(0.6)
+	var dp: ModalPanel = hud.panels.dwellers
+	var cards: Array = dp.find_children("*", "TraitCard", true, false)
+	var clash := 0
+	for i in cards.size():
+		for j in range(i + 1, cards.size()):
+			if Rect2(cards[i].global_position, cards[i].size).grow(4).intersects(Rect2(cards[j].global_position, cards[j].size).grow(4)):
+				clash += 1
+	_check("trait cards: the dossier shows one card per trait, their light never meets (%d cards)" % cards.size(),
+		cards.size() == Crew.traits(crew).size() and clash == 0)
+	await shot("trait_cards_dossier")
+	dp.close()
+	await wait(0.3)
+	Features.set_override("features", "trait_card_style", false)
+	hud.open_panel("dwellers")
+	(hud.panels.dwellers as DwellersPanel).manage(int(crew.id))
+	await wait(0.5)
+	_check("trait cards: style off = the old trait chips", dp.find_children("*", "TraitCard", true, false).is_empty())
+	dp.close()
+	await wait(0.3)
+	Features.set_override("features", "trait_card_style", null)
+	# --- GOD preview
+	hud.open_panel("god")
+	var god = hud.panels.god
+	god.tab = "crew"
+	god.refresh()
+	await wait(0.5)
+	_check("trait cards: GOD previews all twelve profiles + fallbacks", god.find_children("*", "TraitCard", true, false).size() >= 16)
+	await shot("trait_cards_god")
+	god.close()
 	await wait(0.3)
 	Settings.set_value("tips", keep_tips)
