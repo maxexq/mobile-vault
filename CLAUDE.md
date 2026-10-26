@@ -23,7 +23,8 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
 - **PixelLab API costs money:** `tools/pixellab.py gen ... --yes` spends Parames's credits. Show the
   `--dry-run` cost estimate and get an OK before every paid batch (README "Redrawing sprites with PixelLab").
 - **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served by Vercel
-  from `web/`.
+  from `web/`, and by Cloudflare Pages in parallel while it is being verified (MV-499,
+  `docs/hosting-cloudflare.md`: the engine wasm comes from R2; a Godot upgrade needs a new R2 upload).
 - Never commit secrets: `cloud_config.json`, `.plane-api-key`, `ai/.env` are git-ignored.
 - PR, review, CI and Vercel deploy events post to Discord (`.github/workflows/discord-notify.yml`,
   secret `DISCORD_WEBHOOK_URL`). A new CI workflow must be added to its `workflow_run.workflows` list.

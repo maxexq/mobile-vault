@@ -1,4 +1,4 @@
-# Posts PR activity, CI results and Vercel deploys to Discord (MV-96).
+# Posts PR activity, CI results and Vercel / Cloudflare Pages deploys to Discord (MV-96, MV-499).
 # Setup: repo secret DISCORD_WEBHOOK_URL (Discord channel > Integrations > Webhooks).
 # Optional repo variable SKIP_PREVIEW_SUCCESS=true mutes successful Preview deploys.
 # Message logic: .github/scripts/discord-notify.sh
@@ -13,6 +13,9 @@ on:
     types: [submitted]
   # Vercel reports each Preview/Production deploy as a commit status named "Vercel".
   status:
+  # Cloudflare Pages (MV-499, Git integration) reports each deploy as a check run named "Cloudflare Pages".
+  check_run:
+    types: [completed]
   # Kept for providers that create GitHub deployments instead.
   deployment_status:
   # CI workflows to report: put each new workflow's `name:` here. Scheduled runs and Error spike
@@ -28,6 +31,8 @@ permissions:
 
 jobs:
   notify:
+    # other apps' check runs (only Cloudflare Pages deploys are news) don't start a runner
+    if: github.event_name != 'check_run' || startsWith(github.event.check_run.name, 'Cloudflare Pages')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -7,6 +7,8 @@
 | **production** | `main` | ผู้เล่นจริง | `https://apocarlypse-mobile-vault.vercel.app/` | โปรเจกต์ **prod** (ของเดิม) |
 | **UAT** | `uat` | เทสแบบเปิด (ผู้เล่นทดสอบ alpha / beta) | `https://apocarlypse-mobile-vault-git-uat-<ทีม>.vercel.app/` | โปรเจกต์ **test** |
 | **staging** | `staging` | เทสภายใน (ทีม) | `https://apocarlypse-mobile-vault-git-staging-<ทีม>.vercel.app/` | โปรเจกต์ **test** |
+
+> **กำลังย้ายไป Cloudflare Pages (MV-499):** ใช้คู่กับ Vercel จนกว่าจะตรวจผ่าน URL ของ Pages: `main` → `https://apocarlypse-mobile-vault.pages.dev/`, `uat` → `https://uat.apocarlypse-mobile-vault.pages.dev/`, `staging` → `https://staging.apocarlypse-mobile-vault.pages.dev/` ขั้นตอนตั้งค่า: [hosting-cloudflare.md](hosting-cloudflare.md)
 | **dev** | branch งาน / PR preview / เครื่องตัวเอง | นักพัฒนา | URL preview ของแต่ละ PR | โปรเจกต์ **test** |
 
 - **บิลด์เดียวใช้ได้ทุกที่:** เกมดูชื่อโดเมนของหน้าเว็บแล้วรู้เองว่าอยู่ env ไหน (`config/environments.json`) จึง merge `staging` → `uat` → `main` ได้โดยไม่ต้อง export ใหม่ และไม่มีทางเอาค่าของ staging หลุดไป production

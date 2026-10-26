@@ -74,6 +74,11 @@ jobs:
       - name: GameAnalytics proxy tests
         run: node tools/ga_proxy_test.mjs
 
+      # Cloudflare Pages serves the engine from R2 (MV-499): web/index.wasm must be the build recorded in
+      # config/engine_wasm.json, else a Godot upgrade would ship against the old upload
+      - name: Engine wasm matches the R2 upload record
+        run: node tools/engine_wasm_check.mjs
+
       - name: Cache Godot
         id: godot-cache
         if: steps.scope.outputs.godot == 'true'

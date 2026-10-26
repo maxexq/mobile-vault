@@ -3720,6 +3720,11 @@ func _env_test() -> void:
 	_check("env: PR previews and unknown hosts are dev", BuildInfo.env_for_host("apocarlypse-mobile-vault-k2j3h4-maxexq.vercel.app") == "dev"
 		and BuildInfo.env_for_host("apocarlypse-mobile-vault-git-mv-112-env-maxexq.vercel.app") == "dev"
 		and BuildInfo.env_for_host("evil.example.com") == "dev")
+	_check("env: Cloudflare Pages branch URLs (MV-499)", BuildInfo.env_for_host("apocarlypse-mobile-vault.pages.dev") == "prod"
+		and BuildInfo.env_for_host("uat.apocarlypse-mobile-vault.pages.dev") == "uat"
+		and BuildInfo.env_for_host("staging.apocarlypse-mobile-vault.pages.dev") == "staging"
+		and BuildInfo.env_for_host("3f2a9c1b.apocarlypse-mobile-vault.pages.dev") == "dev"
+		and BuildInfo.env_for_host("mv-499-cloudflare-pages.apocarlypse-mobile-vault.pages.dev") == "dev")
 	_check("env: desktop / editor (tests) is dev, on the test project", BuildInfo.env() == "dev" and BuildInfo.cloud_project() == "test")
 	var both := {"projects": {"prod": {"url": "https://p.supabase.co", "anon_key": "pk"}, "test": {"url": "https://t.supabase.co", "anon_key": "tk"}}}
 	_check("env: per-project config picks its section", str(Cloud.pick_config(both, "prod").url) == "https://p.supabase.co"

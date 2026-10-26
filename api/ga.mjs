@@ -1,15 +1,15 @@
 // GameAnalytics signing proxy (MV-426). The repo is public and the web build bundles cloud_config.json, so the
 // GameAnalytics secret key must never be in either. The game (scripts/autoload/analytics.gd) posts its init / events
 // body here: POST /api/ga?route=init|events&game=<game key>. This function signs the exact body with the secret from
-// the Vercel environment (Authorization = base64 HMAC-SHA256, Collection API v2) and forwards it to GameAnalytics,
+// the host's environment (Authorization = base64 HMAC-SHA256, Collection API v2) and forwards it to GameAnalytics,
 // passing the answer back unchanged.
-//  * Vercel env vars (Project Settings > Environment Variables, all environments):
-//    GA_GAME_KEY_PROD + GA_SECRET_PROD, GA_GAME_KEY_TEST + GA_SECRET_TEST
+//  * MV-499: platform-neutral (Web Crypto, no node: modules), so the same code runs as the Vercel function (this file's
+//    default export) and as the Cloudflare Pages Function functions/api/ga.js (which passes its context.env)
+//  * env vars on the host (Vercel: Project Settings > Environment Variables; Cloudflare Pages: Settings > Variables and
+//    Secrets, Production + Preview): GA_GAME_KEY_PROD + GA_SECRET_PROD, GA_GAME_KEY_TEST + GA_SECRET_TEST
 //  * only our own two game keys are signed: this is not an open signer for other games
 //  * GameAnalytics unreachable = 502, which the game keeps queued like "offline"
 // Local test (no network): node tools/ga_proxy_test.mjs
-
-import { createHmac } from "node:crypto";
 
 export const HOST = "https://api.gameanalytics.com";
 export const ROUTES = new Set(["init", "events"]);
@@ -24,8 +24,13 @@ export function secretFor(gameKey, env) {
   return "";
 }
 
-export function sign(body, secret) {
-  return createHmac("sha256", secret).update(body, "utf8").digest("base64");
+export async function sign(body, secret) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(body)));
+  let bin = "";
+  for (const b of mac) bin += String.fromCharCode(b);
+  return btoa(bin);
 }
 
 // what this deployment sees, for a 403 (short: GOD shows the first 120 characters): per project the last 4 characters
@@ -46,7 +51,7 @@ function reply(status, obj) {
   });
 }
 
-export async function handle(request, env = process.env, send = fetch) {
+export async function handle(request, env = globalThis.process?.env ?? {}, send = fetch) {
   if (request.method !== "POST") return reply(405, { error: "POST only" });
   const url = new URL(request.url);
   const route = url.searchParams.get("route") || "";
@@ -55,7 +60,7 @@ export async function handle(request, env = process.env, send = fetch) {
   const secret = secretFor(game, env);
   if (secret === "") return reply(403, { error: "unknown game key", got: ".." + game.slice(-4), ...seen(env) });
   const body = await request.text();
-  if (Buffer.byteLength(body, "utf8") > MAX_BYTES) return reply(413, { error: "body too large" });
+  if (new TextEncoder().encode(body).length > MAX_BYTES) return reply(413, { error: "body too large" });
   try {
     JSON.parse(body);
   } catch {
@@ -65,7 +70,7 @@ export async function handle(request, env = process.env, send = fetch) {
   try {
     r = await send(`${HOST}/v2/${game}/${route}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: sign(body, secret) },
+      headers: { "Content-Type": "application/json", Authorization: await sign(body, secret) },
       body,
     });
   } catch {
