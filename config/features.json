@@ -53,7 +53,9 @@
     "vehicle_ambience": true,
     "enemy_size": true,
     "cozy_roof": true,
-    "driver_cab": true
+    "driver_cab": true,
+    "audio_ambience": true,
+    "audio_sfx": true
   },
   "events": {},
   "tune": {}
