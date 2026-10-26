@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Changed
+- Crew stats are easier to read: STR, AGI and INT always in that order and colour, a bar with one segment per point, each person's best stat boxed in gold (with the rooms it suits), and a separate green line for what their equipment adds (MV-518)
 - Monsters look bigger and more threatening: normal monsters ×2, elites ×3, bosses and checkpoint warlords ×3, still in crisp whole pixels (MV-517)
 
 ## [4.7.0-alpha.3] - 2026-10-26

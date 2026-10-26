@@ -47,8 +47,7 @@ func refresh() -> void:
 	var g: Dictionary = Inspection.GRADES[c.grade]
 	info.add_child(UIKit.label(str(c.name), UIKit.FS_BIG, UIKit.C_WHITE))
 	info.add_child(UIKit.label("%s · %s  Lv%d" % [g.en, g.th, int(c.lvl)], UIKit.FS_SMALL, UIKit.C_GOLD if c.grade == "rare" else UIKit.C_ORANGE))
-	for stt in ["str", "int", "agi"]:
-		info.add_child(UIKit.stat_bar(stt, int(c[stt])))
+	info.add_child(UIKit.stat_bars(c))
 	var tr := []
 	for t in c.traits:
 		tr.append(Crew.TRAITS[t].th)
