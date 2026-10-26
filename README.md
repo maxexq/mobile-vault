@@ -151,6 +151,19 @@ Fallout-Shelter style: two or three rooms of the **same type and level**, side b
 | View | The anchor's `RoomView` spans the cells (actors wander and use equipment across it); the strips the hull's partition / shaft would hide are redrawn above the shell by `Vehicle._sync_large_rooms()`. The close-up frames the whole room (drops to 1× zoom if 3 cells don't fit). |
 | Modules (planned) | Turret bays / defence modules from the modular-chassis design are not in `Data.MERGEABLE`, so they stay single-cell. |
 
+## 4k. Seeded world map (MV-500 epic) — phase 1: generation + save (MV-129)
+
+The fixed six-map itinerary becomes one spatial road map per world (approved preview: `tools/art/micro/previews/seeded-map-v1`). Decisions (Parames 2026-10-26): **a new world every lap** (reaching the exit of Signal Metropolis = lap + 1 in a freshly seeded world, bosses reset, harder; a world never changes while you are on it); **checkpoints sit on the border road** (the next region's Vault level and the warlord of the one you leave, or the toll in peaceful mode, as today); **phased delivery behind `seeded_world_map`** (off = the old itinerary; off in `config/features.json` until the map screen ships).
+
+| Phase | Status |
+|---|---|
+| 1. Generation + save + GOD (MV-129) | this section |
+| 2. Driving along roads, offline, landmarks, gates, lap = new world (MV-130) | next |
+| 3. Map screen + art (MV-515, MV-501..513) | later |
+| 4. Event / suspect markers (MV-131) + old-save migration (MV-514) | later |
+
+`scripts/autoload/world_map.gd` (`WorldMap`): `generate(seed, lap)` is pure (same seed + `GEN_VERSION` = same world). Six regions on a 2×3 grid in an order where each borders the next; each region is a loop of four stops (industrial: `start` + market / hospital / depot; the others: `<biome>_junction`, their two landmarks from `Expedition.SITES`, `<biome>_signal` report) with an optional diagonal shortcut; one border road per pair of neighbouring regions (`gate` = the next region's Vault level, `boss` = the region being left); `world_exit` in the last region. Road km follow drawn length, scaled so crossing a region ≈ that biome's old length (tune `world.km_scale`). The whole graph is saved in `Game.s.world` (`seed`, `gen`, `lap`, `regions`, `nodes`, `edges`, `at`, `visited`) so a later generator can't move existing roads; `ensure()` (on game start, switch on) makes one only when there is none. `route(from, to, vault)` = shortest drivable route respecting gates; `reachable(from, vault)`. GOD → โลก → WORLD MAP: summary, region order with Vault levels, a test route, new world from a random seed, "regenerate from the seed = same?" check. Autotest `--only=world_map`.
+
 ## 4j. Room expansion foundation (MV-428 epic, MV-429)
 
 Ten optional new rooms (Salvagers' Saloon, Scout Dispatch, Decontamination Bay, Companion Den, Jury-Rig Drone Dock, Battery Reserve, Stormwatch Station, Wasteland Barter Counter, Scrapyard Training Cage, Relic & Memory Room) arrive one PR each, every one with its gameplay, its 64x52 background and one micro-animation. Art style: **[docs/art/room-style-reference.md](docs/art/room-style-reference.md)** (approved 2026-10-26; use a real existing room sprite as the visual input). The foundation ships no room by itself.

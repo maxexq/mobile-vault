@@ -32,6 +32,7 @@
     "trait_card_vfx": true,
     "trait_tiers": true,
     "trait_roll_weights": true,
+    "seeded_world_map": false,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,

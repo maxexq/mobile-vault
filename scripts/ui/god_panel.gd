@@ -532,6 +532,19 @@ func _tab_fight() -> void:
 
 
 func _tab_world() -> void:
+	_head("WORLD MAP", "แผนที่โลก (MV-500)")
+	_note("ระยะที่ 1: สร้างและเก็บโลกเท่านั้น ยังไม่มีหน้าจอแผนที่")
+	_note(WorldMap.summary())
+	var wm := WorldMap.world()
+	if not wm.is_empty():
+		var order := []
+		for reg in wm.regions:
+			order.append("%s(Vault %d)" % [str(reg.id), int(reg.req)])
+		_note("ลำดับพื้นที่: " + " → ".join(order))
+		var rt := WorldMap.route("start", "helios", Data.MAX_VAULT_LEVEL)
+		_note("เส้นทางทดสอบ start → helios: %s" % (("%.1f กม. ผ่าน %d จุด" % [float(rt.km), (rt.ids as Array).size()]) if not rt.is_empty() else "ไปไม่ถึง"))
+	_row([_b("โลกใหม่", func(): Dev.world_new(), "yellow", true), _b("ตรวจ seed", func(): Dev.world_verify(), "green")], "โลก")
+	_note("โลกใหม่ = สุ่ม seed ใหม่แทนโลกนี้ · ตรวจ seed = สร้างซ้ำจาก seed ที่เก็บไว้แล้วเทียบว่าตรงกัน")
 	_head("INDUSTRIAL SKY", "ฉากนิคมอุตสาหกรรมใหม่ (MV-369) ตามเวลาในเกม")
 	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
 	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])
