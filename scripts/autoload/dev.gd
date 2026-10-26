@@ -578,6 +578,50 @@ func world_new(seed_text: String = "") -> void:
 	act("world new", {"seed": w.seed})
 
 
+## MV-130: drive the world map. dest = a stop id, "next" = the nearest landmark not done yet, "exit" = the world exit
+func world_drive(dest: String) -> bool:
+	if dest == "next":
+		dest = ""
+		var best := INF
+		for n in WorldMap.world().get("nodes", []):
+			if n.has("site") and not Expedition.is_done(str(n.site)):
+				var rt := WorldMap.route(WorldMap.here(), str(n.id), int(Game.s.vault_level))
+				if not rt.is_empty() and float(rt.km) < best and str(n.id) != WorldMap.here():
+					best = float(rt.km)
+					dest = str(n.id)
+	elif dest == "exit":
+		dest = "world_exit"
+	var ok := dest != "" and WorldMap.drive_to(dest)
+	Trace.rec("god", "world drive %s" % dest, {"ok": ok})
+	if not ok:
+		Game.toast.emit("ไปไม่ได้: %s" % (WorldMap.drive_block(dest) if dest != "" else "ไม่มีแลนด์มาร์กที่ยังไม่ไป"), "warn")
+	return ok
+
+
+## jump to just before the end of the current road (the next step arrives)
+func world_finish_road() -> void:
+	var t := WorldMap.trip()
+	if t.is_empty():
+		return
+	t.prog = maxf(0.0, float(WorldMap.edge(str(t.edges[int(t.i)])).km) - 0.01)
+	act("world finish road")
+
+
+## drive offline for this many minutes (the real offline catch-up step), to watch arrivals and blockers
+func world_offline(minutes: float) -> void:
+	var left := minutes * 60.0
+	while left > 0.0:
+		Game._simulate(minf(60.0, left), true)
+		left -= 60.0
+	act("world offline %d min" % int(minutes))
+	Game.travel_changed.emit()
+
+
+func world_cancel() -> void:
+	WorldMap.cancel_trip()
+	Trace.rec("god", "world cancel trip")
+
+
 ## regenerate from the saved seed and compare with the saved graph (nothing is replaced); read-only, not cheated
 func world_verify() -> bool:
 	var w := WorldMap.world()

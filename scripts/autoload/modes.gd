@@ -167,9 +167,9 @@ func toll_due() -> bool:
 	if not peaceful() or Game.s.is_empty():
 		return false
 	var b := int(Game.s.biome)
-	if Combat.boss_beaten(b) or float(Game.s.km) < Game.biome_end_km() - 0.001:
+	if Combat.boss_beaten(b) or not Game.at_checkpoint_spot():
 		return false
-	return b >= Data.BIOMES.size() - 1 or int(Game.s.vault_level) >= int(Data.biome(b + 1).req)
+	return Game.checkpoint_vault_ok()
 
 
 ## scrap per minute the squad brings in on a peaceful run (no fights = no kill scrap); 0 without a squad
