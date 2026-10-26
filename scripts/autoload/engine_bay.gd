@@ -329,15 +329,21 @@ func burn_pm() -> Dictionary:
 	return {}
 
 
+## the resource this engine burns ("" = none): what burn_pm() would return a key for, without working out the amount
+## (MV-113: burn_pm's fuel amount needs the whole haul weight, and starved() runs on every speed check)
+func burn_key() -> String:
+	if mode() == "silent":
+		return "power"
+	var kind := str(t().fuel_kind)
+	return kind if kind in ["fuel", "scrap", "power"] else ""
+
+
 ## nothing left to burn: the vault crawls
 func starved() -> bool:
 	if Game.s.is_empty():
 		return false
-	var b := burn_pm()
-	for k in b:
-		if float(Game.s.res.get(k, 0.0)) <= 0.0:
-			return true
-	return false
+	var k := burn_key()
+	return k != "" and float(Game.s.res.get(k, 0.0)) <= 0.0
 
 
 func blocked_reason() -> String:

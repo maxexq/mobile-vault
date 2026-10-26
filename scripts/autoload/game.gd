@@ -330,6 +330,7 @@ func _migrate_v4() -> void:
 func save_game() -> void:
 	if not started:
 		return
+	_flush_sim()       # MV-113: the time collected for the next sim step goes into the save too
 	s.saved_at = Cloud.now()
 	Save.write(Account.envelope(s))
 
@@ -373,10 +374,38 @@ func _offline_progress(sec: float) -> void:
 	toast.emit("ระหว่างที่คุณไม่อยู่ %d นาที: %s" % [int(sec / 60.0), ", ".join(parts)], "info")
 
 
+## MV-113: the economy doesn't need every rendered frame (its rates are per minute), and at 120 fps it would run twice
+## as often as at 60. With fixed_sim on, frame time is collected and a step runs perf.sim_hz times a second, the
+## world half and the crew half on alternate steps (each with all the time collected for it: fast-forward and long
+## frames work as before), so no frame pays for the whole economy. Off = everything once per frame, as before.
+const SIM_HZ := 20.0
+var sim_ms := {"world": 0.0, "crew": 0.0}     # the last step of each half (GOD / FPS overlay)
+var sim_steps := {"world": 0, "crew": 0}      # live steps run so far (autotest)
+var _acc_world := 0.0
+var _acc_crew := 0.0
+var _acc_step := 0.0
+var _crew_next := false
+
+
 func _process(delta: float) -> void:
 	if not started:
 		return
-	_simulate(delta, false)
+	if not Features.on("fixed_sim"):
+		_flush_sim()
+		_simulate(delta, false)
+	else:
+		_acc_world += delta
+		_acc_crew += delta
+		_acc_step += delta
+		if _acc_step >= 1.0 / Features.num("perf.sim_hz", SIM_HZ):
+			_acc_step = 0.0
+			if _crew_next:
+				_sim_crew(_acc_crew, false)
+				_acc_crew = 0.0
+			else:
+				_sim_world(_acc_world, false)
+				_acc_world = 0.0
+			_crew_next = not _crew_next
 	_autosave_t += delta
 	if _autosave_t >= AUTOSAVE_SEC:
 		_autosave_t = 0.0
@@ -486,8 +515,22 @@ func room_unlock_level(t: String) -> int:
 	return maxi(1, lv)
 
 
+## MV-113: checked for every room many times a tick; unlocked_slots() builds a new array each call, so the set is
+## kept until what it depends on (vault level, body size, room count) changes
+var _unl_key := -1
+var _unl := {}
+
+
 func is_slot_unlocked(slot: int) -> bool:
-	return slot == Data.CAB_SLOT or unlocked_slots().has(slot)
+	if slot == Data.CAB_SLOT:
+		return true
+	var key := int(s.vault_level) * 1000000 + main_slots() * 1000 + slot_count()
+	if key != _unl_key:
+		_unl_key = key
+		_unl.clear()
+		for i in unlocked_slots():
+			_unl[int(i)] = true
+	return _unl.has(slot)
 
 
 func weather_def() -> Dictionary:
@@ -955,7 +998,35 @@ func armory_bonus() -> float:
 
 
 # =================================================================== simulation
+## one simulation step: the world and the rooms (_sim_world), then the crew, travel and radio (_sim_crew). MV-113:
+## with fixed_sim on, Game._process runs the two halves on alternate steps, each with the time collected for it, so no
+## single frame pays for the whole economy; offline catch-up and the switch off run both at once.
 func _simulate(dt: float, offline: bool) -> void:
+	_sim_world(dt, offline)
+	_sim_crew(dt, offline)
+
+
+## run whatever each half still has waiting (fixed_sim switched off mid-way, or before a save)
+func _flush_sim() -> void:
+	if _acc_world > 0.0:
+		_sim_world(_acc_world, false)
+	if _acc_crew > 0.0:
+		_sim_crew(_acc_crew, false)
+	_acc_world = 0.0
+	_acc_crew = 0.0
+
+
+func _sim_world(dt: float, offline: bool) -> void:
+	var t0 := Time.get_ticks_usec()
+	Synergy.sim_begin()
+	_sim_world_body(dt, offline)
+	Synergy.sim_end()
+	if not offline:
+		sim_ms.world = float(Time.get_ticks_usec() - t0) / 1000.0
+		sim_steps.world += 1
+
+
+func _sim_world_body(dt: float, offline: bool) -> void:
 	sim_offline = offline
 	var m := dt / 60.0     # minutes
 	if started:
@@ -1022,6 +1093,21 @@ func _simulate(dt: float, offline: bool) -> void:
 					d.hp = minf(float(d.max_hp), float(d.hp) + float(def.heal) * float(r.level) * hm * m)
 					d.rads = maxf(0.0, float(d.rads) - 0.5 * float(r.level) * hm * m)
 
+
+func _sim_crew(dt: float, offline: bool) -> void:
+	var t0 := Time.get_ticks_usec()
+	Synergy.sim_begin()
+	_sim_crew_body(dt, offline)
+	Synergy.sim_end()
+	if not offline:
+		sim_ms.crew = float(Time.get_ticks_usec() - t0) / 1000.0
+		sim_steps.crew += 1
+
+
+func _sim_crew_body(dt: float, offline: bool) -> void:
+	sim_offline = offline
+	var m := dt / 60.0     # minutes
+	var res: Dictionary = s.res
 	# --- dwellers: eat, drink, xp, happiness, explorers
 	var present := 0
 	var now := Time.get_unix_time_from_system()
@@ -1048,6 +1134,17 @@ func _simulate(dt: float, offline: bool) -> void:
 	for i in s.rooms.size():
 		if s.rooms[i].type == "quarters" and not is_site(i):
 			has_quarters = true
+	# MV-113: everything below is the same for every crew member this tick: work it out once, not per person
+	var first_q := _first_quarters()
+	var env_base := Env.happy_base()
+	var freeze := Env.freeze_power()
+	var pets_bonus := 6.0 * minf(2.0, float((s.get("pets", []) as Array).size()))
+	var low_food: bool = float(res.food) < cap("food") * 0.1
+	var night := is_night()
+	var deck_lv := Mods.level("roof_deck")
+	var deck_id := int(deck_dweller().get("id", -1))
+	var home_mod := {}       # slot -> Synergy.happy_mod
+	var mentors := {}        # slot -> [workers] for the mentor bonus
 	for d in s.dwellers:
 		if is_away(d):
 			continue
@@ -1055,31 +1152,34 @@ func _simulate(dt: float, offline: bool) -> void:
 			d.hp = maxf(1.0, float(d.hp) - 3.0 * m)
 		if float(d.rads) > 0.0:
 			d.hp = maxf(1.0, float(d.hp) - float(d.rads) * 0.02 * m)
-		var target := 45.0 + Crew.happy_aura(d) + Env.happy_mod(d)
+		var target := 45.0 + Crew.happy_aura(d) + env_base
+		if freeze > 0.0 and not Crew.has(d, "cold_blooded"):
+			target -= 30.0 * freeze
 		if Crew.is_infected(d):
 			target -= 15.0
-		target += 6.0 * minf(2.0, float((s.get("pets", []) as Array).size()))
-		var home := int(d.room) if int(d.room) >= 0 else _first_quarters()
+		target += pets_bonus
+		var home := int(d.room) if int(d.room) >= 0 else first_q
 		if home >= 0:
-			target += Synergy.happy_mod(home)
+			if not home_mod.has(home):
+				home_mod[home] = Synergy.happy_mod(home)
+			target += float(home_mod[home])
 			if room_dark(home):
 				target -= 16.0 if Crew.has(d, "afraid_dark") else 4.0
-		elif is_night() and Crew.has(d, "afraid_dark"):
+		elif night and Crew.has(d, "afraid_dark"):
 			target -= 8.0
 		if crowded:
 			target -= 10.0
-		if res.food < cap("food") * 0.1:
+		if low_food:
 			target -= 8.0
 		if has_quarters:
 			target += 15.0
 		if not starving:
 			target += 15.0
 		var role := squad_role(d)
-		var deck_lv := Mods.level("roof_deck")
 		if role >= 0:
 			target += 20.0 if _best_stat(d) == Combat.ROLES[role].stat else 10.0
 			target += 2.0 * deck_lv    # a place to sit down between waves
-		elif deck_lv > 0 and is_deck(d):
+		elif deck_lv > 0 and int(d.id) == deck_id:
 			# the reserve dozes in the open air on the cot: rests up, heals, stays sharp
 			target += 16.0 + 3.0 * deck_lv
 			d.hp = minf(float(d.max_hp), float(d.hp) + float(d.max_hp) * 0.006 * deck_lv * m)
@@ -1094,7 +1194,9 @@ func _simulate(dt: float, offline: bool) -> void:
 					target += 12.0
 			target += 20.0 if st != "" and _best_stat(d) == st else 8.0
 			var mentor := 0.0     # the best mentor in the room (a large room's crew don't multiply it)
-			for o in room_workers(int(d.room)):
+			if not mentors.has(int(d.room)):
+				mentors[int(d.room)] = room_workers(int(d.room))
+			for o in mentors[int(d.room)]:
 				if o != d:
 					mentor = maxf(mentor, Skills.val(o, "mentor"))
 			xpm *= 1.0 + 2.0 * mentor
@@ -1777,7 +1879,10 @@ func span_efficiency(slot: int) -> float:
 
 ## how many single rooms this room is worth (level effects, healing, pop cap, armory...)
 func room_scale(slot: int) -> float:
-	return float(work_span(slot)) * span_efficiency(slot)
+	var span := room_span(slot)      # MV-113: once (it walks the cells), not once each for work_span and span_efficiency
+	if is_merging(slot):
+		return float(span)
+	return float(span) * float(Data.SPAN_EFFICIENCY[clampi(span, 1, Data.MAX_SPAN)])
 
 
 ## crew seats: 2 per cell

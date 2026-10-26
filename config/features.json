@@ -23,6 +23,7 @@
     "tutorial_tips": true,
     "hull_warning": true,
     "morale_v2": true,
+    "fixed_sim": true,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,

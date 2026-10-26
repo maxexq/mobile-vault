@@ -233,7 +233,7 @@ func _tab_game() -> void:
 	_choice(Loc.t("มุมกล้อง"), "zoom", [["auto", "AUTO"], ["wide", Loc.t("กว้าง")], ["normal", Loc.t("ปกติ")]], Loc.t("AUTO จะถอยกล้องเองตอนสู้บอสหรือลากโบกี้"))
 	_toggle(Loc.t("ฟิลเตอร์จอ CRT"), "crt")
 	_choice(Loc.t("เอฟเฟกต์อนุภาค"), "fx_gpu", [[true, "GPU"], [false, "CPU"]], Loc.t("เลือก CPU ถ้าเครื่องช้าหรือเครื่องเก่า"))
-	_choice(Loc.t("เฟรมเรต"), "fps", [[60, "60"], [30, "30"]], Loc.t("30 FPS ช่วยประหยัดแบตเตอรี่"))
+	_choice(Loc.t("เฟรมเรต"), "fps", [[30, "30"], [60, "60"], [120, "120"]], Loc.t("30 FPS ประหยัดแบตเตอรี่ · 120 FPS ลื่นสุดบนจอ 120Hz (จอ 60Hz จะได้ 60)"))
 	_toggle(Loc.t("เต็มจอ"), "fullscreen", Loc.t("บน iPhone (Safari) ให้ใช้ แชร์ > เพิ่มไปยังหน้าจอโฮม แทน"))
 
 	_head("FEEL", Loc.t("ความรู้สึก"))

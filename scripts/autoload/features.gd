@@ -41,6 +41,7 @@ const FEATURES := {
 	"encounters": "จุดพิเศษระหว่างสำรวจ",
 	"hull_warning": "เตือนก่อนรถพัง (MV-250): ตัวถังเหลือ 50/25/10% มีข้อความบอกผล จอสั่นเบาๆ สั่นมือถือ กรอบจอแดงกะพริบ และแถบซ่อมด่วน (ปิด = มีแค่แถบตัวถังเปลี่ยนสีแบบเดิม)",
 	"morale_v2": "ขวัญกำลังใจแบบใหม่ (MV-127): หดหู่ (ทำงานช้าลง) → ใจสลาย (ร้องไห้ในห้องพัก ไม่รับคำสั่ง) → ลงจากรถตอนกลางคืน + ปุ่มคุยปลอบใจ (ปิด = ประท้วง/หนีพร้อมขโมยของแบบเดิม)",
+	"fixed_sim": "จำลองเศรษฐกิจเป็นจังหวะคงที่ (MV-113): คำนวณทรัพยากร/ลูกเรือ/การเดินทาง 20 ครั้งต่อวิ ไม่ใช่ทุกเฟรม ช่วยให้ 60/120 FPS ลื่น (ปิด = ทุกเฟรมแบบเดิม)",
 	"rooms_expansion": "ห้องใหม่ชุดขยาย 10 ห้อง (MV-428): ห้องที่สร้างได้เพิ่ม งานของห้อง และแอนิเมชันประจำห้อง (ปิด = ซ่อนจากเมนูสร้าง งาน/นาฬิกาหยุดไว้ ห้องและของที่เก็บได้ยังอยู่)",
 	"strangers": "คนแปลกหน้าหน้าประตู (ตรวจคน)",
 	"stop_for_strangers": "คนแปลกหน้าโบกรถตอนรถวิ่ง รถจะจอดก่อนแล้วเปิดหน้าต่างตรวจ เลือกขับผ่านได้ (MV-244) (ปิด = รถวิ่งต่อ คนรอหน้าประตูแบบเดิม)",
@@ -103,6 +104,7 @@ const TUNE := {
 	"morale.talk_gain": [1.0, 40.0, "ขวัญ: คุยปลอบใจได้ความสุข"],
 	"morale.talk_sec": [0.0, 600.0, "ขวัญ: คนคุยพักงาน (วิ)"],
 	"morale.talk_cd": [0.0, 3600.0, "ขวัญ: คู่เดิมคุยกันอีกได้หลัง (วิ)"],
+	"perf.sim_hz": [5.0, 60.0, "ประสิทธิภาพ: คำนวณเศรษฐกิจกี่ครั้งต่อวินาที (fixed_sim)"],
 	"barks.cooldown": [3.0, 120.0, "บทพูดตามสถานการณ์: เว้นก่อนพูดเรื่องเดิมซ้ำ (วิ)"],
 	"saloon.food": [0.0, 100.0, "โรงเตี๊ยม: อาหารต่อมื้อเย็น"],
 	"saloon.water": [0.0, 100.0, "โรงเตี๊ยม: น้ำต่อมื้อเย็น"],
@@ -320,6 +322,20 @@ func _layer(l: String) -> Dictionary:
 
 
 func _value(block: String, key: String, def: Variant) -> Variant:
+	# MV-113: switches and tunables are single values, so read each layer directly (session ?ff= overrides win over
+	# dev.cfg, as in _merge) instead of _layer("dev"), which deep-copied the whole dev layer on every call. on() and
+	# num() run hundreds of times a frame. Still reads the live layers, so a change is never missed.
+	if block == "features" or block == "tune":
+		var fv = def
+		for l in LAYERS:
+			var lb = (layers[l] as Dictionary).get(block)
+			if lb is Dictionary and lb.has(key):
+				fv = lb[key]
+			if l == "dev":
+				var sb = _session_dev.get(block)
+				if sb is Dictionary and sb.has(key):
+					fv = sb[key]
+		return fv
 	var v = def
 	for l in LAYERS:
 		var b = _layer(l) if block == "" else _layer(l).get(block, {})

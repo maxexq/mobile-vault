@@ -136,6 +136,11 @@ func _run() -> void:
 		await _outbox_test()
 		_finish()
 		return
+	if "--only=perf" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _perf_test()
+		_finish()
+		return
 	if "--only=morale" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _morale_test()
@@ -891,6 +896,7 @@ func _run() -> void:
 	await _barks_test()
 	await _hull_warning_test()
 	await _morale_test()
+	await _perf_test()
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
@@ -6111,8 +6117,10 @@ func _hull_warning_test() -> void:
 	await wait(0.2)
 	ha._fix.pressed.emit()
 	await wait(0.3)
-	_check("hull warning: repair from the strip fills the hull and clears the warning", is_equal_approx(float(Game.s.hull), Game.hull_max())
-		and ha.stage == 0 and not ha._strip.visible and float(Game.s.res.scrap) < 9999.0)
+	# damage can tick between the repair and this check (acid rain, a raid, one economy step), so "full" is 99 %
+	_check("hull warning: repair from the strip fills the hull and clears the warning (hull %.1f/%.1f, scrap %.0f, stage %d, weather %s)" % [
+		float(Game.s.hull), Game.hull_max(), float(Game.s.res.scrap), ha.stage, str(Game.s.weather)],
+		float(Game.s.hull) >= Game.hull_max() * 0.99 and ha.stage == 0 and not ha._strip.visible and float(Game.s.res.scrap) < 9999.0)
 	Features.set_override("features", "hull_warning", false)
 	Dev.hull_warning_preview(3)
 	await wait(0.3)
@@ -6288,3 +6296,105 @@ func _morale_test() -> void:
 	Game.dwellers_changed.emit()
 	Game.squad_changed.emit()
 	await wait(0.3)
+
+
+## MV-113: frame-rate setting 30 / 60 / 120, the fixed-rate economy (alternating halves, no time lost, switch off =
+## every frame), the Features fast path and the synergy cache give exactly the old answers, and a loose time budget
+## for the economy in a heavy scene (CI renders in software, so only a big regression fails it)
+func _perf_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	# --- frame-rate setting
+	var fps0 = Settings.get_value("fps")
+	Settings.set_value("fps", 120)
+	var at120 := Engine.max_fps
+	Settings.set_value("fps", 30)
+	var at30 := Engine.max_fps
+	Settings.apply_remote({"fps": 90})
+	_check("perf: frame cap 120 / 30 apply, an unknown 90 falls back to 60", at120 == 120 and at30 == 30 and int(Settings.get_value("fps")) == 60
+		and Engine.max_fps == 60)
+	Settings.set_value("fps", fps0)
+	# --- Features fast path == the old merged lookup (dev + session overrides included)
+	Features.set_override("features", "barks", false)
+	Features.set_override("tune", "fx.shake", 1.5)
+	Features._session_dev = {"features": {"raids": false}, "tune": {"barks.cooldown": 30.0}}
+	var mism := []
+	for blk in ["features", "tune"]:
+		var keys: Array = Features.FEATURES.keys() if blk == "features" else Features.TUNE.keys()
+		for k in keys:
+			var slow = null
+			for l in Features.LAYERS:
+				var b = Features._layer(l).get(blk, {})
+				if b is Dictionary and b.has(k):
+					slow = b[k]
+			if Features._value(blk, k, null) != slow:
+				mism.append("%s/%s" % [blk, k])
+	_check("perf: feature switches and tunables read the same as before %s" % [mism], mism.is_empty() and not Features.on("raids")
+		and is_equal_approx(Features.num("barks.cooldown", 12.0), 30.0) and not Features.on("barks"))
+	Features._session_dev = {}
+	Features.set_override("features", "barks", null)
+	Features.set_override("tune", "fx.shake", null)
+	# --- synergy cache == a fresh calculation, also right after a layout change without any signal
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	var stale := []
+	for round in 2:
+		for i in Game.s.rooms.size():
+			if JSON.stringify(Synergy.effects(i)) != JSON.stringify(Synergy._effects(i)):
+				stale.append("%d:%d" % [round, i])
+		Game.s.rooms[Data.ENGINE_SLOT].type = "quarters" if str(Game.s.rooms[Data.ENGINE_SLOT].type) != "quarters" else "workshop"
+	_check("perf: cached room synergies match a fresh calculation %s" % [stale], stale.is_empty())
+	Game.s.rooms = keep_rooms
+	Game.rooms_changed.emit()
+	# --- fixed-rate economy: alternating halves, fewer steps than frames, no game time lost
+	Features.set_override("features", "fixed_sim", true)
+	Game._flush_sim()
+	var w0: int = Game.sim_steps.world
+	var c0: int = Game.sim_steps.crew
+	var tod0 := float(Game.s.tod)
+	var frames := 0
+	var elapsed := 0.0
+	var t0 := Time.get_ticks_usec()
+	while Time.get_ticks_usec() - t0 < 1500000:
+		await get_tree().process_frame
+		frames += 1
+		elapsed += get_process_delta_time() * Engine.time_scale
+	var wn: int = Game.sim_steps.world - w0
+	var cn: int = Game.sim_steps.crew - c0
+	Game._flush_sim()
+	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
+	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
+		and wn + cn >= mini(frames, 20))
+	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
+	Features.set_override("features", "fixed_sim", false)
+	w0 = Game.sim_steps.world
+	frames = 0
+	for i in 20:
+		await get_tree().process_frame
+		frames += 1
+	_check("perf: switch off = the economy every frame (%d steps in %d frames)" % [Game.sim_steps.world - w0, frames],
+		Game.sim_steps.world - w0 >= frames - 1)
+	Features.set_override("features", "fixed_sim", null)
+	# --- loose budget in a heavy scene (prints the numbers for the PR)
+	var keep_dw: Array = Game.s.dwellers.duplicate(true)
+	var keep_tier = Game.s.get("tier", "van")
+	Dev.set_tier("rig")
+	Dev.set_trailers(2)
+	Dev.rooms_fill()
+	Dev.spawn_roster_all()
+	await wait(0.5)
+	var t1 := Time.get_ticks_usec()
+	for i in 60:
+		Game._simulate(1.0 / 60.0, false)
+	var per := float(Time.get_ticks_usec() - t1) / 60.0 / 1000.0
+	print("[perf] heavy scene (%d crew, %d rooms): economy %.2f ms per full step, last halves %.2f + %.2f ms" % [Game.s.dwellers.size(),
+		Game.s.rooms.size(), per, float(Game.sim_ms.world), float(Game.sim_ms.crew)])
+	_check("perf: the economy in a heavy scene stays under the budget (%.2f ms per full step)" % per, per < 25.0)
+	Dev.set_trailers(0)
+	Dev.set_tier(str(keep_tier))
+	Game.s.dwellers = keep_dw
+	Game.s.rooms = keep_rooms
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	await wait(0.5)
