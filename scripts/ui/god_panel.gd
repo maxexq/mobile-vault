@@ -380,6 +380,7 @@ func _tab_crew() -> void:
 		var tid: String = t
 		bb.append(_b("ช่าง+" + str(Crew.TRAITS[t].th), func(): Dev.spawn_builder(tid), "red" if Crew.TRAITS[t].get("bad", false) else "gray"))
 	_row(bb)
+	_trait_odds()
 	_crew_roster()
 	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
 	for g in Inspection.GRADES:
@@ -422,6 +423,25 @@ func _tab_crew() -> void:
 
 
 ## MV-170: every named crew sprite (any animation) + portrait, and a button that boards that one
+## MV-516: the trait roll weights, and the shares from rolling 1000 made-up recruits
+func _trait_odds() -> void:
+	var on := Features.on("trait_roll_weights")
+	_head("TRAIT ODDS", "โอกาสสุ่มนิสัย (MV-516) · %s" % ("ตามระดับ" if on else "เท่ากันทุกนิสัย"))
+	var w := []
+	for i in Crew.TIER_NAMES.size():
+		w.append("%s %s" % [Loot.RARITY[i].en, Features.num("crew.trait_weight." + Crew.TIER_NAMES[i], Crew.TRAIT_WEIGHTS[i])])
+	w.append("ข้อเสีย %s" % Features.num("crew.trait_weight.trade_off", Crew.TRADE_OFF_WEIGHT))
+	_note("น้ำหนัก: " + " · ".join(w))
+	var r: Dictionary = Dev.last_trait_roll
+	if not r.is_empty():
+		var parts := []
+		for i in Crew.TIER_NAMES.size():
+			parts.append("%s %.1f%%" % [Loot.RARITY[i].en, float(r[Crew.TIER_NAMES[i]])])
+		parts.append("ข้อเสีย %.1f%%" % float(r.bad))
+		_note("สุ่ม %d คน มีนิสัยระดับนั้นอย่างน้อย 1: %s" % [int(r.n), " · ".join(parts)])
+	_row([_b("สุ่มทดสอบ 1000 คน", func(): Dev.trait_roll_test(1000), "green")], "ไม่เพิ่มคนจริง")
+
+
 func _crew_roster() -> void:
 	_head("CREW ROSTER", "ลูกเรือมีชื่อ 20 คน · สวิตช์ %s · โอกาส %d%%" % ["เปิด" if Features.on("crew_roster_20") else "ปิด",
 		roundi(Features.num("crew.roster_chance", Crew.ROSTER_CHANCE) * 100.0)])

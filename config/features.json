@@ -31,6 +31,7 @@
     "trait_card_style": true,
     "trait_card_vfx": true,
     "trait_tiers": true,
+    "trait_roll_weights": true,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,
