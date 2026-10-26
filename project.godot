@@ -63,7 +63,7 @@ window/handheld/orientation=4
 
 [gui]
 
-fonts/dynamic_fonts/use_oversampling=false
+fonts/dynamic_fonts/use_oversampling=true
 common/snap_controls_to_pixels=true
 common/default_scroll_deadzone=8
 

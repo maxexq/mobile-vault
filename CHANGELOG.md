@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Changed
+- In-game Chakra Petch UI text now renders smoothly at the screen resolution for clearer Thai and English menus. Silkscreen tags and world pixel art retain their crisp pixel edges; a player anti-aliasing setting will come later (MV-540)
+
 ## [4.7.0-alpha.4] - 2026-10-27
 
 ### Merged pull requests

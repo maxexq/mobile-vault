@@ -31,6 +31,7 @@ static var font_main: Font
 static var font_bold: Font
 static var font_pixel: Font
 static var _tex := {}
+static var _smooth_text_state := -1
 
 
 static func ui_tex(name: String) -> Texture2D:
@@ -64,12 +65,15 @@ static func theme() -> Theme:
 		f.antialiasing = TextServer.FONT_ANTIALIASING_NONE
 		f.hinting = TextServer.HINTING_NORMAL
 		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
+		f.oversampling = 1.0 # Silkscreen and the rollback mode stay on the native pixel grid.
 	font_main = chakra
 	font_bold = chakra_b
 	var pix := FontVariation.new()
 	pix.base_font = silk
 	pix.fallbacks = [chakra_b]
 	font_pixel = pix
+	refresh_text_rendering()
+	Features.changed.connect(refresh_text_rendering)
 
 	var t := Theme.new()
 	t.default_font = chakra
@@ -127,6 +131,21 @@ static func theme() -> Theme:
 	t.set_color("font_color", "TooltipLabel", C_TEXT)
 	_theme = t
 	return t
+
+
+## MV-540: shared policy for the existing UI fonts; a player preference can use this later.
+## Mutate the existing FontFiles so open controls and Thai fallbacks update in place.
+static func refresh_text_rendering() -> void:
+	if font_main == null or font_bold == null:
+		return
+	var smooth := Features.on("smooth_ui_text")
+	if _smooth_text_state == int(smooth):
+		return
+	_smooth_text_state = int(smooth)
+	for font: FontFile in [font_main, font_bold]:
+		font.antialiasing = TextServer.FONT_ANTIALIASING_GRAY if smooth else TextServer.FONT_ANTIALIASING_NONE
+		font.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO if smooth else TextServer.SUBPIXEL_POSITIONING_DISABLED
+		font.oversampling = 0.0 if smooth else 1.0 # 0 follows display-resolution viewport oversampling.
 
 
 const BTN_TEX := {"green": "btn", "yellow": "btn_amber", "orange": "btn_amber",

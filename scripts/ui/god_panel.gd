@@ -623,6 +623,10 @@ func _tab_world() -> void:
 
 
 func _tab_sys() -> void:
+	var smooth := Features.on("smooth_ui_text")
+	_head("UI TEXT", "ตัวอักษร (MV-540)")
+	_row([_b("ขอบเรียบ", func(): Dev.ui_text_preview(true), "yellow" if smooth else "gray"),
+		_b("ขอบพิกเซลเดิม", func(): Dev.ui_text_preview(false), "gray" if smooth else "yellow")])
 	var wm := not Features.on("window_still")
 	_head("WINDOWS", "หน้าต่าง (MV-537) · ตอนนี้%s" % ("เลื่อนนุ่มตามเนื้อหา" if wm else "อยู่นิ่ง ขอบบนไม่ขยับ"))
 	_row([_b("อยู่นิ่ง", func(): Dev.window_motion(false), "gray" if wm else "yellow"),
