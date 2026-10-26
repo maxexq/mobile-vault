@@ -220,6 +220,11 @@ func _run() -> void:
 		await _engine_detail_test()
 		_finish()
 		return
+	if "--only=cozy_roof" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _cozy_roof_test()
+		_finish()
+		return
 	if "--only=vehicle_detail" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _vehicle_detail_test()
@@ -915,6 +920,7 @@ func _run() -> void:
 	await _boss_intro_test()
 	await _enemy_size_test()
 	await _vehicle_detail_test()
+	await _cozy_roof_test()
 	await _engine_detail_test()
 	await _idle_motion_test()
 	_env_micro_test()
@@ -5045,6 +5051,68 @@ func _boss_intro_test() -> void:
 
 ## MV-388 phase 1: wheel redraws keep their sizes / phases, the static shell details are in the atlas, leaf springs
 ## sit over every road wheel (main + trailers), give way to the coil-overs and the tracks, none on rails, switch off
+## MV-462 cozy roof: the nine parts at their spec sizes, the roof parts / old roof follow the switch on every
+## chassis, the deck art follows it at every level, and the roof deck keeps its stats
+func _cozy_roof_test() -> void:
+	var v: Vehicle = main.vehicle
+	var sizes := {"prop_roof_water_tank": [32, 20], "prop_roof_satellite_dish": [16, 17], "prop_roof_planter_tray": [14, 17],
+		"prop_roof_deck_frame": [76, 60], "prop_roof_patched_awning": [38, 22], "prop_roof_bench_blanket": [24, 7],
+		"prop_roof_glass_windbreak": [22, 16], "prop_roof_caged_lamp": [6, 12], "prop_roof_water_can": [9, 14],
+		"mod_roof_deck_cozy_1": [76, 60], "mod_roof_deck_cozy_2": [76, 60], "mod_roof_deck_cozy_3": [76, 60],
+		"roof_legacy_van": [146, 38], "roof_legacy_bus": [146, 38], "roof_legacy_rig": [146, 38], "roof_legacy_train": [146, 38]}
+	var ok := true
+	for k in sizes:
+		var r = Atlas.regions.get(k)
+		if r == null or int(r[2]) != int(sizes[k][0]) or int(r[3]) != int(sizes[k][1]):
+			ok = false
+			print("[autotest] cozy roof sprite wrong: %s %s" % [k, str(r)])
+	_check("cozy roof: 9 parts, 3 deck levels and 4 old-roof sprites at their sizes", ok)
+	var was_mods: Dictionary = Game.s.mods.duplicate(true)
+	var was_tier := Game.tier()
+	var was_tr := Game.trailers()
+	var cozy := ["prop_roof_planter_tray", "prop_roof_planter_tray", "prop_roof_water_tank", "prop_roof_satellite_dish"]
+	Dev.set_trailers(0)
+	for t in ["van", "bus", "rig", "train"]:
+		Dev.set_tier(t)
+		await wait(0.1)
+		Dev.cozy_roof_switch(true)
+		await wait(0.05)
+		var on_parts := v.sprite_regions(true)
+		on_parts.sort()
+		var want := cozy.duplicate()
+		want.sort()
+		Dev.cozy_roof_switch(false)
+		await wait(0.05)
+		_check("cozy roof %s: switch on = tank, dish, 2 trays; off = the old roof (%s / %s)" % [t, str(on_parts), str(v.sprite_regions(true))],
+			on_parts == want and v.sprite_regions(true) == ["roof_legacy_" + t])
+	Dev.cozy_roof_switch(true)
+	Dev.set_tier("rig")
+	await wait(0.1)
+	for lv in [1, 2, 3]:
+		Dev.roof_deck_preview(lv)
+		await wait(0.05)
+		_check("cozy roof: deck Lv%d uses the cozy art" % lv, v.sprite_regions(false).has("mod_roof_deck_cozy_%d" % lv))
+		if lv == 3:
+			await shot("cozy_roof_rig_deck3")
+		Dev.cozy_roof_switch(false)
+		await wait(0.05)
+		_check("cozy roof: switch off = the old deck Lv%d" % lv, v.sprite_regions(false).has("mod_roof_deck_%d" % lv)
+			and not v.sprite_regions(false).has("mod_roof_deck_cozy_%d" % lv))
+		Dev.cozy_roof_switch(true)
+		await wait(0.05)
+	_check("cozy roof: the deck keeps its height (lift %d)" % int(Vehicle.deck_lift()), Vehicle.deck_lift() == float(Vehicle.ROOF_DECK_H))
+	Dev.roof_deck_preview(0)
+	await wait(0.05)
+	_check("cozy roof: no deck sprite at Lv0", not v.sprite_regions(false).any(func(r): return str(r).begins_with("mod_roof_deck")))
+	await shot("cozy_roof_rig")
+	Features.set_override("features", "cozy_roof", null)
+	Game.s.mods = was_mods
+	Mods.mods_changed.emit()
+	Dev.set_tier(was_tier)
+	Dev.set_trailers(was_tr)
+	await wait(0.1)
+
+
 func _vehicle_detail_test() -> void:
 	var v: Vehicle = main.vehicle
 	var sizes := {"wheel_0": [32, 32], "wheel_3": [32, 32], "bwheel_0": [32, 32], "bwheel_3": [32, 32], "rwheel_0": [20, 20],
