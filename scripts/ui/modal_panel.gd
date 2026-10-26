@@ -250,6 +250,8 @@ func close() -> void:
 	tw.tween_property(box, "modulate:a", 0.0, 0.1)
 	tw.tween_property(dim, "modulate:a", 0.0, 0.1)
 	tw.chain().tween_callback(func():
+		if is_open:
+			return      # reopened during the 0.1 s fade-out (MV-515): don't hide the new window
 		visible = false
 		closed.emit())
 

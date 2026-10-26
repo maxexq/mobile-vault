@@ -37,7 +37,7 @@ extends Node
 
 signal world_changed
 
-const GEN_VERSION := 1
+const GEN_VERSION := 2      # 2 (MV-515): the exit sits clear of its neighbour stop. Saved worlds keep their own graph
 const SAVE_VERSION := 1                  # Game.s.world.v this build reads
 const PLACE_VERSION := 1                 # MV-514 placement rule (recorded in world.placed)
 const CANVAS := Vector2i(336, 360)       # native map canvas (handoff); stop positions are in these pixels
@@ -254,8 +254,30 @@ static func generate(seed_text: String, lap: int = 0) -> Dictionary:
 	for x in last:
 		if int(x.x) + int(x.y) > int(far.x) + int(far.y):
 			far = x
-	var ex := {"id": "world_exit", "type": "exit", "biome": n_reg - 1,
-		"x": mini(CANVAS.x - 8, int(far.x) + 22), "y": mini(CANVAS.y - 8, int(far.y) + 18)}
+	# the exit goes next to its stop but clear of every frame: the nearest spot (34 / 44 / 56 px, 8 directions,
+	# inside the map) whose box gap to every other stop is at least 30 px; if none, the roomiest one
+	var ex_at := Vector2i(int(far.x), int(far.y)) + Vector2i(0, 34)
+	var best_gap := -1
+	var found := false
+	for d in [34, 44, 56]:
+		if found:
+			break
+		for dir in [Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(-1, -1)]:
+			var step: Vector2i = dir
+			var at: Vector2i = Vector2i(int(far.x), int(far.y)) + step * (d if step.x == 0 or step.y == 0 else int(d * 0.75))
+			if at.x < 17 or at.y < 17 or at.x > CANVAS.x - 17 or at.y > CANVAS.y - 17:
+				continue
+			var gap := 1 << 20
+			for x in nodes:
+				gap = mini(gap, maxi(absi(at.x - int(x.x)), absi(at.y - int(x.y))))
+			if gap >= 30:
+				ex_at = at
+				found = true
+				break
+			if gap > best_gap:
+				best_gap = gap
+				ex_at = at
+	var ex := {"id": "world_exit", "type": "exit", "biome": n_reg - 1, "x": ex_at.x, "y": ex_at.y}
 	nodes.append(ex)
 	by_id[ex.id] = ex
 	_link(edges, by_id, far.id, ex.id, int(regions[n_reg - 1].req), n_reg - 1, r)   # needs the last warlord

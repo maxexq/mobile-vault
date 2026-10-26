@@ -34,6 +34,7 @@ def main():
     ui.gen_ui_frames()
     ui.gen_gear_slots()       # MV-473: steel equipment slots + rarity light masks
     ui.gen_trait_cards()      # MV-483: compact trait card frame (+ the light reference sheet, not shipped)
+    ui.gen_world_map()        # MV-500 / MV-501..513: seeded world map tiles, frames, markers
     bg.gen_env_micro()        # MV-388 phase 4: atlas sprites for the living backgrounds
     pack_atlas()
     bg.gen_backgrounds()

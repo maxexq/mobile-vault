@@ -562,6 +562,7 @@ func _tab_world() -> void:
 	_row([_b("ย้ายซ้ำ (ต้องไม่เปลี่ยน)", func(): Dev.world_reconcile(), "green"),
 		_b("แผนที่: " + ("เปิด" if Features.on("seeded_world_map") else "ปิด"), func(): Dev.feature_set("seeded_world_map", not Features.on("seeded_world_map")),
 		"green" if Features.on("seeded_world_map") else "red")], "MV-514")
+	_row([_b("เปิดแผนที่ (TEST-515)", func(): Dev.world_screen(), "green", true)], "หน้าจอ")
 	if not wm.is_empty():
 		var t := WorldMap.trip()
 		if t.is_empty():
