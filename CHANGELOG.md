@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Fixed
+- Forge synthesis now spends components instead of scrap; affordability and Thai/English cost descriptions match the components icon (MV-543)
+
 ## [4.7.0-alpha.4] - 2026-10-27
 
 ### Merged pull requests

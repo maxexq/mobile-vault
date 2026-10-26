@@ -1499,6 +1499,46 @@ func _tutorial_test() -> void:
 	await wait(1.5)
 
 
+## MV-543: recipes spend components at every tier, even with no scrap; resource ticks update affordability.
+func _forge_cost_test(loot_ui: LootPanel) -> void:
+	var saved_free: bool = Dev.flags.get("free", false)
+	Dev.flags["free"] = false
+	loot_ui.tab = "forge"
+	for r in range(Loot.RARITY.size() - 1):
+		var cost := 15 * (r + 1)
+		Game.s.gear = [Loot.roll_item("weapon", 1, r), Loot.roll_item("armor", 1, r), Loot.roll_item("boots", 1, r)]
+		Game.s.items["components"] = cost - 1
+		Game.s.res.scrap = 999.0
+		loot_ui.refresh()
+		var before := JSON.stringify(Loot.stash())
+		var button := loot_ui.find_child("Synthesize%d" % r, true, false) as Button
+		_check("forge: tier %d requires components despite abundant scrap" % r, button.disabled)
+		var denied := Loot.synthesize(r)
+		_check("forge: tier %d insufficient components preserve items and currencies" % r, denied.is_empty() and JSON.stringify(Loot.stash()) == before and int(Game.s.items.components) == cost - 1 and float(Game.s.res.scrap) == 999.0)
+		Game.s.items["components"] = cost
+		Game.s.res.scrap = 0.0
+		Game.resources_changed.emit()
+		button = loot_ui.find_child("Synthesize%d" % r, true, false) as Button
+		_check("forge: tier %d enables on a components tick with zero scrap" % r, not button.disabled)
+		Game.s.res.scrap = 999.0
+		Game.resources_changed.emit()
+		_check("forge: tier %d scrap-only ticks keep the same button" % r, is_instance_valid(button) and button == loot_ui.find_child("Synthesize%d" % r, true, false) and not button.disabled)
+		Game.s.res.scrap = 0.0
+		Game.resources_changed.emit()
+		var out := Loot.synthesize(r)
+		_check("forge: tier %d spends exactly %d components and no scrap" % [r, cost], not out.is_empty() and int(out.rar) == r + 1 and Loot.stash().size() == 1 and int(Game.s.items.get("components", 0)) == 0 and float(Game.s.res.scrap) == 0.0)
+	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
+	Game.s.items.erase("components")
+	Game.s.res.scrap = 999.0
+	Game.resources_changed.emit()
+	var before := JSON.stringify(Loot.stash())
+	var denied := Loot.synthesize(0)
+	_check("forge: missing components cannot fall back to scrap", denied.is_empty() and JSON.stringify(Loot.stash()) == before and not Game.s.items.has("components") and float(Game.s.res.scrap) == 999.0 and (loot_ui.find_child("Synthesize0", true, false) as Button).disabled)
+	Dev.flags["free"] = saved_free
+	loot_ui.tab = "gear"
+	loot_ui.refresh()
+
+
 ## settings window: every option applies + persists, version info, save export / validate / reset
 ## MV-422: real UI entry points must leave state untouched until a named confirmation.
 func _confirm_actions_test() -> void:
@@ -1638,17 +1678,33 @@ func _confirm_actions_test() -> void:
 	Game.s.gear.append(later)
 	dialog.confirm_button.pressed.emit()
 	_check("confirm: bulk salvage preserves locked gear and drops arriving after the prompt", Loot.stash().size() == 2 and Loot.stash().has(locked) and Loot.stash().has(later))
+	_forge_cost_test(loot_ui)
 	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
 	Game.s.res.scrap = 200.0
+	Game.s.items["components"] = 45
+	var saved_lang = Settings.get_value("lang")
+	for lang in ["th", "en"]:
+		Settings.set_value("lang", lang)
+		loot_ui._request_synthesize(0)
+		_check("confirm: %s synthesis preview names components" % lang, dialog.is_open and dialog.message.text.begins_with("ใช้ 15 ชิ้นส่วน" if lang == "th" else "Spend 15 components"))
+		dialog.cancel_button.pressed.emit()
+		_check("confirm: cancelling synthesis preserves all items and currencies", Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
+	Settings.set_value("lang", saved_lang)
 	loot_ui._request_synthesize(0)
-	_check("confirm: synthesis waits without consuming items or scrap", dialog.is_open and Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	_check("confirm: synthesis waits without consuming items or currencies", dialog.is_open and Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
 	Game.s.gear[0].lock = true
 	dialog.confirm_button.pressed.emit()
-	_check("confirm: locking an ingredient invalidates synthesis", Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	_check("confirm: locking an ingredient invalidates synthesis", Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
 	Game.s.gear[0].lock = false
 	loot_ui._request_synthesize(0)
 	dialog.confirm_button.pressed.emit()
-	_check("confirm: synthesis consumes exactly three ingredients after acceptance", Loot.stash().size() == 1 and int(Loot.stash()[0].rar) == 1 and float(Game.s.res.scrap) == 185.0)
+	_check("confirm: synthesis consumes three ingredients and components, preserving scrap", Loot.stash().size() == 1 and int(Loot.stash()[0].rar) == 1 and int(Game.s.items.components) == 30 and float(Game.s.res.scrap) == 200.0)
+	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
+	loot_ui._request_synthesize(0)
+	Game.s.items["components"] = 14
+	Game.resources_changed.emit()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: losing components before acceptance preserves items and scrap", Loot.stash().size() == 3 and int(Game.s.items.components) == 14 and float(Game.s.res.scrap) == 200.0)
 	Game.s.combat.auto_salvage = -1
 	loot_ui._request_auto_salvage(1)
 	dialog.close()
