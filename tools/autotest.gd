@@ -6523,6 +6523,31 @@ func _audio_test() -> void:
 	await shot("god_sound")
 	main.hud.panels.god.close()
 	Dev.sound_preview("clear")
+	# MV-538: on the industrial map in rain only rain is heard; a GOD weather preview (acid rain) ends with the panel
+	# and a forgotten one times out
+	Dev.goto_biome(0)
+	Game.force_weather("rain")
+	await wait(0.9)
+	var stray := []
+	for w in Sound.WEATHER_SOUNDS:
+		if w != "rain" and (Sound.is_playing(w) or float(Sound.layer(w).cur) > 0.0):
+			stray.append(w)
+	_check("audio: a weather layer is silent unless its weather is active %s" % [stray], stray.is_empty() and Sound.is_playing("rain"))
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "sound"
+	main.hud.panels.god.refresh()
+	await wait(0.3)
+	Dev.sound_preview("weather", "acid_rain")
+	await wait(0.8)
+	_check("audio: GOD acid-rain preview plays while the panel is open", Sound.is_playing("acid_rain"))
+	main.hud.panels.god.close()
+	await wait(1.4)
+	_check("audio: closing GOD ends the preview, acid rain is silent on the industrial map", Sound.preview.is_empty()
+		and not Sound.is_playing("acid_rain") and Sound.is_playing("rain") and Sound.is_playing("industrial"))
+	Dev.sound_preview("weather", "acid_rain")
+	Sound.preview_left = 0.05
+	await wait(1.2)
+	_check("audio: a forgotten GOD preview times out", Sound.preview.is_empty() and not Sound.is_playing("acid_rain"))
 	Features.set_override("tune", "audio.fade_sec", null)
 	Dev.goto_biome(keep_biome)
 	Game.force_weather(keep_weather)

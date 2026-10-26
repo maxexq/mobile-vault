@@ -14,7 +14,11 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ### Added
 - The game has sound: every area has its own ambience (factory wind and clanks, desert wind with glass chimes, forest crickets and crows, swamp frogs, icy wind, a dead city's radio) over the engine's rumble, and the weather is heard too, from calm rain on the metal roof to thunderstorms, sandstorms, snow, fog, acid rain and ashfall. Fights, bosses, building, loot, road events, expeditions and buttons have sound effects. The title screen plays a cozy lo-fi theme. Settings has volume sliders for music, ambience, effects and buttons; on the web sound starts after your first tap. High, sharp sounds were softened so nothing stings your ears (MV-536)
 
+### Fixed
+- Acid rain could be heard on the first map without any acid rain, after a weather sound had been previewed in the tester panel (MV-538)
+
 ### Changed
+- Every area's background sound is softer and cozier, with a lo-fi, retro warmth: a quiet chord in the background, dusty vinyl and gentle tape wobble, and no sharp highs, while each area keeps its own character (factory knocks, desert glass chimes, forest crickets and creek, swamp frogs, icy wind, the dead city radio) (MV-538)
 - New icons for the three main stats so they are told apart at a glance: STR is a fist, INT a lightbulb, AGI a zigzag (MV-524..526)
 - Every vehicle got small hardware details in the first van's style: bolted pillar joints, roof seam caps, fuel caps, and a door handle, vent, latch or hinges per vehicle (MV-528)
 - Viktor now drives: every vehicle's cab shows him at the wheel with a dash, seat and little lamp, and now and then he blinks, the dash light flickers or he nudges the wheel (MV-519)
