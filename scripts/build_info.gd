@@ -8,7 +8,7 @@ extends RefCounted
 ## no stamp and reports itself as a "dev" build.
 
 const GAME_NAME := "Apocarlypse: Mobile Vault"   # player-facing title; the repo, domain and save keys keep "mobile-vault"
-const GAME_VERSION := "4.7.0-alpha.3"
+const GAME_VERSION := "4.7.0-alpha.4"
 const CODENAME := "MAMMOTH-7"
 const STAMP_PATH := "res://build_info.json"
 

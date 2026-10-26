@@ -14,6 +14,8 @@ and the Vercel host names in `config/environments.json` stay until the cutover b
   wasm no longer matches that record, so a Godot upgrade can't ship against the old upload.
 - `functions/api/ga.js` runs the same GameAnalytics signer as Vercel (`api/ga.mjs`, Web Crypto, MV-426).
 - `web/_headers` = the headers from `vercel.json`.
+- `web/404.html`: without it Pages answers any missing path with the game page and 200 (single-page-app fallback),
+  so `features.<env>.json` lookups for environments without their own file would get HTML instead of a 404.
 - Branch URLs: `main` → `https://apocarlypse-mobile-vault.pages.dev/` (prod),
   `uat` → `https://uat.apocarlypse-mobile-vault.pages.dev/`, `staging` → `https://staging.apocarlypse-mobile-vault.pages.dev/`.
   Other branches / PRs get `<hash>.` or `<branch>.apocarlypse-mobile-vault.pages.dev` → `dev`. Mapping: `config/environments.json`.

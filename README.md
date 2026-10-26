@@ -578,6 +578,8 @@ Branches `staging` (internal test) → `uat` (open test) → `main` (production)
 |---|---|---|
 | Supabase (`cloud_config.json` → `projects`) | `prod` | `test` (shared, free plan) |
 | Remote config | `web/features.json` | `web/features.<env>.json`, else `web/features.json` |
+
+An environment file **replaces** `web/features.json` (it is not layered on top), so it repeats everything in it (announcements included) and adds its own changes. Now: `web/features.uat.json` and `web/features.staging.json` turn `seeded_world_map` on (testers get the world map, production stays on the old one until the default changes); keep their other contents in step with `web/features.json`. `web/404.html` makes Cloudflare Pages answer a missing file with a real 404 (without it Pages serves the game page with 200, and an environment without its own file would read HTML instead of falling back to `features.json`).
 | Badge (switch `env_badge`) | none | **UAT / STAGING / DEV SERVER** on the title + About, `ENV` row in About, `env` in the trace session start |
 
 An old flat `cloud_config.json` holds production keys and is used **only in prod**; elsewhere the cloud stays off until the `test` project is configured (`Cloud.pick_config`). Setup step by step (Thai): `docs/environments.md`. Autotest `--only=env`.
