@@ -20,6 +20,7 @@ import wave
 import zlib
 
 SR = 22050
+BED_FC = 2800.0      # MV-538: biome beds roll off above this (lo-fi, cozy)
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "audio")
 
 
@@ -350,104 +351,147 @@ def amb_engine(rnd):
     return seam(x, F)
 
 
+def cozy(x, rnd, chord, pad=0.22, wobble=0.0018, dust=3.0):
+    """MV-538 lo-fi treatment of a finished loop (exact length, seamless): a soft tonal pad in the biome's chord
+    (whole cycles per loop, slow swells), vinyl dust, tape wobble and a gentle saturation. write() then rolls the
+    top off at BED_FC. Everything wraps around the loop, so the seam stays clean."""
+    L = len(x)
+    rms = math.sqrt(sum(v * v for v in x) / L) or 1.0
+    pd = [0.0] * L
+    for m in chord:
+        f = round(440.0 * 2 ** ((m - 69) / 12.0) * L / SR) * SR / L          # whole cycles per loop
+        sw = rnd.randint(1, 3)                                               # swells per loop
+        ph = rnd.uniform(0, math.tau)
+        for i in range(L):
+            amp = 0.55 + 0.45 * math.sin(math.tau * sw * i / L + ph)
+            ang = math.tau * f * i / SR
+            pd[i] += (math.sin(ang) + 0.18 * math.sin(2 * ang)) * amp / len(chord)
+    prms = math.sqrt(sum(v * v for v in pd) / L) or 1.0
+    y = [a + b * pad * rms / prms for a, b in zip(x, pd)]
+    mix(y, lp(crackle(L / SR, rnd, dust, 900, (0.05, 0.25)), 2500), 0, rms * 1.2)
+    out, pos = [], 0.0
+    cyc = rnd.randint(2, 4)
+    for i in range(L):        # tape wobble: whole cycles over the loop, read with wrap-around
+        j = int(pos)
+        fr = pos - j
+        out.append(y[j % L] * (1 - fr) + y[(j + 1) % L] * fr)
+        pos += 1.0 + wobble * math.cos(math.tau * cyc * i / L)
+    return [math.tanh(v / rms * 0.35) * rms / 0.35 for v in out]
+
+
+def soft_mallet(rnd, f, sec=1.6, tau=0.45):
+    """a far clank turned into a soft, round mallet knock on a pipe"""
+    x = ping(f, sec, tau, 1.0, ((1.0, 1.0), (2.76, 0.25), (5.4, 0.06)))
+    return lp(env_mul(x, lambda t: min(1.0, t / 0.006)), 1400)
+
+
 def amb_industrial(rnd):
+    """ruined factories: a warm low breeze, a muffled mains hum, far soft pipe knocks and a slow steam sigh"""
     L, F = 8.0, 0.6
     sec = L + F
-    x = wind(sec, rnd, 250, 700, 1.0, (0.3, 0.8))
-    hum = [0.3 * math.sin(math.tau * 100 * i / SR) + 0.15 * math.sin(math.tau * 150 * i / SR) for i in range(n(sec))]
-    mix(x, env_mul(hum, slow_lfo(sec, rnd, 2, 0.5, 1.0)), 0, 0.25)
+    x = lp(wind(sec, rnd, 180, 450, 0.9, (0.3, 0.7)), 900)
+    hum = [0.3 * math.sin(math.tau * 100 * i / SR) + 0.12 * math.sin(math.tau * 150 * i / SR) for i in range(n(sec))]
+    mix(x, env_mul(hum, slow_lfo(sec, rnd, 2, 0.5, 1.0)), 0, 0.18)
     far = zeros(sec)
-    for at in (0.7, 3.1, 4.0, 6.4):
-        mix(far, clank(rnd), n(at), rnd.uniform(0.4, 1.0))
-    hiss = env_mul(hp(white(n(1.6), rnd), 2500), lambda t: math.sin(math.pi * t / 1.6) ** 2)
-    mix(far, hiss, n(5.2), 0.15)
-    mix(x, lp(verb(far, 0.6, 1.4, 0.8), 2400), 0, 0.5)
-    return seam(x, F)
+    for at, f in ((0.7, 196), (3.1, 262), (4.0, 220), (6.4, 175)):
+        mix(far, soft_mallet(rnd, f), n(at), rnd.uniform(0.4, 0.8))
+    sigh = env_mul(lp(bp(pink(n(1.8), rnd), 700, 0.8), 1500), lambda t: math.sin(math.pi * t / 1.8) ** 2)
+    mix(far, sigh, n(5.2), 0.25)
+    mix(x, verb(far, 0.55, 1.5, 0.8), 0, 0.55)
+    return cozy(seam(x, F), rnd, [48, 55, 63], 0.22)            # C minor-ish: grey, a little melancholy
 
 
 def amb_desert(rnd):
+    """glass desert: a soft, warm breeze with slow gusts and fused-glass wind chimes far away"""
     L, F = 8.0, 0.8
     sec = L + F
-    x = wind(sec, rnd, 450, 1300, 0.9, (0.2, 1.0), 0.35)
-    mix(x, bp(pink(n(sec), rnd), 1800, 0.7), 0, 0.04)     # sand hiss
+    x = lp(wind(sec, rnd, 300, 800, 0.8, (0.25, 0.9), 0.3), 1300)
+    mix(x, lp(bp(pink(n(sec), rnd), 1200, 0.6), 1800), 0, 0.03)      # sand whisper
     glass = zeros(sec)
-    for _ in range(6):        # wind chimes of fused glass
-        f = rnd.choice([1047, 1175, 1319, 1568, 1760])
-        mix(glass, ping(f, 1.0, 0.25, 1.0, ((1.0, 1.0), (2.01, 0.3), (3.7, 0.1))), rnd.randrange(n(sec)), rnd.uniform(0.03, 0.07), True)
-    mix(x, verb(glass, 0.5, 1.2))
-    return seam(x, F)
+    for _ in range(7):        # chimes in D pentatonic, round and low
+        f = rnd.choice([587.3, 659.3, 740.0, 880.0, 987.8])
+        chime = lp(ping(f, 1.6, 0.4, 1.0, ((1.0, 1.0), (2.0, 0.15))), 2000)
+        mix(glass, env_mul(chime, lambda t: min(1.0, t / 0.01)), rnd.randrange(n(sec)), rnd.uniform(0.05, 0.1), True)
+    mix(x, verb(glass, 0.55, 1.4, 0.8))
+    return cozy(seam(x, F), rnd, [50, 57, 62, 66], 0.2)         # D major: warm sun
 
 
 def amb_forest(rnd):
+    """overgrown forest: leaves, a small creek, soft far crickets and a crow far off in the trees"""
     L, F = 8.0, 0.6
     sec = L + F
-    x = gain(hp(lp(pink(n(sec), rnd), 2200), 300), 0.25)
-    x = env_mul(x, slow_lfo(sec, rnd, 3, 0.3, 1.0, 0.1, 0.6))      # leaves
+    x = gain(lp(hp(pink(n(sec), rnd), 250), 1500), 0.22)
+    x = env_mul(x, slow_lfo(sec, rnd, 3, 0.3, 1.0, 0.1, 0.5))       # leaves
+    creek = bp(brown(n(sec), rnd), lambda t: 500 + 200 * math.sin(t * 1.3), 1.5)
+    mix(x, env_mul(creek, slow_lfo(sec, rnd, 3, 0.5, 1.0, 0.3, 0.9)), 0, 0.25)
     insects = zeros(sec)
-    for _ in range(14):       # cricket chirps: 4 kHz carrier, 3-4 pulses
-        c = rnd.uniform(2500, 3100)
-        pulses = rnd.randint(3, 4)
-        chirp = [math.sin(math.tau * c * i / SR) * (math.sin(math.pi * ((i / SR) * 32 % 1.0)) ** 2)
-                 for i in range(n(pulses / 32.0))]
-        mix(insects, chirp, rnd.randrange(n(sec)), rnd.uniform(0.025, 0.06), True)
-    mix(x, insects)
-    for at in (1.8, 2.3, 6.1):      # crow caws far away
-        caw = osc(lambda t: 620 - 220 * t, 0.32, "saw")
-        caw = bp(env_mul(caw, lambda t: adsr(t, 0.02, 0.12, 0.32)), 1300, 2.0)
-        mix(x, verb(caw + [0.0] * n(0.6), 0.5), n(at), 0.12)
-    return seam(x, F)
+    for _ in range(10):       # crickets, soft and distant
+        c = rnd.uniform(2000, 2400)
+        chirp = [math.sin(math.tau * c * i / SR) * (math.sin(math.pi * ((i / SR) * 28 % 1.0)) ** 2)
+                 for i in range(n(3 / 28.0))]
+        mix(insects, chirp, rnd.randrange(n(sec)), rnd.uniform(0.015, 0.035), True)
+    mix(x, lp(verb(insects, 0.4), 2400))
+    caw = osc(lambda t: 520 - 180 * t, 0.3, "tri")
+    caw = lp(bp(env_mul(caw, lambda t: adsr(t, 0.03, 0.1, 0.3)), 1000, 1.5), 1300)
+    mix(x, verb(caw + [0.0] * n(0.8), 0.6, 1.3), n(2.0), 0.06)
+    return cozy(seam(x, F), rnd, [53, 60, 64, 69], 0.2)         # F major 7: green, gentle
 
 
 def amb_swamp(rnd):
+    """toxic bayou: slow water, round frog croaks, low plops and the soft hum of an insect swarm"""
     L, F = 8.0, 0.6
     sec = L + F
-    x = gain(lp(brown(n(sec), rnd), 300), 0.35)                   # murky water
-    for at in (0.4, 0.9, 3.3, 5.0, 5.4, 7.2):       # frogs: a pulsed croak
-        f0 = rnd.uniform(140, 190)
-        croak = osc(f0, 0.38, "saw")
-        croak = env_mul(croak, lambda t: (0.5 + 0.5 * math.sin(math.tau * 22 * t)) * adsr(t, 0.02, 0.15, 0.38))
-        mix(x, lp(bp(croak, 420, 1.5), 900), n(at), rnd.uniform(0.25, 0.45))
-    for _ in range(10):       # bubbles: low, round plops
-        bub = osc(lambda t, f=rnd.uniform(160, 300): f * (1 + 4 * t), 0.08)
-        mix(x, env_mul(bub, lambda t: adsr(t, 0.004, 0.02, 0.08)), rnd.randrange(n(sec)), rnd.uniform(0.08, 0.18), True)
-    # the insect swarm (MV-536 ear check): a soft, low hum that swells and fades instead of a buzzing saw
+    x = gain(lp(brown(n(sec), rnd), 260), 0.35)                  # murky water
+    for at in (0.4, 0.9, 3.3, 5.0, 5.4, 7.2):       # frogs: a pulsed croak, rounded off
+        f0 = rnd.uniform(120, 160)
+        croak = osc(f0, 0.38, "tri")
+        croak = env_mul(croak, lambda t: (0.5 + 0.5 * math.sin(math.tau * 20 * t)) * adsr(t, 0.03, 0.15, 0.38))
+        mix(x, lp(bp(croak, 380, 1.2), 700), n(at), rnd.uniform(0.3, 0.5))
+    for _ in range(9):        # plops
+        bub = osc(lambda t, f=rnd.uniform(150, 260): f * (1 + 3 * t), 0.09)
+        mix(x, env_mul(bub, lambda t: adsr(t, 0.006, 0.025, 0.09)), rnd.randrange(n(sec)), rnd.uniform(0.08, 0.16), True)
     hum = [0.6 * math.sin(math.tau * 165 * i / SR) + 0.4 * math.sin(math.tau * 247.5 * i / SR + 0.7 * math.sin(math.tau * 5.5 * i / SR))
            for i in range(n(sec))]
-    mix(x, env_mul(hum, slow_lfo(sec, rnd, 2, 0.0, 1.0, 0.1, 0.3)), 0, 0.035)
-    return seam(x, F)
+    mix(x, env_mul(hum, slow_lfo(sec, rnd, 2, 0.0, 1.0, 0.1, 0.3)), 0, 0.03)
+    return cozy(seam(x, F), rnd, [45, 52, 60], 0.22)            # A minor: murky, a bit sad
 
 
 def amb_tundra(rnd):
+    """frozen highway: a soft, low wind, faint ice crystals and a slow creak of ice"""
     L, F = 8.0, 0.8
     sec = L + F
-    x = gain(wind(sec, rnd, 450, 1000, 3.0, (0.2, 1.0), 0.3), 0.6)       # whistling, low and soft
-    mix(x, wind(sec, rnd, 200, 500, 0.8, (0.3, 0.8)), 0, 0.9)
-    for at in (2.5, 6.7):     # ice creak
-        cr = osc(lambda t, f=rnd.uniform(70, 110): f + 30 * math.sin(t * 40) + rnd.uniform(-8, 8), 0.5, "saw")
-        mix(x, bp(env_mul(cr, lambda t: math.sin(math.pi * t / 0.5)), 600, 3), n(at), 0.2)
-    return seam(x, F)
+    x = lp(wind(sec, rnd, 220, 520, 0.9, (0.3, 0.85), 0.25), 900)
+    mix(x, gain(lp(wind(sec, rnd, 500, 900, 2.5, (0.0, 0.6), 0.2), 1200), 0.35))      # a faint, low whistle
+    ice = zeros(sec)
+    for _ in range(6):        # crystals tinkling in the wind, very soft
+        mix(ice, lp(ping(rnd.choice([1047, 1175, 1319, 1568]), 0.8, 0.15), 2200), rnd.randrange(n(sec)), rnd.uniform(0.02, 0.05), True)
+    mix(x, verb(ice, 0.6, 1.4, 0.8))
+    cr = osc(lambda t, f=rnd.uniform(70, 95): f + 20 * math.sin(t * 30), 0.6, "tri")
+    mix(x, lp(env_mul(cr, lambda t: math.sin(math.pi * t / 0.6)), 500), n(5.5), 0.15)
+    return cozy(seam(x, F), rnd, [40, 47, 54, 59], 0.2)         # E minor add9: cold but calm
 
 
 def amb_metro(rnd):
+    """signal metropolis: a low city drone, a siren far away and a dead station's soft static and morse"""
     L, F = 8.0, 0.6
     sec = L + F
-    x = [0.25 * math.sin(math.tau * 55 * i / SR) + 0.25 * math.sin(math.tau * 110.7 * i / SR)
-         + 0.12 * math.sin(math.tau * 166 * i / SR) for i in range(n(sec))]
-    mix(x, wind(sec, rnd, 300, 600, 1.0, (0.2, 0.5)), 0, 0.7)
-    siren = osc(lambda t: 700 + 180 * math.sin(math.tau * 0.25 * t), sec)
+    x = [0.22 * math.sin(math.tau * 55 * i / SR) + 0.22 * math.sin(math.tau * 110.7 * i / SR)
+         + 0.08 * math.sin(math.tau * 166 * i / SR) for i in range(n(sec))]
+    mix(x, lp(wind(sec, rnd, 250, 500, 1.0, (0.2, 0.5)), 900), 0, 0.6)
+    siren = osc(lambda t: 520 + 120 * math.sin(math.tau * 0.25 * t), sec)
     siren = env_mul(siren, lambda t: 0.5 - 0.5 * math.cos(math.tau * t / sec))
-    mix(x, verb(lp(siren, 1200), 0.8, 1.5, 0.82), 0, 0.06)
+    mix(x, verb(lp(siren, 900), 0.85, 1.6, 0.82), 0, 0.04)
     radio = zeros(sec)
-    for at in (1.2, 4.6):     # a dead station: static burst then morse-ish beeps
-        st = lp(bp(pink(n(0.5), rnd), 1000, 0.8), 2000)
-        mix(radio, env_mul(st, lambda t: math.sin(math.pi * t / 0.5)), n(at), 0.15)
-        b = at + 0.6
-        for d in rnd.sample([0.08, 0.08, 0.2, 0.08, 0.2], 5):        # soft sine beeps, not a square
-            beep = env_mul(osc(660, d), lambda t, d=d: min(1.0, t / 0.01, (d - t) / 0.01))
-            mix(radio, beep, n(b), 0.06)
-            b += d + 0.08
-    mix(x, lp(verb(radio, 0.5), 2200))
-    return seam(x, F)
+    for at in (1.2, 4.6):     # a dead station: warm static, then slow soft morse
+        st = lp(bp(pink(n(0.6), rnd), 900, 0.8), 1500)
+        mix(radio, env_mul(st, lambda t: math.sin(math.pi * t / 0.6)), n(at), 0.12)
+        b = at + 0.7
+        for d in rnd.sample([0.09, 0.09, 0.22, 0.09, 0.22], 5):
+            beep = env_mul(osc(523.3, d), lambda t, d=d: min(1.0, t / 0.015, (d - t) / 0.015))
+            mix(radio, beep, n(b), 0.045)
+            b += d + 0.1
+    mix(x, lp(verb(radio, 0.55), 1800))
+    return cozy(seam(x, F), rnd, [43, 50, 58, 62], 0.2)         # G minor 7: neon night
 
 
 # ------------------------------------------------------------------ weather (loops)
@@ -916,7 +960,9 @@ def main():
             continue
         rnd = random.Random(zlib.crc32(name.encode()))
         x = fn(rnd)
-        write(os.path.join(ROOT, folder, name + ".wav"), x, loop)
+        # MV-538: the biome beds get a warmer top (lo-fi) than effects and weather
+        write(os.path.join(ROOT, folder, name + ".wav"), x, loop,
+              fc=BED_FC if folder == "amb" and name != "engine" else 6500.0)
 
 
 if __name__ == "__main__":

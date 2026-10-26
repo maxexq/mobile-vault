@@ -55,12 +55,15 @@ const THUNDER_GAP := 22.0
 const SFX_GAP := 0.06
 const IDLE_PITCH := 0.72
 const BGM_GAIN := 1.0
+## a GOD preview ends by itself after this long, so a forgotten one never plays over the game (MV-538)
+const PREVIEW_SEC := 45.0
 
 var unlocked := false
 var layers := {}             # id -> {"p": AudioStreamPlayer, "cur": float, "target": float, "pitch": float}
 var played := {}             # sound id -> times started (autotest / GOD readout)
 var last_sfx := ""
 var preview := {}            # GOD: {"bed": id} / {"weather": id} overrides what the game asks for
+var preview_left := 0.0      # seconds until the preview ends (PREVIEW_SEC)
 var _streams := {}
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _ui_pool: Array[AudioStreamPlayer] = []
@@ -281,6 +284,10 @@ func _process(dt: float) -> void:
 		_poll = 0.25
 		_watch()
 		_refresh()
+	if not preview.is_empty():
+		preview_left -= dt
+		if preview_left <= 0.0:
+			preview_clear()
 	var fade := 0.6 if _fast_fade > 0.0 else Features.num("audio.fade_sec", FADE_SEC)
 	_fast_fade = maxf(0.0, _fast_fade - dt)
 	var step := dt / maxf(0.05, fade)
@@ -444,24 +451,31 @@ func _input(event: InputEvent) -> void:
 # =================================================================== GOD MODE previews
 func preview_bed(id: String) -> void:
 	preview = {"bed": id}
+	preview_left = PREVIEW_SEC
 	_fast_fade = 0.6
 	_refresh()
 
 
 func preview_weather(id: String) -> void:
 	preview = {"bed": want_bed(), "weather": id}
+	preview_left = PREVIEW_SEC
 	_fast_fade = 0.6
 	_refresh()
 
 
 func preview_bgm() -> void:
 	preview = {"bgm": MUSIC[0]}
+	preview_left = PREVIEW_SEC
 	_fast_fade = 0.6
 	_refresh()
 
 
+## back to what the game asks for; GodPanel calls this when it closes (MV-538: a weather preview, e.g. acid rain,
+## used to keep playing over the industrial map after the panel was closed)
 func preview_clear() -> void:
 	preview = {}
+	preview_left = 0.0
+	_fast_fade = 0.6
 	_refresh()
 
 

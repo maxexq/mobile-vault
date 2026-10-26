@@ -24,6 +24,7 @@ func _build() -> void:
 	Cloud.status_changed.connect(func(): if is_open and tab == "sys": refresh())
 	Features.changed.connect(func(): if is_open and tab == "feat": refresh())
 	Modes.changed.connect(func(): if is_open and tab == "sys": refresh())
+	closed.connect(func(): if not Sound.preview.is_empty(): Dev.sound_preview("clear"))      # MV-538
 
 
 func refresh() -> void:
