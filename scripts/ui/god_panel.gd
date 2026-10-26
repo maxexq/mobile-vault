@@ -397,6 +397,9 @@ func _tab_world() -> void:
 	_row([_b("จั่วใบถัดไป", func(): Dev.event_draw(), "yellow", true), _b("สับสำรับใหม่", func(): Dev.event_deck_reset())])
 	_note("จับเวลาตัดสินใจ: %s · ตั้งค่า %s · x%.2f" % ["เปิด" if Features.on("event_timer") else "ปิด", str(Settings.get_value("event_timer")), Features.num("events.decide_scale", 1.0)])
 	_row([_b("อีเว้นต์สุ่ม หมดเวลาใน 2 วิ", func(): Dev.event_quick_timeout(), "red", true)], "จับเวลา")
+	_note("ห้ามหนีตอนรถออกตัวไม่ได้ (MV-243): สวิตช์ flee_guard %s · ตอนนี้: %s" % ["เปิด" if Features.on("flee_guard") else "ปิด",
+		Game.drive_block() if Game.drive_block() != "" else "รถออกตัวได้"])
+	_row([_b("หมาป่าตอนรถจอดรอ 45 วิ", func(): Dev.event_flee_stuck(), "red", true)], "หนีไม่ได้")
 	var eb := []
 	for id in Data.EVENTS:
 		var eid: String = id
