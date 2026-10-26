@@ -296,9 +296,14 @@ func _build_deck_chooser() -> void:
 			where = Combat.ROLES[role].th
 		elif int(d.room) >= 0:
 			where = Data.room_def(Game.room(int(d.room)).type).th
-		var l := UIKit.label("%s Lv%d S%d A%d I%d (%s)" % [d.name, d.lvl, d.str, d.agi, d.int, where], UIKit.FS_SMALL)
+		var l := UIKit.label("%s Lv%d (%s)" % [d.name, d.lvl, where], UIKit.FS_SMALL)
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(l)
+		var chips := UIKit.stat_chips(d)
+		chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(chips)
 		b.add_child(h)
 		var did: int = d.id
 		b.pressed.connect(func():

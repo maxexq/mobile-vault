@@ -196,6 +196,11 @@ func _run() -> void:
 		await _saloon_test()
 		_finish()
 		return
+	if "--only=stat_view" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _stat_view_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -921,6 +926,7 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _stat_view_test()
 	await _rooms_x_test()
 	await _saloon_test()
 	await _flagged_test()
@@ -7165,3 +7171,53 @@ func _trait_cards_test() -> void:
 	god.close()
 	await wait(0.3)
 	Settings.set_value("tips", keep_tips)
+
+## MV-518: crew stats easy to read: same order and colour everywhere, one bar segment per point, the best stat boxed in
+## gold with "ถนัด" (none when all three tie), compact chips in list rows, what the best stat is good for, and what
+## the equipment adds shown apart (gear never changes STR / AGI / INT)
+func _stat_view_test() -> void:
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	var d: Dictionary = Game.s.dwellers[0]
+	var keep := {"str": d.str, "agi": d.agi, "int": d.int}
+	d.str = 7
+	d.agi = 4
+	d["int"] = 5
+	_check("stat view: best stat found (STR)", UIKit.best_stats(d) == ["str"] and UIKit.best_stats({"str": 5, "agi": 5, "int": 5}).is_empty()
+		and UIKit.best_stats({"str": 6, "agi": 6, "int": 2}) == ["str", "agi"])
+	var bars := UIKit.stat_bars(d)
+	add_child(bars)
+	var segs: Array = bars.find_children("Segments", "", true, false)
+	var lit := 0
+	for r in segs[0].get_children():
+		lit += 1 if (r as ColorRect).color == UIKit.STAT_COLOR.str else 0
+	_check("stat view: order STR AGI INT, one segment per point (STR 7 = %d lit)" % lit, segs.size() == 3 and segs[0].get_child_count() == 10 and lit == 7
+		and bars.get_child(0).name == "BestStat_str" and bars.get_child(1).name == "Stat_agi" and bars.get_child(2).name == "Stat_int")
+	_check("stat view: only the best stat is boxed in gold", bars.find_children("BestStat_*", "", true, false).size() == 1)
+	bars.queue_free()
+	var chips := UIKit.stat_chips(d)
+	add_child(chips)
+	_check("stat view: compact chips box the best one", chips.find_children("BestChip_*", "", true, false).size() == 1
+		and chips.find_children("BestChip_str", "", true, false).size() == 1)
+	chips.queue_free()
+	_check("stat view: the best stat says which rooms it suits", UIKit.stat_rooms("str").size() > 0)
+	# the crew window: list row and detail
+	main.hud.open_panel("dwellers")
+	await wait(0.3)
+	var panel = main.hud.panels.dwellers
+	_check("stat view: crew list rows show the chips", panel.find_children("StatChips", "", true, false).size() >= 1)
+	await shot("stat_view_list")
+	panel.manage(int(d.id))
+	await wait(0.3)
+	var gear: Array = panel.find_children("GearLine", "", true, false)
+	var labels: Array = panel.find_children("*", "Label", true, false).map(func(l): return str(l.text))
+	_check("stat view: detail has the bars, the best boxed, what it suits and the gear line", panel.find_children("BestStat_str", "", true, false).size() == 1
+		and gear.size() == 1 and str(gear[0].text).begins_with("จากอุปกรณ์") and labels.any(func(t): return t.begins_with("ถนัด STR")))
+	await shot("stat_view_detail")
+	panel.close()
+	d.str = keep.str
+	d.agi = keep.agi
+	d["int"] = keep.int
+	await wait(0.2)
+
