@@ -127,6 +127,18 @@ func refresh() -> void:
 			refresh(), func(): return is_same(Inspection.current(), c)))
 	hb.add_child(shoot)
 	list.add_child(hb)
+	# MV-244: they flagged the vehicle down: it can also just drive on without opening the door
+	if bool(c.get("halt", false)) and Features.on("stop_for_strangers"):
+		var past := UIKit.button(Loc.t("ขับผ่าน ไม่รับ"), "gray", "play")
+		past.name = "DrivePastStranger"
+		past.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# like turning them away, it can't be undone: confirm first (MV-422)
+		past.pressed.connect(func():
+			ConfirmPanel.ask(self, Loc.t("ขับผ่าน ไม่รับ"), Loc.t("รถจะออกตัวไป %s จะถูกทิ้งไว้ข้างทาง คุณจะกลับมารับคนนี้ไม่ได้") % c.name, Loc.t("ยืนยันขับผ่าน"), func():
+				_outcome = Inspection.pass_by(c)
+				refresh(), func(): return is_same(Inspection.current(), c)))
+		list.add_child(past)
+		list.add_child(UIKit.wrap_label(Loc.t("รถจอดข้างทางอยู่ จะออกตัวต่อเมื่อตัดสินใจแล้ว"), UIKit.FS_SMALL, UIKit.C_DIM))
 
 
 func _portrait(c: Dictionary, k: int) -> Control:

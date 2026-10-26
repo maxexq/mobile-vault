@@ -32,6 +32,7 @@ var _autosave_t := 0.0
 var _float_acc: Dictionary = {}    # "slot:res" -> accumulated amount for floating "+N"
 var rng := RandomNumberGenerator.new()
 var _offline_built: Array = []     # room names finished while away (for the welcome-back toast)
+var sim_offline := false           # MV-244: the current simulation step is offline catch-up
 
 
 func _ready() -> void:
@@ -560,6 +561,8 @@ func blocked_reason() -> String:
 		return "ตัวถังพัง! ซ่อมก่อนเดินทาง"
 	if s.stall > 0.0:
 		return "จอดรอ %ds" % int(ceil(s.stall))
+	if Inspection.halting():
+		return "จอดรับคนแปลกหน้า"
 	var eng := EngineBay.blocked_reason()
 	if eng != "":
 		return eng
@@ -950,6 +953,7 @@ func armory_bonus() -> float:
 
 # =================================================================== simulation
 func _simulate(dt: float, offline: bool) -> void:
+	sim_offline = offline
 	var m := dt / 60.0     # minutes
 	if started:
 		Account.add_sim_time(dt)

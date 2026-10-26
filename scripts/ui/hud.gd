@@ -675,6 +675,11 @@ func _refresh_door() -> void:
 		var c := Inspection.current()
 		_door_lbl.text = Loc.t("มีคนเคาะประตู! %s [%s] · %s") % [c.name, Inspection.GRADES[c.grade].th, Game.fmt_time(float(c.wait))]
 		_door_box.modulate.a = 1.0 if int(Time.get_ticks_msec() / 500) % 2 == 0 else 0.75
+		# MV-244: someone flagged the vehicle down: it parks, and the door window opens once nothing else is showing
+		# (marked on the stranger, not by cid: the cid counter starts again with a new run)
+		if Inspection.halting() and bool(c.get("halt", false)) and not bool(c.get("auto_shown", false)) and not any_modal_open():
+			c["auto_shown"] = true
+			open_door()
 
 
 func open_door() -> void:

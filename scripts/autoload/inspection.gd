@@ -6,6 +6,11 @@ extends Node
 ## Admitted bad apples hide a `secret` that goes off later: infected turn sick and spread it, mimics kill
 ## someone, thieves rob the larder and run, raiders sabotage the hull and let their gang strip the cargo.
 
+## MV-244: a stranger who flags the vehicle down while it is driving makes it pull over ("halt"): it slows to a stop
+## (Game.blocked_reason "จอดรับคนแปลกหน้า", which also closes "เร่งเครื่องหนี", MV-243) and the door window opens by
+## itself. The stop ends with the answer: let in, turn away, shoot, drive past (pass_by, leaves them behind) or the
+## stranger giving up. Only online: offline catch-up never parks the vehicle. Switch stop_for_strangers.
+
 signal queue_changed
 signal revealed(name: String, kind: String, text: String)
 
@@ -82,6 +87,7 @@ var rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	rng.randomize()
+	queue_changed.connect(func(): Game.travel_changed.emit())   # MV-244: the door queue can park the vehicle
 
 
 # =================================================================== state
@@ -101,6 +107,27 @@ func pending() -> bool:
 
 func current() -> Dictionary:
 	return queue()[0] if pending() else {}
+
+
+## MV-244: the vehicle is parked for someone at the door who flagged it down
+func halting() -> bool:
+	if not Features.on("stop_for_strangers"):
+		return false
+	for c in queue():
+		if bool(c.get("halt", false)):
+			return true
+	return false
+
+
+## MV-244: don't stop: drive past and leave them by the road (no answer at the door, nobody learns who they were)
+func pass_by(c: Dictionary) -> String:
+	if not queue().has(c):
+		return ""
+	queue().erase(c)
+	st().stats["passed"] = int(st().stats.get("passed", 0)) + 1
+	Trace.rec("crew", "drove past %s (%s)" % [c.name, c.kind])
+	queue_changed.emit()
+	return "รถเร่งเครื่องออกไป %s ยืนมองตามอยู่ข้างทางจนลับตา" % c.name
 
 
 # =================================================================== the recruit hook
@@ -163,12 +190,18 @@ func queue_candidate(source: String, grade: String = "rare", kind: String = "") 
 		"skin": ["a", "b", "c"][rng.randi() % 3], "hair": rng.randi() % 4,
 		"signs": _roll_signs(kind), "seen": {}, "points": points_budget(), "max_points": points_budget(), "wait": WAIT_SEC,
 		"story": "",
+		# MV-244: flagged the vehicle down on the road (not while it was already parked, not during offline catch-up)
+		"halt": Features.on("stop_for_strangers") and not Game.sim_offline and Game.started and bool(Game.s.get("traveling", false))
+			and Game.blocked_reason() == "",
 	}
 	c.story = (STORIES_SHAKY if c.signs.story == "shaky" else STORIES_OK)[rng.randi() % 4]
 	stt.stats.next = int(stt.stats.get("next", 1)) + 1
 	queue().append(c)
-	Trace.rec("crew", "stranger at the door: %s (%s, %s)" % [c.name, grade, kind], {"src": source})
-	Game.toast.emit("มีคนแปลกหน้าฝีมือดี [%s] มาขอขึ้นรถ — ตรวจให้ดีก่อนเปิดประตู!" % g.th, "warn")
+	Trace.rec("crew", "stranger at the door: %s (%s, %s)" % [c.name, grade, kind], {"src": source, "halt": c.halt})
+	if c.halt:
+		Game.toast.emit("มีคนโบกรถ! [%s] รถจอดข้างทาง — ตรวจให้ดีก่อนเปิดประตู" % g.th, "warn")
+	else:
+		Game.toast.emit("มีคนแปลกหน้าฝีมือดี [%s] มาขอขึ้นรถ — ตรวจให้ดีก่อนเปิดประตู!" % g.th, "warn")
 	queue_changed.emit()
 	return c
 

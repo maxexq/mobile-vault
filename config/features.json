@@ -22,6 +22,7 @@
     "barks": true,
     "tutorial_tips": true,
     "rooms_expansion": true,
+    "stop_for_strangers": true,
     "flee_guard": true,
     "event_timer": true,
     "engine_bay": true,
