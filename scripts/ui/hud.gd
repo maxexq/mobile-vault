@@ -27,6 +27,7 @@ var tod_icon: TextureRect
 var speed_lbl: Label
 var dist_lbl: Label
 var hull_bar: ProgressBar
+var hull_regen_lbl: Label     # MV-541: "+X/m" free repair next to the hull bar
 var go_btn: Button
 var biome_lbl: Label
 var toast_box: VBoxContainer
@@ -358,6 +359,11 @@ func _build_bottom() -> void:
 	hull_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hull_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hh.add_child(hull_bar)
+	hull_regen_lbl = UIKit.label("", UIKit.FP, UIKit.C_GREEN, true)
+	hull_regen_lbl.name = "HullRegen"
+	hull_regen_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hull_regen_lbl.visible = false
+	hh.add_child(hull_regen_lbl)
 	tv.add_child(hh)
 	_exp_box = _chip_box(UIKit.C_GOLD)
 	_exp_box.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -598,6 +604,13 @@ func _update_hull_bar() -> void:
 		hull_bar.add_theme_stylebox_override("fill", fill)
 	var blink := hull_alert.stage >= HullAlert.CRITICAL and int(Time.get_ticks_msec() / 400) % 2 == 1
 	hull_bar.modulate.a = 0.35 if blink else 1.0
+	# MV-541: the free repair rate while the hull is below full (updated in place, never rebuilt)
+	var rg := Game.hull_regen_pm() if Features.on("hull_repair_v2") and hp < 1.0 else 0.0
+	hull_regen_lbl.visible = rg >= 0.05
+	if hull_regen_lbl.visible:
+		var rt := "+%.1f/m" % rg
+		if hull_regen_lbl.text != rt:
+			hull_regen_lbl.text = rt
 
 
 func _refresh_res() -> void:
