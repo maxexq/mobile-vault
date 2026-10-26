@@ -636,7 +636,7 @@ func at_checkpoint() -> bool:
 
 ## MV-130: the world map is driving this run (switch on and a world exists)
 func map_mode() -> bool:
-	return Features.on("seeded_world_map") and not WorldMap.world().is_empty()
+	return WorldMap.usable()
 
 
 ## the vehicle stands at the checkpoint: the end of the biome on the old road, before a border road on the map
@@ -663,7 +663,10 @@ func checkpoint_vault_ok() -> bool:
 ## MV-130: one travel step on the world map: same speed, power, fuel, scrap and road events as the old road
 func _drive_map(m: float, dt: float, offline: bool) -> void:
 	var km := WorldMap.step(Data.BASE_TRAVEL_KMPM * speed_factor() * m, offline)
-	s.km = float(s.km) + km
+	# MV-514: s.km stays inside the current biome (short of its old checkpoint), so with the switch off the old road
+	# carries on from a sensible spot; the real distance is stats.km_total
+	var cap := maxf(Data.biome_start_km(int(s.biome)), biome_end_km() - 0.1)
+	s.km = maxf(float(s.km), minf(float(s.km) + km, cap))
 	s.stats.km_total = float(s.stats.km_total) + km
 	_add_res("power", -Data.TRAVEL_POWER_PM * m)
 	var burn := EngineBay.burn_pm()

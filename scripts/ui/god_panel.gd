@@ -543,7 +543,19 @@ func _tab_world() -> void:
 		_note("ลำดับพื้นที่: " + " → ".join(order))
 		var rt := WorldMap.route("start", "helios", Data.MAX_VAULT_LEVEL)
 		_note("เส้นทางทดสอบ start → helios: %s" % (("%.1f กม. ผ่าน %d จุด" % [float(rt.km), (rt.ids as Array).size()]) if not rt.is_empty() else "ไปไม่ถึง"))
-	_row([_b("โลกใหม่", func(): Dev.world_new(), "yellow", true), _b("ตรวจ seed", func(): Dev.world_verify(), "green")], "โลก")
+	# MV-514: a new world replaces this one (its roads and visited stops): the MV-422 confirmation, like any destructive action
+	_row([_b("โลกใหม่", func(): ConfirmPanel.ask(self, "โลกใหม่", "โลกนี้ (ถนน จุดที่ไปแล้ว ทริปที่ขับอยู่) จะถูกแทนด้วยโลกใหม่จาก seed สุ่ม ย้อนคืนไม่ได้ รถจะถูกวางไว้ในพื้นที่ปัจจุบัน",
+		"ยืนยันโลกใหม่", func(): Dev.world_new()), "yellow"), _b("ตรวจ seed", func(): Dev.world_verify(), "green")], "โลก")
+	var lb := []
+	for i in Data.BIOMES.size():
+		var bi: int = i
+		lb.append(_b(str(i + 1), func(): Dev.world_legacy("mid", bi), "yellow" if int(Game.s.biome) == bi else "gray"))
+	_row(lb, "เซฟเก่า")
+	_row([_b("ที่ด่าน", func(): Dev.world_legacy("checkpoint", int(Game.s.biome))), _b("จอดที่จุดสำคัญ", func(): Dev.world_legacy("site", int(Game.s.biome))),
+		_b("สำรวจแล้ว", func(): Dev.world_legacy("done", int(Game.s.biome))), _b("รอบ+1", func(): Dev.world_legacy("lap", int(Game.s.biome)))], "เซฟเก่า")
+	_row([_b("ย้ายซ้ำ (ต้องไม่เปลี่ยน)", func(): Dev.world_reconcile(), "green"),
+		_b("แผนที่: " + ("เปิด" if Features.on("seeded_world_map") else "ปิด"), func(): Dev.feature_set("seeded_world_map", not Features.on("seeded_world_map")),
+		"green" if Features.on("seeded_world_map") else "red")], "MV-514")
 	if not wm.is_empty():
 		var t := WorldMap.trip()
 		if t.is_empty():

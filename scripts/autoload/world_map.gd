@@ -19,12 +19,27 @@ extends Node
 ## (step()); entering a region switches the biome; an unvisited landmark parks the vehicle once through the normal
 ## expedition flow (offline: drives past, as before); the vehicle waits before a closed border road (Game.at_checkpoint:
 ## the warlord / peaceful toll work as today) and parks at the destination; the exit = lap + 1 in a new world.
+## Phase 4 (MV-514): old saves and the switch flipped off / on. reconcile() (on every game start, cloud load and
+## switch change) makes the saved world agree with the run, and changes nothing when it already does, so running it
+## twice is a no-op. No world yet, or one from another lap: a new world for this lap (the lap rule is unchanged: only
+## the far exit starts a lap). The vehicle's stop must be in the run's biome: if it isn't (an old biome / km / lap save,
+## or progress made on the old road while the switch was off) place() puts it there by one fixed rule:
+##   parked at a landmark (at_site)        -> that landmark's stop
+##   standing at the old biome's checkpoint -> the stop on the border road out of the region (it waits there as before)
+##   anywhere else in the biome             -> the region's entry stop (where the border road from the previous one lands)
+## Every stop of earlier regions, that stop, and each landmark already done this lap are marked visited; a trip that no
+## longer fits is dropped (the vehicle waits for a destination). Resources, crew, bosses beaten, Vault level,
+## sites_done, an expedition, km and lap are never touched and nothing is granted. With the switch off the old road
+## drives on s.km, which map driving keeps inside the current biome (Game._drive_map). A world this build doesn't know
+## (newer save version / generator) is kept as it is and the old road drives (usable() = false).
 ## Switch seeded_world_map (off = the old itinerary; off in config until the map screen ships). GOD → โลก → WORLD MAP.
-## Autotest --only=world_map, --only=world_travel.
+## Autotest --only=world_map, --only=world_travel, --only=world_migrate.
 
 signal world_changed
 
 const GEN_VERSION := 1
+const SAVE_VERSION := 1                  # Game.s.world.v this build reads
+const PLACE_VERSION := 1                 # MV-514 placement rule (recorded in world.placed)
 const CANVAS := Vector2i(336, 360)       # native map canvas (handoff); stop positions are in these pixels
 const REGION_STEP := Vector2i(168, 120)
 const REGION_ORIGIN := Vector2i(84, 60)
@@ -34,7 +49,10 @@ const SEED_CHARS := "ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 
 func _ready() -> void:
-	Game.game_started.connect(func(): ensure())
+	Game.game_started.connect(func(): reconcile())
+	Features.changed.connect(func():
+		if Game.started:
+			reconcile())
 
 
 func on() -> bool:
@@ -49,22 +67,122 @@ func world() -> Dictionary:
 	return Game.s.world
 
 
-## make the world for this run if there is none yet (never replaces an existing one)
+## make the world for this run if there is none yet (never replaces an existing one of this lap)
 func ensure() -> Dictionary:
 	if not on() or Game.s.is_empty():
 		return {}
-	if not world().is_empty():
-		return world()
-	return create(random_seed())
+	reconcile()
+	return world()
+
+
+## a world this build can drive (the save version and generator it knows)
+func supported(w: Dictionary) -> bool:
+	return int(w.get("v", 0)) == SAVE_VERSION and int(w.get("gen", 0)) >= 1 and int(w.get("gen", 0)) <= GEN_VERSION 		and w.get("nodes") is Array and w.get("edges") is Array and w.get("visited") is Dictionary
+
+
+## the switch is on and there is a world this build can drive
+func usable() -> bool:
+	return on() and not world().is_empty() and supported(world())
+
+
+## MV-514: make the saved world agree with the run; "" = it already did (nothing changed), else what it did:
+## "created" (a new world for this lap), "placed" (the vehicle moved into the run's biome), "unsupported" (kept as is)
+func reconcile() -> String:
+	if not on() or Game.s.is_empty():
+		return ""
+	var w := world()
+	if not w.is_empty() and not supported(w):
+		Trace.rec("travel", "world kept: unsupported", {"v": w.get("v"), "gen": w.get("gen")})
+		return "unsupported"
+	if w.is_empty() or int(w.get("lap", 0)) != int(Game.s.get("lap", 0)):
+		create(random_seed())
+		return "created"
+	if fits():
+		return ""
+	place(w)
+	return "placed"
+
+
+## the world's stop is in the run's biome, and the vehicle parked at a landmark is at that landmark's stop
+func fits() -> bool:
+	var n := node(here())
+	if n.is_empty() or int(n.biome) != int(Game.s.biome):
+		return false
+	var site := Expedition.at_site()
+	return site == "" or str(n.get("site", "")) == site or _site_node(site) == ""
 
 
 ## a new world for this run / lap from a seed: the only place a world is (re)generated
 func create(seed_text: String) -> Dictionary:
 	var w := generate(seed_text, int(Game.s.get("lap", 0)))
 	Game.s["world"] = w
-	Trace.rec("travel", "world created", {"seed": w.seed, "gen": w.gen, "lap": w.lap})
+	if int(Game.s.get("biome", 0)) != 0 or Expedition.at_site() != "":
+		place(w)          # a run already under way (old save, GOD new world mid-run): put the vehicle where it is
+	Trace.rec("travel", "world created", {"seed": w.seed, "gen": w.gen, "lap": w.lap, "at": w.at})
 	world_changed.emit()
 	return w
+
+
+## MV-514: put the vehicle into the run's biome by the fixed rule (see the top of this file); returns the rule used
+func place(w: Dictionary) -> String:
+	var b := clampi(int(Game.s.get("biome", 0)), 0, Data.BIOMES.size() - 1)
+	var entry := _entry_stop(w, b)
+	var at := entry
+	var rule := "entry"
+	var site := Expedition.at_site()
+	if site != "" and _site_node(site, w) != "":
+		at = _site_node(site, w)
+		rule = "landmark"
+	elif float(Game.s.get("km", 0.0)) >= Data.biome_start_km(b + 1) - 0.001:
+		at = _exit_stop(w, b)
+		rule = "checkpoint"
+	for n in w.nodes:
+		var id := str(n.id)
+		if int(n.biome) < b and str(n.type) != "exit" or id == entry or id == at 				or int(n.biome) == b and n.has("site") and Expedition.is_done(str(n.site)):
+			w.visited[id] = true
+	w.at = at
+	w.erase("trip")
+	w["placed"] = {"v": PLACE_VERSION, "rule": rule, "biome": b, "km": snappedf(float(Game.s.get("km", 0.0)), 0.01),
+		"lap": int(Game.s.get("lap", 0)), "at": at}
+	Trace.rec("travel", "world placed", w.placed)
+	world_changed.emit()
+	return rule
+
+
+## where the border road from the previous region lands in region b (the start in the first)
+static func _entry_stop(w: Dictionary, b: int) -> String:
+	if b == 0:
+		return "start"
+	return _border_end(w, b - 1, b)
+
+
+## the stop of region b on the border road out of it (to the next region, or to the exit in the last)
+static func _exit_stop(w: Dictionary, b: int) -> String:
+	return _border_end(w, b, b)
+
+
+## the end in region `side` of the road whose warlord is region `boss`
+static func _border_end(w: Dictionary, boss: int, side: int) -> String:
+	var by := {}
+	for n in w.nodes:
+		by[str(n.id)] = n
+	for e in w.edges:
+		if int(e.get("boss", -1)) != boss:
+			continue
+		for id in [str(e.a), str(e.c)]:
+			if by.has(id) and int(by[id].biome) == side and str(by[id].type) != "exit":
+				return id
+	for n in w.nodes:
+		if int(n.biome) == side and str(n.type) != "exit":
+			return str(n.id)
+	return "start"
+
+
+func _site_node(site: String, w: Dictionary = {}) -> String:
+	for n in (w if not w.is_empty() else world()).get("nodes", []):
+		if str(n.get("site", "")) == site:
+			return str(n.id)
+	return ""
 
 
 func random_seed() -> String:
@@ -294,8 +412,12 @@ func summary() -> String:
 	var w := world()
 	if w.is_empty():
 		return "ยังไม่มีโลก" if on() else "สวิตช์ seeded_world_map ปิด"
-	return "seed %s · v%d · รอบ %d · %d จุด · %d ถนน · อยู่ที่ %s" % [w.seed, int(w.gen), int(w.lap) + 1,
-		(w.nodes as Array).size(), (w.edges as Array).size(), str(w.at)]
+	if not supported(w):
+		return "โลกเวอร์ชันใหม่กว่าเกมนี้ (v%s gen %s): เก็บไว้เหมือนเดิม ใช้ถนนแบบเดิม" % [str(w.get("v")), str(w.get("gen"))]
+	var pl: Dictionary = w.get("placed", {})
+	return "seed %s · v%d · รอบ %d · %d จุด · %d ถนน · อยู่ที่ %s%s" % [w.seed, int(w.gen), int(w.lap) + 1,
+		(w.nodes as Array).size(), (w.edges as Array).size(), str(w.at),
+		"" if pl.is_empty() else " · ย้ายจากเซฟเก่า (%s)" % str(pl.rule)]
 
 
 # =================================================================== phase 2 (MV-130): driving along the roads
