@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from PIL import Image
 import micro_asset
-from art import ui
+from art import ui, icon_details
 from art.common import new, outline_alpha
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -38,7 +38,8 @@ def verify(preview=None):
             image = atlas.crop((x, y, x + width, y + height))
             source = new(16, 16)
             renderers[name.removeprefix('ic_')](source)
-            if outline_alpha(source).tobytes() != image.tobytes():
+            expected = source if name.removeprefix('ic_') in icon_details.NATIVE_FINAL else outline_alpha(source)
+            if expected.tobytes() != image.tobytes():
                 failures.append(f'{name}: atlas is stale relative to its deterministic drawing source')
             colors = set(image.getdata())
             allowed = {tuple(bytes.fromhex(palette[c])) for c in spec['palette']}
@@ -70,8 +71,9 @@ def verify(preview=None):
         sheet.resize((sheet.width * 6, sheet.height * 6), Image.Resampling.NEAREST).save(path)
     for failure in failures:
         print('FAIL', failure)
-    print(f'Icons: {len(images)}/92; reviewed pixel matches: {samples}/12; failures: {len(failures)}')
-    return not failures and len(images) == 92 and samples == 12
+    reviewed = sum(1 for spec in contracts.values() if spec.get('approved_rgba_sha256'))
+    print(f'Icons: {len(images)}/92; reviewed pixel matches: {samples}/{reviewed}; failures: {len(failures)}')
+    return not failures and len(images) == 92 and samples == reviewed
 
 
 if __name__ == '__main__':
