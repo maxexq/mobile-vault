@@ -2097,14 +2097,58 @@ func upgrade_vault() -> bool:
 	return true
 
 
-func repair_hull() -> bool:
-	var missing := hull_max() - float(s.hull)
-	if missing < 1.0:
+## MV-541 (switch hull_repair_v2): scrap per HP. Off = the old flat 0.6. On, a bigger hull pays less per HP:
+## base x sqrt(ref_hull / hull_max), never above base (a van with its first gear pays what it always did)
+func repair_rate() -> float:
+	var base := Features.num("repair.base", 0.6)
+	if not Features.on("hull_repair_v2"):
+		return 0.6
+	return minf(base, base * sqrt(Features.num("repair.ref_hull", 140.0) / maxf(1.0, hull_max())))
+
+
+## MV-541: the crew's discount on a paid repair, capped (repair.discount_cap): per crew member working the engine room
+## or a workshop (up to repair.max_crew of them), extra per Mechanic and per Handyman level among them, per Repair Bay
+## level. {crew, mechanic, skill, bay, total}; all 0 with the switch off
+func repair_discount() -> Dictionary:
+	var out := {"crew": 0.0, "mechanic": 0.0, "skill": 0.0, "bay": 0.0, "total": 0.0}
+	if s.is_empty() or not Features.on("hull_repair_v2"):
+		return out
+	var n := 0
+	for slot in [Data.CAB_SLOT] + _rooms_of("workshop"):
+		for d in room_workers(slot):
+			n += 1
+			if Crew.has(d, "mechanic"):
+				out.mechanic += Features.num("repair.mechanic", 0.05)
+			out.skill += Features.num("repair.skill", 0.05) * Skills.val(d, "repair")
+	out.crew = Features.num("repair.per_crew", 0.05) * mini(n, int(Features.num("repair.max_crew", 4.0)))
+	out.bay = Features.num("repair.bay", 0.10) * Mods.level("repair_bay")
+	out.total = minf(Features.num("repair.discount_cap", 0.4), out.crew + out.mechanic + out.skill + out.bay)
+	return out
+
+
+## HP a repair restores: everything missing (part 1.0), or a chunk of the max hull (part 0.25, MV-541), never more
+## than is missing; the switch off always repairs in full
+func repair_amount(part: float = 1.0) -> float:
+	var missing := maxf(0.0, hull_max() - float(s.hull))
+	if part >= 1.0 or not Features.on("hull_repair_v2"):
+		return missing
+	return minf(missing, hull_max() * part)
+
+
+func repair_cost(part: float = 1.0) -> int:
+	var hp := repair_amount(part)
+	if hp < 1.0:
+		return 0
+	return maxi(1, int(ceil(hp * repair_rate() * (1.0 - float(repair_discount().total)))))
+
+
+func repair_hull(part: float = 1.0) -> bool:
+	var hp := repair_amount(part)
+	if hp < 1.0:
 		return false
-	var c := int(ceil(missing * 0.6))
-	if not pay({"scrap": c}):
+	if not pay({"scrap": repair_cost(part)}):
 		return false
-	s.hull = hull_max()
+	s.hull = minf(hull_max(), float(s.hull) + hp)
 	travel_changed.emit()
 	return true
 

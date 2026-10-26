@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Changed
+- Hull repairs are fairer on big vehicles: the bigger your hull, the less each point costs (a train pays about a third less than before, the van the same), you can patch up 25 % at a time instead of paying for a full repair, and crew in the engine room or a workshop, Mechanics, the Handyman skill and the Repair Bay knock up to 40 % off. The build menu and the hull bar now show how fast the crew repairs the hull for free (MV-541)
+
 ### Fixed
 - Windows no longer slide around when what's inside them changes: the title and the button you just tapped stay where they are, and the room close-up keeps the room still when you switch tabs, so nothing moves under your finger (MV-537)
 
