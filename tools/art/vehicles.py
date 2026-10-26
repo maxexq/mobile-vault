@@ -479,6 +479,103 @@ BOGIE_DETAIL = decal_train_bogie_detail()
 # where the cage sits on the nose lamp: (cut-away after cut_cab, closed shell); the train is excluded
 LAMP_CAGE_AT = {"van": ((0, 210), (0, 210)), "bus": ((0, 222), (0, 224)), "rig": ((0, 228), (0, 230))}
 
+# ------------------------------------------------------------------ MV-528 van-reference fittings (MV-529..535)
+# Exact native rows from the approved micro-asset specs (sources: tools/art/vehicle_details_ref/). Baked into the
+# shells like the MV-388 details: after weathering, before the exterior copy. Each is also its own atlas sprite.
+def _rows(legend, rows):
+    img = new(len(rows[0]), len(rows))
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            px(img, x, y, c(legend[ch]))
+    return img
+
+
+FITTING_ROWS = {
+    "decal_vehicle_pillar_joint": ({'A': 'ol0', 'B': 'gray1', 'C': 'gray2', 'D': 'gray3', 'E': 'gray4', 'F': 'gray5', 'G': 'orange1', 'H': 'orange2'}, [   # MV-529
+        "AAAAAA",
+        "AFEEEA",
+        "ABDDDA",
+        "ADDDFA",
+        "ADGDBA",
+        "AAAAAA",
+    ]),
+    "decal_vehicle_roof_seam": ({'A': 'ol0', 'B': 'gray1', 'C': 'gray2', 'D': 'gray3', 'E': 'gray4', 'F': 'gray5', 'G': 'orange1', 'H': 'orange2'}, [   # MV-530
+        "AAAAAAAAAAAA",
+        "AEEEEEEEEEEA",
+        "ADFDDDDDDFDA",
+        "ADBDDDDDDBDA",
+        "ADDDGGDDDDDA",
+        "AAAAAAAAAAAA",
+    ]),
+    "decal_vehicle_fuel_cap": ({'A': 'ol0', 'B': 'gray1', 'C': 'gray2', 'D': 'gray3', 'E': 'gray4', 'F': 'gray5', 'G': 'orange1', 'H': 'orange2'}, [   # MV-531
+        "EEECACEE",
+        "EEDEEECE",
+        "EDCEDEEC",
+        "EAEDEDDC",
+        "EBDDDCDC",
+        "EECDDDCD",
+        "EEFCBCEE",
+        "FEFEEEEF",
+    ]),
+    "decal_van_door_hardware": ({'A': 'ol0', 'B': 'blue1', 'C': 'blue2', 'D': 'blue3', 'E': 'blue4', 'F': 'gray3', 'G': 'gray5', 'H': 'orange1'}, [   # MV-532
+        "CCCCCCCCCCCCCC",
+        "CAAACCCCCCCCCC",
+        "CAGACCCCCCCCCC",
+        "CAFAAAAAAAAACC",
+        "CAFAAGGGGGFACC",
+        "CAFAAFFFFFFACC",
+        "CAFAAAAAAAAACC",
+        "CAGACCCCCCCCCC",
+        "CAAHCCCCCCCCCC",
+        "CCCCCCCCCCCCCC",
+    ]),
+    "decal_bus_service_vent": ({'A': 'ol0', 'B': 'yellow1', 'C': 'yellow2', 'D': 'gray1', 'E': 'gray3', 'F': 'gray5', 'G': 'orange1'}, [   # MV-533
+        "CAAAAAAAAAAC",
+        "CFFEEEEEEEAC",
+        "CAFDDDDDDEAC",
+        "CAFEEEEEEEAC",
+        "CAFDDDDDDEAC",
+        "CAFEEEEEEEAC",
+        "CAFDDDDDDEGC",
+        "CAAAAAAAAAAC",
+    ]),
+    "decal_rig_door_latch": ({'A': 'ol0', 'B': 'red1', 'C': 'red2', 'D': 'gray1', 'E': 'gray3', 'F': 'gray5', 'G': 'orange1'}, [   # MV-534
+        "CCCCCCCC",
+        "CAAAAAAC",
+        "CAFFFEAC",
+        "CAEEEEAC",
+        "CAAAAAGC",
+        "CCCCCCCC",
+    ]),
+    "decal_train_access_hinges": ({'A': 'ol0', 'B': 'gray2', 'C': 'gray3', 'D': 'gray4', 'E': 'gray5', 'F': 'orange1'}, [   # MV-535
+        "AAACCCCCCC",
+        "ADEDDDDDAC",
+        "ADAAAAAAAC",
+        "ADACCCCCCC",
+        "ADACCCCCCC",
+        "ADEDDDDDAC",
+        "ADAAAAAFAC",
+        "AAACCCCCCC",
+    ]),
+}
+FITTINGS = {k: _rows(*v) for k, v in FITTING_ROWS.items()}
+# per-tier fitting (shell px), clear of the driver window, engine-room cut-out, rooms and the war stripe
+TIER_FITTING = {"van": ("decal_van_door_hardware", (16, 185)), "bus": ("decal_bus_service_vent", (20, 182)),
+                "rig": ("decal_rig_door_latch", (26, 214)), "train": ("decal_train_access_hinges", (10, 118))}
+
+
+def fittings(img, floors, trailer, tier=""):
+    """MV-528: pillar joints on every floor, a roof seam cap, the fuel cap (van / bus / rig) and the tier fitting"""
+    for fb in range(floors):
+        for x in ((16, 218) if trailer else (38, 248)):
+            paste(img, FITTINGS["decal_vehicle_pillar_joint"], x, 204 - 56 * fb)
+    paste(img, FITTINGS["decal_vehicle_roof_seam"], 206 if trailer else 216, roof_y(floors))
+    if tier in ("van", "bus", "rig"):
+        paste(img, FITTINGS["decal_vehicle_fuel_cap"], 74, 274)
+    if tier in TIER_FITTING:
+        name, at = TIER_FITTING[tier]
+        paste(img, FITTINGS[name], *at)
+
 
 def prop_car_chain_idle():
     """MV-399: 4 frames 6x14 at 2 fps: a safety chain hanging from the rear deck; the top two pixels are fixed,
@@ -645,6 +742,7 @@ def shell_details(img, floors, trailer, tier=""):
     if tier == "train":
         for bx in (7, 141):
             paste(img, BOGIE_DETAIL, bx, 276)
+    fittings(img, floors, trailer, tier)             # MV-528
 
 
 # ------------------------------------------------------------------ assemble
@@ -820,6 +918,8 @@ def gen_vehicles():
     add("prop_car_leaf_spring", prop_car_leaf_spring())
     add("decal_car_lamp_cage", LAMP_CAGE)
     add("decal_train_bogie_detail", BOGIE_DETAIL)
+    for name, img in FITTINGS.items():               # MV-528: the van-reference fittings as their own sprites
+        add(name, img)
     for i, f in enumerate(prop_car_chain_idle()):
         add(f"prop_car_chain_idle_{i}", f)
     for i, f in enumerate(prop_car_mudflap_idle()):

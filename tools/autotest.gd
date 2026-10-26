@@ -5161,6 +5161,32 @@ func _vehicle_detail_test() -> void:
 			print("[autotest] detail sprite wrong: %s %s" % [k, str(r)])
 	_check("vehicle detail: wheels + 6 detail sprites at their spec sizes", ok and Atlas.wheel_frames(false).get_frame_count("default") == 4
 		and Atlas.rail_wheel_frames().get_frame_count("default") == 4)
+	# MV-528: the van-reference fittings are their own sprites and are baked into the cut-away and closed shells
+	var fit := {"decal_vehicle_pillar_joint": [[38, 204, "van bus rig"], [218, 148, "trailer wagon"]],
+		"decal_vehicle_roof_seam": [[216, 148, "van"], [216, 92, "bus"], [216, 36, "rig train"], [206, 148, "trailer wagon"]],
+		"decal_vehicle_fuel_cap": [[74, 274, "van bus rig"]], "decal_van_door_hardware": [[16, 185, "van"]],
+		"decal_bus_service_vent": [[20, 182, "bus"]], "decal_rig_door_latch": [[26, 214, "rig"]],
+		"decal_train_access_hinges": [[10, 118, "train"]]}
+	var sheet: Image = Atlas.sheet.get_image()
+	var baked := 0
+	var fit_ok := true
+	for k in fit:
+		var fr = Atlas.regions.get(k)
+		if fr == null:
+			fit_ok = false
+			continue
+		var part := sheet.get_region(Rect2i(int(fr[0]), int(fr[1]), int(fr[2]), int(fr[3])))
+		for at in fit[k]:
+			for t in str(at[2]).split(" "):
+				for pre in ["veh_", "ext_"]:
+					var sr = Atlas.regions[pre + t]
+					var got := sheet.get_region(Rect2i(int(sr[0]) + int(at[0]), int(sr[1]) + int(at[1]), int(fr[2]), int(fr[3])))
+					if got.get_data() == part.get_data():
+						baked += 1
+					else:
+						fit_ok = false
+						print("[autotest] MV-528 fitting not baked: %s on %s%s" % [k, pre, t])
+	_check("vehicle detail: 7 van-reference fittings baked into every shell (%d placements)" % baked, fit_ok and baked == 36)
 	var was_mods: Dictionary = Game.s.mods.duplicate(true)
 	var was_tier := Game.tier()
 	var was_tr := Game.trailers()
