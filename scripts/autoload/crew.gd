@@ -76,12 +76,29 @@ func roll_traits(d: Dictionary) -> void:
 
 
 ## MV-483 / MV-497: the visual tier of each trait card (0 common .. 5 mythic). Explicit and approved only: nothing is
-## inferred from item rarity, the bad flag, the size of a bonus or a roll. Empty until MV-497 is approved; an
-## unlisted trait shows the quiet untiered card. Visual only: no stat, spawn or save uses it.
-const TRAIT_TIERS := {}
+## inferred from item rarity, the bad flag, the size of a bonus or a roll. MV-497: a benefit's tier = how much it is
+## worth to a run (narrow / situational = common .. whole-vehicle or loot-economy effects = legendary; mythic is kept
+## for future unique traits); a trade-off's tier = how hard its cost bites (a crimson edge that grows with the risk).
+## Switch trait_tiers off (or a trait not listed) = the quiet untiered card. Visual only: no stat, spawn or save uses it.
+const TRAIT_TIERS := {
+	# common: only in one biome / at night / a small build bonus
+	"cold_blooded": 0, "night_owl": 0, "rad_proof": 0, "quick_hands": 0,
+	# uncommon: one room +40-45 %, or halved upkeep for one survivor
+	"cook": 1, "hydrologist": 1, "green_thumb": 1, "gunsmith": 1, "light_eater": 1,
+	# rare: several rooms or a second effect, a sturdier body, better expedition loot, the rear-gunner bonus
+	"mechanic": 2, "healer": 2, "tough": 2, "scavenger": 2, "brawler": 2,
+	# epic: always-on combat power, three rooms + XP, faster construction, morale for the whole room (MV-127)
+	"sharpshooter": 3, "genius": 3, "engineer": 3, "cheerful": 3,
+	# legendary: cheaper rooms for the whole vehicle, better odds on every expedition and drop
+	"architect": 4, "lucky": 4,
+	# trade-offs: mild and avoidable (common), costly (uncommon), unavoidable every night, can break morale (rare)
+	"grumpy": 0, "coward": 0, "glutton": 1, "clumsy": 1, "afraid_dark": 2,
+}
 
 
 func trait_tier(t: String) -> int:
+	if not Features.on("trait_tiers"):
+		return -1
 	return int(TRAIT_TIERS.get(t, -1))
 
 
