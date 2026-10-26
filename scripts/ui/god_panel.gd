@@ -586,6 +586,9 @@ func _tab_world() -> void:
 	_head("INDUSTRIAL SKY", "ฉากนิคมอุตสาหกรรมใหม่ (MV-369) ตามเวลาในเกม")
 	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
 	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])
+	_head("GLASS DESERT", "ทะเลทรายแก้ว (MV-539) ตามเวลาในเกม")
+	_row([_b("เช้า", func(): Dev.desert_background_preview(0.25)), _b("เที่ยง", func(): Dev.desert_background_preview(0.5)), _b("เย็น", func(): Dev.desert_background_preview(0.75)), _b("คืน", func(): Dev.desert_background_preview(0.0))])
+	_row([_b("ทะเลทรายใหม่", func(): Dev.feature_set("desert_parallax", true), "green"), _b("ทะเลทรายเดิม", func(): Dev.feature_set("desert_parallax", false), "gray")])
 	var bb := []
 	for i in Data.BIOMES.size():
 		var bi: int = i

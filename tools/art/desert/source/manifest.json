@@ -1,0 +1,165 @@
+{
+  "ticket": "MV-539",
+  "source": "Approved Glass Desert native panels attached to MV-539; image_gen drafts normalized to the master palette and one art-pixel grid. No image service is used during regeneration.",
+  "key": "#FF00FF",
+  "panels_per_layer": 4,
+  "dimensions": "Panel-1 dimensions govern every panel of each layer, superseding generic 480x230 continuation boilerplate.",
+  "normalization": "Accepted native inputs already include quiet 12px seam collars and ground-line alignment. Preserve their pixels; key exact magenta only.",
+  "layers": [
+    {
+      "name": "clouds",
+      "panel_size": [
+        496,
+        220
+      ],
+      "strip_size": [
+        1984,
+        220
+      ],
+      "speed": 0.03,
+      "panels": [
+        {
+          "file": "clouds-panel-01.png",
+          "sha256": "d7d32a285aa44071146d77a9af39c180431ef0efe11e5d9eca39dfcd32ebdbd1"
+        },
+        {
+          "file": "clouds-panel-02.png",
+          "sha256": "be591d16f5b687cc631563ea0e7deff5c17c6dc5ac066b5bdfc0f1d206690310"
+        },
+        {
+          "file": "clouds-panel-03.png",
+          "sha256": "1a079bbdc7376ad7f9eca5ea89e626a402afa29ec72228c81302530aeddcd73e"
+        },
+        {
+          "file": "clouds-panel-04.png",
+          "sha256": "68606fa4749c55e15d1a6b88e6907722d724ea30145a4397773d4c0f62d9e479"
+        }
+      ],
+      "approved_rgb_sha256": "300f08f6c8ffe25332c6f1702acb1b4f5f87cdee913f83b6108d72791810d926"
+    },
+    {
+      "name": "far",
+      "panel_size": [
+        480,
+        300
+      ],
+      "strip_size": [
+        1920,
+        300
+      ],
+      "speed": 0.08,
+      "panels": [
+        {
+          "file": "far-panel-01.png",
+          "sha256": "490f62ef6203c33d6917a631c0bb69b83f0054cf14670c1d6c83c4df224aa56e"
+        },
+        {
+          "file": "far-panel-02.png",
+          "sha256": "a850b2dd5253c08e01c63f4b580748d4840f7c40d036891872a6b622c682cade"
+        },
+        {
+          "file": "far-panel-03.png",
+          "sha256": "cd8c5e1870b5fa14e35677590b656290ba61c238c90967864924de9c4a2b2be3"
+        },
+        {
+          "file": "far-panel-04.png",
+          "sha256": "251bd02b04edc12e3b259cc104783b7d403f645d359a023f875969d904776e01"
+        }
+      ],
+      "approved_rgb_sha256": "081ebe603d6f5a018944e7ae1d61bc4692cfb5e3916c01e95491b3d0c999b968"
+    },
+    {
+      "name": "mid",
+      "panel_size": [
+        480,
+        230
+      ],
+      "strip_size": [
+        1920,
+        230
+      ],
+      "speed": 0.25,
+      "panels": [
+        {
+          "file": "mid-panel-01.png",
+          "sha256": "68f60a771b7274049fad5c8bd392d1e5b4e33584304cc81eeb505491053baaa3"
+        },
+        {
+          "file": "mid-panel-02.png",
+          "sha256": "3f816981251774fcf5fdb023bb276dec64c631b09a398d1fa527264fc364a8fe"
+        },
+        {
+          "file": "mid-panel-03.png",
+          "sha256": "f72dcd37d46680de178b71b0b92dc20915a45d3af1c1abd0351dba8128cf493c"
+        },
+        {
+          "file": "mid-panel-04.png",
+          "sha256": "eb2aabf6c2f9b9e76413d577de438918c1f0303a20bdb663d9a993a32aaecabb"
+        }
+      ],
+      "approved_rgb_sha256": "5002c831856f44f51ecd8e59974ee8b28255213a0e4a77b5cc1a272883865486"
+    },
+    {
+      "name": "near",
+      "panel_size": [
+        528,
+        124
+      ],
+      "strip_size": [
+        2112,
+        124
+      ],
+      "speed": 0.6,
+      "panels": [
+        {
+          "file": "near-panel-01.png",
+          "sha256": "618036867358209b296ccad670c13bfc2d153eebd74430e96004b08da7029706"
+        },
+        {
+          "file": "near-panel-02.png",
+          "sha256": "ce4a53dd685e16b3351da8344a65f5344e9e7e003e5c5e5410affb55c1633e8d"
+        },
+        {
+          "file": "near-panel-03.png",
+          "sha256": "e2f5f45bb608643e5e9ff5f539e4254e003103674076c6e11cc43747937f8b54"
+        },
+        {
+          "file": "near-panel-04.png",
+          "sha256": "78e8772a926b998ed7cd0a8b499486807e5c918fee0b32f8da5d347ce4db28c9"
+        }
+      ],
+      "approved_rgb_sha256": "d75e0e05f05ea3ac1b666d5f11830c7eb1e7dc55ee0730d0f9b0fd115d2542e3"
+    },
+    {
+      "name": "road",
+      "panel_size": [
+        576,
+        64
+      ],
+      "strip_size": [
+        2304,
+        64
+      ],
+      "speed": 1.0,
+      "panels": [
+        {
+          "file": "road-panel-01.png",
+          "sha256": "e4d4caeee7aca01d64b7457d1c16657c3fd2375f292c3e370f5612ed4489905b"
+        },
+        {
+          "file": "road-panel-02.png",
+          "sha256": "198fcd5e44965bdaa0b498b510e0b6d1955760b5a2e67e8558555af6455951aa"
+        },
+        {
+          "file": "road-panel-03.png",
+          "sha256": "a9efa4837447b5a46455018923371f5a9964d7e4973dee3f292089ac2cd13f24"
+        },
+        {
+          "file": "road-panel-04.png",
+          "sha256": "e822c793e88e7c1df075568b8dc8a44e7dde5dc641238444f7eae23d86ea4807"
+        }
+      ],
+      "approved_rgb_sha256": "bdbf1f641152a3fd5354eef93fdeafc3cb6f7e375af1ba302817ec8af9be4607"
+    }
+  ]
+}
