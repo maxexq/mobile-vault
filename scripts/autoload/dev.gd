@@ -611,6 +611,44 @@ func world_new(seed_text: String = "") -> void:
 	act("world new", {"seed": w.seed})
 
 
+## MV-514: turn this run into an old (pre-map) save and migrate it: no world, the vehicle in biome b on the old road.
+## kind: "mid" (half-way through the biome), "checkpoint" (at its end), "site" (parked at its first landmark),
+## "done" (its first landmark already explored), "lap" (the same, one lap further). Returns what reconcile() did.
+func world_legacy(kind: String, b: int) -> String:
+	b = clampi(b, 0, Data.BIOMES.size() - 1)
+	Game.s.erase("world")
+	Game.s.biome = b
+	Game.s["at_site"] = ""
+	var start := Data.biome_start_km(b)
+	var length := float(Data.biome(b).length)
+	Game.s.km = start + length * 0.5
+	var first: String = Expedition.biome_sites(b)[0] if not Expedition.biome_sites(b).is_empty() else ""
+	match kind:
+		"checkpoint":
+			Game.s.km = start + length
+		"site":
+			if first != "":
+				Game.s.km = Expedition.site_km(first)
+				Game.s["at_site"] = first
+		"done":
+			if first != "":
+				Expedition.mark_done(first)
+		"lap":
+			Game.s.lap = int(Game.s.lap) + 1
+	var did := WorldMap.reconcile() if WorldMap.on() else "switch off"
+	act("world legacy %s biome %d" % [kind, b], {"did": did, "at": WorldMap.world().get("at", "")})
+	Game.travel_changed.emit()
+	return did
+
+
+## MV-514: run the migration again ("" = nothing to change: running it twice is a no-op)
+func world_reconcile() -> String:
+	var did := WorldMap.reconcile()
+	act("world reconcile", {"did": did})
+	Game.toast.emit("ย้ายเซฟ: %s" % (did if did != "" else "ตรงกันแล้ว ไม่มีอะไรเปลี่ยน"), "info")
+	return did
+
+
 ## MV-130: drive the world map. dest = a stop id, "next" = the nearest landmark not done yet, "exit" = the world exit
 func world_drive(dest: String) -> bool:
 	if dest == "next":
