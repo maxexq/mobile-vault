@@ -55,7 +55,7 @@ func _layout_sig() -> String:
 				if not it.is_empty() and not (it.kind in ["weapon", "armor"]):
 					ids.append(str(id))
 			ids.sort()
-			return "items:" + ",".join(ids) + ":%d" % box.size.x
+			return "items:" + ",".join(ids) + ":%d" % box.custom_minimum_size.x
 		"forge":
 			var bits := "forge:%d:" % int(Game.s.combat.get("auto_salvage", -1))
 			for r in range(Loot.RARITY.size() - 1):
@@ -134,6 +134,8 @@ func refresh() -> void:
 		"forge":
 			_build_forge()
 	_sig = _layout_sig()
+	if is_open:
+		_layout()        # a narrower tab / grid lets the window shrink back to its size for this screen
 
 
 func _find(uid: int) -> Dictionary:
@@ -212,7 +214,9 @@ func _build_grid() -> void:
 		_list.add_child(UIKit.wrap_label(Loc.t("ยังไม่มีอุปกรณ์ในหมวดนี้ — ศัตรูดรอปของเมื่อถูกกำจัด (บอสดรอปแน่นอน) หรือผลิตที่ห้องอาวุธ")))
 		return
 	var grid := GridContainer.new()
-	var w := box.size.x - 24.0
+	# the width _layout gives the window on this screen (MV-266/113): box.size is still stretched by the last build's
+	# grid, so a grid built on a wide screen kept its columns after the screen got narrower and ran past the edge
+	var w := box.custom_minimum_size.x - 24.0
 	grid.columns = maxi(5, int(w / 40.0))
 	grid.add_theme_constant_override("h_separation", 4)
 	grid.add_theme_constant_override("v_separation", 4)
@@ -367,7 +371,7 @@ func _after_equip() -> void:
 func _build_items() -> void:
 	set_title(Loc.t("ITEMS / ไอเทมและทรัพยากร"))
 	var grid := GridContainer.new()
-	grid.columns = 2 if box.size.x < 500 else 3
+	grid.columns = 2 if box.custom_minimum_size.x < 500 else 3
 	grid.add_theme_constant_override("h_separation", 4)
 	grid.add_theme_constant_override("v_separation", 4)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL

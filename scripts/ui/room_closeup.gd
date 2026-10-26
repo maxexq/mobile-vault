@@ -13,6 +13,7 @@ signal build_requested(slot: int, room_type: String)
 
 var slot := -1
 var mode := "main"           # main | assign | supper
+const PANEL_MIN_W := 280.0   # MV-266: landscape panel width the room leaves free at least
 var _diners: Array = []      # MV-430: crew ids picked for the next supper (checked again when it starts)
 var _rx_bar: ProgressBar
 var _rx_lbl: Label
@@ -25,6 +26,7 @@ var _content: VBoxContainer
 
 
 func _build() -> void:
+	centered = false        # docks beside the zoomed room (_layout)
 	dim_alpha = 0.0
 	dim.color = Color(0, 0, 0, 0)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -47,7 +49,16 @@ func focus_rect() -> Rect2:
 	var vp := get_viewport_rect().size
 	if _portrait():
 		return Rect2(8, 26, vp.x - 16, floorf(vp.y * 0.3))
-	return Rect2(4, 4, floorf(vp.x * 0.46), vp.y - 8)
+	# MV-266: on a narrow landscape screen the room gives up width so the panel gets at least what its content needs
+	var need := maxf(PANEL_MIN_W, _content_min_w())
+	return Rect2(4, 4, floorf(minf(vp.x * 0.46, vp.x - need - 12.0)), vp.y - 8)
+
+
+## the width the panel's content needs (not the box's own custom minimum, which _layout sets from the focus rect)
+func _content_min_w() -> float:
+	if box == null or box.get_child_count() == 0:
+		return 0.0
+	return (box.get_child(0) as Control).get_combined_minimum_size().x + box.get_theme_stylebox("panel").get_minimum_size().x
 
 
 func _layout() -> void:
@@ -65,6 +76,7 @@ func _layout() -> void:
 	sz = sz.floor()
 	box.custom_minimum_size = sz
 	box.size = sz
+	_recenter.call_deferred()        # MV-266: never past a screen edge
 
 
 func open_slot(s: int) -> void:

@@ -141,6 +141,11 @@ func _run() -> void:
 		await _perf_test()
 		_finish()
 		return
+	if "--only=responsive" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _responsive_test()
+		_finish()
+		return
 	if "--only=morale" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _morale_test()
@@ -896,6 +901,7 @@ func _run() -> void:
 	await _barks_test()
 	await _hull_warning_test()
 	await _morale_test()
+	await _responsive_test()
 	await _perf_test()
 	await _analytics_test()
 	_checkpoint_test()
@@ -1478,7 +1484,10 @@ func _confirm_actions_test() -> void:
 	dialog.confirm_button.pressed.emit()
 	dialog.confirm_button.pressed.emit()
 	var refund := float(Data.room_def("kitchen").cost) * 0.5
-	_check("confirm: accepting demolishes once and refunds once", Game.s.rooms[1].type == "empty" and float(Game.s.res.scrap) == scrap_before + refund)
+	# an economy step can land between the click and this check on a slow machine (MV-113 runs it 20x a second), so
+	# "once" = the change is one refund, not none and not two
+	_check("confirm: accepting demolishes once and refunds once (scrap %.4f, expected %.4f)" % [float(Game.s.res.scrap), scrap_before + refund],
+		Game.s.rooms[1].type == "empty" and absf(float(Game.s.res.scrap) - scrap_before - refund) < refund * 0.5)
 	Game.s.rooms[1] = room_before
 	room_ui.refresh()
 	room_ui._request_demolish()
@@ -6296,6 +6305,137 @@ func _morale_test() -> void:
 	Game.dwellers_changed.emit()
 	Game.squad_changed.emit()
 	await wait(0.3)
+
+
+## MV-266: every screen class (phones portrait / landscape, tablets, laptops, large screens): a sane whole-number UI
+## scale, the HUD inside the screen without its bars overlapping, every window / popup inside the screen (centred
+## ones in the middle at their real size, the close-up docked beside the room), screenshots of each class
+const RESPONSIVE_SIZES := [Vector2i(360, 640), Vector2i(390, 844), Vector2i(412, 915), Vector2i(844, 390), Vector2i(768, 1024),
+	Vector2i(1024, 768), Vector2i(1024, 1366), Vector2i(1280, 800), Vector2i(1366, 768), Vector2i(2560, 1440)]
+
+
+func _inside(r: Rect2, vp: Vector2) -> bool:
+	return r.position.x >= -0.5 and r.position.y >= -0.5 and r.end.x <= vp.x + 0.5 and r.end.y <= vp.y + 0.5
+
+
+func _grect(c: Control) -> Rect2:
+	return Rect2(c.global_position, c.size)
+
+
+func _responsive_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep := DisplayServer.window_get_size()
+	var keep_tips = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	_check("responsive: scale rule (768x1024 -> 2, 1024x768 -> 2, 390x844 -> 1, 1170x2532 -> 3, 1920x1080 -> 3, 2560x1440 -> 4)",
+		main.ui_scale_for(Vector2(768, 1024), Vector2(main.PORTRAIT_BASE)) == 2.0 and main.ui_scale_for(Vector2(1024, 768), Vector2(main.LANDSCAPE_BASE)) == 2.0
+		and main.ui_scale_for(Vector2(390, 844), Vector2(main.PORTRAIT_BASE)) == 1.0 and main.ui_scale_for(Vector2(1170, 2532), Vector2(main.PORTRAIT_BASE)) == 3.0
+		and main.ui_scale_for(Vector2(1920, 1080), Vector2(main.LANDSCAPE_BASE)) == 3.0 and main.ui_scale_for(Vector2(2560, 1440), Vector2(main.LANDSCAPE_BASE)) == 4.0)
+	Features.set_override("features", "responsive_scale", false)
+	_check("responsive: switch off = the old round-down (768x1024 -> 1)", main.ui_scale_for(Vector2(768, 1024), Vector2(main.PORTRAIT_BASE)) == 1.0)
+	Features.set_override("features", "responsive_scale", null)
+	var hud: HUD = main.hud
+	var tested := 0
+	# the window's own size first (always real), then every size class. Under xvfb without a window manager (CI) the
+	# OS reports the new size but the viewport never follows: such a size is skipped (logged), not tested at a stale size
+	for sz in [Vector2i.ZERO] + RESPONSIVE_SIZES:
+		if sz != Vector2i.ZERO:
+			DisplayServer.window_set_size(sz)
+		await wait(0.8)
+		var real: Vector2i = DisplayServer.window_get_size()
+		var vp: Vector2 = hud.get_viewport_rect().size
+		var tag := "%dx%d" % [real.x, real.y]
+		if sz != Vector2i.ZERO and (absf(vp.x * main.pixel_scale - real.x) > main.pixel_scale or absf(vp.y * main.pixel_scale - real.y) > main.pixel_scale):
+			print("[autotest] SKIP responsive %s: the window didn't really resize (design %s at %dx), no window manager?" % [tag, vp, int(main.pixel_scale)])
+			continue
+		tested += 1
+		var base := Vector2(main.PORTRAIT_BASE if main.is_portrait() else main.LANDSCAPE_BASE)
+		_check("responsive %s: whole scale %d, design %s at least %d%% of the base" % [tag, int(main.pixel_scale), vp, int(main.SCALE_MIN * 100)],
+			main.pixel_scale == floorf(main.pixel_scale) and vp.x >= base.x * main.SCALE_MIN - 1.0 and vp.y >= base.y * main.SCALE_MIN - 1.0)
+		var bars := [hud._top, hud._bottom, hud._tools, hud._combat_box, hud._view_box]
+		var out := bars.filter(func(c): return c.visible and not _inside(_grect(c), vp))
+		_check("responsive %s: HUD bars inside the screen" % tag, out.is_empty())
+		var clash: bool = _grect(hud._bottom).intersects(_grect(hud._tools)) or (not main.is_portrait() and _grect(hud._top).intersects(_grect(hud._tools)))
+		_check("responsive %s: the tool bar doesn't cover the top / route bars" % tag, not clash)
+		await shot("responsive_%s_hud" % tag)
+		var bad := []
+		var off_mid := []
+		for key in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "engine", "god", "settings"]:
+			_no_events()
+			if key == "settings":
+				hud.open_settings("game")
+			else:
+				hud.open_panel(key)
+			await wait(0.35)
+			var p: ModalPanel = hud.panels[key]
+			var r := _grect(p.box)
+			if not _inside(r, vp):
+				bad.append("%s %s" % [key, r])
+			elif p.centered and absf(r.position.x - (vp.x - r.end.x)) > 1.5 and r.size.x < vp.x - 1.0:
+				off_mid.append("%s %s" % [key, r])
+			if key == "build":
+				await shot("responsive_%s_build" % tag)
+			p.close()
+			await wait(0.2)
+		# a loot grid built while the window was wide must not keep its columns on a narrower screen
+		var loot: LootPanel = hud.panels.inventory
+		if Game.s.get("stash", []).is_empty():
+			Dev.forge_kit()          # a gear grid needs gear in the stash
+		loot.tab = "gear"
+		loot.filter = "all"
+		loot.pick_slot = ""
+		hud.open_panel("inventory")
+		await wait(0.2)
+		loot.box.custom_minimum_size.x = 900.0      # as if the grid was last built on a wide screen
+		loot.box.size.x = 900.0
+		loot.refresh()
+		await wait(0.1)
+		loot.close()
+		await wait(0.2)
+		hud.open_panel("inventory")
+		await wait(0.3)
+		if not _inside(_grect(loot.box), vp):
+			bad.append("inventory after a wide grid %s" % _grect(loot.box))
+		loot.close()
+		await wait(0.2)
+		_check("responsive %s: every window inside the screen %s" % [tag, bad], bad.is_empty())
+		_check("responsive %s: centred windows sit in the middle at their real size %s" % [tag, off_mid], off_mid.is_empty())
+		# a confirm on top, a road event, the room close-up docked beside the room
+		ConfirmPanel.ask(hud, "ทดสอบ", "ทดสอบขนาดจอ", "ตกลง", func(): pass)
+		await wait(0.35)
+		var cp := get_tree().get_first_node_in_group("confirm_dialog") as ConfirmPanel
+		var conf_ok: bool = cp != null and cp.is_open and _inside(_grect(cp.box), vp)
+		if cp:
+			cp.close()
+		Game.trigger_event("stray_dog")
+		await wait(0.5)
+		var ev_ok: bool = _inside(_grect(hud.event_popup.box), vp)
+		await shot("responsive_%s_event" % tag)
+		Game.cancel_event()
+		hud.event_popup.close()
+		await wait(0.3)
+		_check("responsive %s: confirm and event windows inside the screen" % tag, conf_ok and ev_ok)
+		main.open_closeup(1)
+		await wait(0.8)
+		var cu: RoomCloseup = hud.room_closeup
+		var cr := _grect(cu.box)
+		var f := cu.focus_rect()
+		var room := f       # landscape: the room fills the left focus area; portrait: a 80x52 room at zoom 2-3 in its middle
+		if cu._portrait():
+			var z := clampi(int(minf(f.size.x / 80.0, f.size.y / 52.0)), 2, 3)
+			room = Rect2(f.get_center() - Vector2(40, 26) * z, Vector2(80, 52) * z)
+		_check("responsive %s: the close-up is docked beside the room and inside the screen %s" % [tag, cr], _inside(cr, vp)
+			and not cr.intersects(room.grow(-2.0)))
+		await shot("responsive_%s_closeup" % tag)
+		cu.close()
+		await wait(0.5)
+	_check("responsive: at least the window's own size was checked (%d sizes)" % tested, tested >= 1)
+	Settings.set_value("tips", keep_tips)
+	DisplayServer.window_set_size(keep)
+	await wait(0.6)
 
 
 ## MV-113: frame-rate setting 30 / 60 / 120, the fixed-rate economy (alternating halves, no time lost, switch off =
