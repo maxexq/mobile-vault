@@ -16,6 +16,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Anonymous play statistics (maps reached, rooms built, events, play time) now also go to GameAnalytics so we can see how the game is played; the privacy notice and the Settings switch cover it, and turning it off stops both (MV-423)
 
 ### Fixed
+- You can no longer "speed up and flee" from wolves or bugs while the vehicle can't move (waiting for the expedition team, out of power, broken hull, engine resting, parked); the button says why, the crew fights instead when time runs out, and with nobody aboard they lock the doors and brace. The stray dog's "drive away" is now "leave it be" (MV-243)
 - The engine room's "park to rest" button works again when the engine is already cool; it now holds until you tap "set off again" (MV-419)
 - You can no longer tear down (or split) living quarters when your crew would end up with fewer beds than people; the button says how many beds would be left (MV-420)
 

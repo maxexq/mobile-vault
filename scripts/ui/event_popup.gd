@@ -137,11 +137,16 @@ func refresh() -> void:
 
 
 func _choice_button(ch: Dictionary, i: int) -> ChoiceButton:
-	var b := ChoiceButton.new(ch.th, ch.en, ch.get("sub", ""), ch.get("color", "green"))
+	# MV-243: a choice the vehicle can't do right now (flee while it can't move) is shown closed, with the reason
+	var why := Game.choice_block(ch)
+	var sub_text: String = (Loc.t("รถออกตัวไม่ได้: %s") % Loc.t(Game.drive_block())) if why != "" else ch.get("sub", "")
+	var b := ChoiceButton.new(ch.th, ch.en, sub_text, "gray" if why != "" else ch.get("color", "green"))
 	if ch.has("lore") and not Lore.is_unlocked(str(ch.lore)):
 		b.add_badge(Atlas.icon("book"), Loc.t("ปลดล็อกบันทึกใหม่"))
 	if ch.has("cost"):
 		b.disabled = not Game.can_afford(ch.cost)
+	if why != "":
+		b.disabled = true
 	b.pressed.connect(func():
 		if ch.action == "fight":
 			_choice = i
@@ -193,9 +198,13 @@ func _build_defenders(v: VBoxContainer, _ch: Dictionary) -> void:
 		_choice = -1
 		refresh())
 	hb.add_child(back)
-	var go := UIKit.button(Loc.t("ส่งทีมออกไปรบ!"), "red", "skull")
+	# MV-243: nobody aboard (all out on an expedition): the crew can't go out, the vehicle braces and takes the hit
+	var brace := list.is_empty() and Features.on("flee_guard")
+	if brace:
+		v.add_child(UIKit.wrap_label(Loc.t("ไม่มีใครอยู่บนรถ ทุกคนออกไปสำรวจ"), UIKit.FS_SMALL, UIKit.C_ORANGE))
+	var go := UIKit.button(Loc.t("ปิดประตูตั้งรับ") if brace else Loc.t("ส่งทีมออกไปรบ!"), "red", "skull")
 	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	go.disabled = _selected.is_empty()
+	go.disabled = _selected.is_empty() and not brace
 	go.pressed.connect(func(): _resolve(_choice))
 	hb.add_child(go)
 	v.add_child(hb)

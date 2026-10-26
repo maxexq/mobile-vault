@@ -287,7 +287,7 @@ const EVENTS := {
 			{"action": "adopt", "pet": {"kind": "dog", "name": "ข้าวตัง"}, "cost": {"food": 10}, "th": "รับเลี้ยง ตั้งชื่อว่า ข้าวตัง", "en": "ADOPT IT", "sub": "-10 อาหาร · ทุกคนมีความสุข +15 · มันจะวิ่งเล่นทั่วรถ", "color": "green", "lore": "khaotang"},
 			{"action": "gift", "cost": {"food": 5}, "th": "โยนเนื้อแห้งให้", "en": "TOSS SOME FOOD", "sub": "-5 อาหาร · ความสุข +", "color": "yellow",
 				"result": "มันงับเนื้อแห้งแล้วกระดิกหาง ก่อนวิ่งหายเข้าพุ่มไม้ข้างทาง ทุกคนยิ้มออก (+ความสุข)", "stamp": ["GOOD BOY", "ใจดีจัง"]},
-			{"action": "ignore", "th": "เร่งเครื่องหนี", "en": "DRIVE AWAY", "sub": "ความสุขลด", "color": "gray", "happy": -6},
+			{"action": "ignore", "th": "ปล่อยมันไป", "en": "LEAVE IT BE", "sub": "ความสุขลด", "color": "gray", "happy": -6},
 		],
 	},
 	"stray_cat": {

@@ -803,6 +803,13 @@ func event_quick_timeout() -> void:
 		hud.event_popup.since_input = 0.0
 
 
+## MV-243: wolves while the vehicle is held for 45 s (as after a detour or a breakdown): "เร่งเครื่องหนี" must be closed
+## with the reason, and a time-out sends the crew to fight instead
+func event_flee_stuck() -> void:
+	Game.s.stall = 45.0
+	event("wolves")
+
+
 func arrive(site: String) -> void:
 	if Expedition.active():
 		return
