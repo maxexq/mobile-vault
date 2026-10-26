@@ -6433,6 +6433,11 @@ func _audio_test() -> void:
 	await wait(0.8)
 	_check("audio: industrial bed plays in biome 1", Sound.is_playing("industrial") and float(Sound.layer("industrial").cur) > 0.5)
 	_check("audio: engine layer runs while the game runs", Sound.is_playing("engine") or Sound._engine_now() == "off")
+	var sample_beds := []
+	for id in Sound.layers:
+		if (Sound.layers[id].p as AudioStreamPlayer).playback_type != AudioServer.PLAYBACK_TYPE_STREAM:
+			sample_beds.append(id)
+	_check("audio: beds use stream playback, web samples drop the loop %s" % [sample_beds], sample_beds.is_empty())
 	Dev.goto_biome(1)
 	await wait(0.05)
 	_check("audio: biome change crossfades (desert up, industrial down)", float(Sound.layer("desert").target) > 0.0 and float(Sound.layer("industrial").target) == 0.0)

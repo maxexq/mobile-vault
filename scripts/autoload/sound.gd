@@ -167,7 +167,7 @@ func layer(id: String) -> Dictionary:
 
 
 func is_playing(id: String) -> bool:
-	return layers.has(id) and layers[id].p.playing
+	return layers.has(id) and bool(layers[id].on)
 
 
 ## the bed / weather the game wants right now ("" = none)
@@ -235,9 +235,17 @@ func _set_target(id: String, t: float) -> void:
 		if st == null:
 			return
 		var p := _player("Ambience")
+		# the web build plays through browser samples by default, and those drop the loop (the bed stopped at the
+		# end of the file and restarted from the same spot); Godot's own mixer loops it (MV-536 web fix)
+		p.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 		p.stream = st
 		p.volume_db = -80.0
-		layers[id] = {"p": p, "cur": 0.0, "target": 0.0, "pitch": 1.0}
+		# "on" is ours, not p.playing, so a bed is started once and never re-triggered by a stale `playing`;
+		# finished re-arms a loop that really ended (a re-import without the loop chunk).
+		layers[id] = {"p": p, "cur": 0.0, "target": 0.0, "pitch": 1.0, "on": false}
+		p.finished.connect(func():
+			if layers[id].on:
+				p.play())
 	layers[id].target = t
 
 
@@ -255,15 +263,17 @@ func _process(dt: float) -> void:
 		L.cur = move_toward(float(L.cur), float(L.target), step)
 		var p: AudioStreamPlayer = L.p
 		if L.cur <= 0.001 and L.target <= 0.0:
-			if p.playing:
+			if L.on:
+				L.on = false
 				p.stop()
 			continue
 		if id == "engine":
 			L.pitch = move_toward(float(L.pitch), 1.0 if _engine_now() == "run" else IDLE_PITCH, dt * 0.4)
 			p.pitch_scale = float(L.pitch)
 		p.volume_db = linear_to_db(maxf(0.0001, float(L.cur))) + float(TRIM.get(id, 0.0))
-		if not p.playing:
+		if not L.on:
 			# start beds at a random spot so two loops of the same length don't line up
+			L.on = true
 			p.play(randf() * maxf(0.0, p.stream.get_length() - 0.5))
 	_thunder(dt)
 
