@@ -636,6 +636,10 @@ func _run() -> void:
 	await shot("closeup_blackout_torches")
 	main.hud.room_closeup.close()
 	await wait(0.8)
+	# an outage that outlived its room (smaller vehicle / room gone) ends quietly instead of crashing the tick
+	Game.s.outage = {str(Game.s.rooms.size() + 3): 0.01}
+	Game._tick_outages(0.02, false)      # tiny dt: no new random outage gets rolled
+	_check("short circuit: an outage on a room that no longer exists just ends", (Game.s.outage as Dictionary).is_empty())
 	Game.s.outage = {}
 	main.hud.open_panel("garage")
 	await wait(0.6)
