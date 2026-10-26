@@ -300,6 +300,58 @@ def _cut(img, r=1):
         px(img, x, y, CLEAR)
 
 
+# MV-418: the reviewed worn-steel faces. These are nine-slice textures, not
+# larger controls: UIKit keeps the original content margins and hit areas.
+BUTTON_FAMILIES = {
+    "btn": ("green2", "green3", "green1"),
+    "btn_amber": ("yellow1", "yellow2", "yellow0"),
+    "btn_gray": ("gray2", "gray3", "gray1"),
+    "btn_cyan": ("blue1", "blue2", "blue0"),
+    "btn_red": ("red1", "red2", "red0"),
+}
+
+
+def button_skin(stem, state):
+    """24x24, 6 px nine-slice caps; wear never enters the stretched centre."""
+    face, hi, lo = BUTTON_FAMILIES[stem]
+    if state == "hover":
+        face, hi = hi, "gray5"
+    elif state == "pressed":
+        face, hi = lo, "ol0"
+    elif state == "disabled":
+        face, hi, lo = "gray1", "gray2", "ol0"
+    b = new(24, 24)
+    rect(b, 0, 0, 24, 24, c("ol0"))
+    rect(b, 1, 1, 22, 22, c("gray3"))
+    rect(b, 2, 2, 20, 20, c("ol0"))
+    rect(b, 3, 3, 18, 18, c(face))
+    hline(b, 3, 3, 18, c(hi))
+    hline(b, 3, 20, 18, c(lo))
+    hline(b, 1, 1, 22, c("gray6" if state == "hover" else "gray4"))
+    for x in (3, 18):
+        for y in (3, 18):
+            rect(b, x, y, 3, 3, c("ol0"))
+            rect(b, x, y, 2, 2, c("gray3" if state == "disabled" else "gray4"))
+            if state != "disabled":
+                px(b, x, y, c("gray6"))
+    if state != "disabled":
+        px(b, 5, 1, c("orange2"))
+        hline(b, 18, 22, 2, c("orange1"))
+        px(b, 20, 21, c("orange2"))
+    for x, y in ((0, 0), (1, 0), (0, 1), (23, 0), (22, 0), (23, 1),
+                 (0, 23), (1, 23), (0, 22), (23, 23), (22, 23), (23, 22)):
+        px(b, x, y, CLEAR)
+    return b
+
+
+def gen_button_skins():
+    for stem in BUTTON_FAMILIES:
+        for state in ("normal", "hover", "pressed"):
+            _save_ui(button_skin(stem, state), stem + ("" if state == "normal" else "_" + state))
+    # The disabled face is identical for every family.
+    _save_ui(button_skin("btn", "disabled"), "btn_disabled")
+
+
 def gen_ui_frames():
     # window: 16x16, margin 5 -- soot outline, riveted steel border with rust, inner bevel, near-black inside
     p = new(16, 16)
@@ -333,34 +385,7 @@ def gen_ui_frames():
     _cut(p)
     _save_ui(p, "card")
 
-    # buttons 10x10 (margin 3): metal plate with a painted face, bevel + 1px dark lip
-    def btn(fill, hi, lo, name, line=BR):
-        b = new(10, 10)
-        rect(b, 0, 0, 10, 10, line)
-        rect(b, 1, 1, 8, 8, fill)
-        hline(b, 1, 1, 8, hi)
-        vline(b, 1, 1, 7, hi)
-        hline(b, 1, 8, 8, lo)
-        vline(b, 8, 2, 7, lo)
-        _cut(b)
-        _save_ui(b, name)
-
-    def ramp(r, i, hover=False):
-        n = len(RAMPS[r]) - 1
-        j = min(i + (1 if hover else 0), n)
-        return c(f"{r}{j}"), c(f"{r}{min(j + 1, n)}"), c(f"{r}{max(j - 1, 0)}")
-    btn(*ramp("green", 2), "btn")
-    btn(*ramp("green", 2, True), "btn_hover")
-    btn(c("gray1"), c("gray0"), c("gray2"), "btn_pressed")
-    btn(hx("1a1a1c"), hx("222224"), hx("121214"), "btn_disabled", line=c("gray2"))
-    btn(*ramp("yellow", 1), "btn_amber")
-    btn(*ramp("yellow", 1, True), "btn_amber_hover")
-    btn(*ramp("gray", 2), "btn_gray")
-    btn(*ramp("gray", 2, True), "btn_gray_hover")
-    btn(*ramp("blue", 2), "btn_cyan")
-    btn(*ramp("blue", 2, True), "btn_cyan_hover")
-    btn(*ramp("red", 1), "btn_red")
-    btn(*ramp("red", 1, True), "btn_red_hover")
+    gen_button_skins()
     # tab on / off (8x8, bottom open)
     t = new(8, 8)
     rect(t, 0, 0, 8, 8, BR)
@@ -394,3 +419,382 @@ def gen_ui_frames():
     _save_ui(t, "bubble_tail")
     t = new(4, 4); rect(t, 0, 0, 4, 4, c("gray2")); rect(t, 1, 1, 2, 2, hx("0c0c0e")); _save_ui(t, "bar_bg")
     t = new(4, 1); px(t, 0, 0, c("gray3")); px(t, 1, 0, c("gray3")); _save_ui(t, "dash")
+
+
+# ------------------------------------------------------------------ MV-473 equipment slots (approved v1 steel + v3 light)
+# One riveted worn-steel frame per tile width (MV-474) and six rarity light loops (MV-475..480). The light is a MASK:
+# three grey codes (gray2 / gray4 / gray6 = faint / lit / hot) that the game colours at runtime with the approved
+# per-rarity emission and hot colours (UIKit / gear_fx.gdshader), so the atlas keeps the master palette. The masks
+# follow the approved preview helper (tools/art/gear_slots/build_preview.py, cell()): same integer paths, five stepped
+# pulse levels, phase offset (index + rank*2) % 16, highlight lengths, corner lights, particle counts and the Mythic
+# heartbeat, with every edge re-derived for each native width (never a rescaled 32 px animation).
+GEAR_WIDTHS = [28, 30, 32, 36, 40]
+GEAR_RARITIES = ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
+GEAR_PAD = 12          # template padding around the slot in a light-mask cell
+GEAR_PHASES = 16
+GEAR_HOT = 1.25        # strength of the hot / core colour on the same scale as the base emission
+
+
+def _gear_suffix(w):
+    return "" if w == 32 else "_%d" % w
+
+
+def ui_gear_slot_frame(w=32):
+    """MV-474: the approved steel slot at native width w: clipped corners, ol0 outline, top-left bevel, gunmetal band
+    with sparse rust, four bolted corner plates, a dark groove at inset 4 (where the rarity rim lights up) and a dark
+    recessed centre around the 16x16 icon area. Drawn per width: whole-pixel plates and bevels, recomputed spans."""
+    img = new(w, w)
+    rng = random.Random(4730 + w)
+    for y in range(w):
+        for x in range(w):
+            d = min(x, y, w - 1 - x, w - 1 - y)
+            corner = min(x, w - 1 - x) + min(y, w - 1 - y)
+            if corner < 1:
+                continue                                   # clipped corners
+            if d == 0 or corner == 1:
+                col = "ol0"
+            elif d <= 3:
+                # band: light from the top-left
+                if (x == 1 or y == 1) and corner > 2:
+                    col = "gray5"
+                elif x == w - 2 or y == w - 2:
+                    col = "gray2"
+                else:
+                    col = "gray4" if (x + y) % 5 else "gray3"
+            elif d == 4:
+                col = "ol1"                                # the rim groove
+            elif d == 5:
+                col = "ol0" if (x == 5 or y == 5) else "gray2"
+            else:
+                col = "gray1"                              # recess
+            px(img, x, y, c(col))
+    # rust on the band, sparse
+    for _ in range(max(4, w // 5)):
+        side = rng.randrange(4)
+        t = rng.randrange(5, w - 5)
+        k = rng.randrange(2, 4)
+        x, y = [(t, k), (w - 1 - k, t), (t, w - 1 - k), (k, t)][side]
+        px(img, x, y, c("orange1" if rng.random() < 0.6 else "orange2"))
+    # four bolted plates
+    for bx, by in [(1, 1), (w - 4, 1), (1, w - 4), (w - 4, w - 4)]:
+        rect(img, bx, by, 3, 3, c("gray3"))
+        px(img, bx + 1, by + 1, c("gray5"))
+        px(img, bx + 2, by + 2, c("ol1"))
+    return img
+
+
+def _gear_path(vertices):
+    pts = []
+    for (x0, y0), (x1, y1) in zip(vertices, vertices[1:] + vertices[:1]):
+        steps = max(abs(x1 - x0), abs(y1 - y0))
+        for i in range(steps):
+            p = (round(x0 + (x1 - x0) * i / steps), round(y0 + (y1 - y0) * i / steps))
+            if not pts or pts[-1] != p:
+                pts.append(p)
+    return pts
+
+
+def gear_light(rank, index, w=32, aura=True):
+    """light strengths (x, y) -> s for one phase of one rarity at slot width w, in a (w+24)^2 cell with the slot at
+    (12,12). The approved cell() with its colours replaced by strengths: tint(color, a) = a, mix(x, hot, t) moves x
+    towards GEAR_HOT."""
+    px0 = py0 = GEAR_PAD
+    lit = {}
+
+    def put(x, y, s):
+        lit[(x, y)] = s                     # later draws replace earlier ones, as in the preview
+
+    def mix(a, t):
+        return a + (GEAR_HOT - a) * t
+
+    rim = _gear_path([(7, 4), (w - 8, 4), (w - 5, 7), (w - 5, w - 8), (w - 8, w - 5), (7, w - 5), (4, w - 8), (4, 7)])
+    outer = _gear_path([(-1, -3), (w, -3), (w + 3, 0), (w + 3, w - 1), (w, w + 2), (-1, w + 2), (-4, w - 1), (-4, 0)])
+    corners = [(4, 4), (w - 5, 4), (w - 5, w - 5), (4, w - 5)]
+    n = GEAR_PHASES
+    phase = (index + rank * 2) % n
+    pulse = (1 - math.cos(math.tau * phase / n)) / 2
+    pulse = round(pulse * 4) / 4
+    if rank == 5:
+        pulse = [0.25, 0.5, 1, 0.5, 0.25, 0.5, 0.75, 0.5, 0.25, 0, 0, 0, 0, 0, 0, 0.25][phase]
+    if aura:
+        reach = [1, 2, 3, 3, 4, 5][rank]
+        for ring in range(reach, 0, -1):
+            glow = (0.08 + 0.025 * rank + 0.09 * pulse) * (reach - ring + 1) / reach
+            v = [(px0 + 3 - ring, py0 + 1 - ring), (px0 + w - 4 + ring, py0 + 1 - ring),
+                 (px0 + w - 2 + ring, py0 + 3 - ring), (px0 + w - 2 + ring, py0 + w - 4 + ring),
+                 (px0 + w - 4 + ring, py0 + w - 2 + ring), (px0 + 3 - ring, py0 + w - 2 + ring),
+                 (px0 + 1 - ring, py0 + w - 4 + ring), (px0 + 1 - ring, py0 + 3 - ring)]
+            for i, (x, y) in enumerate(_gear_path(v)):
+                if (i + phase + ring) % 3 != 0:
+                    put(x, y, glow)
+    strength = (0.42 + 0.12 * pulse) if rank == 0 else (0.56 + 0.38 * pulse)
+    for x, y in rim:
+        put(px0 + x, py0 + y, strength)
+    head = (phase * len(rim) // n) % len(rim)
+    tails = 3 if rank == 0 else 4 + rank
+    for k in range(tails):
+        x, y = rim[(head - k) % len(rim)]
+        put(px0 + x, py0 + y, mix(strength, (tails - k) / tails * (0.45 if rank == 0 else 0.9)))
+    if rank >= 3:
+        for k in range(4):
+            x, y = rim[(head + len(rim) // 2 - k) % len(rim)]
+            put(px0 + x, py0 + y, mix(strength, (4 - k) / 5))
+        for k, (x, y) in enumerate(corners):
+            put(px0 + x, py0 + y, mix(0.4, 0.25 + 0.55 * ((phase + k * 4) % n) / n))
+    if aura and rank > 0:
+        count = [0, 1, 2, 3, 4, 6][rank]
+        for particle in range(count):
+            if rank >= 4:
+                age = (phase + particle * 5) % n
+                x = px0 + (-3 if particle % 2 == 0 else w + 2) + ((age // 4 + particle) % 2)
+                y = py0 + w - 2 - age * 2
+                size = 2 if rank == 5 and particle % 3 == 0 else 1
+                s = mix(0.35, 1 - age / n)
+            else:
+                x, y = outer[(phase * len(outer) // n + particle * len(outer) // count) % len(outer)]
+                x, y = px0 + x, py0 + y
+                size = 1
+                s = mix(0.5, 0.35 + 0.45 * ((phase + particle) % 4) / 3)
+            for dx in range(size):
+                for dy in range(size):
+                    put(x + dx, y + dy, s)
+        if rank == 5:
+            for shift in (0, len(outer) // 2):
+                for k in range(7):
+                    x, y = outer[(head + shift + k) % len(outer)]
+                    if k % 3 != 2:
+                        put(px0 + x, py0 + y, mix(1.0, (7 - k) / 9))
+    # the item never lights: its 16x16 centre stays empty
+    ix = px0 + (w - 16) // 2
+    iy = py0 + (w - 16) // 2
+    for (x, y) in list(lit):
+        if ix <= x < ix + 16 and iy <= y < iy + 16:
+            del lit[(x, y)]
+    return lit
+
+
+def gear_mask_code(s):
+    """light strength -> mask code: gray2 faint, gray4 lit, gray6 hot (None = dark)"""
+    if s < 0.02:
+        return None
+    if s < 0.45:
+        return "gray2"
+    if s < 0.9:
+        return "gray4"
+    return "gray6"
+
+
+def fx_gear_mask(rank, index, w=32):
+    cell = w + 2 * GEAR_PAD
+    img = new(cell, cell)
+    for (x, y), s in gear_light(rank, index, w).items():
+        code = gear_mask_code(s)
+        if code and 0 <= x < cell and 0 <= y < cell:
+            px(img, x, y, c(code))
+    return img
+
+
+def fx_gear_common(i, w=32):
+    return fx_gear_mask(0, i, w)
+
+
+def fx_gear_uncommon(i, w=32):
+    return fx_gear_mask(1, i, w)
+
+
+def fx_gear_rare(i, w=32):
+    return fx_gear_mask(2, i, w)
+
+
+def fx_gear_epic(i, w=32):
+    return fx_gear_mask(3, i, w)
+
+
+def fx_gear_legendary(i, w=32):
+    return fx_gear_mask(4, i, w)
+
+
+def fx_gear_mythic(i, w=32):
+    return fx_gear_mask(5, i, w)
+
+
+def gen_gear_slots():
+    for w in GEAR_WIDTHS:
+        add("ui_gear_slot_frame" + _gear_suffix(w), ui_gear_slot_frame(w))
+        for rank, name in enumerate(GEAR_RARITIES):
+            for i in range(GEAR_PHASES):
+                add("fx_gear_%s%s_%d" % (name, _gear_suffix(w), i), fx_gear_mask(rank, i, w))
+
+
+# ------------------------------------------------------------------ MV-483 trait cards (approved v2 compact + v4 light)
+# A quiet compact trait card (MV-484) and twelve light loops (MV-485..496): six beneficial, six trade-off. The light is
+# a mask in three grey codes (gray2 faint / gray4 lit / gray6 hot) coloured at runtime (TraitFx), so the atlas keeps
+# the master palette. The masks follow the approved preview helper (tools/art/trait_cards/build_preview.py) at native
+# scale: phase (index + rank*2) % 16, the stepped pulse / uneven flicker lookups, glint lengths, mote and ember counts,
+# integer paths. The canonical card is 160x58 in a 172x70 cell (card at 6,6); the game draws the SAME algorithm for a
+# card's real size (scripts/ui/trait_fx.gd, checked against these masks by the autotest).
+TRAIT_W, TRAIT_H, TRAIT_PAD = 160, 58, 6
+TRAIT_FLICKER = [0.62, 0.70, 0.66, 0.84, 0.73, 0.97, 0.76, 0.82, 0.68, 0.73, 0.92, 0.80, 0.66, 0.71, 0.78, 0.68]
+TRAIT_HOT = 1.25
+
+
+def ui_trait_card_frame():
+    """MV-484: charcoal panel, one thin neutral steel outline, a one-pixel corner bevel, a dark 20x20 icon recess.
+    No rivets, plates or nested frames. 9-slice with fixed 3 px corners (the game sizes it to the content)."""
+    w, h = TRAIT_W, TRAIT_H
+    img = new(w, h)
+    for y in range(h):
+        for x in range(w):
+            corner = min(x, w - 1 - x) + min(y, h - 1 - y)
+            if corner < 1:
+                continue
+            d = min(x, y, w - 1 - x, h - 1 - y)
+            if d == 0 or corner == 1:
+                col = "gray4" if (y == 0 or x == 0) and corner > 1 else "gray3"
+            elif d == 1:
+                col = "ol0"
+            else:
+                col = "gray1"
+            px(img, x, y, c(col))
+    return img
+
+
+def _trait_path(x0, y0, x1, y1, ch):
+    v = [(x0 + ch, y0), (x1 - ch, y0), (x1, y0 + ch), (x1, y1 - ch), (x1 - ch, y1), (x0 + ch, y1), (x0, y1 - ch), (x0, y0 + ch)]
+    pts = []
+    for (ax, ay), (bx, by) in zip(v, v[1:] + v[:1]):
+        steps = max(abs(bx - ax), abs(by - ay))
+        for i in range(steps):
+            p = (round(ax + (bx - ax) * i / steps), round(ay + (by - ay) * i / steps))
+            if not pts or pts[-1] != p:
+                pts.append(p)
+    return pts
+
+
+def trait_light(negative, rank, index, w=TRAIT_W, h=TRAIT_H, still=False):
+    """light strengths {(x, y): s} for one phase of one profile, in a (w+12)x(h+12) cell with the card at (6,6).
+    still = the static semantic look (no pulse, glint, motes or embers). Mirrors TraitFx.light() in the game."""
+    lit = {}
+    x0, y0, x1, y1 = TRAIT_PAD, TRAIT_PAD, TRAIT_PAD + w - 1, TRAIT_PAD + h - 1
+    rim = _trait_path(x0, y0, x1, y1, 2)
+    n = 16
+    phase = 0 if still else (index + rank * 2) % n
+    # the semantic accent: a two-pixel bar down the left inside edge
+    for y in range(y0 + 3, y1 - 2):
+        lit[(x0 + 1, y)] = 0.6
+        lit[(x0 + 2, y)] = 0.6
+    if not negative:
+        pulse = round((1 - math.cos(math.tau * phase / n)) * 2) / 4
+        s = 0.5 if rank == 0 else 0.3 + 0.7 * pulse
+        if still:
+            s = 0.5
+        for p in rim:
+            lit[p] = s
+        if rank >= 2 and not still:
+            for ring in range(1, min(rank - 1, 2) + 1):
+                for i, p in enumerate(_trait_path(x0 - ring, y0 - ring, x1 + ring, y1 + ring, 2 + ring)):
+                    if (i + phase + ring) % 3 != 0:
+                        lit.setdefault(p, 0.25)
+        if not still:
+            head = phase * len(rim) // n
+            length = round((3 if rank == 0 else 5 + rank) * 1.4)
+            for offset in ([0, len(rim) // 2] if rank >= 3 else [0]):
+                for k in range(length):
+                    lit[rim[(head + offset - k) % len(rim)]] = 0.6 + 0.65 * (length - k) / length
+            count = [0, 1, 2, 3, 4, 5][rank]
+            orbit = _trait_path(x0 - 3, y0 - 3, x1 + 3, y1 + 3, 5)
+            for m in range(count):
+                x, y = orbit[(phase * len(orbit) // n + m * len(orbit) // count) % len(orbit)]
+                size = 1 if rank < 4 else 2
+                for dx in range(size):
+                    for dy in range(size):
+                        lit[(x + dx, y + dy)] = 0.6 + 0.6 * ((phase + m) % 4) / 3
+    else:
+        flicker = TRAIT_FLICKER[phase]
+        gain = 0.86 + (flicker - 0.75) * (0.35 + rank * 0.13)
+        if still:
+            gain = 0.86
+        for i, p in enumerate(rim):
+            if (i * 7 + 3) % 23 < 3:
+                continue                               # fixed cracks in the broken edge
+            lit[p] = 0.6 * gain
+        if rank >= 1 and not still:
+            for ring in range(1, min(rank, 2) + 1):
+                for i, p in enumerate(_trait_path(x0 - ring, y0 - ring, x1 + ring, y1 + ring, 2 + ring)):
+                    if (i + phase * 2 + ring) % 4 == 0:
+                        lit.setdefault(p, 0.25)
+        if not still:
+            head = (phase * len(rim) // n + rank * 15) % len(rim)
+            length = round((3 + rank) * 1.4)
+            for k in range(length):
+                if k % 3 == 2:
+                    continue
+                lit[rim[(head + k) % len(rim)]] = 1.0 - 0.3 * k / length
+            count = [0, 1, 2, 3, 4, 6][rank]
+            for m in range(count):
+                age = (phase + m * 5) % n
+                x = (x0 - 3 if m % 2 == 0 else x1 + 2) + ((age // 4 + m) % 2)
+                y = y0 + age * h // n
+                size = 2 if rank == 5 and m % 3 == 0 else 1
+                for dx in range(size):
+                    for dy in range(size):
+                        lit[(x + dx, y + dy)] = 0.35 + 0.65 * (n - age) / n
+            if rank >= 4:
+                bx, by = rim[(rank * 43 + phase // 2 * 6) % len(rim)]
+                for dx in range(2):
+                    for dy in range(2):
+                        lit.pop((bx + dx, by + dy), None)          # a soot-dark break
+    # the content never lights
+    for (x, y) in list(lit):
+        if x0 + 4 <= x < x1 - 3 and y0 + 4 <= y < y1 - 3:
+            del lit[(x, y)]
+    return lit
+
+
+def trait_mask_code(s):
+    if s < 0.02:
+        return None
+    if s < 0.45:
+        return "gray2"
+    if s < 0.9:
+        return "gray4"
+    return "gray6"
+
+
+def fx_trait_mask(negative, rank, index):
+    cw, ch = TRAIT_W + 2 * TRAIT_PAD, TRAIT_H + 2 * TRAIT_PAD
+    img = new(cw, ch)
+    for (x, y), s in trait_light(negative, rank, index).items():
+        code = trait_mask_code(s)
+        if code and 0 <= x < cw and 0 <= y < ch:
+            px(img, x, y, c(code))
+    return img
+
+
+TRAIT_TIER_NAMES = ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
+TRAIT_MASK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trait_cards")
+
+
+def gen_trait_cards():
+    """the frame goes into the atlas; the 192 canonical light masks go into a reference sheet that is NOT shipped
+    (tools/art/trait_cards/fx_trait_masks.png + .json): the game draws the same light for each card's real size, and
+    the autotest checks its 160x58 output against this sheet pixel for pixel. Keeping them out of the atlas keeps it
+    at 2048x2048 on phones."""
+    import json
+    add("ui_trait_card_frame", ui_trait_card_frame())
+    cw, ch = TRAIT_W + 2 * TRAIT_PAD, TRAIT_H + 2 * TRAIT_PAD
+    cols = 16
+    sheet = new(cw * cols, ch * 12)
+    regions = {}
+    row = 0
+    for negative, kind in ((False, "benefit"), (True, "tradeoff")):
+        for rank, name in enumerate(TRAIT_TIER_NAMES):
+            for i in range(16):
+                key = "fx_trait_%s_%s_%d" % (kind, name, i)
+                sheet.paste(fx_trait_mask(negative, rank, i), (i * cw, row * ch))
+                regions[key] = [i * cw, row * ch, cw, ch]
+            row += 1
+    os.makedirs(TRAIT_MASK_DIR, exist_ok=True)
+    sheet.save(os.path.join(TRAIT_MASK_DIR, "fx_trait_masks.png"), optimize=True)
+    with open(os.path.join(TRAIT_MASK_DIR, "fx_trait_masks.json"), "w") as f:
+        json.dump(regions, f, indent=0, sort_keys=True)

@@ -6,11 +6,18 @@ extends ModalPanel
 ## the site: progress, time left, the builder crew (+ who speeds it up) and a components rush.
 ## LARGE ROOMS (v4.4): a "ขยายห้อง" section knocks the room through into a same-type neighbour (2-3 cells) or
 ## splits it back. focus_rect() tells the camera where on screen the zoomed room should sit.
+## SALVAGERS' SALOON (MV-430): a "มื้อเย็นร่วมกัน" section picks one or two diners (mode "supper"), shows the meal's
+## progress and hands out the finished supper (Saloon).
 
 signal build_requested(slot: int, room_type: String)
+signal focus_changed      # MV-482: the room's area moved (the panel's height changed): Main re-centres the camera
 
 var slot := -1
-var mode := "main"           # main | assign
+var mode := "main"           # main | assign | supper
+const PANEL_MIN_W := 280.0   # MV-266: landscape panel width the room leaves free at least
+var _diners: Array = []      # MV-430: crew ids picked for the next supper (checked again when it starts)
+var _rx_bar: ProgressBar
+var _rx_lbl: Label
 var _job_bar: ProgressBar
 var _job_lbl: Label
 var _site_bar: ProgressBar
@@ -20,6 +27,7 @@ var _content: VBoxContainer
 
 
 func _build() -> void:
+	centered = false        # docks beside the zoomed room (_layout)
 	dim_alpha = 0.0
 	dim.color = Color(0, 0, 0, 0)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -28,6 +36,8 @@ func _build() -> void:
 	Game.rooms_changed.connect(_maybe_refresh)
 	Game.dwellers_changed.connect(_maybe_refresh)
 	Game.resources_changed.connect(_update_buttons)
+	RoomX.job_done.connect(func(_j): _maybe_refresh())         # MV-430: a supper ends while the room is open
+	RoomX.job_dropped.connect(func(_j, _why): _maybe_refresh())
 
 
 func _portrait() -> bool:
@@ -35,34 +45,80 @@ func _portrait() -> bool:
 	return vp.y >= vp.x
 
 
-## screen area reserved for the zoomed-in room
+## MV-482: the zoomed room's area. Portrait: everything between the visible top bar and the panel, which docks at the
+## bottom at its content height, so the room sits centred in the free space and nothing covers it. Landscape: the left
+## part of the screen, beside the panel (MV-266: on a narrow screen the room gives up width so the panel fits).
 func focus_rect() -> Rect2:
 	var vp := get_viewport_rect().size
 	if _portrait():
-		return Rect2(8, 26, vp.x - 16, floorf(vp.y * 0.3))
-	return Rect2(4, 4, floorf(vp.x * 0.46), vp.y - 8)
+		var top := _top_y()
+		var bottom := box.position.y - 4.0 if is_open and box != null and box.size.y > 0.0 else top + _room_h()
+		return Rect2(8, top, vp.x - 16, maxf(_room_h(), bottom - top))
+	var need := maxf(PANEL_MIN_W, _content_min_w())
+	return Rect2(4, 4, floorf(minf(vp.x * 0.46, vp.x - need - 12.0)), vp.y - 8)
+
+
+## where the room area starts: under the HUD's top bar (only the resource row shows during a close-up)
+func _top_y() -> float:
+	var hud := get_parent() as HUD
+	if hud and hud._top and hud._top.visible:
+		return floorf(hud._top.position.y + hud._top.size.y + 4.0)
+	return 26.0
+
+
+## the portrait zoom (whole number, 2-3 as before) and the room height it needs, frame included
+func _room_zoom() -> int:
+	var vp := get_viewport_rect().size
+	return clampi(int(minf((vp.x - 16.0) / float(Vehicle.ROOM_SIZE.x), vp.y * 0.3 / float(Vehicle.ROOM_SIZE.y))), 2, 3)
+
+
+func _room_h() -> float:
+	return float(Vehicle.ROOM_SIZE.y * _room_zoom()) + 12.0
+
+
+## the width the panel's content needs (not the box's own custom minimum, which _layout sets from the focus rect)
+func _content_min_w() -> float:
+	if box == null or box.get_child_count() == 0:
+		return 0.0
+	return (box.get_child(0) as Control).get_combined_minimum_size().x + box.get_theme_stylebox("panel").get_minimum_size().x
+
+
+## the panel is never taller than what leaves the whole zoomed room visible
+func max_height() -> float:
+	var vp := get_viewport_rect().size
+	if _portrait():
+		return floorf(vp.y - _top_y() - _room_h() - 8.0)
+	return floorf(vp.y - 8.0)
 
 
 func _layout() -> void:
 	var vp := get_viewport_rect().size
-	var f := focus_rect()
-	var sz: Vector2
-	if _portrait():
-		var z := clampi(int(minf(f.size.x / 80.0, f.size.y / 52.0)), 2, 3)
-		var room_bottom := f.get_center().y + 26.0 * z + 6.0
-		sz = Vector2(vp.x - 8, vp.y - room_bottom - 4)
-		box.position = Vector2(4, floorf(room_bottom))
-	else:
-		sz = Vector2(vp.x - f.end.x - 8, vp.y - 8)
-		box.position = Vector2(floorf(f.end.x + 4), 4)
-	sz = sz.floor()
+	var w := vp.x - 8.0 if _portrait() else vp.x - focus_rect().end.x - 8.0
+	if _fit_tw:
+		_fit_tw.kill()
+	var sz := Vector2(w, fit_target()).floor()
 	box.custom_minimum_size = sz
 	box.size = sz
+	_recenter()
+
+
+## docked: portrait at the bottom, landscape on the right and vertically centred; kept inside the screen
+func _recenter() -> void:
+	if box == null:
+		return
+	var vp := get_viewport_rect().size
+	if _portrait():
+		box.position = Vector2(4, floorf(vp.y - box.size.y - 4.0))
+	else:
+		box.position = Vector2(floorf(focus_rect().end.x + 4.0), floorf((vp.y - box.size.y) * 0.5))
+	box.position = box.position.clamp(Vector2.ZERO, (vp - box.size).max(Vector2.ZERO)).floor()
+	focus_changed.emit()
 
 
 func open_slot(s: int) -> void:
 	slot = Game.room_anchor(s)
 	mode = "main"
+	_diners.clear()
 	open()
 
 
@@ -80,6 +136,7 @@ func refresh() -> void:
 	_job_bar = null
 	_site_bar = null
 	_rush_btn = null
+	_rx_bar = null
 	var r: Dictionary = Game.s.rooms[slot]
 	if not Game.is_slot_unlocked(slot):
 		_build_locked()
@@ -93,20 +150,24 @@ func refresh() -> void:
 	if mode == "assign":
 		_build_assign(def)
 		return
+	if mode == "supper" and str(r.type) == Saloon.TYPE and not Game.is_constructing(slot):
+		_build_supper_pick()
+		return
 	if Game.is_site(slot):
 		set_title(Loc.t("BUILDING %s / กำลังสร้าง%s") % [def.en, def.th])
 		_build_site(r, def)
 		_build_workers(def)
 		var cancel := UIKit.button(Loc.t("ยกเลิกการก่อสร้าง (คืนเศษเหล็กครึ่งหนึ่ง)"), "red", "close")
-		cancel.pressed.connect(func():
-			Game.demolish_room(slot)
-			refresh())
+		cancel.name = "CancelConstructionButton"
+		cancel.pressed.connect(_request_demolish)
 		_content.add_child(cancel)
 		return
 	if Game.is_constructing(slot):
 		_build_site(r, def)
 	_build_workers(def)
 	_build_production(r, def)
+	if str(r.type) == Saloon.TYPE:
+		_build_saloon()
 	_build_recipes(r, def)
 	_build_upgrade(r, def)
 	_build_large(r, def)
@@ -314,13 +375,151 @@ func _build_production(r: Dictionary, def: Dictionary) -> void:
 	if Game.room_dark(slot):
 		v.add_child(UIKit.wrap_label(Loc.t("ไฟดับ! ห้องมืดสนิท ผลิตได้น้อยลง — ช่างเครื่องซ่อมได้เร็วขึ้น") if not Game.blackout() else Loc.t("แบตเตอรี่หมด! ทั้งรถมืด"), UIKit.FS_SMALL, UIKit.C_RED))
 	for d in Game.room_occupants(slot):
-		if d.get("strike", false):
+		if Crew.is_broken(d):
+			v.add_child(UIKit.wrap_label(Loc.t("%s ใจสลาย นั่งร้องไห้ (ความสุข %d) · แตะชื่อในเมนูลูกเรือเพื่อคุยปลอบใจ") % [d.name, int(d.happy)], UIKit.FS_SMALL, UIKit.C_RED))
+		elif d.get("strike", false):
 			v.add_child(UIKit.wrap_label(Loc.t("%s ประท้วงหยุดงาน (ความสุข %d)") % [d.name, int(d.happy)], UIKit.FS_SMALL, UIKit.C_RED))
 	if Env.prod_mult() < 0.99:
 		v.add_child(UIKit.wrap_label(Loc.t("หนาวจัด! ผลิตได้ x%.2f (ต้องการเชื้อเพลิง)") % Env.prod_mult(), UIKit.FS_SMALL, UIKit.C_RED))
 	if def.get("weather_crop", false):
 		v.add_child(UIKit.label(Loc.t("สภาพอากาศ: %s (x%.2f)") % [Game.weather_def().th, Game.weather_def().crop], UIKit.FS_SMALL, UIKit.C_BLUE))
 	_content.add_child(eff)
+
+
+## MV-430: the shared supper (running / waiting to be claimed / pick the diners) and the crew's bonds
+func _build_saloon() -> void:
+	_section("SHARED SUPPER", Loc.t("มื้อเย็นร่วมกัน"))
+	var p := UIKit.panel(Color("1a140c"), UIKit.C_GOLD)
+	var v := UIKit.vbox(2)
+	p.add_child(v)
+	var j := Saloon.supper(slot)
+	if not j.is_empty() and not bool(j.done):
+		var names := []
+		for did in Saloon.diners(j):
+			var d := Game.dweller_by_id(did)
+			if not d.is_empty() and int(d.room) == slot:
+				names.append(str(d.name))
+		v.add_child(UIKit.wrap_label(Loc.t("กำลังกินมื้อเย็น: %s") % (" & ".join(names) if not names.is_empty() else "-"), UIKit.FS_SMALL, UIKit.C_TEXT))
+		_rx_bar = UIKit.progress(UIKit.C_GOLD, 10)
+		_rx_bar.custom_minimum_size.y = 10
+		_rx_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_rx_lbl = UIKit.label("", UIKit.FP, UIKit.C_WHITE, true)
+		_rx_lbl.add_theme_constant_override("outline_size", 2)
+		_rx_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+		_rx_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_rx_bar.add_child(_rx_lbl)
+		v.add_child(_rx_bar)
+		v.add_child(UIKit.wrap_label(Loc.t("คนที่นั่งกินพักงานของตัวเองไว้ กินเสร็จแล้วจะกลับไปทำงานที่เดิม · ย้ายใครออกกลางคัน คนนั้นไม่ได้ความสุข"), UIKit.FS_SMALL, UIKit.C_DIM))
+	elif not j.is_empty():
+		v.add_child(UIKit.wrap_label(Loc.t("มื้อเย็นเสร็จแล้ว ทุกคนกลับไปทำงาน เหลือแค่นั่งคุยกันอีกนิด"), UIKit.FS_SMALL, UIKit.C_GREEN))
+		var b := UIKit.button(Loc.t("นั่งคุยกันต่อ (รับความสุข)"), "green", "happy")
+		b.name = "SupperClaimButton"
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var jid := int(j.id)
+		b.pressed.connect(func():
+			Saloon.claim(jid)
+			refresh())
+		v.add_child(b)
+	else:
+		v.add_child(UIKit.wrap_label(Loc.t("ชวน 1–2 คนมานั่งกินด้วยกัน: ใช้ %s · %s · ความสุข +%d ต่อคน · ระหว่างกินไม่ได้ทำงาน") % [
+			Game.cost_text(Saloon.cost()), Game.fmt_time(Saloon.duration(slot)), int(Saloon.happy_gain())], UIKit.FS_SMALL, UIKit.C_TEXT))
+		if not RoomX.on():
+			v.add_child(UIKit.wrap_label(Loc.t("ระบบห้องใหม่ปิดอยู่"), UIKit.FS_SMALL, UIKit.C_RED))
+		var b := UIKit.button(Loc.t("เลือกคนร่วมโต๊ะ"), "yellow", "people")
+		b.name = "SupperPickButton"
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.disabled = not RoomX.on() or Game.is_constructing(slot)
+		b.pressed.connect(func():
+			mode = "supper"
+			refresh())
+		v.add_child(b)
+	var bl := _bond_lines()
+	if not bl.is_empty():
+		v.add_child(UIKit.label(Loc.t("สายสัมพันธ์บนรถ"), UIKit.FS_SMALL, UIKit.C_GOLD))
+		for t in bl:
+			v.add_child(UIKit.wrap_label(t, UIKit.FS_SMALL, UIKit.C_DIM))
+	_content.add_child(p)
+	_update_saloon()
+
+
+## the three strongest bonds between crew who are still aboard
+func _bond_lines() -> Array:
+	var all := []
+	var b: Dictionary = Saloon.st().get("bonds", {})
+	for k in b:
+		var ids := str(k).split("|")
+		if ids.size() != 2:
+			continue
+		var a := Game.dweller_by_id(int(ids[0]))
+		var c := Game.dweller_by_id(int(ids[1]))
+		if a.is_empty() or c.is_empty():
+			continue
+		all.append([int(b[k]), "%s & %s" % [a.name, c.name]])
+	all.sort_custom(func(x, y): return int(x[0]) > int(y[0]))
+	var out := []
+	for e in all.slice(0, 3):
+		out.append(Loc.t("%s · กินด้วยกัน %d มื้อ") % [e[1], e[0]])
+	return out
+
+
+## picking the diners: tap to seat / unseat (two at most), then start
+func _build_supper_pick() -> void:
+	var back := UIKit.button(Loc.t("< กลับ"), "gray")
+	back.pressed.connect(func():
+		mode = "main"
+		refresh())
+	_content.add_child(back)
+	_section("SUPPER · PICK 1-2", Loc.t("เลือกคนร่วมโต๊ะ"))
+	var list: Array = []
+	for d in Game.s.dwellers:
+		if not Game.is_away(d):
+			list.append(d)
+	list.sort_custom(func(a, b): return float(a.happy) < float(b.happy))
+	for d in list:
+		var did := int(d.id)
+		var picked := _diners.has(did)
+		var why := Saloon.diner_block(d)
+		var where: String = Loc.t("ว่าง") if int(d.room) < 0 else Data.room_def(Game.room(int(d.room)).type).th
+		var b := _row_button(d, Loc.t("%s  ความสุข %d  (%s)") % [d.name, int(d.happy), Loc.t(why) if why != "" else where],
+			"green" if picked else ("gray" if why != "" else "blue"))
+		b.disabled = why != "" and not picked
+		b.pressed.connect(func():
+			if _diners.has(did):
+				_diners.erase(did)
+			else:
+				_diners.append(did)
+				while _diners.size() > 2:
+					_diners.pop_front()
+			refresh())
+		_content.add_child(b)
+	var why := Saloon.start_block(slot, _diners)
+	if not _diners.is_empty() and why != "":
+		_content.add_child(UIKit.wrap_label(Loc.t(why), UIKit.FS_SMALL, UIKit.C_RED))
+	var go := UIKit.button(Loc.t("เริ่มมื้อเย็น %d คน (%s)") % [_diners.size(), Game.cost_text(Saloon.cost())], "green", "happy")
+	go.name = "SupperStartButton"
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	go.set_meta("cost", Saloon.cost())
+	go.set_meta("busy", _diners.is_empty())
+	go.pressed.connect(func():
+		if not Saloon.start(slot, _diners).is_empty():
+			_diners.clear()
+			mode = "main"
+			refresh())
+	_content.add_child(go)
+	_update_buttons()
+
+
+func _update_saloon() -> void:
+	if _rx_bar == null or not is_instance_valid(_rx_bar):
+		return
+	var j := Saloon.supper(slot)
+	if j.is_empty():
+		return
+	_rx_bar.value = RoomX.progress(j)
+	var why := RoomX.paused_why(j)
+	_rx_lbl.text = "%d%%  %s" % [int(RoomX.progress(j) * 100.0), Game.fmt_time(float(j.left)) if why == "" else "PAUSED"]
+	_rx_lbl.size = _rx_bar.size
+	_rx_lbl.position = Vector2(0, 1)
 
 
 func _build_recipes(r: Dictionary, def: Dictionary) -> void:
@@ -384,9 +583,7 @@ func _build_upgrade(r: Dictionary, def: Dictionary) -> void:
 		var d := UIKit.button(Loc.t("รื้อ"), "red", "close")
 		d.name = "DemolishButton"
 		d.disabled = short >= 0
-		d.pressed.connect(func():
-			Game.demolish_room(slot)
-			refresh())
+		d.pressed.connect(_request_demolish)
 		h.add_child(d)
 	_content.add_child(h)
 	if short >= 0:
@@ -442,18 +639,39 @@ func _build_large(r: Dictionary, def: Dictionary) -> void:
 		sp.disabled = short >= 0
 		if short >= 0:
 			v.add_child(UIKit.wrap_label(Game.beds_short_text(short), UIKit.FS_SMALL, UIKit.C_GOLD))
-		sp.pressed.connect(func():
-			Game.split_room(slot)
-			refresh())
+		sp.pressed.connect(_request_split)
 		v.add_child(sp)
 	_content.add_child(p)
 	_update_buttons()
 
 
+func _request_demolish() -> void:
+	var target := slot
+	var room: Dictionary = Game.s.rooms[target]
+	var site := Game.is_site(target)
+	var level := int(room.level)
+	var span := Game.room_span(target)
+	var title := Loc.t("ยกเลิกการก่อสร้าง") if site else Loc.t("รื้อห้อง")
+	var refund := float(Data.room_def(room.type).cost) * 0.5 * span
+	var detail := Loc.t("%s Lv.%d · %d ช่อง\nห้องและงานที่กำลังทำจะหายไป ลูกเรือจะว่างงาน ได้เศษเหล็กคืน %.1f ย้อนคืนไม่ได้") % [Data.room_def(room.type).th, level, span, refund]
+	ConfirmPanel.ask(self, title, detail, title, func():
+		Game.demolish_room(target)
+		refresh(), func(): return slot == target and target < Game.s.rooms.size() and is_same(Game.s.rooms[target], room) and Game.is_site(target) == site and int(room.level) == level and Game.room_span(target) == span)
+
+
+func _request_split() -> void:
+	var target := slot
+	var room: Dictionary = Game.s.rooms[target]
+	var span := Game.room_span(target)
+	ConfirmPanel.ask(self, Loc.t("แยกห้องใหญ่"), Loc.t("%s Lv.%d จะแยกเป็น %d ห้อง โบนัสห้องใหญ่จะหายไป ไม่มีวัสดุคืน") % [Data.room_def(room.type).th, int(room.level), span], Loc.t("ยืนยันแยกห้อง"), func():
+		Game.split_room(target)
+		refresh(), func(): return slot == target and target < Game.s.rooms.size() and is_same(Game.s.rooms[target], room) and Game.room_span(target) == span)
+
+
 func _build_empty() -> void:
 	set_title(Loc.t("EMPTY SLOT / ช่องว่าง — เลือกห้องที่จะสร้าง"))
 	_section("SCRAP %d" % int(Game.s.res.scrap), Loc.t("วัสดุ"))
-	for t in Data.BUILDABLE:
+	for t in Data.buildable():
 		var def := Data.room_def(t)
 		var ul := Game.room_unlock_level(t)
 		var locked := ul > int(Game.s.vault_level)
@@ -515,6 +733,7 @@ func _process(_d: float) -> void:
 	if not is_open or slot < 0:
 		return
 	_update_site()
+	_update_saloon()
 	if _job_bar == null or not is_instance_valid(_job_bar):
 		return
 	var r: Dictionary = Game.s.rooms[slot]

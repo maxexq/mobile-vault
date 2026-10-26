@@ -17,10 +17,14 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
 - **Art:** true 16-bit pixel art, dark post-apocalyptic, 3 rooms per vehicle floor, Nearest
   filter, everything in `assets/atlas/`. AI images are drafts: enforce grid and palette.
   (A 32-bit upgrade is proposed but not approved; keep 16-bit until told otherwise.)
+- **Future rooms:** follow the approved [room style reference](docs/art/room-style-reference.md).
+  Use an actual existing room sprite as the visual input, keep its coarse 64x52 pixel style,
+  and include a distinctive small micro-animation for each new furnished room.
 - **PixelLab API costs money:** `tools/pixellab.py gen ... --yes` spends Parames's credits. Show the
   `--dry-run` cost estimate and get an OK before every paid batch (README "Redrawing sprites with PixelLab").
 - **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served by Vercel
-  from `web/`.
+  from `web/`, and by Cloudflare Pages in parallel while it is being verified (MV-499,
+  `docs/hosting-cloudflare.md`: the engine wasm comes from R2; a Godot upgrade needs a new R2 upload).
 - Never commit secrets: `cloud_config.json`, `.plane-api-key`, `ai/.env` are git-ignored.
 - PR, review, CI and Vercel deploy events post to Discord (`.github/workflows/discord-notify.yml`,
   secret `DISCORD_WEBHOOK_URL`). A new CI workflow must be added to its `workflow_run.workflows` list.

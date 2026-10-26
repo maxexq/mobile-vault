@@ -1,0 +1,105 @@
+{
+  "status": "Animated compact trait-card appearance approved by Parames; queued for implementation",
+  "date": "2026-10-26",
+  "epic": {
+    "id": "d9a9a8f7-9238-4ee8-9f2c-ad189eeee16a",
+    "ref": "MV-483",
+    "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/d9a9a8f7-9238-4ee8-9f2c-ad189eeee16a",
+    "state": "Todo"
+  },
+  "integration": {
+    "id": "aff6e7f9-8072-4c13-9b69-b37a610f9d2b",
+    "ref": "MV-498",
+    "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/aff6e7f9-8072-4c13-9b69-b37a610f9d2b",
+    "state": "Todo"
+  },
+  "classification_design": {
+    "id": "1805e4d3-3374-455f-8083-861a3ec80b2c",
+    "ref": "MV-497",
+    "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/1805e4d3-3374-455f-8083-861a3ec80b2c",
+    "state": "Todo"
+  },
+  "art": {
+    "ui_trait_card_frame": {
+      "ref": "MV-484",
+      "id": "0cf77c95-c1bb-4a33-98dd-340bd307a765",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/0cf77c95-c1bb-4a33-98dd-340bd307a765",
+      "state": "Todo"
+    },
+    "fx_trait_benefit_common": {
+      "ref": "MV-485",
+      "id": "93ab5668-33eb-4acf-a354-b047cb418cf0",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/93ab5668-33eb-4acf-a354-b047cb418cf0",
+      "state": "Todo"
+    },
+    "fx_trait_benefit_uncommon": {
+      "ref": "MV-486",
+      "id": "8b429925-2b47-4b12-9b80-a566f10d77c2",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/8b429925-2b47-4b12-9b80-a566f10d77c2",
+      "state": "Todo"
+    },
+    "fx_trait_benefit_rare": {
+      "ref": "MV-487",
+      "id": "46ff806a-b534-42e5-810a-5a7f941e26ca",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/46ff806a-b534-42e5-810a-5a7f941e26ca",
+      "state": "Todo"
+    },
+    "fx_trait_benefit_epic": {
+      "ref": "MV-488",
+      "id": "40172425-c0ae-4824-9b7a-ce5b5b618fce",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/40172425-c0ae-4824-9b7a-ce5b5b618fce",
+      "state": "Todo"
+    },
+    "fx_trait_benefit_legendary": {
+      "ref": "MV-489",
+      "id": "a2779552-67f6-4e69-af83-aec7037e6869",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/a2779552-67f6-4e69-af83-aec7037e6869",
+      "state": "Todo"
+    },
+    "fx_trait_benefit_mythic": {
+      "ref": "MV-490",
+      "id": "78c86196-3e3b-4aba-ac0d-f5fce5277b47",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/78c86196-3e3b-4aba-ac0d-f5fce5277b47",
+      "state": "Todo"
+    },
+    "fx_trait_tradeoff_common": {
+      "ref": "MV-491",
+      "id": "1ba5245e-5bac-4f00-b999-73110e1852cf",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/1ba5245e-5bac-4f00-b999-73110e1852cf",
+      "state": "Todo"
+    },
+    "fx_trait_tradeoff_uncommon": {
+      "ref": "MV-492",
+      "id": "d8bed2e9-e579-42fa-ac2d-e2c83e2afed9",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/d8bed2e9-e579-42fa-ac2d-e2c83e2afed9",
+      "state": "Todo"
+    },
+    "fx_trait_tradeoff_rare": {
+      "ref": "MV-493",
+      "id": "fb891867-637f-4349-b501-9e73450ac704",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/fb891867-637f-4349-b501-9e73450ac704",
+      "state": "Todo"
+    },
+    "fx_trait_tradeoff_epic": {
+      "ref": "MV-494",
+      "id": "30748177-1579-4e84-b3f6-6bf8cfe2903f",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/30748177-1579-4e84-b3f6-6bf8cfe2903f",
+      "state": "Todo"
+    },
+    "fx_trait_tradeoff_legendary": {
+      "ref": "MV-495",
+      "id": "bf7221be-7201-4ba8-9136-f2ec9496dbe6",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/bf7221be-7201-4ba8-9136-f2ec9496dbe6",
+      "state": "Todo"
+    },
+    "fx_trait_tradeoff_mythic": {
+      "ref": "MV-496",
+      "id": "61838c4f-fae3-431d-8182-0b50639e4a8d",
+      "url": "https://app.plane.so/mobile-vault/projects/c18b3b42-dee2-4767-9a63-b278a184f125/issues/61838c4f-fae3-431d-8182-0b50639e4a8d",
+      "state": "Todo"
+    }
+  },
+  "approved_gif_sha256": "aef4716a7f17fce183992de844d6380e740363b5d6a5be94d0db66b3cef3df50",
+  "rarity_policy": "Appearance approved; no per-trait rarity classification approved or assigned. See MV-497.",
+  "scope": "Validated drafts and new Todo tickets only; no game implementation, production asset, commit, PR or deployment."
+}

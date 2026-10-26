@@ -200,9 +200,9 @@ func _update_overlay() -> void:
 		if flags[k]:
 			on_flags.append(k)
 	var vp := _layer.get_viewport().get_visible_rect().size
-	_lbl.text = "FPS %d  x%s  draw %d  nodes %d\nwave %d  enemies %d  km %.2f  b%d L%d\nmem %.1f MB  %s" % [
-		Engine.get_frames_per_second(), speed, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
-		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), Combat.wave(), Combat.enemies.size(),
+	_lbl.text = "FPS %d/%d  x%s  draw %d  nodes %d\nsim %.2f+%.2f ms  wave %d  enemies %d  km %.2f  b%d L%d\nmem %.1f MB  %s" % [
+		Engine.get_frames_per_second(), Engine.max_fps, speed, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), float(Game.sim_ms.world), float(Game.sim_ms.crew), Combat.wave(), Combat.enemies.size(),
 		float(Game.s.km), int(Game.s.biome), int(Game.s.get("lap", 0)),
 		Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0, " ".join(on_flags)]
 	_lbl.add_theme_font_override("font", UIKit.font_pixel)
@@ -358,6 +358,12 @@ func set_hull(frac: float) -> void:
 	act("hull %d%%" % int(frac * 100))
 
 
+## MV-250: drop the hull just under a warning line (1 = warn, 2 = danger, 3 = critical) so that stage's alert fires;
+## 0 = full hull (clears the warning)
+func hull_warning_preview(stage: int) -> void:
+	set_hull(1.0 if stage <= 0 else maxf(0.01, HullAlert.line(stage) - 0.01))
+
+
 # ------------------------------------------------------------------ engine bay (v4.6)
 ## the engine_bay Features switch for this tester (MV-40): off = stock diesel, no heat / wear / rests / jobs
 func engine_bay_switch(v: bool) -> void:
@@ -446,6 +452,123 @@ func rooms_fill() -> void:
 			i += 1
 	act("fill rooms")
 	Game.rooms_changed.emit()
+
+
+# ------------------------------------------------------------------ MV-429 room expansion
+## put an expansion room (finished, level 1) in the first empty slot; returns the slot or -1
+func rx_build(t: String) -> int:
+	if not RoomX.is_rx(t):
+		return -1
+	for slot in Game.s.rooms.size():
+		if Game.is_slot_unlocked(slot) and str(Game.s.rooms[slot].type) == "empty" and not Game.is_annex(slot):
+			Game.s.rooms[slot] = {"type": t, "level": 1, "job": {}}
+			act("rx build %s" % t, {"slot": slot})
+			Game.rooms_changed.emit()
+			return slot
+	Game.toast.emit("ไม่มีช่องว่างให้สร้าง", "warn")
+	return -1
+
+
+## every running expansion job finishes now (still waits to be claimed)
+func rx_finish_jobs() -> void:
+	for k in RoomX.jobs():
+		RoomX.jobs()[k].left = 0.0
+	act("rx finish jobs", {"n": RoomX.jobs().size()})
+
+
+func rx_drop_jobs() -> void:
+	for k in RoomX.jobs().keys():
+		RoomX.drop(int(RoomX.jobs()[k].id), "god")
+	act("rx drop jobs")
+
+
+## every room animation: "" = live, "rest" = hold the rest frame, "active" = play as if the room were busy;
+## read-only for the save (not cheated)
+func rx_anim_preview(mode: String) -> void:
+	RoomAnim.preview = mode
+	RoomAnim.paused_preview = false
+	Trace.rec("god", "rx anim preview %s" % mode)
+
+
+## stop every room animation's clock and move them all one frame (read-only, not cheated)
+func rx_anim_step() -> void:
+	RoomAnim.paused_preview = true
+	for a in get_tree().get_nodes_in_group("room_anim"):
+		a.frame_step()
+	Trace.rec("god", "rx anim step")
+
+
+## MV-430 Saloon: seat up to two crew who can eat now at the first Saloon (one is built if there is none) and start a
+## supper; food / water are topped up to pay for it. Returns the job ({} = couldn't).
+func saloon_supper() -> Dictionary:
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == Saloon.TYPE and not Game.is_constructing(i) and RoomX.job_in(i).is_empty():
+			slot = i
+			break
+	if slot < 0:
+		slot = rx_build(Saloon.TYPE)
+	if slot < 0:
+		return {}
+	var ids := []
+	for d in Game.s.dwellers:
+		if ids.size() < 2 and Saloon.diner_block(d) == "":
+			ids.append(int(d.id))
+	for k in Saloon.cost():
+		Game.s.res[k] = maxf(float(Game.s.res[k]), float(Saloon.cost()[k]) + 1.0)
+	act("saloon supper", {"slot": slot, "n": ids.size()})
+	return Saloon.start(slot, ids)
+
+
+## every crew member may sit down to supper again right away
+func saloon_clear_cd() -> void:
+	(Saloon.st().cd as Dictionary).clear()
+	act("saloon clear cooldowns")
+
+
+## claim every finished supper (happiness, bond and the conversation)
+func saloon_claim_all() -> void:
+	for k in RoomX.jobs().keys():
+		var j: Dictionary = RoomX.jobs()[k]
+		if str(j.kind) == Saloon.KIND and bool(j.done):
+			Saloon.claim(int(j.id))
+	act("saloon claim all")
+
+
+# ------------------------------------------------------------------ MV-473 equipment slots
+## every gear tile's light: "" = follow the switches, "base" / "neon" / "aura" / "still" (read-only, not cheated)
+func gear_preview(mode: String) -> void:
+	GearFx.preview = mode
+	GearFx.paused_preview = false
+	Trace.rec("god", "gear preview %s" % mode)
+
+
+## hold every light and move it one phase (read-only)
+func gear_step() -> void:
+	GearFx.frame_step()
+	Trace.rec("god", "gear step %d" % GearFx.current_phase())
+
+
+## a preview item that isn't in the stash (no uid used): rarity r in a slot, with +N and lock for showing the badges
+func gear_sample(r: int, slot: String, plus: int = 0, lock: bool = false) -> Dictionary:
+	var base := ""
+	for k in Loot.BASES:
+		if str(Loot.BASES[k].slot) == slot:
+			base = str(k)
+			break
+	return {"uid": -1, "base": base, "slot": slot, "rar": r, "ilvl": 5 + r * 4, "plus": plus, "aff": [], "lock": lock}
+# ------------------------------------------------------------------ MV-483 trait cards
+## every trait card's light: "" = live, "still", "off" (read-only, not cheated)
+func trait_preview(mode: String) -> void:
+	TraitFx.preview = mode
+	TraitFx.paused_preview = false
+	Trace.rec("god", "trait preview %s" % mode)
+
+
+## hold every trait card light and move it one phase (read-only)
+func trait_step() -> void:
+	TraitFx.frame_step()
+	Trace.rec("god", "trait step %d" % TraitFx.current_phase())
 
 
 func finish_construction() -> void:
@@ -594,6 +717,42 @@ func force_strike(d: Dictionary) -> void:
 	Game.rooms_changed.emit()
 
 
+## MV-127 morale v2: put a crew member in a mood stage now ("" = fine, "depressed", "broken"; "leaving" = Broken and
+## leaves at the next night)
+func mood_force(d: Dictionary, stage: String) -> void:
+	if Crew.is_broken(d) and stage != "broken" and stage != "leaving":
+		Crew._clear_broken(d, true)
+	match stage:
+		"":
+			d.happy = 75.0
+			d["mood"] = ""
+			d["strike_t"] = 0.0
+		"depressed":
+			d.happy = 30.0
+			d["mood"] = Crew.MOOD_DEPRESSED
+			d["strike_t"] = 0.0
+		"broken", "leaving":
+			d.happy = 10.0
+			if not Crew.is_broken(d):
+				Crew._set_broken(d, true)
+			if stage == "leaving":
+				d["desert_t"] = Features.num("morale.leave_sec", 180.0)
+				d["desert_warn"] = true
+	act("mood %s = %s" % [d.name, stage])
+	Game.dwellers_changed.emit()
+	Game.rooms_changed.emit()
+
+
+## every talk timer and pair cooldown ends now
+func talk_reset() -> void:
+	for d in Game.s.dwellers:
+		d.erase("talk_t")
+	if Game.s.get("morale") is Dictionary:
+		(Game.s.morale as Dictionary)["talk_cd"] = {}
+	act("talk reset")
+	Game.rooms_changed.emit()
+
+
 func desert_now(d: Dictionary) -> void:
 	act("desert " + str(d.name))
 	Crew.desert(d)
@@ -736,6 +895,18 @@ func event(id: String) -> void:
 	Game.trigger_event(id)
 
 
+## MV-427: someone says the line for this moment now (skips the cooldown); "" = a random kind. Read-only (not cheated)
+func bark(kind: String = "") -> String:
+	var m = get_tree().current_scene
+	if m == null or m.get("chatter") == null:
+		return ""
+	var kinds: Array = Lore.BARKS.keys()
+	var k := kind if kind != "" else str(kinds[randi() % kinds.size()])
+	var ok: bool = m.chatter.bark(k, -1, "", true)
+	Trace.rec("god", "bark %s" % k, {"said": ok})
+	return k if ok else ""
+
+
 ## MV-134: a random road event whose clock runs out in 2 s (as if the player were watching), to see the crew's pick
 func event_quick_timeout() -> void:
 	var ids := Data.EVENTS.keys()
@@ -745,6 +916,13 @@ func event_quick_timeout() -> void:
 		hud.event_popup.decide_total = maxf(hud.event_popup.decide_total, 2.0)
 		hud.event_popup.decide_left = 2.0
 		hud.event_popup.since_input = 0.0
+
+
+## MV-243: wolves while the vehicle is held for 45 s (as after a detour or a breakdown): "เร่งเครื่องหนี" must be closed
+## with the reason, and a time-out sends the crew to fight instead
+func event_flee_stuck() -> void:
+	Game.s.stall = 45.0
+	event("wolves")
 
 
 func arrive(site: String) -> void:
@@ -1070,6 +1248,13 @@ func cloud_forget() -> void:
 	Cloud.sync()
 
 
+## MV-423: GameAnalytics: one test design event now, and send the queue; read-only for the save (not cheated)
+func ga_test_event() -> void:
+	Trace.rec("god", "gameanalytics test event", {"queued": Analytics.queue.size()})
+	Analytics.design("Test:GodMode")
+	Analytics.flush()
+
+
 ## player logs (MV-116): send the queued trace entries now; read-only for the save (not cheated)
 func logs_flush() -> bool:
 	Trace.rec("god", "logs flush", {"queued": Telemetry.pending().size()})
@@ -1082,6 +1267,22 @@ func logs_flush() -> bool:
 func logs_test_error() -> bool:
 	Trace.rec("error", "GOD test error (ignore)", {"kind": "test"})
 	return await logs_flush()
+
+
+## server outbox (MV-424): pretend the server answered 503, so the lane is held for its next backoff step (press again
+## to climb the steps); read-only for the save (not cheated)
+func outbox_fail() -> void:
+	Outbox.report(Outbox.SUPABASE, 503)
+	Trace.rec("god", "outbox fake 503", {"fails": Outbox.lane(Outbox.SUPABASE).fails})
+	Game.toast.emit("พักการส่งขึ้นเซิร์ฟเวอร์ %d วิ (ล้มเหลวติดกัน %d ครั้ง)" % [ceili(Outbox.hold_left(Outbox.SUPABASE)),
+		int(Outbox.lane(Outbox.SUPABASE).fails)], "info")
+
+
+## lift the hold now: the automatic save / log rounds go on their next tick
+func outbox_open() -> void:
+	Outbox.reset(Outbox.SUPABASE)
+	Trace.rec("god", "outbox open")
+	Game.toast.emit("เปิดคิวเซิร์ฟเวอร์แล้ว", "info")
 
 
 ## MV-174: what the offline catch-up would give if saved_at had been moved back 4 hours, with and without the
@@ -1241,3 +1442,12 @@ func announce_forget_seen() -> void:
 	Announce.seen.clear()
 	Save.write_key(Announce.SEEN_KEY, Announce.SEEN_PATH, "{}")
 	Announce.collect()
+
+
+## MV-422: demonstrate the real confirmation UI without deleting anything.
+func confirm_preview() -> void:
+	Trace.rec("god", "confirmation preview")
+	var panel := get_tree().get_first_node_in_group("confirm_dialog") as ConfirmPanel
+	if panel == null:
+		return
+	panel.request(panel.get_parent() as Control, Loc.t("ทดสอบหน้าต่างยืนยัน"), Loc.t("นี่คือตัวอย่างเท่านั้น ยืนยันแล้วจะแสดงข้อความ ไม่มีข้อมูลถูกลบ"), Loc.t("ยืนยันตัวอย่าง"), func(): Game.toast.emit(Loc.t("ยืนยันตัวอย่างแล้ว ไม่มีข้อมูลถูกลบ"), "good"))

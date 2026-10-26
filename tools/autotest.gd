@@ -58,6 +58,22 @@ func _run() -> void:
 	await wait(0.3)
 	main.hud.title_screen._go(true)
 	await wait(2.5)
+	_button_skin_contract_test()
+	if "--only=confirm" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		if "--confirm-ui-sequence" in OS.get_cmdline_user_args():
+			get_window().size = Vector2i(1280, 640)
+			await wait(0.6)
+			await _touch_test()
+			await _settings_test()
+		await _confirm_actions_test()
+		_finish()
+		return
+	if "--only=buttons" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _button_skin_menu_test()
+		_finish()
+		return
 	if "--only=background" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _industrial_background_test()
@@ -108,6 +124,76 @@ func _run() -> void:
 	if "--only=engine_rest" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _engine_rest_test()
+		_finish()
+		return
+	if "--only=analytics" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _analytics_test()
+		_finish()
+		return
+	if "--only=outbox" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _outbox_test()
+		_finish()
+		return
+	if "--only=window_fit" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _window_fit_test()
+		_finish()
+		return
+	if "--only=trait_cards" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _trait_cards_test()
+		_finish()
+		return
+	if "--only=gear_slots" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _gear_slots_test()
+		_finish()
+		return
+	if "--only=perf" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _perf_test()
+		_finish()
+		return
+	if "--only=responsive" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _responsive_test()
+		_finish()
+		return
+	if "--only=morale" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _morale_test()
+		_finish()
+		return
+	if "--only=hull_warning" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _hull_warning_test()
+		_finish()
+		return
+	if "--only=barks" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _barks_test()
+		_finish()
+		return
+	if "--only=flee_guard" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _flee_guard_test()
+		_finish()
+		return
+	if "--only=flagged" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _flagged_test()
+		_finish()
+		return
+	if "--only=rooms_x" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _rooms_x_test()
+		_finish()
+		return
+	if "--only=saloon" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _saloon_test()
 		_finish()
 		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
@@ -476,7 +562,8 @@ func _run() -> void:
 	Game.s.rooms[es].type = "medical"
 	_check("weight grows with rooms", es >= 0 and Haul.weight() > w0 and Haul.capacity() > float(Game.vehicle_def().engine))
 	Game.s.rooms[es].type = "empty"
-	# morale: strike then theft + desertion
+	# morale: strike then theft + desertion (the legacy rules, morale_v2 off; v2 is _morale_test)
+	Features.set_override("features", "morale_v2", false)
 	var grumpy := Game._add_dweller({"name": "ทดสอบหนี", "variant": "dw_raider_black", "str": 3, "int": 3, "agi": 3, "lvl": 1})
 	grumpy.happy = 5.0
 	for i in 12:
@@ -487,6 +574,7 @@ func _run() -> void:
 		Crew.morale_tick(grumpy, 10.0, false)
 	Crew.flush_deserters()
 	_check("morale: deserter steals and leaves", not Game.s.dwellers.has(grumpy) and float(Game.s.res.food) < food0)
+	Features.set_override("features", "morale_v2", null)
 	# pets live on the vehicle
 	var adopt := Game.resolve_event("stray_cat", 0, [])
 	_check("adopt a pet", adopt.ok and Game.has_pet("cat"))
@@ -786,10 +874,12 @@ func _run() -> void:
 	await _inspection_test()
 	await _threat_test()
 	await _settings_test()
+	await _confirm_actions_test()
 	_event_variety_test()
 	await _cloud_test()
 	await _cloud_account_test()
 	await _logs_test()
+	await _outbox_test()
 	await _account_test()
 	await _resume_test()
 	await _large_room_test()
@@ -819,6 +909,19 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _rooms_x_test()
+	await _saloon_test()
+	await _flagged_test()
+	await _flee_guard_test()
+	await _barks_test()
+	await _hull_warning_test()
+	await _morale_test()
+	await _responsive_test()
+	await _perf_test()
+	await _window_fit_test()
+	await _gear_slots_test()
+	await _trait_cards_test()
+	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
 	_finish()
@@ -826,6 +929,96 @@ func _run() -> void:
 
 ## god mode actions for the newer systems (tutorial, construction, builders, squad, forge, event deck,
 ## encounters, strangers, cloud, settings) + every tab renders
+## MV-418: real controls retain the old geometry even though the nine-slice caps grow.
+func _button_skin_contract_test() -> void:
+	var fixture := Control.new()
+	fixture.theme = UIKit.theme()
+	fixture.visible = false
+	add_child(fixture)
+	var old_image := Image.create(10, 10, false, Image.FORMAT_RGBA8)
+	old_image.fill(UIKit.C_BG2)
+	var old_texture := ImageTexture.create_from_image(old_image)
+	for key in ["green", "yellow", "gray", "blue", "red", "orange"]:
+		var b := UIKit.button("สร้าง / Build", key, "hammer")
+		fixture.add_child(b)
+		var complete := true
+		for state in UIKit.BUTTON_STATES:
+			var style := b.get_theme_stylebox(state) as StyleBoxTexture
+			var down: bool = state in ["pressed", "hover_pressed"]
+			var expected: String = "btn_disabled" if state == "disabled" else str(UIKit.BTN_TEX[key]) + ("_pressed" if down else ("_hover" if state == "hover" else ""))
+			complete = complete and style.texture.get_size() == Vector2(24, 24) and style.texture.resource_path.ends_with("/" + expected + ".png")
+			complete = complete and style.texture_margin_left == 6 and style.texture_margin_top == 6 and style.texture_margin_right == 6 and style.texture_margin_bottom == 6
+		_check("buttons: %s routes every state to its own family" % key, complete)
+		for sample in ["+", "", "สร้าง / Build", "รายละเอียด / Details"]:
+			b.text = sample
+			var actual := b.get_combined_minimum_size()
+			var saved := {}
+			for state in UIKit.BUTTON_STATES:
+				var style := b.get_theme_stylebox(state) as StyleBoxTexture
+				saved[state] = style
+				var legacy := style.duplicate() as StyleBoxTexture
+				legacy.texture = old_texture
+				legacy.set_texture_margin_all(3)
+				b.add_theme_stylebox_override(state, legacy)
+			_check("buttons: %s '%s' keeps the legacy minimum size" % [key, sample], actual == b.get_combined_minimum_size())
+			for state in UIKit.BUTTON_STATES:
+				b.add_theme_stylebox_override(state, saved[state])
+		# Settings and toggled HUD controls restyle the same node without rebuilding it.
+		UIKit.style_button(b, "yellow")
+		UIKit.style_button(b, key)
+		_check("buttons: restyled %s keeps its pressed and disabled faces" % key,
+			b.get_theme_stylebox("pressed").texture == UIKit.button_style(key, "pressed").texture
+			and b.get_theme_stylebox("disabled").texture == UIKit.ui_tex("btn_disabled"))
+		b.free()
+	var inherited := Button.new()
+	fixture.add_child(inherited)
+	_check("buttons: theme defaults and node overrides use the same pressed face", inherited.get_theme_stylebox("pressed").texture == UIKit.ui_tex("btn_pressed"))
+	_check("buttons: pressed and disabled labels remain readable", inherited.get_theme_color("font_pressed_color") == UIKit.C_WHITE
+		and inherited.get_theme_color("font_hover_pressed_color") == UIKit.C_WHITE and inherited.get_theme_color("font_disabled_color") == UIKit.C_DIM)
+	var choice := ChoiceButton.new("สร้างห้องนี้ / Build this room", "BUILD", "120 scrap", "red")
+	fixture.add_child(choice)
+	choice.disabled = true
+	_check("buttons: wrapped choices share the coloured pressed skin and remain disabled", choice.button.disabled
+		and choice.button.get_theme_stylebox("pressed").texture == UIKit.ui_tex("btn_red_pressed"))
+	fixture.free()
+
+
+## Focused captures of the original menus; this does not replace the full touch checks.
+func _button_skin_menu_test() -> void:
+	var previous_lang: String = str(Settings.get_value("lang"))
+	var previous_tips: bool = bool(Settings.get_value("tips"))
+	var previous_size := DisplayServer.window_get_size()
+	var previous_english = Features.layers.dev.get("features", {}).get("english")
+	var previous_raids = Features.layers.dev.get("features", {}).get("raids")
+	Settings.set_value("tips", false)
+	Features.set_override("features", "english", true)
+	Features.set_override("features", "raids", false)
+	Game.s.res.scrap = 500.0
+	for size_case in [[Vector2i(720, 1280), "portrait"], [Vector2i(1600, 1200), "landscape"]]:
+		DisplayServer.window_set_size(size_case[0])
+		await wait(0.6)
+		_check("buttons: captures use the requested %s resolution" % size_case[1], DisplayServer.window_get_size() == size_case[0])
+		for language in ["th", "en"]:
+			Settings.set_value("lang", language)
+			await wait(0.2)
+			for key in ["build", "dwellers", "inventory", "settings"]:
+				_no_events()
+				if key == "settings": main.hud.open_settings("game")
+				else: main.hud.open_panel(key)
+				await wait(0.4)
+				var panel: ModalPanel = main.hud.panels[key]
+				var vp: Vector2 = main.hud.get_viewport_rect().size
+				_check("buttons: %s/%s/%s keeps the original floating window" % [size_case[1], language, key], panel.box.size.x < vp.x and panel.box.size.y < vp.y)
+				await shot("buttons_%s_%s_%s" % [size_case[1], language, key])
+				panel.close()
+				await wait(0.25)
+	Features.set_override("features", "english", previous_english)
+	Features.set_override("features", "raids", previous_raids)
+	Settings.set_value("lang", previous_lang)
+	Settings.set_value("tips", previous_tips)
+	DisplayServer.window_set_size(previous_size)
+
+
 func _god_update_test() -> void:
 	var god = main.hud.panels.god
 	# tutorial: replay, jump to a step, skip
@@ -1233,6 +1426,252 @@ func _tutorial_test() -> void:
 
 
 ## settings window: every option applies + persists, version info, save export / validate / reset
+## MV-422: real UI entry points must leave state untouched until a named confirmation.
+func _confirm_actions_test() -> void:
+	var saved_state := Game.s
+	var saved_account := Account.a
+	var saved_store := Save.read()
+	var saved_started := Game.started
+	var saved_processing := Game.is_processing()
+	var saved_title: bool = main.hud.title_screen.visible
+	var saved_features: Dictionary = Features.layers.dev.duplicate(true)
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_size := get_window().size
+	Game.set_process(false)
+	# Earlier integration checks deliberately leave stale squad IDs; use a fresh, isolated vehicle.
+	Account.a = {}
+	Game.setup_default_state()
+	Account.attach(Game.s)
+	Game.started = true
+	main.hud.title_screen.visible = false
+	Features.set_override("features", "confirm_actions", true)
+	Features.set_override("features", "english", true)
+	Settings.set_value("tips", false)
+	_no_events()
+	Tutorial.skip()
+	Game._emit_all(true)
+	var dialog: ConfirmPanel = main.hud.confirmation
+	var room_ui: RoomCloseup = main.hud.room_closeup
+	Game.s.rooms[1] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[2] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	Game.s.res.scrap = 50.0
+	main.open_closeup(1)
+	await wait(0.5)
+	var room_before: Dictionary = Game.s.rooms[1]
+	var scrap_before := float(Game.s.res.scrap)
+	(room_ui.find_child("DemolishButton", true, false) as Button).pressed.emit()
+	_check("confirm: demolish click opens a modal without deleting or refunding", dialog.is_open and is_same(Game.s.rooms[1], room_before) and float(Game.s.res.scrap) == scrap_before)
+	_check("confirm: Cancel has keyboard focus and the HUD treats it as modal", dialog.cancel_button.has_focus() and main.hud.any_modal_open())
+	# Keyboard acceptance acts on Cancel, never on the destructive option by default.
+	var enter := InputEventKey.new()
+	enter.keycode = KEY_ENTER
+	enter.pressed = true
+	Input.parse_input_event(enter)
+	await get_tree().process_frame
+	enter = enter.duplicate()
+	enter.pressed = false
+	Input.parse_input_event(enter)
+	await wait(0.1)
+	_check("confirm: default Enter cancels and preserves the room", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
+	room_ui._request_demolish()
+	var escape := InputEventKey.new()
+	escape.keycode = KEY_ESCAPE
+	escape.pressed = true
+	Input.parse_input_event(escape)
+	await get_tree().process_frame
+	escape = escape.duplicate()
+	escape.pressed = false
+	Input.parse_input_event(escape)
+	_check("confirm: Escape cancels without a refund", not dialog.is_open and float(Game.s.res.scrap) == scrap_before)
+	room_ui._request_demolish()
+	await _finger(81, Vector2(1, 1), true)
+	await _finger(81, Vector2(1, 1), false)
+	await wait(0.1)
+	_check("confirm: backdrop tap cancels without deleting", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
+	room_ui._request_demolish()
+	await wait(0.1)
+	var point := dialog.cancel_button.get_global_rect().get_center()
+	await _finger(82, point, true)
+	await wait(0.08)
+	var hit := get_viewport().gui_get_hovered_control()
+	_check("confirm: touch reaches Cancel (hit %s)" % (str(hit.get_path()) if hit else "none"), hit == dialog.cancel_button)
+	await _finger(82, point, false)
+	await wait(0.1)
+	_check("confirm: touch Cancel preserves the target", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
+	room_ui._request_demolish()
+	dialog.confirm_button.pressed.emit()
+	dialog.confirm_button.pressed.emit()
+	var refund := float(Data.room_def("kitchen").cost) * 0.5
+	# an economy step can land between the click and this check on a slow machine (MV-113 runs it 20x a second), so
+	# "once" = the change is one refund, not none and not two
+	_check("confirm: accepting demolishes once and refunds once (scrap %.4f, expected %.4f)" % [float(Game.s.res.scrap), scrap_before + refund],
+		Game.s.rooms[1].type == "empty" and absf(float(Game.s.res.scrap) - scrap_before - refund) < refund * 0.5)
+	Game.s.rooms[1] = room_before
+	room_ui.refresh()
+	room_ui._request_demolish()
+	Game.s.rooms[1] = room_before.duplicate(true)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: a replaced room cannot be deleted by a stale prompt", Game.s.rooms[1].type == "kitchen")
+	room_ui._request_demolish()
+	room_ui.close()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: closing the originating window invalidates the action", Game.s.rooms[1].type == "kitchen")
+	await wait(0.2)
+	Game.s.rooms[1] = {"type": "kitchen", "level": 1, "job": {}, "build": {"kind": "build", "left": 100.0, "total": 100.0}}
+	main.open_closeup(1)
+	await wait(0.2)
+	(room_ui.find_child("CancelConstructionButton", true, false) as Button).pressed.emit()
+	_check("confirm: construction cancellation waits for a decision", dialog.is_open and Game.is_site(1))
+	dialog.close_btn.pressed.emit()
+	_check("confirm: X cancels construction deletion", Game.is_site(1))
+	room_ui._request_demolish()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: construction cancellation commits after confirmation", Game.s.rooms[1].type == "empty")
+	Game.s.rooms[1] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[2] = {"type": "annex", "level": 1, "job": {}, "build": {}}
+	room_ui.refresh()
+	(room_ui.find_child("SplitButton", true, false) as Button).pressed.emit()
+	dialog.close()
+	_check("confirm: cancelling a split preserves the large room", Game.room_span(1) == 2)
+	room_ui._request_split()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: accepting a split preserves both rooms and their level", Game.room_span(1) == 1 and Game.s.rooms[2].type == "kitchen" and int(Game.s.rooms[2].level) == 1)
+	room_ui.close()
+	await wait(0.2)
+	var loot_ui: LootPanel = main.hud.panels.inventory
+	var item := Loot.roll_item("weapon", 1, 0)
+	Game.s.gear = [item]
+	main.hud.open_panel("inventory")
+	loot_ui.detail_uid = int(item.uid)
+	loot_ui.refresh()
+	(loot_ui.find_child("SalvageButton", true, false) as Button).pressed.emit()
+	_check("confirm: single salvage names the item without removing it", dialog.is_open and dialog.message.text.contains(Loot.item_name(item)) and Loot.stash().size() == 1)
+	dialog.cancel_button.pressed.emit()
+	_check("confirm: cancelling single salvage preserves gear", Loot.stash().size() == 1)
+	loot_ui._request_salvage(item)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: accepting single salvage removes that item", Loot.stash().is_empty())
+	var first := Loot.roll_item("weapon", 1, 0)
+	var locked := Loot.roll_item("armor", 1, 0)
+	locked.lock = true
+	Game.s.gear = [first, locked]
+	loot_ui._request_bulk_salvage(0)
+	dialog.cancel_button.pressed.emit()
+	_check("confirm: cancelling bulk salvage preserves every item", Loot.stash().size() == 2 and Loot.stash().has(first))
+	loot_ui._request_bulk_salvage(0)
+	_check("confirm: bulk preview excludes locked gear", dialog.is_open and dialog.confirm_button.text.contains("1"))
+	var later := Loot.roll_item("boots", 1, 0)
+	Game.s.gear.append(later)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: bulk salvage preserves locked gear and drops arriving after the prompt", Loot.stash().size() == 2 and Loot.stash().has(locked) and Loot.stash().has(later))
+	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
+	Game.s.res.scrap = 200.0
+	loot_ui._request_synthesize(0)
+	_check("confirm: synthesis waits without consuming items or scrap", dialog.is_open and Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	Game.s.gear[0].lock = true
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: locking an ingredient invalidates synthesis", Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	Game.s.gear[0].lock = false
+	loot_ui._request_synthesize(0)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: synthesis consumes exactly three ingredients after acceptance", Loot.stash().size() == 1 and int(Loot.stash()[0].rar) == 1 and float(Game.s.res.scrap) == 185.0)
+	Game.s.combat.auto_salvage = -1
+	loot_ui._request_auto_salvage(1)
+	dialog.close()
+	_check("confirm: cancelling auto-salvage keeps it off", int(Game.s.combat.auto_salvage) == -1)
+	loot_ui._request_auto_salvage(1)
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: enabling auto-salvage requires acceptance", int(Game.s.combat.auto_salvage) == 1)
+	loot_ui._request_auto_salvage(-1)
+	_check("confirm: turning auto-salvage off is immediate", not dialog.is_open and int(Game.s.combat.auto_salvage) == -1)
+	main.hud.open_settings("data")
+	Game.save_game()
+	var stored := JSON.stringify(Save.read())
+	main.hud.settings_panel._on_reset_pressed()
+	main.hud.settings_panel._on_reset_pressed()
+	_check("confirm: repeated reset clicks still wait and preserve the saved game", dialog.is_open and JSON.stringify(Save.read()) == stored and Game.started)
+	dialog.close()
+	Settings._finish_import("not json")
+	_check("confirm: invalid imported files never open a confirmation", not dialog.is_open)
+	Settings._finish_import(stored)
+	_check("confirm: a valid import waits before replacing the saved game", dialog.is_open and JSON.stringify(Save.read()) == stored)
+	dialog.close()
+	_check("confirm: cancelling import leaves the saved game byte-for-byte unchanged", JSON.stringify(Save.read()) == stored)
+	main.hud.settings_panel.close()
+	await wait(0.2)
+	main.hud.title_screen.visible = true
+	main.hud.title_screen.modulate.a = 1.0
+	main.hud.title_screen._new_run()
+	_check("confirm: NEW RUN waits when an existing save would be erased", dialog.is_open and JSON.stringify(Save.read()) == stored)
+	dialog.close()
+	_check("confirm: cancelling NEW RUN keeps the existing save", JSON.stringify(Save.read()) == stored and main.hud.title_screen.visible)
+	main.hud.title_screen.visible = false
+	main.hud.open_settings("data")
+	# Long localized prompts remain inside the viewport, with both choices always reachable.
+	for size in [Vector2i(360, 640), Vector2i(720, 1280), Vector2i(1600, 1200)]:
+		get_window().size = size
+		await wait(0.3)
+		for language in ["th", "en"]:
+			Settings.set_value("lang", language)
+			main.hud.settings_panel._on_reset_pressed()
+			await wait(0.1)
+			var screen: Rect2 = main.hud.get_global_rect()
+			_check("confirm: %s %s frame and both choices fit the screen" % [size, language], screen.encloses(dialog.box.get_global_rect()) and dialog.box.get_global_rect().encloses(dialog.cancel_button.get_global_rect()) and dialog.box.get_global_rect().encloses(dialog.confirm_button.get_global_rect()))
+			await shot("confirm_%s_%dx%d" % [language, size.x, size.y])
+			dialog.close()
+	main.hud.settings_panel.close()
+	await wait(0.2)
+	var nextgen: NextGenPanel = main.hud.panels.nextgen
+	main.hud.open_nextgen(false)
+	nextgen.step = "crew"
+	nextgen.refresh()
+	var gen := Meta.generation()
+	(nextgen.find_child("NextGenerationButton", true, false) as Button).pressed.emit()
+	_check("confirm: next generation waits without replacing the vehicle", dialog.is_open and Meta.generation() == gen)
+	dialog.close()
+	_check("confirm: cancelling next generation retains its selection screen", nextgen.is_open and nextgen.step == "crew" and Meta.generation() == gen)
+	nextgen.close()
+	await wait(0.2)
+	Inspection.queue().clear()
+	var stranger := Inspection.queue_candidate("confirm-test", "rare", "human")
+	main.hud.open_door()
+	var door: InspectionPanel = main.hud.panels.door
+	(door.find_child("RefuseStranger", true, false) as Button).pressed.emit()
+	dialog.close()
+	_check("confirm: cancelling stranger dismissal keeps them at the door", is_same(Inspection.current(), stranger))
+	(door.find_child("ShootStranger", true, false) as Button).pressed.emit()
+	dialog.close()
+	_check("confirm: cancelling shooting leaves the visitor alive", is_same(Inspection.current(), stranger))
+	door.close()
+	await wait(0.2)
+	main.hud.open_panel("god")
+	Dev.confirm_preview()
+	_check("confirm: GOD MODE previews the actual dialog", dialog.is_open)
+	dialog.close()
+	var calls := [0]
+	Features.set_override("features", "confirm_actions", false)
+	ConfirmPanel.ask(main.hud.panels.god, "test", "test", "test", func(): calls[0] += 1)
+	_check("confirm: feature off restores direct actions without leaving a modal", calls[0] == 1 and not dialog.is_open)
+	main.hud.panels.god.close()
+	await wait(0.2)
+	if saved_store.is_empty():
+		Save.wipe()
+	else:
+		Save.write(saved_store)
+	Account.a = saved_account
+	Game.s = saved_state
+	Game.started = saved_started
+	Game.set_process(saved_processing)
+	for key in saved_settings:
+		Settings.set_value(key, saved_settings[key])
+	Features.layers.dev = saved_features
+	Features.changed.emit()
+	main.hud.title_screen.visible = saved_title
+	Game._emit_all(true)
+	get_window().size = saved_size
+	await wait(0.3)
+
+
 func _settings_test() -> void:
 	get_window().size = Vector2i(720, 1280)
 	await wait(1.2)
@@ -1303,7 +1742,8 @@ func _settings_test() -> void:
 	_check("save: junk rejected", Settings.validate_save("{\"hello\": 1}") != "" and Settings.validate_save("not json") != "")
 	DirAccess.remove_absolute(path)
 	main.hud.settings_panel._on_reset_pressed()
-	_check("save: reset needs a second tap", Save.has_save())
+	_check("save: reset waits for confirmation", Save.has_save() and main.hud.confirmation.is_open)
+	main.hud.confirmation.close()
 	main.hud.settings_panel.close()
 	await wait(0.3)
 	Settings.reset_progress(false)
@@ -1967,7 +2407,8 @@ func _loot_tabs_test() -> void:
 		get_viewport().push_input(mv, true)
 		await wait(0.05)
 		var hov := get_viewport().gui_get_hovered_control()
-		_check("loot tabs: %s tab button is the control under the finger (got %s)" % [from, str(hov.get_path()) if hov else "none"],
+		_check("loot tabs: %s tab button is the control under the finger (got %s; button %s, window %s, open %s)" % [from, str(hov.get_path()) if hov else "none",
+			btn.get_global_rect(), Rect2(inv.box.global_position, inv.box.size), inv.is_open],
 			hov != null and (hov == btn or btn.is_ancestor_of(hov)))
 		get_viewport().push_input(ev, true)
 		await wait(0.15)
@@ -3285,6 +3726,11 @@ func _env_test() -> void:
 	_check("env: PR previews and unknown hosts are dev", BuildInfo.env_for_host("apocarlypse-mobile-vault-k2j3h4-maxexq.vercel.app") == "dev"
 		and BuildInfo.env_for_host("apocarlypse-mobile-vault-git-mv-112-env-maxexq.vercel.app") == "dev"
 		and BuildInfo.env_for_host("evil.example.com") == "dev")
+	_check("env: Cloudflare Pages branch URLs (MV-499)", BuildInfo.env_for_host("apocarlypse-mobile-vault.pages.dev") == "prod"
+		and BuildInfo.env_for_host("uat.apocarlypse-mobile-vault.pages.dev") == "uat"
+		and BuildInfo.env_for_host("staging.apocarlypse-mobile-vault.pages.dev") == "staging"
+		and BuildInfo.env_for_host("3f2a9c1b.apocarlypse-mobile-vault.pages.dev") == "dev"
+		and BuildInfo.env_for_host("mv-499-cloudflare-pages.apocarlypse-mobile-vault.pages.dev") == "dev")
 	_check("env: desktop / editor (tests) is dev, on the test project", BuildInfo.env() == "dev" and BuildInfo.cloud_project() == "test")
 	var both := {"projects": {"prod": {"url": "https://p.supabase.co", "anon_key": "pk"}, "test": {"url": "https://t.supabase.co", "anon_key": "tk"}}}
 	_check("env: per-project config picks its section", str(Cloud.pick_config(both, "prod").url) == "https://p.supabase.co"
@@ -3513,11 +3959,16 @@ func _thai_terms_test() -> void:
 func _title_backdrop_test() -> void:
 	var v: Node = main.vehicle
 	_check("title: van wheels turn", v.wheels.size() > 0 and v.wheels[0].is_playing())
+	# Half-pixel rumble randomly skips beats; test motion with a deterministic whole-pixel amplitude.
+	# _engine_shake_test separately checks the default half strength and its distribution.
+	var rumble_override = Features.layers.dev.get("tune", {}).get("fx.engine_shake")
+	Features.set_override("tune", "fx.engine_shake", 1.0)
 	var ys := {}
 	for i in 30:
 		await get_tree().process_frame
 		ys[v.body.position.y] = true
 	_check("title: engine rumble moves the body", ys.size() >= 2)
+	Features.set_override("tune", "fx.engine_shake", rumble_override)
 	var p: Control = main.hud.title_screen._panel
 	var vp: Rect2 = main.hud.title_screen.get_viewport_rect()
 	_check("title: menu window inside the screen", vp.encloses(p.get_rect()))
@@ -4236,7 +4687,9 @@ func _col_diff(im: Image, a: int, b: int) -> float:
 ## into food (and stops when they run out or the pantry is full); recipes use sensible inputs; switch off = old game
 ## MV-378: a save load turns the biome into a float; the beaten warlord must still open the checkpoint
 func _checkpoint_test() -> void:
-	var keep := {"biome": Game.s.biome, "km": Game.s.km, "vault_level": Game.s.vault_level, "beaten": (Game.s.combat.boss_beaten as Dictionary).duplicate()}
+	var keep := {"biome": Game.s.biome, "km": Game.s.km, "vault_level": Game.s.vault_level, "beaten": (Game.s.combat.boss_beaten as Dictionary).duplicate(), "warlord_cd": Combat.warlord_cd}
+	# Earlier boss tests can leave a retry cooldown; this fixture models a fresh load.
+	Combat.warlord_cd = 0.0
 	Game.s.biome = 0.0     # as JSON.parse_string hands it back
 	Game.s.km = Data.biome_start_km(1)
 	Game.s.vault_level = maxi(int(Game.s.vault_level), int(Data.biome(1).req))
@@ -4254,6 +4707,7 @@ func _checkpoint_test() -> void:
 	Game.s.km = float(keep.km)
 	Game.s.vault_level = int(keep.vault_level)
 	Game.s.combat.boss_beaten = keep.beaten
+	Combat.warlord_cd = float(keep.warlord_cd)
 	Combat.wave_changed.emit()
 
 
@@ -4763,3 +5217,1774 @@ func _quarters_guard_test() -> void:
 	Game.rooms_changed.emit()
 	Game.dwellers_changed.emit()
 	await wait(0.3)
+
+
+## MV-423: GameAnalytics over the Collection API, with a fake transport (the autotest never calls the network):
+## signing (the API's own test vector), consent + switches, the session, cleaned event ids, map progression, the
+## error cap, batching and the resend rules
+func _analytics_test() -> void:
+	const SANDBOX_GK := "5c6bcb5402204249437fb5a7a80a4959"
+	const SANDBOX_SK := "16813a12f718bc5c620f56944e1abc3ea13ccbac"
+	_check("analytics: HMAC matches GameAnalytics' test vector",
+		Analytics.hmac_auth('{"test": "test"}', SANDBOX_SK) == "slnR8CKJtKtFDaESSrqnqQeUvp5FaVV7d5XHxt50N5A=")
+	_check("analytics: no network in test runs without a fake transport", not Analytics.active())
+	var sent := []
+	var codes := [201]
+	Analytics.transport = func(route: String, body: String, auth: String) -> int:
+		sent.append({"route": route, "body": body, "auth": auth})
+		return int(codes.pop_front()) if not codes.is_empty() else 200
+	Analytics.set_keys(SANDBOX_GK, SANDBOX_SK)
+	Analytics.queue.clear()
+	Analytics.errors_sent = 0
+	Analytics._session_id = ""
+	var was_tel: bool = bool(Settings.get_value("telemetry"))
+	var was_notice: bool = bool(Cloud.meta.get("log_notice", false))
+	Settings.set_value("telemetry", true)
+	Cloud.meta.log_notice = true
+	_check("analytics: active with keys, consent and the switch", Analytics.active() and Analytics.status() == "on")
+	Analytics.start_session()
+	_check("analytics: a session sends init and queues the user event", sent.size() == 1 and sent[0].route == "init"
+		and Analytics.queue.size() == 1 and Analytics.queue[0].category == "user")
+	var ev: Dictionary = Analytics.queue[0]
+	var re := RegEx.create_from_string("^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
+	_check("analytics: annotations (v2, uuid session, rest api v2, build)", int(ev.v) == 2 and re.search(str(ev.session_id)) != null
+		and ev.sdk_version == "rest api v2" and ev.build == BuildInfo.GAME_VERSION and int(ev.session_num) >= 1)
+	_check("analytics: ids keep only GameAnalytics' characters", Analytics.clean_id("RoadEvent:ปล้นรถ #1:a:b:c:d:e", 5) == "RoadEvent:______ _1:a:b:c")
+	Analytics.design("Room:Built:kitchen")
+	Analytics._on_biome(1, false)
+	var cats := Analytics.queue.map(func(e): return str(e.get("event_id", e.category)))
+	_check("analytics: design + map progression (%s)" % ", ".join(cats), cats.has("Room:Built:kitchen")
+		and cats.has("Complete:Map:" + str(Data.biome(0).id)) and cats.has("Start:Map:" + str(Data.biome(1).id)))
+	for i in 15:
+		Analytics.error("error", "boom %d" % i)
+	_check("analytics: at most 10 errors per launch", Analytics.queue.filter(func(e): return e.category == "error").size() == 10)
+	var n := Analytics.queue.size()
+	Analytics.flush()
+	var last: Dictionary = sent[-1]
+	var arr = JSON.parse_string(last.body)
+	_check("analytics: one signed batch to /events", last.route == "events" and arr is Array and (arr as Array).size() == n
+		and last.auth == Analytics.hmac_auth(last.body, SANDBOX_SK) and Analytics.queue.is_empty() and Analytics.sent_total >= n)
+	codes.assign([413])
+	Analytics.design("Test:Again")
+	Analytics.flush()
+	_check("analytics: 413 keeps the batch and halves the next one", Analytics.queue.size() == 1 and Analytics._batch_max == Analytics.BATCH_MAX / 2)
+	codes.assign([400])
+	Analytics.flush()
+	_check("analytics: 400 drops it (never resend bad data)", Analytics.queue.is_empty() and Analytics.last_error.begins_with("400"))
+	codes.assign([502])
+	Analytics.design("Test:Down")
+	Analytics.flush()
+	_check("analytics: 502 / 5xx keeps the batch (signer or GameAnalytics down)", Analytics.queue.size() == 1 and Analytics.last_error == "server 502")
+	codes.assign([200])
+	Analytics.flush()
+	# offline: nothing is lost, even across a reload
+	codes.assign([0])
+	Analytics.design("Offline:One")
+	Analytics.design("Offline:Two")
+	Analytics.flush()
+	var stored = JSON.parse_string(Save.read_key(Analytics.QUEUE_KEY, Analytics.QUEUE_PATH))
+	_check("analytics: offline = the batch stays queued and is saved in the browser", Analytics.queue.size() == 2
+		and stored is Array and (stored as Array).size() == 2 and Analytics.last_error == "offline")
+	Analytics.queue.clear()
+	Analytics._load_queue()
+	_check("analytics: a reload brings the saved queue back with whole numbers", Analytics.queue.size() == 2
+		and typeof(Analytics.queue[0].client_ts) == TYPE_INT and typeof(Analytics.queue[0].session_num) == TYPE_INT
+		and str(Analytics.queue[1].event_id) == "Offline:Two")
+	Analytics.flush()
+	stored = JSON.parse_string(Save.read_key(Analytics.QUEUE_KEY, Analytics.QUEUE_PATH))
+	_check("analytics: back online they go up and leave the saved queue", Analytics.queue.is_empty() and stored is Array
+		and (stored as Array).is_empty() and str(JSON.parse_string(sent[-1].body)[1].event_id) == "Offline:Two")
+	# full queue: the oldest session goes first, as a whole
+	var fill := []
+	for i in Analytics.QUEUE_MAX - 50:
+		fill.append({"category": "design", "event_id": "Old:%d" % i, "session_id": "old-session"})
+	for i in 100:
+		fill.append({"category": "design", "event_id": "New:%d" % i, "session_id": "new-session"})
+	Analytics.queue = fill
+	Analytics._trim()
+	_check("analytics: over the cap the oldest session is dropped whole (%d left)" % Analytics.queue.size(),
+		Analytics.queue.size() == 100 and str(Analytics.queue[0].session_id) == "new-session")
+	Analytics.clear_queue()
+	Analytics.end_session()
+	_check("analytics: session_end with its length", JSON.parse_string(sent[-1].body)[0].category == "session_end"
+		and int(JSON.parse_string(sent[-1].body)[0].length) >= 0)
+	Analytics.queue = [{"category": "design", "event_id": "Waiting:One", "session_id": "x"}]
+	Analytics._persist()
+	Settings.set_value("telemetry", false)
+	Analytics._process(0.1)
+	Analytics.design("Test:OptedOut")
+	_check("analytics: player opted out = nothing queued, the saved queue is cleared", Analytics.queue.is_empty()
+		and Save.read_key(Analytics.QUEUE_KEY, Analytics.QUEUE_PATH) == "[]" and Analytics.status() == "player opted out")
+	Settings.set_value("telemetry", true)
+	Features.set_override("features", "game_analytics", false)
+	Analytics.design("Test:SwitchOff")
+	_check("analytics: switch off = nothing queued", Analytics.queue.is_empty())
+	Features.set_override("features", "game_analytics", null)
+	# MV-426: no secret in the build: unsigned, through the signing function on the game's own site
+	Analytics.set_keys(SANDBOX_GK, "")
+	Analytics.design("Test:Proxy")
+	Analytics.flush()
+	_check("analytics: without a secret the batch goes unsigned via /api/ga", Analytics.configured() and sent[-1].auth == ""
+		and Analytics.mode() == "via /api/ga" and Analytics.queue.is_empty())
+	Analytics.set_keys("", "")
+	_check("analytics: no keys for this environment = off", not Analytics.active() and Analytics.status().begins_with("no keys"))
+	Analytics.transport = Callable()
+	Analytics.clear_queue()
+	Analytics._batch_max = Analytics.BATCH_MAX
+	Analytics._load_keys()
+	Analytics._session_id = ""
+	Analytics.queue.clear()
+	Analytics.errors_sent = 0
+	Settings.set_value("telemetry", was_tel)
+	Cloud.meta.log_notice = was_notice
+
+
+## MV-424: the server outbox: backoff with jitter and its cap, Retry-After, one request at a time by priority, and a
+## held lane pausing Cloud's automatic retry / upload / last try on hide and the log batches (tools/cloud_fake.gd)
+func _outbox_test() -> void:
+	const L := "outbox-test"
+	var SB := Outbox.SUPABASE
+	Outbox.rng = func() -> float: return 0.0
+	_check("outbox: first hold is half the base (jitter floor)", is_equal_approx(Outbox.backoff(1), Outbox.BASE_SEC * 0.5))
+	Outbox.rng = func() -> float: return 1.0
+	_check("outbox: doubles per failure", is_equal_approx(Outbox.backoff(3), Outbox.BASE_SEC * 4.0))
+	_check("outbox: capped at max", is_equal_approx(Outbox.backoff(30), Outbox.MAX_SEC))
+	Outbox.rng = Callable()
+	var spread := {}
+	for i in 20:
+		spread[snappedf(Outbox.backoff(2), 0.01)] = true
+	_check("outbox: jitter spreads the holds (%d different of 20)" % spread.size(), spread.size() >= 10
+		and spread.keys().all(func(v): return v >= Outbox.BASE_SEC and v <= Outbox.BASE_SEC * 2.0))
+	_check("outbox: Retry-After in seconds, a date is ignored", Outbox.retry_after(PackedStringArray(["Content-Type: x", "Retry-After: 120"])) == 120.0
+		and Outbox.retry_after(PackedStringArray(["retry-after: Wed, 21 Oct 2026 07:28:00 GMT"])) == 0.0)
+	Outbox.report(L, 503)
+	_check("outbox: 503 holds the lane", not Outbox.open(L) and Outbox.hold_left(L) > 0.0 and int(Outbox.lane(L).fails) == 1)
+	Outbox.report(L, 429, 400.0)
+	_check("outbox: Retry-After wins when longer", Outbox.hold_left(L) > 390.0 and int(Outbox.lane(L).fails) == 2)
+	Outbox.report(L, 404)
+	_check("outbox: any other answer (404) clears it", Outbox.open(L) and int(Outbox.lane(L).fails) == 0)
+	Outbox.report(L, 0)
+	Features.set_override("features", "server_outbox", false)
+	_check("outbox: switch off = never held", Outbox.open(L))
+	Features.set_override("features", "server_outbox", null)
+	Outbox.reset(L)
+	# one request at a time; the waiting ones by priority
+	var order := []
+	await Outbox.acquire(L, Outbox.Prio.SAVE)
+	var job := func(p: int, tag: String) -> void:
+		await Outbox.acquire(L, p)
+		order.append(tag)
+		await get_tree().process_frame
+		Outbox.release(L)
+	job.call(Outbox.Prio.LOGS, "logs")
+	job.call(Outbox.Prio.SAVE, "save")
+	job.call(Outbox.Prio.AUTH, "auth")
+	_check("outbox: a busy lane makes the others wait", order.is_empty() and (Outbox.lane(L).waiting as Array).size() == 3)
+	Outbox.release(L)
+	await wait(0.3)
+	_check("outbox: then one at a time: sign-in, save, logs (%s)" % ", ".join(order), order == ["auth", "save", "logs"]
+		and not Outbox.lane(L).busy and (Outbox.lane(L).waiting as Array).is_empty())
+	# the real lane, against the fake server
+	var fake = load("res://tools/cloud_fake.gd").new()
+	Cloud.session = {}
+	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}, "chose": "guest"}
+	Cloud._save_session()
+	Cloud._save_meta()
+	Settings.set_value("telemetry", true)
+	await Cloud.start_for_test(fake)
+	Outbox.reset(SB)
+	_check("outbox: cloud up, lane open", Cloud.state == Cloud.State.OK and Outbox.open(SB))
+	fake.online = false
+	Cloud.meta.dirty = true
+	await Cloud.sync()
+	_check("outbox: server gone = cloud offline and the lane held", Cloud.state == Cloud.State.OFFLINE and not Outbox.open(SB))
+	fake.online = true
+	var n: int = fake.calls.size()
+	Cloud._t = 0.0
+	Cloud._process(Cloud.RETRY_SEC * 2.0)
+	await wait(0.2)
+	_check("outbox: held = no automatic retry, even after 60 s", fake.calls.size() == n and Cloud.state == Cloud.State.OFFLINE)
+	Outbox.lane(SB).hold_until = 0     # the hold ran out
+	Cloud._process(Cloud.RETRY_SEC * 0.5 + 0.1)
+	await wait(0.5)
+	_check("outbox: hold over = it retries and recovers", fake.calls.size() > n and Cloud.state == Cloud.State.OK
+		and int(Outbox.lane(SB).fails) == 0)
+	# the save: no upload round and no last try on hide while held, but "sync now" still goes
+	Cloud.meta.dirty = true
+	Outbox.report(SB, 503)
+	n = fake.calls.size()
+	Cloud._process(Cloud.UPLOAD_SEC + 1.0)
+	Cloud._on_flush()
+	await wait(0.2)
+	_check("outbox: held = no upload round, no last try on hide", fake.calls.size() == n)
+	await Cloud.sync()
+	_check("outbox: what the player asks for still goes and opens the lane", fake.calls.size() > n and Outbox.open(SB)
+		and Cloud.state == Cloud.State.OK)
+	# player logs wait in the trace while held
+	Cloud.meta.log_notice = true
+	Trace.rec("meta", "outbox log wait")
+	Outbox.report(SB, 503)
+	var lc: int = fake.log_calls
+	Telemetry._t = 0.0
+	Telemetry._process(Features.num("logs.flush_sec", Telemetry.FLUSH_SEC) + 1.0)
+	Telemetry._on_hide()
+	await wait(0.2)
+	_check("outbox: held = log batches wait in the trace", fake.log_calls == lc and not Telemetry.pending().is_empty())
+	Outbox.reset(SB)
+	Telemetry._process(0.1)
+	await wait(0.3)
+	_check("outbox: open again = the batch goes", fake.log_calls > lc)
+	Outbox.rng = Callable()
+	Outbox._lanes.erase(L)
+	Outbox.reset(SB)
+	Save.wipe()
+
+## MV-427: situational lines: every moment has lines in the right voice, the right person says them, cooldown / gap /
+## bubble cap keep a fight readable, nothing over an event pop-up or with the switch off, "raid won" only after a raid
+## nobody lost, and a badly hurt hero speaks up
+func _barks_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var ch: Chatter = main.chatter
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 427
+	var missing: Array = ch.BARK_RULES.keys().filter(func(k): return k != "weather" and (Lore.BARKS.get(k, []) as Array).is_empty())
+	_check("barks: every moment has lines (%s)" % ", ".join(missing), missing.is_empty())
+	var stray := []
+	for bio in Lore.BARKS_PERSONAL:
+		for k in Lore.BARKS_PERSONAL[bio]:
+			if not Lore.BARKS.has(k):
+				stray.append("%s.%s" % [bio, k])
+	_check("barks: personal lines only for real moments (%s)" % ", ".join(stray), stray.is_empty() and Lore.BARKS_PERSONAL.keys().all(func(b): return Lore.BIOS.has(b)))
+	var mark := {"name": "จ่ามาร์ค", "id": -99}
+	var own := false
+	for i in 30:
+		own = own or (Lore.BARKS_PERSONAL.mark.raid_start as Array).has(Lore.pick_bark("raid_start", mark, rng))
+	_check("barks: a named character uses their own voice", own and Lore.bio_key(mark) == "mark")
+	_check("barks: weather change uses the weather lines", (Lore.LINES_WEATHER.rain as Array).has(Lore.pick_bark("weather:rain", {}, rng))
+		and Lore.pick_bark("no_such_moment", {}, rng) == "")
+	# live, through the real chatter layer
+	var reset := func():
+		ch._cool = {}
+		ch._bark_gap = 0.0
+		for b in ch._bubbles.duplicate():
+			ch._free_bubble(b)
+	reset.call()
+	var cands: Array = ch._candidates()
+	_check("barks: someone in view to talk (%d)" % cands.size(), not cands.is_empty())
+	var who: Array = cands[0]
+	_check("barks: the named person says it", ch.bark("hurt", int(who[0])) and ch._bubbles.size() == 1 and ch._bubbles[0].actor == who[1]
+		and ch.last_bark.begins_with("hurt|"))
+	ch._t = 999.0
+	ch.bark("site", -1, "", true)
+	_check("barks: a second line goes to someone else, the first stays", ch._bubbles.size() == (2 if cands.size() > 1 else 1)
+		and ch._bubbles[0].actor == who[1])
+	await wait(0.4)     # bubbles fade in / out over 0.15-0.2 s
+	var r0 := Rect2((ch._bubbles[0].node as Node2D).position, ch._bubbles[0].size)
+	_check("barks: two bubbles never cover each other", ch._bubbles.size() < 2
+		or not r0.intersects(Rect2((ch._bubbles[1].node as Node2D).position, ch._bubbles[1].size)))
+	await shot("barks_hurt")
+	ch._t = 5.0
+	ch._bark_gap = 0.0
+	_check("barks: same moment again waits for the cooldown", not ch.bark("hurt", int(who[0])))
+	ch._bark_gap = 0.0
+	ch._cool = {}
+	ch.bark("site")
+	ch._bark_gap = 0.0
+	ch.bark("built")
+	ch._bark_gap = 0.0
+	ch.bark("new_area")
+	ch._bark_gap = 0.0
+	ch.bark("level_up")
+	_check("barks: never more than %d bubbles" % ch.BARK_MAX, ch._bubbles.size() <= ch.BARK_MAX)
+	reset.call()
+	_check("barks: a gap of %.1f s between any two" % ch.BARK_GAP, ch.bark("site") and not ch.bark("built"))
+	reset.call()
+	Game.active_event = "cache"
+	_check("barks: quiet while an event pop-up is open", not ch.bark("site", -1, "", true))
+	Game.active_event = ""
+	Features.set_override("features", "barks", false)
+	_check("barks: switch off = no barks", not ch.bark("site", -1, "", true))
+	Features.set_override("features", "barks", null)
+	# raid won only when nobody was wiped out
+	reset.call()
+	ch._on_phase("raid")
+	reset.call()
+	ch._on_phase("quiet")
+	var won := ch.last_bark.begins_with("raid_won|")
+	reset.call()
+	ch.last_bark = ""
+	ch._on_phase("raid")
+	ch._on_wiped()
+	reset.call()
+	ch.last_bark = ""
+	ch._on_phase("quiet")
+	_check("barks: 'raid won' after a clean raid, not after a wipe", won and not ch.last_bark.begins_with("raid_won|"))
+	# a badly hurt hero speaks up (the hit carries the hero's slot)
+	reset.call()
+	var keep_heroes: Array = Combat.heroes.duplicate(true)
+	Combat.heroes = [{"slot": 0, "did": int(who[0]), "hp": 80.0, "max": 100.0, "alive": true}]
+	ch.last_bark = ""
+	ch._on_hit("hero", 0, 5.0, false)
+	var calm := ch.last_bark == ""
+	Combat.heroes[0].hp = 20.0
+	ch._on_hit("hero", 0, 5.0, false)
+	_check("barks: a hero below 35% HP says a hurt line, a scratch doesn't", calm and ch.last_bark.begins_with("hurt|"))
+	Combat.heroes = keep_heroes
+	# GOD
+	reset.call()
+	_check("barks: GOD 'say it now' works for every moment", Lore.BARKS.keys().all(func(k):
+		ch._cool = {}
+		ch._bark_gap = 0.0
+		return Dev.bark(k) == k))
+	reset.call()
+
+
+## MV-243: "เร่งเครื่องหนี" is closed (with the reason) whenever the vehicle can't pull away, for every reason
+## blocked_reason() knows; resolve_event refuses it, a time-out fights instead, and with nobody aboard the fight
+## becomes "brace inside" so the event can always end
+func _flee_guard_test() -> void:
+	_no_events()
+	var ep = main.hud.event_popup
+	if Game.active_event != "":
+		Game.cancel_event()
+		ep.close()
+	var keep := {"stall": float(Game.s.stall), "hull": float(Game.s.hull), "power": float(Game.s.res.power),
+		"wrecked": Game.s.get("wrecked", false), "away": Game.s.dwellers.map(func(d): return float(d.away_until))}
+	Game.s.stall = 0.0
+	Game.s.hull = maxf(50.0, float(Game.s.hull))
+	Game.s.res.power = maxf(50.0, float(Game.s.res.power))
+	var fi := _qte_index("wolves", "flee")
+	var fight := _qte_index("wolves", "fight")
+	var flee: Dictionary = Data.EVENTS.wolves.choices[fi]
+	_check("flee guard: free road = flee open (%s)" % Game.blocked_reason(), Game.drive_block() == "" and Game.choice_block(flee) == ""
+		and Game.event_auto_choice("wolves") == fi)
+	# every reason the vehicle can't move closes it, and a time-out picks the fight instead
+	var cases := {
+		"waiting out a stop": func(on: bool): Game.s.stall = 45.0 if on else 0.0,
+		"no power": func(on: bool): Game.s.res.power = 0.0 if on else maxf(50.0, float(keep.power)),
+		"hull broken": func(on: bool): Game.s.hull = 0.0 if on else maxf(50.0, float(keep.hull)),
+		"engine resting": func(on: bool):
+			EngineBay.st().resting = on
+			EngineBay.st().rest_hold = false,
+		"wrecked": func(on: bool): Game.s.wrecked = on,
+	}
+	for why in cases:
+		cases[why].call(true)
+		var blk := Game.choice_block(flee)
+		_check("flee guard: %s -> flee closed (%s)" % [why, blk], blk.begins_with("รถออกตัวไม่ได้") and Game.drive_block() != ""
+			and Game.event_auto_choice("wolves") == fight)
+		cases[why].call(false)
+	var site: String = Expedition.SITES.keys()[0]
+	Expedition.arrive(site)
+	_check("flee guard: parked at a site -> flee closed", Game.choice_block(flee) != "" and Expedition.at_site() == site)
+	Expedition.skip_site()
+	_check("flee guard: open again once it can drive", Game.choice_block(flee) == "" and Game.event_auto_choice("wolves") == fi)
+	_check("flee guard: the stray dog's 'drive away' is no longer called flee", not Data.EVENTS.stray_dog.choices.any(func(c): return str(c.th) == "เร่งเครื่องหนี"))
+	# the game refuses it, not only the button
+	Game.s.stall = 45.0
+	Game.trigger_event("wolves")
+	await wait(0.3)
+	var p0 := float(Game.s.res.power)
+	var r: Dictionary = Game.resolve_event("wolves", fi, [])
+	_check("flee guard: resolve refuses flee, the event stays, no power spent", not r.ok and str(r.text).begins_with("รถออกตัวไม่ได้")
+		and Game.active_event == "wolves" and is_equal_approx(float(Game.s.res.power), p0))
+	# the pop-up shows it closed with the reason
+	ep.refresh()
+	await wait(0.1)
+	var btns: Array = ep.find_children("*", "", true, false).filter(func(n): return n is ChoiceButton)
+	var texts: Array = ep.find_children("*", "Label", true, false).map(func(l): return str(l.text))
+	_check("flee guard: pop-up button closed, reason shown", btns.size() == Data.EVENTS.wolves.choices.size() and bool(btns[fi].disabled)
+		and not bool(btns[fight].disabled) and texts.any(func(t): return t.contains("รถออกตัวไม่ได้")))
+	await shot("flee_guard_closed")
+	# a time-out sends the crew to fight
+	Settings.set_value("event_timer", "normal")
+	ep.decide_total = 2.0
+	ep.decide_left = 0.1
+	ep.since_input = 0.0
+	await wait(0.5)
+	_check("flee guard: time-out fights instead of fleeing", Game.active_event == ""
+		and Trace.entries.any(func(e): return str(e.msg).begins_with("time out wolves -> #%d fight" % fight)))
+	ep.close()
+	Settings.set_value("event_timer", "off")
+	await wait(0.2)
+	# nobody aboard: the fight is "brace inside", the hull takes it, the event ends
+	for d in Game.s.dwellers:
+		d.away_until = 9e9
+	Game.s.hull = 100.0
+	Game.trigger_event("wolves")
+	await wait(0.3)
+	ep._choice = fight
+	ep.refresh()
+	await wait(0.1)
+	var brace: Array = ep.find_children("*", "Button", true, false).filter(func(b): return str(b.text).contains("ปิดประตูตั้งรับ"))
+	_check("flee guard: nobody aboard -> 'brace' button, not a dead 'send team'", Game.nobody_aboard() and brace.size() == 1 and not brace[0].disabled)
+	await shot("flee_guard_brace")
+	r = Game.resolve_event("wolves", fight, [])
+	_check("flee guard: bracing ends the event and costs hull", Game.active_event == "" and float(Game.s.hull) < 100.0
+		and str(r.text).contains("ปิดประตูตั้งรับ"))
+	ep.close()
+	await wait(0.2)
+	for i in Game.s.dwellers.size():
+		Game.s.dwellers[i].away_until = keep.away[i]
+	# switch off = the old behaviour
+	Features.set_override("features", "flee_guard", false)
+	Game.s.stall = 45.0
+	_check("flee guard: switch off = flee always open", Game.choice_block(flee) == "" and Game.event_auto_choice("wolves") == fi)
+	Features.set_override("features", "flee_guard", null)
+	Game.s.stall = keep.stall
+	Game.s.hull = keep.hull
+	Game.s.res.power = keep.power
+	Game.s.wrecked = keep.wrecked
+	Game.dwellers_changed.emit()
+	Game.travel_changed.emit()
+
+
+## MV-244: a stranger who turns up while the vehicle drives flags it down: it parks, the door window opens by itself
+## (once), "drive past" leaves them and lets it go, as does any other answer or them giving up; never when it was
+## already parked, during offline catch-up, or with the switch off
+func _flagged_test() -> void:
+	_no_events()
+	if main.hud.confirmation.is_open:
+		main.hud.confirmation.close()     # an earlier group's confirmation would (rightly) keep the door window shut
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	var keep_q: Array = Inspection.queue().duplicate(true)
+	var keep_trav: bool = bool(Game.s.traveling)
+	var keep_stall := float(Game.s.stall)
+	Inspection.queue().clear()
+	Game.s.traveling = true
+	Game.s.stall = 0.0
+	Game.s.hull = maxf(50.0, float(Game.s.hull))
+	Game.s.res.power = maxf(50.0, float(Game.s.res.power))
+	_check("flagged: road clear to start (%s)" % Game.blocked_reason(), Game.blocked_reason() == "")
+	var c := Inspection.queue_candidate("test", "rare", "human")
+	_check("flagged: a stranger while driving flags it down", bool(c.get("halt", false)) and Inspection.halting()
+		and Game.blocked_reason() == "จอดรับคนแปลกหน้า" and not Game.is_moving() and Game.speed_factor() == 0.0)
+	await wait(0.6)
+	var door = main.hud.panels.door
+	_check("flagged: the door window opens by itself (modal %s, confirm %s, event %s, encounter %s, title %s)" % [main.hud.any_modal_open(),
+		main.hud.confirmation.is_open, main.hud.event_popup.is_open, main.hud.encounter_popup.is_open, main.hud.title_screen.visible], door.is_open)
+	var past: Array = door.find_children("*", "Button", true, false).filter(func(b): return str(b.text).contains("ขับผ่าน"))
+	_check("flagged: the window offers 'drive past'", past.size() == 1)
+	await shot("flagged_door")
+	var passed0 := int(Inspection.st().stats.get("passed", 0))
+	past[0].pressed.emit()
+	await wait(0.2)
+	_check("flagged: drive past asks first (MV-422 confirmation), nothing happens yet", main.hud.confirmation.is_open
+		and Inspection.halting() and int(Inspection.st().stats.get("passed", 0)) == passed0)
+	main.hud.confirmation.confirm_button.pressed.emit()
+	await wait(0.2)
+	_check("flagged: drive past leaves them and the vehicle goes", Inspection.queue().is_empty() and not Inspection.halting()
+		and Game.blocked_reason() == "" and int(Inspection.st().stats.passed) == passed0 + 1)
+	door.close()
+	await wait(0.2)
+	# closing the window doesn't make it pop up again for the same stranger
+	c = Inspection.queue_candidate("test", "rare", "human")
+	await wait(0.6)
+	door.close()
+	await wait(0.6)
+	_check("flagged: opens once per stranger, not again after closing", not door.is_open and Inspection.halting())
+	Inspection.refuse(c)
+	_check("flagged: turning them away lets it go", not Inspection.halting() and Game.blocked_reason() == "")
+	c = Inspection.queue_candidate("test", "rare", "human")
+	c.wait = 0.01
+	Inspection.tick(0.1, false)
+	_check("flagged: giving up lets it go", Inspection.queue().is_empty() and not Inspection.halting())
+	await wait(0.3)
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	# no stop: already parked, offline catch-up, switch off
+	Game.s.traveling = false
+	c = Inspection.queue_candidate("test", "rare", "human")
+	_check("flagged: already parked = just knocks", not bool(c.halt) and not Inspection.halting())
+	Inspection.queue().clear()
+	Game.s.traveling = true
+	Game.sim_offline = true
+	c = Inspection.queue_candidate("test", "rare", "human")
+	Game.sim_offline = false
+	_check("flagged: offline catch-up never parks the vehicle", not bool(c.halt) and Game.blocked_reason() == "")
+	Inspection.queue().clear()
+	Features.set_override("features", "stop_for_strangers", false)
+	c = Inspection.queue_candidate("test", "rare", "human")
+	_check("flagged: switch off = drives on as before", not bool(c.halt) and not Inspection.halting() and Game.blocked_reason() == "")
+	Features.set_override("features", "stop_for_strangers", null)
+	await wait(0.6)
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	Inspection.queue().clear()
+	for q in keep_q:
+		Inspection.queue().append(q)
+	Game.s.traveling = keep_trav
+	Game.s.stall = keep_stall
+	Inspection.queue_changed.emit()
+
+
+## MV-429: room expansion foundation, with a stand-in room (radio art + the weld strip) since the foundation ships no
+## real room: registry and build menu, saved namespace, jobs (pay once, pause dark / building, freeze when off, claim
+## once, JSON float ids, demolition), and the shared RoomAnim (rest / active / dark / paused / hidden / switches / GOD)
+func _rooms_x_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var regs_ok := Data.buildable() == Data.BUILDABLE + RoomX.buildable()
+	for t in RoomX.DEFS:
+		regs_ok = regs_ok and Atlas.has(RoomX.art_key(t)) and not Data.BUILDABLE.has(t) and not Data.MERGEABLE.has(t)
+		for sp in RoomX.anims(t):
+			for f in int(sp.count):
+				regs_ok = regs_ok and Atlas.has("%s_%d" % [sp.prefix, f])
+	_check("rooms_x: every registered room (%d) has its art and strips, single-cell, after the original ten" % RoomX.DEFS.size(), regs_ok)
+	var keep_res: Dictionary = Game.s.res.duplicate(true)
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	Game.s.erase("rx")
+	var before: String = JSON.stringify(Game.s.res)
+	RoomX.st()
+	_check("rooms_x: an old save gets the namespace once, nothing else changes", Game.s.rx is Dictionary and int(Game.s.rx.v) == RoomX.VERSION
+		and JSON.stringify(Game.s.res) == before and RoomX.jobs().is_empty())
+	RoomX.extra["rx_test"] = {"th": "ห้องทดสอบ", "en": "TEST ROOM", "cost": 50, "unlock": 1, "stat": "int", "produce": {}, "power": 0.2,
+		"effect_th": "ทดสอบ", "effect_en": "TEST", "recipes": [], "art": "room_radio",
+		"anims": [{"prefix": "fx_weld", "count": 4, "fps": 8.0, "loop": true, "rest": 0, "x": 20, "y": 20, "active": "job"}]}
+	_check("rooms_x: a registered room joins the build menu", Data.buildable().has("rx_test") and Data.room_def("rx_test").en == "TEST ROOM"
+		and Data.room_art("rx_test") == "room_radio" and Data.room_art("kitchen") == "room_kitchen")
+	Features.set_override("features", "rooms_expansion", false)
+	_check("rooms_x: switch off = not offered", not Data.buildable().has("rx_test") and Data.buildable() == Data.BUILDABLE)
+	Features.set_override("features", "rooms_expansion", null)
+	# the full run reaches here with every slot built: free one single-cell room (all rooms are restored at the end)
+	var has_empty := false
+	for i in Game.s.rooms.size():
+		has_empty = has_empty or (Game.is_slot_unlocked(i) and str(Game.s.rooms[i].type) == "empty" and not Game.is_annex(i))
+	if not has_empty:
+		for i in Game.s.rooms.size():
+			if Game.is_slot_unlocked(i) and not Game.is_annex(i) and Game.room_cells(i).size() == 1 and str(Game.s.rooms[i].type) != "engine":
+				Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}}
+				break
+	var slot := Dev.rx_build("rx_test")
+	await wait(0.3)
+	_check("rooms_x: built in an empty slot (%d)" % slot, slot >= 0 and str(Game.room(slot).type) == "rx_test" and not Game.is_constructing(slot))
+	if slot < 0:
+		RoomX.extra.erase("rx_test")
+		Game.s.rooms = keep_rooms
+		Game.rooms_changed.emit()
+		return
+	var rv = main.vehicle.room_views.filter(func(v): return v.slot == slot)[0]
+	_check("rooms_x: the room shows its art and one animation strip", rv.anims.size() == 1 and rv.interior.texture == Atlas.tex("room_radio"))
+	var anim: RoomAnim = rv.anims[0]
+	await wait(0.4)
+	_check("rooms_x: idle room holds the rest frame", anim.cur_frame == 0)
+	# jobs: pay once, one per room
+	Game.s.res.power = maxf(80.0, float(Game.s.res.power))
+	Game.s.res.scrap = 100.0
+	var j := RoomX.start_job(slot, "test", 10.0, {"scrap": 30})
+	var again := RoomX.start_job(slot, "test", 10.0, {"scrap": 30})
+	_check("rooms_x: a job starts and pays once; a second one is refused", not j.is_empty() and again.is_empty()
+		and is_equal_approx(float(Game.s.res.scrap), 70.0) and RoomX.start_block(slot) != "")
+	_check("rooms_x: no job in a room that isn't an expansion room", RoomX.start_job(0 if slot != 0 else 1, "x", 5.0).is_empty())
+	RoomX.tick(4.0, false)
+	_check("rooms_x: the clock runs", is_equal_approx(float(j.left), 6.0) and is_equal_approx(RoomX.progress(j), 0.4))
+	await wait(0.6)
+	_check("rooms_x: a busy room animates (frame %d)" % anim.cur_frame, anim.cur_frame != 0 or anim._t > 0.0)
+	await shot("rooms_x_active")
+	# dark room: paused, animation at rest
+	var pw := float(Game.s.res.power)
+	Game.s.res.power = 0.0
+	var l0 := float(j.left)        # the real game clock keeps ticking jobs between checks: compare from here
+	RoomX.tick(2.0, false)
+	await wait(0.2)
+	_check("rooms_x: a dark room pauses the job and the animation", is_equal_approx(float(j.left), l0) and RoomX.paused_why(j) == "dark" and anim.cur_frame == 0)
+	Game.s.res.power = pw
+	# switch off: frozen, no catch-up later
+	Features.set_override("features", "rooms_expansion", false)
+	l0 = float(j.left)
+	RoomX.tick(3.0, false)
+	await wait(0.2)
+	_check("rooms_x: switch off freezes the job and holds the rest frame", is_equal_approx(float(j.left), l0) and anim.cur_frame == 0)
+	Features.set_override("features", "rooms_expansion", null)
+	_check("rooms_x: switched back on: no hidden catch-up", is_equal_approx(float(j.left), l0))
+	Features.set_override("features", "room_ambience", false)
+	await wait(0.3)
+	_check("rooms_x: room_ambience off holds the rest frame", anim.cur_frame == 0)
+	Features.set_override("features", "room_ambience", null)
+	# paused game / hidden room: the animation clock stops
+	await wait(0.3)
+	var t0 := anim._t
+	get_tree().paused = true
+	await get_tree().create_timer(0.3, true).timeout
+	var paused_ok := is_equal_approx(anim._t, t0)
+	get_tree().paused = false
+	rv.visible = false
+	t0 = anim._t
+	await wait(0.3)
+	var hidden_ok := is_equal_approx(anim._t, t0)
+	rv.visible = true
+	_check("rooms_x: the animation clock stops while paused and while hidden", paused_ok and hidden_ok)
+	# GOD preview + frame step
+	Dev.rx_anim_preview("rest")
+	await wait(0.2)
+	var rest_ok := anim.cur_frame == 0
+	Dev.rx_anim_preview("active")
+	Dev.rx_anim_step()
+	var f1 := anim.cur_frame
+	Dev.rx_anim_step()
+	_check("rooms_x: GOD rest / active preview and frame step", rest_ok and anim.cur_frame == (f1 + 1) % 4)
+	Dev.rx_anim_preview("")
+	# finish + claim exactly once, after a JSON round trip (ids come back as floats)
+	RoomX.tick(10.0, false)
+	_check("rooms_x: the job finishes and waits to be claimed", bool(j.done) and not bool(j.claimed) and RoomX.claim(int(j.id) + 999).is_empty())
+	Game.s.rx = JSON.parse_string(JSON.stringify(Game.s.rx))
+	var claimed := [0]
+	var cb := func(_j): claimed[0] += 1
+	RoomX.job_claimed.connect(cb)
+	var c1 := RoomX.claim(int(j.id))
+	var c2 := RoomX.claim(int(j.id))
+	RoomX.job_claimed.disconnect(cb)
+	_check("rooms_x: claimed once after a reload, a repeated tap gets nothing", not c1.is_empty() and c2.is_empty() and claimed[0] == 1
+		and RoomX.job_in(slot).is_empty())
+	# demolition drops a running job, no refund, no reward
+	var j2 := RoomX.start_job(slot, "test", 30.0, {"scrap": 10})
+	var scrap_after := float(Game.s.res.scrap)
+	var dropped := [""]
+	var dcb := func(_j, why): dropped[0] = why
+	RoomX.job_dropped.connect(dcb)
+	Game.s.rooms[slot] = {"type": "empty", "level": 1, "job": {}}
+	Game.rooms_changed.emit()
+	RoomX.tick(1.0, false)
+	RoomX.job_dropped.disconnect(dcb)
+	_check("rooms_x: demolishing the room drops its job (no refund)", not j2.is_empty() and RoomX.jobs().is_empty() and dropped[0] == "room gone"
+		and is_equal_approx(float(Game.s.res.scrap), scrap_after))
+	await wait(0.3)
+	_check("rooms_x: the strip goes with the room", rv.anims.is_empty())
+	RoomX.extra.erase("rx_test")
+	Game.s.rooms = keep_rooms
+	Game.s.res = keep_res
+	Game.rooms_changed.emit()
+	Game.resources_changed.emit()
+	await wait(0.2)
+
+
+## MV-430 Salvagers' Saloon (+ MV-440 background, MV-441 steam): art in the atlas, build, seat two diners and pay
+## once, steam only while they eat (rest when dark / off), the cooldown shared by two Saloons, a diner moved away mid-
+## meal gets nothing, everyone goes back to work, claim once after a JSON reload (happiness capped, one bond, the
+## conversation), demolition sends the diners back without a reward, the close-up buttons and GOD.
+func _saloon_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_res: Dictionary = Game.s.res.duplicate(true)
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	var keep_dw: Array = Game.s.dwellers.duplicate(true)
+	var keep_squad: Array = (Game.s.get("squad", []) as Array).duplicate()
+	var keep_rx = (Game.s.rx as Dictionary).duplicate(true) if Game.s.get("rx") is Dictionary else null
+	# --- art: 64x52 background + four 6x8 steam frames in the spec palette, frame 0 empty
+	var sheet: Image = Atlas.sheet.get_image()
+	if sheet.is_compressed():
+		sheet.decompress()
+	var bg: Array = Atlas.regions.get("room_salvagers_saloon", [])
+	_check("saloon: room_salvagers_saloon is 64x52 in the atlas", bg.size() == 4 and int(bg[2]) == 64 and int(bg[3]) == 52)
+	var pal := [Color("3a3a3e"), Color("54544e"), Color("6e6450"), Color("908670")]
+	var frames_ok := true
+	var counts := []
+	for f in 4:
+		var r: Array = Atlas.regions.get("fx_room_saloon_steam_%d" % f, [])
+		if r.size() != 4 or int(r[2]) != 6 or int(r[3]) != 8:
+			frames_ok = false
+			continue
+		var n := 0
+		for y in 8:
+			for x in 6:
+				var c := sheet.get_pixel(int(r[0]) + x, int(r[1]) + y)
+				if c.a == 0.0:
+					continue
+				n += 1
+				frames_ok = frames_ok and c.a == 1.0 and pal.any(func(p): return p.is_equal_approx(Color(c.r, c.g, c.b)))
+		counts.append(n)
+	_check("saloon: steam = 4 frames 6x8, binary alpha, spec palette, rest frame empty, others drawn %s" % [counts],
+		frames_ok and counts.size() == 4 and counts[0] == 0 and counts[1] > 0 and counts[2] > 0 and counts[3] > 0)
+	# --- registry / build menu / switch
+	var def := Data.room_def(Saloon.TYPE)
+	_check("saloon: registered (Lv.%d, %d scrap, %s)" % [int(def.get("unlock", 0)), int(def.get("cost", 0)), def.get("stat", "")],
+		RoomX.is_rx(Saloon.TYPE) and int(def.unlock) == 2 and int(def.cost) == 180 and def.stat == "agi" and is_equal_approx(float(def.power), 0.25)
+		and Data.buildable().has(Saloon.TYPE) and Data.room_art(Saloon.TYPE) == "room_salvagers_saloon")
+	Features.set_override("features", "rooms_expansion", false)
+	_check("saloon: rooms_expansion off = not in the build menu", not Data.buildable().has(Saloon.TYPE))
+	Features.set_override("features", "rooms_expansion", null)
+	# --- a room to work in, two Saloons in freed slots, three crew aboard
+	var work := -1
+	for i in Game.s.rooms.size():
+		var t := str(Game.s.rooms[i].type)
+		if work < 0 and Data.BUILDABLE.has(t) and t != "quarters" and Game.room_cells(i).size() == 1 and not Game.is_constructing(i):
+			work = i
+	for i in Game.s.rooms.size():
+		if i != work and Game.is_slot_unlocked(i) and not Game.is_annex(i) and Game.room_cells(i).size() == 1 				and not str(Game.s.rooms[i].type) in ["engine", "empty", "quarters"]:
+			Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}}
+	for d in Game.s.dwellers:
+		d.room = -1
+	for i in (Game.s.get("squad", []) as Array).size():
+		Game.s.squad[i] = -1
+	while Game.s.dwellers.size() < 3:
+		Game.recruit_random()
+	Game.s.erase("rx")
+	var a := Dev.rx_build(Saloon.TYPE)
+	var b := Dev.rx_build(Saloon.TYPE)
+	_check("saloon: two Saloons built (%d, %d), a room to work in (%d)" % [a, b, work], a >= 0 and b >= 0 and work >= 0)
+	if a < 0 or b < 0 or work < 0:
+		_saloon_restore(keep_res, keep_rooms, keep_dw, keep_squad, keep_rx)
+		return
+	var d1: Dictionary = Game.s.dwellers[0]
+	var d2: Dictionary = Game.s.dwellers[1]
+	var d3: Dictionary = Game.s.dwellers[2]
+	for d in [d1, d2, d3]:
+		d.away_until = 0.0
+		d.erase("exp")
+		d.strike = false
+	d1.room = work
+	d2.room = -1
+	d3.room = work
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	await wait(0.4)
+	var rv = main.vehicle.room_views.filter(func(v): return v.slot == a)[0]
+	_check("saloon: the room shows its art and the steam strip at (22,19)", rv.interior.texture == Atlas.tex("room_salvagers_saloon")
+		and rv.anims.size() == 1 and rv.anims[0].position == Vector2(22, 19) and rv.anims[0].prefix == "fx_room_saloon_steam")
+	var steam: RoomAnim = rv.anims[0]
+	_check("saloon: an empty Saloon holds the empty rest frame", steam.cur_frame == 0)
+	# --- start: pay once, only the diners leave their work
+	Game.s.res.power = maxf(80.0, float(Game.s.res.power))
+	Game.s.res.food = 50.0
+	Game.s.res.water = 50.0
+	var id1 := int(d1.id)
+	var id2 := int(d2.id)
+	var id3 := int(d3.id)
+	_check("saloon: nobody / three people / an unknown id can't start", Saloon.start_block(a, []) != "" and Saloon.start_block(a, [id1, id2, id3]) != ""
+		and Saloon.start_block(a, [999999]) != "")
+	var j := Saloon.start(a, [id1, id2, id2])
+	var again := Saloon.start(a, [id1, id2])
+	_check("saloon: a supper starts and pays 8 food + 4 water once; a second tap is refused", not j.is_empty() and again.is_empty()
+		and is_equal_approx(float(Game.s.res.food), 42.0) and is_equal_approx(float(Game.s.res.water), 46.0) and Saloon.diners(j) == [id1, id2])
+	_check("saloon: the diners sit in the Saloon, the third keeps working", int(d1.room) == a and int(d2.room) == a and int(d3.room) == work
+		and Game.room_workers(work).has(d3) and not Game.room_workers(work).has(d1))
+	_check("saloon: a diner can't sit at the other Saloon meanwhile", Saloon.start_block(b, [id1]) != "" and Saloon.diner_block(d1) != "")
+	await wait(0.6)
+	_check("saloon: steam moves while they eat (frame %d)" % steam.cur_frame, steam.cur_frame != 0 or steam._t > 0.0)
+	await shot("saloon_supper")
+	var pw := float(Game.s.res.power)
+	Game.s.res.power = 0.0
+	await wait(0.3)
+	_check("saloon: a dark Saloon holds the steam at rest", steam.cur_frame == 0 and RoomX.paused_why(j) == "dark")
+	Game.s.res.power = pw
+	Features.set_override("features", "rooms_expansion", false)
+	await wait(0.3)
+	_check("saloon: switch off holds the steam at rest", steam.cur_frame == 0)
+	Features.set_override("features", "rooms_expansion", null)
+	# --- the meal ends: diners back to work, cooldown shared by both Saloons
+	var happy0 := float(d1.happy)
+	d2.happy = 97.0
+	RoomX.tick(Saloon.duration() + 1.0, false)
+	_check("saloon: the meal ends, the diners go back where they came from", bool(j.done) and int(d1.room) == work and int(d2.room) == -1)
+	_check("saloon: no happiness before the claim", is_equal_approx(float(d1.happy), happy0))
+	_check("saloon: both diners are on cooldown in every Saloon (%.0fs)" % Saloon.cd_left(id1), is_equal_approx(Saloon.cd_left(id1), Saloon.cooldown())
+		and Saloon.start_block(b, [id1]) != "" and Saloon.start_block(b, [id2]) != "" and Saloon.start_block(b, [id3]) == "")
+	_check("saloon: an unclaimed supper keeps the table", Saloon.start_block(a, [id3]) != "")
+	# --- claim once after a reload (JSON floats)
+	Game.s.rx = JSON.parse_string(JSON.stringify(Game.s.rx))
+	j = RoomX.job(int(j.id))
+	main.chatter.last_talk = []
+	var l1 := Saloon.claim(int(j.id))
+	var l2 := Saloon.claim(int(j.id))
+	d1 = Game.dweller_by_id(id1)
+	d2 = Game.dweller_by_id(id2)
+	_check("saloon: claimed once: +8 happiness, capped at 100, one bond, a two-line talk", l1.size() == 2 and l2.is_empty()
+		and is_equal_approx(float(d1.happy), minf(100.0, happy0 + 8.0)) and is_equal_approx(float(d2.happy), 100.0) and Saloon.bonds(id1, id2) == 1
+		and main.chatter.last_talk.size() == 2 and int(main.chatter.last_talk[0][0]) == id1)
+	# --- cooldown runs on the game clock, frozen while the switch is off
+	Features.set_override("features", "rooms_expansion", false)
+	var cd0 := Saloon.cd_left(id1)
+	RoomX.tick(60.0, false)
+	_check("saloon: cooldowns freeze with the switch off", is_equal_approx(Saloon.cd_left(id1), cd0))
+	Features.set_override("features", "rooms_expansion", null)
+	RoomX.tick(Saloon.cooldown() + 1.0, false)
+	_check("saloon: the cooldown runs out", Saloon.cd_left(id1) == 0.0 and Saloon.diner_block(d1) == "")
+	# --- stale diner: moved elsewhere mid-meal = no reward; the other one still eats
+	var j2 := Saloon.start(a, [id1, id3])
+	Game.assign(d3, work)
+	RoomX.tick(Saloon.duration() + 1.0, false)
+	var h3 := float(d3.happy)
+	var l3 := Saloon.claim(int(j2.id))
+	_check("saloon: someone moved away mid-meal gets nothing, the other diner eats alone", not j2.is_empty() and l3.size() == 1
+		and int(l3[0][0]) == id1 and is_equal_approx(float(d3.happy), h3) and Saloon.cd_left(id3) == 0.0 and Saloon.bonds(id1, id3) == 0)
+	# --- demolition mid-meal: diners back to work, no reward, no refund
+	Dev.saloon_clear_cd()
+	d1.room = work
+	var food0 := float(Game.s.res.food)
+	var j3 := Saloon.start(a, [id1])
+	var paid := float(Game.s.res.food)
+	var h1 := float(d1.happy)
+	Game.demolish_room(a)
+	RoomX.tick(1.0, false)
+	_check("saloon: demolished mid-meal: the job is gone, the diner is back at work, no refund, no reward", not j3.is_empty() and paid < food0
+		and RoomX.job(int(j3.id)).is_empty() and int(d1.room) == work and is_equal_approx(float(d1.happy), h1)
+		and is_equal_approx(float(Game.s.res.food), paid))
+	# --- close-up: pick two people, start, then claim with the real buttons
+	a = Dev.rx_build(Saloon.TYPE)
+	Dev.saloon_clear_cd()
+	main.open_closeup(a)
+	await wait(0.6)
+	var cu: RoomCloseup = main.hud.room_closeup
+	var pick: Button = cu.find_child("SupperPickButton", true, false)
+	_check("saloon: the close-up offers the supper", pick != null and not pick.disabled)
+	if pick:
+		pick.pressed.emit()
+		await wait(0.3)
+	cu._diners = [id1, id2]
+	cu.refresh()
+	await wait(0.2)
+	var go: Button = cu.find_child("SupperStartButton", true, false)
+	_check("saloon: two diners picked, the start button is live", go != null and not go.disabled)
+	await shot("saloon_pick")
+	if go:
+		go.pressed.emit()
+		await wait(0.3)
+	var j4 := Saloon.supper(a)
+	_check("saloon: started from the close-up", not j4.is_empty() and cu.mode == "main" and Saloon.diners(j4).size() == 2)
+	Dev.rx_finish_jobs()
+	await wait(0.4)
+	var claim_btn: Button = cu.find_child("SupperClaimButton", true, false)
+	_check("saloon: a finished supper shows the claim button", claim_btn != null)
+	if claim_btn:
+		claim_btn.pressed.emit()
+		await wait(0.3)
+	_check("saloon: claimed from the close-up, bond 2 for the pair", Saloon.supper(a).is_empty() and Saloon.bonds(id1, id2) == 2)
+	await shot("saloon_closeup")
+	cu.close()
+	await wait(0.3)
+	# --- GOD
+	Dev.saloon_clear_cd()
+	var gj := Dev.saloon_supper()
+	Dev.rx_finish_jobs()
+	RoomX.tick(0.1, false)
+	Dev.saloon_claim_all()
+	Game.s.rooms[a].level = 3
+	_check("saloon: a Lv.3 Saloon serves supper 30%% faster (%.0fs)" % Saloon.duration(a), is_equal_approx(Saloon.duration(a), Saloon.duration() * 0.7)
+		and is_equal_approx(Saloon.duration(), 90.0))
+	_check("saloon: GOD starts, finishes and claims a supper", not gj.is_empty() and RoomX.jobs().is_empty() and int(Saloon.st().meals) >= 4)
+	_saloon_restore(keep_res, keep_rooms, keep_dw, keep_squad, keep_rx)
+	await wait(0.2)
+
+
+func _saloon_restore(res: Dictionary, rooms: Array, dw: Array, squad: Array, rx) -> void:
+	Game.s.res = res
+	Game.s.rooms = rooms
+	Game.s.dwellers = dw
+	if Game.s.has("squad"):
+		Game.s.squad = squad
+	if rx == null:
+		Game.s.erase("rx")
+	else:
+		Game.s.rx = rx
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+
+
+## MV-250: hull warning stages (50 / 25 / 10 %), hysteresis, one alert per worse stage, red frame + strip, the
+## strip's repair button, shake only with the setting on, switch off = nothing
+func _hull_warning_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var ha: HullAlert = main.hud.hull_alert
+	var keep_hull := float(Game.s.hull)
+	var keep_scrap := float(Game.s.res.scrap)
+	var keep_shake = Settings.get_value("shake")
+	_check("hull warning: stage lines 50/25/10 with 5% hysteresis", HullAlert.stage_for(1.0, 0) == 0 and HullAlert.stage_for(0.5, 0) == 1
+		and HullAlert.stage_for(0.3, 0) == 1 and HullAlert.stage_for(0.24, 1) == 2 and HullAlert.stage_for(0.09, 2) == 3
+		and HullAlert.stage_for(0.28, 2) == 2 and HullAlert.stage_for(0.31, 2) == 1 and HullAlert.stage_for(0.56, 1) == 0)
+	var got := []
+	var cb := func(st): got.append(st)
+	ha.alerted.connect(cb)
+	Settings.set_value("shake", true)
+	Dev.hull_warning_preview(0)
+	await wait(0.3)
+	_check("hull warning: full hull = no stage, no strip, no frame", ha.stage == 0 and not ha._strip.visible and ha.pulse_alpha() == 0.0)
+	Dev.hull_warning_preview(1)
+	await wait(0.3)
+	_check("hull warning: under 50% warns once and shows the strip for a while", ha.stage == 1 and got == [1] and ha._strip.visible
+		and ha.pulse_alpha() == 0.0)
+	main._shake = 0.0
+	Dev.hull_warning_preview(2)
+	await wait(0.05)
+	var shook: bool = main._shake > 0.0
+	await wait(0.3)
+	_check("hull warning: under 25% alerts again, shakes, red frame + strip stay", ha.stage == 2 and got == [1, 2] and shook and ha._strip.visible
+		and ha.pulse_alpha() > 0.0)
+	Game.s.hull = Game.hull_max() * 0.27
+	await wait(0.3)
+	Game.s.hull = Game.hull_max() * 0.24
+	await wait(0.3)
+	_check("hull warning: hovering on the 25% line doesn't alert again", ha.stage == 2 and got == [1, 2])
+	Settings.set_value("shake", false)
+	main._shake = 0.0
+	Dev.hull_warning_preview(3)
+	await wait(0.05)
+	var still: bool = is_zero_approx(main._shake)
+	await wait(0.3)
+	_check("hull warning: the HUD hull bar follows the hull (%.2f)" % main.hud.hull_bar.value, is_equal_approx(main.hud.hull_bar.value, HullAlert.ratio()))
+	_check("hull warning: the red frame covers the screen", ha._edge.size.is_equal_approx(main.hud.size) and ha.size.x > 0.0)
+	_check("hull warning: under 10% is critical; no shake with the shake setting off", ha.stage == 3 and got == [1, 2, 3] and still
+		and ha.pulse_alpha() > 0.0 and ha._lbl.text.contains("%d%%" % int(round(HullAlert.ratio() * 100.0))))
+	await shot("hull_warning_critical")
+	Game.s.res.scrap = 0.0
+	await wait(0.2)
+	_check("hull warning: the repair button needs the scrap", ha._fix.disabled)
+	Game.s.res.scrap = 9999.0
+	await wait(0.2)
+	ha._fix.pressed.emit()
+	await wait(0.3)
+	# damage can tick between the repair and this check (acid rain, a raid, one economy step), so "full" is 99 %
+	_check("hull warning: repair from the strip fills the hull and clears the warning (hull %.1f/%.1f, scrap %.0f, stage %d, weather %s)" % [
+		float(Game.s.hull), Game.hull_max(), float(Game.s.res.scrap), ha.stage, str(Game.s.weather)],
+		float(Game.s.hull) >= Game.hull_max() * 0.99 and ha.stage == 0 and not ha._strip.visible and float(Game.s.res.scrap) < 9999.0)
+	Features.set_override("features", "hull_warning", false)
+	Dev.hull_warning_preview(3)
+	await wait(0.3)
+	_check("hull warning: switch off = no alert, strip or frame", ha.stage == 0 and got == [1, 2, 3] and not ha._strip.visible and ha.pulse_alpha() == 0.0)
+	Features.set_override("features", "hull_warning", null)
+	ha.alerted.disconnect(cb)
+	Settings.set_value("shake", keep_shake)
+	Game.s.hull = keep_hull
+	Game.s.res.scrap = keep_scrap
+	await wait(0.3)
+
+
+## MV-127 morale v2: Depressed (slower work, hysteresis) → Broken (no work, quarters, refuses orders, squad freed) →
+## leaves only at night without stealing; recovery sends them back to their room; talk (best INT talker, gain, talker
+## off work, pair cooldown, frozen with the switch off); the dossier talk button; switch off = old rules; GOD
+func _morale_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_dw: Array = Game.s.dwellers.duplicate(true)
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	var keep_res: Dictionary = Game.s.res.duplicate(true)
+	var keep_squad: Array = (Game.s.get("squad", []) as Array).duplicate()
+	var keep_tod = Game.s.get("tod", 0.5)
+	Features.set_override("features", "morale_v2", true)
+	# a room to work in and finished quarters
+	var work := -1
+	var quarters := -1
+	for i in Game.s.rooms.size():
+		var t := str(Game.s.rooms[i].type)
+		if t == "quarters" and quarters < 0 and not Game.is_site(i):
+			quarters = i
+		elif work < 0 and Data.BUILDABLE.has(t) and t != "quarters" and t != "engine" and Game.room_cells(i).size() == 1 and not Game.is_site(i):
+			work = i
+	if quarters < 0:
+		for i in Game.s.rooms.size():
+			if i != work and Game.is_slot_unlocked(i) and str(Game.s.rooms[i].type) == "empty" and not Game.is_annex(i):
+				Game.s.rooms[i] = {"type": "quarters", "level": 1, "job": {}, "build": {}}
+				quarters = i
+				break
+	_check("morale: setup (work %d, quarters %d)" % [work, quarters], work >= 0 and quarters >= 0)
+	while Game.s.dwellers.size() < 3:
+		Game.recruit_random()
+	var sad: Dictionary = Game.s.dwellers[0]
+	var pal: Dictionary = Game.s.dwellers[1]
+	var pal2: Dictionary = Game.s.dwellers[2]
+	for d in [sad, pal, pal2]:
+		d.away_until = 0.0
+		d.erase("exp")
+		for k in ["mood", "mood_room", "talk_t", "strike", "strike_t", "desert_t", "desert_warn"]:
+			d.erase(k)
+		d.happy = 70.0
+		d.room = -1
+	for i in (Game.s.get("squad", []) as Array).size():
+		Game.s.squad[i] = -1
+	Game.s.erase("morale")
+	sad.room = work
+	pal.int = 9
+	pal2.int = 3
+	Game.rooms_changed.emit()
+	# --- Depressed: slower, with a gap before it clears
+	var full := Crew.room_mult(work)
+	sad.happy = 30.0
+	Crew.morale_tick(sad, 1.0, false)
+	_check("morale: below 35 = Depressed, works at 70%", Crew.is_depressed(sad) and is_equal_approx(Crew.work_mult(sad), 0.7)
+		and Crew.room_mult(work) < full and Game.room_workers(work).has(sad))
+	sad.happy = 38.0
+	Crew.morale_tick(sad, 1.0, false)
+	var held: bool = Crew.is_depressed(sad)
+	sad.happy = 43.0
+	Crew.morale_tick(sad, 1.0, false)
+	_check("morale: stays Depressed until 42, then clears", held and Crew.mood(sad) == "")
+	# --- Broken after 90 s under 20: no work, into the quarters, squad freed, refuses orders
+	Game.set_squad(0, int(sad.id))
+	sad.happy = 10.0
+	for i in 8:
+		Crew.morale_tick(sad, 10.0, false)
+	var not_yet: bool = not Crew.is_broken(sad)
+	Crew.morale_tick(sad, 15.0, false)
+	_check("morale: Broken only after 90 s under 20", not_yet and Crew.is_broken(sad) and bool(sad.strike))
+	_check("morale: Broken = in the quarters, out of the squad, not working", int(sad.room) == quarters and Game.squad_role(sad) < 0
+		and not Game.room_workers(quarters).has(sad))
+	_check("morale: Broken refuses room / squad / Saloon orders", not Game.assign(sad, work) and int(sad.room) == quarters
+		and (func(): Game.set_squad(0, int(sad.id)); return Game.squad_role(sad) < 0).call() and Saloon.diner_block(sad) != "")
+	# --- leaves only at night, after the wait, without stealing
+	Game.s.tod = 0.5
+	var food0 := float(Game.s.res.food)
+	for i in 30:
+		Crew.morale_tick(sad, 10.0, false)
+	Crew.flush_deserters()
+	var day_stays: bool = Game.s.dwellers.has(sad) and bool(sad.get("desert_warn", false))
+	var sad_copy := sad.duplicate(true)
+	Game.s.tod = 0.0
+	Crew.morale_tick(sad, 1.0, false)
+	Crew.flush_deserters()
+	_check("morale: a Broken crew member warned in the day leaves at night with nothing stolen", day_stays and not Game.s.dwellers.has(sad)
+		and is_equal_approx(float(Game.s.res.food), food0))
+	# bring them back for the rest
+	Game.s.dwellers.append(sad_copy)
+	sad = sad_copy
+	Game.s.tod = 0.5
+	# --- talk: best INT talker, gain, talker off work, pair cooldown
+	pal.room = work
+	sad.desert_t = 0.0
+	_check("morale: the best talker is the highest INT one", int(Crew.best_talker(sad).id) == int(pal.id) and Crew.talk_block(sad) == "")
+	var h0 := float(sad.happy)
+	var gain: float = Crew.talk(int(sad.id))
+	_check("morale: talking gives %.1f happiness (more with INT 9)" % gain, gain > 10.0 and is_equal_approx(float(sad.happy), h0 + gain))
+	_check("morale: the talker is off work for a minute", Crew.busy(pal) and not Game.room_workers(work).has(pal))
+	_check("morale: the same pair waits; someone else talks next", Crew.talker_block(pal, sad) != "" and not Crew.best_talker(sad).is_empty()
+		and int(Crew.best_talker(sad).id) != int(pal.id))
+	Features.set_override("features", "morale_v2", false)
+	var t0 := float(pal.talk_t)
+	Crew.morale_v2_global_tick(30.0)
+	_check("morale: talk timers freeze with the switch off", is_equal_approx(float(pal.talk_t), t0))
+	Features.set_override("features", "morale_v2", true)
+	Crew.morale_v2_global_tick(61.0)
+	_check("morale: the talker goes back to work after the talk", not Crew.busy(pal) and Game.room_workers(work).has(pal))
+	# --- recovery: back to the room they had when it has a seat, idle when it is full
+	for o in Game.s.dwellers:
+		if o != sad and int(o.room) == work:
+			o.room = -1
+	sad.mood_room = work
+	sad.happy = 31.0
+	Crew.morale_tick(sad, 1.0, false)
+	_check("morale: from 30 Broken ends: back to their old room, still Depressed", not Crew.is_broken(sad) and not bool(sad.strike)
+		and int(sad.room) == work and Crew.is_depressed(sad))
+	Dev.mood_force(sad, "broken")
+	sad.mood_room = work
+	pal.room = work
+	pal2.room = work
+	sad.happy = 31.0
+	Crew.morale_tick(sad, 1.0, false)
+	_check("morale: a full old room = they recover idle, nobody is pushed out", not Crew.is_broken(sad) and int(sad.room) == -1
+		and int(pal.room) == work and int(pal2.room) == work)
+	pal.room = -1
+	pal2.room = -1
+	# --- the dossier talk button
+	Dev.talk_reset()
+	Dev.mood_force(sad, "depressed")
+	main.hud.open_panel("dwellers")
+	(main.hud.panels.dwellers as DwellersPanel).manage(int(sad.id))
+	await wait(0.4)
+	var tb: Button = main.hud.panels.dwellers.find_child("TalkButton", true, false)
+	_check("morale: the dossier shows the talk button", tb != null and not tb.disabled)
+	await shot("morale_dossier")
+	var h1 := float(sad.happy)
+	if tb:
+		tb.pressed.emit()
+		await wait(0.3)
+	_check("morale: talking from the dossier lifts them", float(sad.happy) > h1)
+	main.hud.panels.dwellers.close()
+	await wait(0.3)
+	# --- switch off: the old strike rules, no mood
+	Features.set_override("features", "morale_v2", false)
+	_check("morale: switch off = no stages, no refusals", Crew.mood(sad) == "" and not Crew.refuses(sad) and is_equal_approx(Crew.work_mult(sad), 1.0))
+	Features.set_override("features", "morale_v2", true)
+	# --- GOD
+	Dev.mood_force(sad, "broken")
+	var gb: bool = Crew.is_broken(sad)
+	Dev.mood_force(sad, "")
+	_check("morale: GOD sets Broken and back to fine", gb and Crew.mood(sad) == "" and not bool(sad.get("strike", false)))
+	Features.set_override("features", "morale_v2", null)
+	Game.s.dwellers = keep_dw
+	Game.s.rooms = keep_rooms
+	Game.s.res = keep_res
+	if Game.s.has("squad"):
+		Game.s.squad = keep_squad
+	Game.s.tod = keep_tod
+	Game.s.erase("morale")
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.squad_changed.emit()
+	await wait(0.3)
+
+
+## MV-266: every screen class (phones portrait / landscape, tablets, laptops, large screens): a sane whole-number UI
+## scale, the HUD inside the screen without its bars overlapping, every window / popup inside the screen (centred
+## ones in the middle at their real size, the close-up docked beside the room), screenshots of each class
+const RESPONSIVE_SIZES := [Vector2i(360, 640), Vector2i(390, 844), Vector2i(412, 915), Vector2i(844, 390), Vector2i(768, 1024),
+	Vector2i(1024, 768), Vector2i(1024, 1366), Vector2i(1280, 800), Vector2i(1366, 768), Vector2i(2560, 1440)]
+
+
+func _inside(r: Rect2, vp: Vector2) -> bool:
+	return r.position.x >= -0.5 and r.position.y >= -0.5 and r.end.x <= vp.x + 0.5 and r.end.y <= vp.y + 0.5
+
+
+func _grect(c: Control) -> Rect2:
+	return Rect2(c.global_position, c.size)
+
+
+func _responsive_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep := DisplayServer.window_get_size()
+	var keep_tips = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	_check("responsive: scale rule (768x1024 -> 2, 1024x768 -> 2, 390x844 -> 1, 1170x2532 -> 3, 1920x1080 -> 3, 2560x1440 -> 4)",
+		main.ui_scale_for(Vector2(768, 1024), Vector2(main.PORTRAIT_BASE)) == 2.0 and main.ui_scale_for(Vector2(1024, 768), Vector2(main.LANDSCAPE_BASE)) == 2.0
+		and main.ui_scale_for(Vector2(390, 844), Vector2(main.PORTRAIT_BASE)) == 1.0 and main.ui_scale_for(Vector2(1170, 2532), Vector2(main.PORTRAIT_BASE)) == 3.0
+		and main.ui_scale_for(Vector2(1920, 1080), Vector2(main.LANDSCAPE_BASE)) == 3.0 and main.ui_scale_for(Vector2(2560, 1440), Vector2(main.LANDSCAPE_BASE)) == 4.0)
+	Features.set_override("features", "responsive_scale", false)
+	_check("responsive: switch off = the old round-down (768x1024 -> 1)", main.ui_scale_for(Vector2(768, 1024), Vector2(main.PORTRAIT_BASE)) == 1.0)
+	Features.set_override("features", "responsive_scale", null)
+	var hud: HUD = main.hud
+	var tested := 0
+	# the window's own size first (always real), then every size class. Under xvfb without a window manager (CI) the
+	# OS reports the new size but the viewport never follows: such a size is skipped (logged), not tested at a stale size
+	for sz in [Vector2i.ZERO] + RESPONSIVE_SIZES:
+		if sz != Vector2i.ZERO:
+			DisplayServer.window_set_size(sz)
+		await wait(0.8)
+		var real: Vector2i = DisplayServer.window_get_size()
+		var vp: Vector2 = hud.get_viewport_rect().size
+		var tag := "%dx%d" % [real.x, real.y]
+		if sz != Vector2i.ZERO and (absf(vp.x * main.pixel_scale - real.x) > main.pixel_scale or absf(vp.y * main.pixel_scale - real.y) > main.pixel_scale):
+			print("[autotest] SKIP responsive %s: the window didn't really resize (design %s at %dx), no window manager?" % [tag, vp, int(main.pixel_scale)])
+			continue
+		tested += 1
+		var base := Vector2(main.PORTRAIT_BASE if main.is_portrait() else main.LANDSCAPE_BASE)
+		_check("responsive %s: whole scale %d, design %s at least %d%% of the base" % [tag, int(main.pixel_scale), vp, int(main.SCALE_MIN * 100)],
+			main.pixel_scale == floorf(main.pixel_scale) and vp.x >= base.x * main.SCALE_MIN - 1.0 and vp.y >= base.y * main.SCALE_MIN - 1.0)
+		var bars := [hud._top, hud._bottom, hud._tools, hud._combat_box, hud._view_box]
+		var out := bars.filter(func(c): return c.visible and not _inside(_grect(c), vp))
+		_check("responsive %s: HUD bars inside the screen" % tag, out.is_empty())
+		var clash: bool = _grect(hud._bottom).intersects(_grect(hud._tools)) or (not main.is_portrait() and _grect(hud._top).intersects(_grect(hud._tools)))
+		_check("responsive %s: the tool bar doesn't cover the top / route bars" % tag, not clash)
+		await shot("responsive_%s_hud" % tag)
+		var bad := []
+		var off_mid := []
+		for key in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "engine", "god", "settings"]:
+			_no_events()
+			if key == "settings":
+				hud.open_settings("game")
+			else:
+				hud.open_panel(key)
+			await wait(0.35)
+			var p: ModalPanel = hud.panels[key]
+			var r := _grect(p.box)
+			if not _inside(r, vp):
+				bad.append("%s %s" % [key, r])
+			elif p.centered and absf(r.position.x - (vp.x - r.end.x)) > 1.5 and r.size.x < vp.x - 1.0:
+				off_mid.append("%s %s" % [key, r])
+			if key == "build":
+				await shot("responsive_%s_build" % tag)
+			p.close()
+			await wait(0.2)
+		# a loot grid built while the window was wide must not keep its columns on a narrower screen
+		var loot: LootPanel = hud.panels.inventory
+		if Game.s.get("stash", []).is_empty():
+			Dev.forge_kit()          # a gear grid needs gear in the stash
+		loot.tab = "gear"
+		loot.filter = "all"
+		loot.pick_slot = ""
+		hud.open_panel("inventory")
+		await wait(0.2)
+		loot.box.custom_minimum_size.x = 900.0      # as if the grid was last built on a wide screen
+		loot.box.size.x = 900.0
+		loot.refresh()
+		await wait(0.1)
+		loot.close()
+		await wait(0.2)
+		hud.open_panel("inventory")
+		await wait(0.3)
+		if not _inside(_grect(loot.box), vp):
+			bad.append("inventory after a wide grid %s" % _grect(loot.box))
+		loot.close()
+		await wait(0.2)
+		_check("responsive %s: every window inside the screen %s" % [tag, bad], bad.is_empty())
+		_check("responsive %s: centred windows sit in the middle at their real size %s" % [tag, off_mid], off_mid.is_empty())
+		# a confirm on top, a road event, the room close-up docked beside the room
+		ConfirmPanel.ask(hud, "ทดสอบ", "ทดสอบขนาดจอ", "ตกลง", func(): pass)
+		await wait(0.35)
+		var cp := get_tree().get_first_node_in_group("confirm_dialog") as ConfirmPanel
+		var conf_ok: bool = cp != null and cp.is_open and _inside(_grect(cp.box), vp)
+		if cp:
+			cp.close()
+		Game.trigger_event("stray_dog")
+		await wait(0.5)
+		var ev_ok: bool = _inside(_grect(hud.event_popup.box), vp)
+		await shot("responsive_%s_event" % tag)
+		Game.cancel_event()
+		hud.event_popup.close()
+		await wait(0.3)
+		_check("responsive %s: confirm and event windows inside the screen" % tag, conf_ok and ev_ok)
+		main.open_closeup(1)
+		await wait(0.8)
+		var cu: RoomCloseup = hud.room_closeup
+		var cr := _grect(cu.box)
+		var f := cu.focus_rect()
+		var room := f       # landscape: the room fills the left focus area; portrait: a 80x52 room at zoom 2-3 in its middle
+		if cu._portrait():
+			var z := clampi(int(minf(f.size.x / 80.0, f.size.y / 52.0)), 2, 3)
+			room = Rect2(f.get_center() - Vector2(40, 26) * z, Vector2(80, 52) * z)
+		_check("responsive %s: the close-up is docked beside the room and inside the screen %s" % [tag, cr], _inside(cr, vp)
+			and not cr.intersects(room.grow(-2.0)))
+		await shot("responsive_%s_closeup" % tag)
+		cu.close()
+		await wait(0.5)
+	_check("responsive: at least the window's own size was checked (%d sizes)" % tested, tested >= 1)
+	Settings.set_value("tips", keep_tips)
+	DisplayServer.window_set_size(keep)
+	await wait(0.6)
+
+
+## MV-113: frame-rate setting 30 / 60 / 120, the fixed-rate economy (alternating halves, no time lost, switch off =
+## every frame), the Features fast path and the synergy cache give exactly the old answers, and a loose time budget
+## for the economy in a heavy scene (CI renders in software, so only a big regression fails it)
+func _perf_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	# --- frame-rate setting
+	var fps0 = Settings.get_value("fps")
+	Settings.set_value("fps", 120)
+	var at120 := Engine.max_fps
+	Settings.set_value("fps", 30)
+	var at30 := Engine.max_fps
+	Settings.apply_remote({"fps": 90})
+	_check("perf: frame cap 120 / 30 apply, an unknown 90 falls back to 60", at120 == 120 and at30 == 30 and int(Settings.get_value("fps")) == 60
+		and Engine.max_fps == 60)
+	Settings.set_value("fps", fps0)
+	# --- Features fast path == the old merged lookup (dev + session overrides included)
+	Features.set_override("features", "barks", false)
+	Features.set_override("tune", "fx.shake", 1.5)
+	Features._session_dev = {"features": {"raids": false}, "tune": {"barks.cooldown": 30.0}}
+	var mism := []
+	for blk in ["features", "tune"]:
+		var keys: Array = Features.FEATURES.keys() if blk == "features" else Features.TUNE.keys()
+		for k in keys:
+			var slow = null
+			for l in Features.LAYERS:
+				var b = Features._layer(l).get(blk, {})
+				if b is Dictionary and b.has(k):
+					slow = b[k]
+			if Features._value(blk, k, null) != slow:
+				mism.append("%s/%s" % [blk, k])
+	_check("perf: feature switches and tunables read the same as before %s" % [mism], mism.is_empty() and not Features.on("raids")
+		and is_equal_approx(Features.num("barks.cooldown", 12.0), 30.0) and not Features.on("barks"))
+	Features._session_dev = {}
+	Features.set_override("features", "barks", null)
+	Features.set_override("tune", "fx.shake", null)
+	# --- synergy cache == a fresh calculation, also right after a layout change without any signal
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	var stale := []
+	for round in 2:
+		for i in Game.s.rooms.size():
+			if JSON.stringify(Synergy.effects(i)) != JSON.stringify(Synergy._effects(i)):
+				stale.append("%d:%d" % [round, i])
+		Game.s.rooms[Data.ENGINE_SLOT].type = "quarters" if str(Game.s.rooms[Data.ENGINE_SLOT].type) != "quarters" else "workshop"
+	_check("perf: cached room synergies match a fresh calculation %s" % [stale], stale.is_empty())
+	Game.s.rooms = keep_rooms
+	Game.rooms_changed.emit()
+	# --- fixed-rate economy: alternating halves, fewer steps than frames, no game time lost
+	Features.set_override("features", "fixed_sim", true)
+	Game._flush_sim()
+	var w0: int = Game.sim_steps.world
+	var c0: int = Game.sim_steps.crew
+	var tod0 := float(Game.s.tod)
+	var frames := 0
+	var elapsed := 0.0
+	var t0 := Time.get_ticks_usec()
+	while Time.get_ticks_usec() - t0 < 1500000:
+		await get_tree().process_frame
+		frames += 1
+		elapsed += get_process_delta_time() * Engine.time_scale
+	var wn: int = Game.sim_steps.world - w0
+	var cn: int = Game.sim_steps.crew - c0
+	Game._flush_sim()
+	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
+	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
+		and wn + cn >= mini(frames, 20))
+	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
+	Features.set_override("features", "fixed_sim", false)
+	w0 = Game.sim_steps.world
+	frames = 0
+	for i in 20:
+		await get_tree().process_frame
+		frames += 1
+	_check("perf: switch off = the economy every frame (%d steps in %d frames)" % [Game.sim_steps.world - w0, frames],
+		Game.sim_steps.world - w0 >= frames - 1)
+	Features.set_override("features", "fixed_sim", null)
+	# --- loose budget in a heavy scene (prints the numbers for the PR)
+	var keep_dw: Array = Game.s.dwellers.duplicate(true)
+	var keep_tier = Game.s.get("tier", "van")
+	Dev.set_tier("rig")
+	Dev.set_trailers(2)
+	Dev.rooms_fill()
+	Dev.spawn_roster_all()
+	await wait(0.5)
+	var t1 := Time.get_ticks_usec()
+	for i in 60:
+		Game._simulate(1.0 / 60.0, false)
+	var per := float(Time.get_ticks_usec() - t1) / 60.0 / 1000.0
+	print("[perf] heavy scene (%d crew, %d rooms): economy %.2f ms per full step, last halves %.2f + %.2f ms" % [Game.s.dwellers.size(),
+		Game.s.rooms.size(), per, float(Game.sim_ms.world), float(Game.sim_ms.crew)])
+	_check("perf: the economy in a heavy scene stays under the budget (%.2f ms per full step)" % per, per < 25.0)
+	Dev.set_trailers(0)
+	Dev.set_tier(str(keep_tier))
+	Game.s.dwellers = keep_dw
+	Game.s.rooms = keep_rooms
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	await wait(0.5)
+
+
+## MV-482: windows are as tall as their content (no empty space, up to the screen), a later change of content height
+## slides there, and the room close-up shows the whole room with nothing over it, centred on portrait screens
+func _window_fit_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var hud: HUD = main.hud
+	var vp: Vector2 = hud.get_viewport_rect().size
+	var keep_tips = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	# --- every window: content height, clamped to the screen
+	var off := []
+	for key in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "engine", "settings"]:
+		_no_events()
+		if key == "settings":
+			hud.open_settings("game")
+		elif key == "skills":
+			hud.open_skills(int(Game.s.dwellers[0].id))
+		else:
+			hud.open_panel(key)
+		await wait(0.5)
+		var p: ModalPanel = hud.panels[key]
+		var want := clampf(p.natural_height(), minf(ModalPanel.MIN_H, p.max_height()), p.max_height())
+		if p.fit_height and absf(p.box.size.y - floorf(want)) > 2.0:
+			off.append("%s %.0f (content %.0f, max %.0f)" % [key, p.box.size.y, p.natural_height(), p.max_height()])
+		if p.box.position.y < -0.5 or p.box.position.y + p.box.size.y > vp.y + 0.5:
+			off.append("%s off screen" % key)
+		p.close()
+		await wait(0.25)
+	_check("window fit: every window is as tall as its content, up to the screen %s" % [off], off.is_empty())
+	Features.set_override("features", "window_fit", false)
+	hud.open_panel("dwellers")
+	await wait(0.5)
+	var full_h: float = hud.panels.dwellers.box.size.y
+	var full_max: float = hud.panels.dwellers.max_height()
+	hud.panels.dwellers.close()
+	await wait(0.25)
+	Features.set_override("features", "window_fit", null)
+	_check("window fit: switch off = the full height as before (%.0f of %.0f)" % [full_h, full_max], absf(full_h - full_max) <= 1.0)
+	# --- the crew list grows: the window slides taller, then back
+	var keep_dw: Array = Game.s.dwellers.duplicate(true)
+	while Game.s.dwellers.size() > 2:
+		Game.s.dwellers.pop_back()
+	Game.dwellers_changed.emit()
+	hud.open_panel("dwellers")
+	await wait(0.6)
+	var dp: ModalPanel = hud.panels.dwellers
+	var h0 := dp.box.size.y
+	for i in 3:
+		Game.recruit_random()
+	Game.dwellers_changed.emit()
+	var seen_between := false
+	for i in 12:
+		await get_tree().process_frame
+		if dp.box.size.y > h0 + 1.0 and dp.box.size.y < dp.fit_target() - 1.0:
+			seen_between = true
+	await wait(0.4)
+	_check("window fit: more crew = the window slides taller (%.0f -> %.0f, in between seen %s)" % [h0, dp.box.size.y, seen_between],
+		dp.box.size.y > h0 + 20.0 and absf(dp.box.size.y - dp.fit_target()) <= 2.0 and seen_between)
+	Game.s.dwellers = keep_dw.duplicate(true)
+	while Game.s.dwellers.size() > 2:
+		Game.s.dwellers.pop_back()
+	Game.dwellers_changed.emit()
+	await wait(0.6)
+	_check("window fit: fewer crew = it shrinks back (%.0f)" % dp.box.size.y, absf(dp.box.size.y - h0) <= 2.0)
+	dp.close()
+	Game.s.dwellers = keep_dw
+	Game.dwellers_changed.emit()
+	await wait(0.3)
+	# --- the room close-up: the whole room, nothing over it, centred on portrait
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if Game.is_slot_unlocked(i) and str(Game.s.rooms[i].type) != "empty" and Game.room_cells(i).size() == 1 and i != Data.CAB_SLOT:
+			slot = i
+			break
+	main.open_closeup(slot)
+	await wait(0.9)
+	var cu: RoomCloseup = hud.room_closeup
+	var r: Rect2 = main.vehicle.slot_global_rect(slot)
+	var a: Vector2 = main.world_to_screen(r.position)
+	var b: Vector2 = main.world_to_screen(r.end)
+	var room := Rect2(a, b - a)
+	var panel := Rect2(cu.box.position, cu.box.size)
+	var top_bar: float = hud._top.position.y + hud._top.size.y
+	_check("window fit: close-up hides the view buttons and the hull strip", not hud._view_box.visible and not hud.hull_alert._strip.visible)
+	_check("window fit: the whole room is on screen, under the top bar, not under the panel (room %s, panel %s)" % [room, panel],
+		room.position.y >= top_bar - 1.0 and room.position.x >= -1.0 and room.end.x <= vp.x + 1.0 and not room.grow(-1.0).intersects(panel))
+	if cu._portrait():
+		var f := cu.focus_rect()
+		_check("window fit: portrait = the room centred above the panel (room %s, area %s)" % [room, f],
+			absf(room.get_center().x - vp.x * 0.5) <= 2.0 and absf(room.get_center().y - f.get_center().y) <= 2.0)
+	await shot("window_fit_closeup")
+	cu.mode = "assign"
+	cu.refresh()
+	await wait(0.8)
+	a = main.world_to_screen(r.position)
+	b = main.world_to_screen(r.end)
+	room = Rect2(a, b - a)
+	panel = Rect2(cu.box.position, cu.box.size)
+	_check("window fit: a shorter panel and the room follows to the middle of the new space (room %s, panel %s)" % [room, panel],
+		not room.grow(-1.0).intersects(panel) and (not cu._portrait() or absf(room.get_center().y - cu.focus_rect().get_center().y) <= 2.0))
+	await shot("window_fit_closeup_assign")
+	cu.close()
+	await wait(0.6)
+	Settings.set_value("tips", keep_tips)
+
+
+## MV-473 (MV-474..481): steel equipment slots and the six rarity light loops: atlas sprites (sizes, mask codes,
+## empty item centre, bounded overscan, motion), the tile (frame per width, light only on filled items, old renderer
+## with the switch off), presentations (aura moves, neon / still clip, still / paused / hidden hold), one shared
+## phase, aura clearance in the stash and crew layouts, taps still work, GOD preview
+func _gear_slots_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_tips = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	var sheet: Image = Atlas.sheet.get_image()
+	if sheet.is_compressed():
+		sheet.decompress()
+	# --- atlas: frames per width, 16 masks per rarity per width
+	var frames_ok := true
+	for w in GearFx.WIDTHS:
+		var r: Array = Atlas.regions.get("ui_gear_slot_frame" + ("" if w == 32 else "_%d" % w), [])
+		frames_ok = frames_ok and r.size() == 4 and int(r[2]) == w and int(r[3]) == w
+	_check("gear slots: a steel frame drawn for each width 28/30/32/36/40", frames_ok)
+	var codes := [Color("26262a"), Color("54544e"), Color("9a9684")]
+	var bad := []
+	var moving := 0
+	for rank in 6:
+		for w in GearFx.WIDTHS:
+			var cell: int = w + 24
+			var first := PackedByteArray()
+			var differs := false
+			for p in 16:
+				var key := GearFx.mask_key(rank, w, p)
+				var r: Array = Atlas.regions.get(key, [])
+				if r.size() != 4 or int(r[2]) != cell or int(r[3]) != cell:
+					bad.append("%s size" % key)
+					continue
+				var img := sheet.get_region(Rect2i(int(r[0]), int(r[1]), cell, cell))
+				var ic: int = 12 + (int(w) - 16) / 2
+				for y in cell:
+					for x in cell:
+						var c := img.get_pixel(x, y)
+						if c.a == 0.0:
+							continue
+						if c.a < 1.0 or not codes.any(func(k): return k.is_equal_approx(Color(c.r, c.g, c.b))):
+							bad.append("%s colour" % key)
+						elif x >= ic and x < ic + 16 and y >= ic and y < ic + 16:
+							bad.append("%s item centre" % key)
+						elif x < 12 - UIKit.GEAR_AURA or y < 12 - UIKit.GEAR_AURA or x >= 12 + w + UIKit.GEAR_AURA or y >= 12 + w + UIKit.GEAR_AURA:
+							bad.append("%s overscan" % key)
+				if p == 0:
+					first = img.get_data()
+				elif img.get_data() != first:
+					differs = true
+			if differs:
+				moving += 1
+	_check("gear slots: 480 light masks, three grey codes only, item centre empty, light within 6 px %s" % [bad.slice(0, 4)], bad.is_empty())
+	_check("gear slots: every rarity's light moves at every width (%d / 30)" % moving, moving == 30)
+	# --- the tile
+	var hud: HUD = main.hud
+	var item := Dev.gear_sample(4, "boots", 3, true)
+	var t := UIKit.gear_tile(item, "boots", 36)
+	var e := UIKit.gear_tile({}, "helmet", 28)
+	var sb := t.get_theme_stylebox("normal") as StyleBoxTexture
+	_check("gear slots: a filled tile = 36 px steel frame + one light; an empty one has none", sb != null and sb.texture == Atlas.tex("ui_gear_slot_frame_36")
+		and t.custom_minimum_size == Vector2(36, 36) and t.find_children("*", "GearFx", true, false).size() == 1
+		and e.find_children("*", "GearFx", true, false).is_empty() and e.get_child(0).material != null)
+	t.free()
+	e.free()
+	Features.set_override("features", "gear_slot_style", false)
+	var old := UIKit.gear_tile(item, "boots", 36)
+	var osb := old.get_theme_stylebox("normal") as StyleBoxTexture
+	_check("gear slots: style off = the old tile, no light", osb != null and osb.texture != Atlas.tex("ui_gear_slot_frame_36") and old.find_children("*", "GearFx", true, false).is_empty())
+	old.free()
+	Features.set_override("features", "gear_slot_style", null)
+	# --- presentations on live tiles (GOD preview grid)
+	hud.open_panel("god")
+	var god = hud.panels.god
+	god.tab = "icons"
+	god.refresh()
+	await wait(0.4)
+	var fxs: Array = god.find_children("*", "GearFx", true, false)
+	_check("gear slots: GOD shows every rarity at every width (%d lights)" % fxs.size(), fxs.size() >= 30)
+	await shot("gear_slots_god_aura")
+	var a: GearFx = fxs[fxs.size() - 1]
+	var b: GearFx = fxs[0]
+	var seen := {}
+	for i in 20:
+		await wait(0.05)
+		seen[a.phase] = true
+	_check("gear slots: aura moves through its phases (%d seen) and every tile shares one phase" % seen.size(), seen.size() >= 4 and a.phase == b.phase
+		and not a.clip_contents)
+	Dev.gear_preview("neon")
+	await wait(0.2)
+	_check("gear slots: neon = the same light clipped to the slot", a.clip_contents and a._tex.visible)
+	await shot("gear_slots_god_neon")
+	Features.set_override("features", "gear_slot_vfx", false)
+	Dev.gear_preview("")
+	await wait(0.4)
+	var p0 := a.phase
+	await wait(0.4)
+	_check("gear slots: vfx off = a still rarity rim (phase %d, clipped)" % a.phase, a.phase == 0 and p0 == 0 and a.clip_contents and a._tex.visible)
+	Features.set_override("features", "gear_slot_vfx", null)
+	await wait(0.3)
+	get_tree().paused = true
+	var held := GearFx.current_phase()
+	await get_tree().create_timer(0.4, true).timeout
+	var paused_ok := GearFx.current_phase() == held
+	get_tree().paused = false
+	god.visible = false
+	held = a.phase
+	await wait(0.4)
+	var hidden_ok := a.phase == held
+	god.visible = true
+	_check("gear slots: the light holds while paused and does no work while hidden", paused_ok and hidden_ok)
+	Dev.gear_preview("base")
+	await wait(0.2)
+	_check("gear slots: GOD base = metal only", not a._tex.visible)
+	Dev.gear_step()
+	var s1 := GearFx.current_phase()
+	Dev.gear_step()
+	_check("gear slots: GOD frame step", GearFx.current_phase() == (s1 + 1) % 16)
+	Dev.gear_preview("")
+	god.close()
+	await wait(0.3)
+	# --- clearance and taps in the real stash and crew layouts
+	if Loot.stash().size() < 8:
+		Dev.forge_kit()
+	var loot: LootPanel = hud.panels.inventory
+	loot.tab = "gear"
+	loot.filter = "all"
+	loot.pick_slot = ""
+	loot.detail_uid = -1
+	hud.open_panel("inventory")
+	await wait(0.5)
+	var tiles: Array = loot.find_children("*", "Button", true, false).filter(func(x): return x.find_child("GearFx", false, false) != null)
+	var clash := 0
+	for i in tiles.size():
+		for j in range(i + 1, tiles.size()):
+			var ri := Rect2(tiles[i].global_position, tiles[i].size).grow(UIKit.GEAR_AURA)
+			if ri.intersects(Rect2(tiles[j].global_position, tiles[j].size)):
+				clash += 1
+	_check("gear slots: in the stash no aura reaches another slot (%d tiles)" % tiles.size(), tiles.size() >= 5 and clash == 0)
+	await shot("gear_slots_stash")
+	if not tiles.is_empty():
+		tiles[0].pressed.emit()
+		await wait(0.3)
+	_check("gear slots: tapping a slot still opens the item", loot.detail_uid >= 0)
+	await shot("gear_slots_detail")
+	loot.close()
+	await wait(0.3)
+	var crew: Dictionary = Game.s.dwellers[0]
+	hud.open_panel("dwellers")
+	(hud.panels.dwellers as DwellersPanel).manage(int(crew.id))
+	await wait(0.5)
+	var f28 := Atlas.tex("ui_gear_slot_frame_28")
+	var ct: Array = hud.panels.dwellers.find_children("*", "Button", true, false).filter(func(x):
+		var tsb = x.get_theme_stylebox("normal")
+		return tsb is StyleBoxTexture and tsb.texture == f28)
+	var caps_ok := true
+	for tb in ct:
+		var h: Control = tb.get_parent()
+		if h is BoxContainer and h.get_child_count() > 1:
+			var cap: Control = h.get_child(1)
+			caps_ok = caps_ok and cap.global_position.x - (tb.global_position.x + tb.size.x) >= UIKit.GEAR_AURA - 0.5
+	_check("gear slots: crew gear labels sit clear of the aura (%d slots)" % ct.size(), ct.size() == 6 and caps_ok)
+	await shot("gear_slots_crew")
+	hud.panels.dwellers.close()
+	await wait(0.3)
+	Settings.set_value("tips", keep_tips)
+
+
+## MV-483 (MV-484..498): compact trait cards and their light. The frame, the 192 canonical masks (codes, content
+## cutout, 4 px bound, motion), the in-game light == those masks at 160x58, real trait values (cost red, upside kept,
+## warning mark), the untiered fallback, cards that grow with their text, the crew dossier (columns, clearance), the
+## switch off = old chips, live / still / paused, the bounded cache, GOD preview
+func _trait_cards_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_tips = Settings.get_value("tips")
+	Settings.set_value("tips", false)
+	var fr: Array = Atlas.regions.get("ui_trait_card_frame", [])
+	_check("trait cards: the compact frame is 160x58 in the atlas", fr.size() == 4 and int(fr[2]) == 160 and int(fr[3]) == 58)
+	# --- the canonical masks (reference sheet, not shipped) and the in-game port
+	var sheet := Image.load_from_file(ProjectSettings.globalize_path("res://tools/art/trait_cards/fx_trait_masks.png"))
+	var regions = JSON.parse_string(FileAccess.get_file_as_string("res://tools/art/trait_cards/fx_trait_masks.json"))
+	_check("trait cards: 192 canonical light masks (12 profiles x 16)", sheet != null and regions is Dictionary and regions.size() == 192)
+	if sheet == null or not (regions is Dictionary):
+		return
+	var codes := [Color("26262a"), Color("54544e"), Color("9a9684")]
+	var bad := []
+	var mismatch := []
+	var moving := 0
+	var names := ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
+	for neg in [false, true]:
+		for rank in 6:
+			var first := PackedByteArray()
+			var differs := false
+			for i in 16:
+				var key := "fx_trait_%s_%s_%d" % ["tradeoff" if neg else "benefit", names[rank], i]
+				var r: Array = regions[key]
+				var img := sheet.get_region(Rect2i(int(r[0]), int(r[1]), 172, 70))
+				var lit := TraitFx.light(neg, rank, i, 160, 58, false)
+				for y in 70:
+					for x in 172:
+						var c := img.get_pixel(x, y)
+						var want := TraitFx.level(float(lit.get(Vector2i(x, y), 0.0)))
+						var got := 0
+						if c.a > 0.0:
+							for ci in codes.size():
+								if codes[ci].is_equal_approx(Color(c.r, c.g, c.b)):
+									got = ci + 1
+							if got == 0:
+								bad.append("%s colour" % key)
+							elif x >= 10 and x < 162 and y >= 10 and y < 60:
+								bad.append("%s content" % key)
+							elif x < 2 or y < 2 or x >= 170 or y >= 68:
+								bad.append("%s bound" % key)
+						if got != want and mismatch.size() < 4:
+							mismatch.append("%s %d,%d mask %d game %d" % [key, x, y, got, want])
+				if i == 0:
+					first = img.get_data()
+				elif img.get_data() != first:
+					differs = true
+			if differs:
+				moving += 1
+	_check("trait cards: masks use only the three codes, never light the content, stay within 4 px %s" % [bad.slice(0, 3)], bad.is_empty())
+	_check("trait cards: all 12 profiles move (%d)" % moving, moving == 12)
+	_check("trait cards: the in-game light matches the approved masks pixel for pixel %s" % [mismatch], mismatch.is_empty())
+	# --- real cards
+	var cook := TraitCard.new()
+	cook.size = Vector2(170, 60)
+	add_child(cook)
+	cook.setup("cook")
+	var glut := TraitCard.new()
+	glut.size = Vector2(170, 60)
+	add_child(glut)
+	glut.setup("glutton")
+	await wait(0.2)
+	var g_lbls: Array = glut.find_children("*", "Label", true, false).map(func(l): return l.text)
+	_check("trait cards: untiered = no tier label; a benefit gets the accent only, a trade-off the still crimson edge",
+		cook.find_child("Tier", true, false) == null and TraitFx.mode_for(false, cook.tier) == "accent" and TraitFx.mode_for(true, glut.tier) == "still")
+	_check("trait cards: a trade-off shows the warning, its red cost and keeps its upside (%s)" % [g_lbls], glut.find_child("Warning", true, false) != null
+		and g_lbls.has(Loc.t(TraitCard.COST.glutton)) and g_lbls.has(Loc.t(TraitCard.UPSIDE.glutton)))
+	cook.queue_free()
+	glut.queue_free()
+	var arch := TraitCard.new()
+	arch.custom_minimum_size.x = 160
+	add_child(arch)
+	arch.setup("architect", 4)
+	await wait(0.3)
+	arch.size = arch.get_combined_minimum_size()
+	await wait(0.2)
+	_check("trait cards: a long description grows the card (%s) and its light follows (%s)" % [arch.size, arch.fx.size],
+		arch.size.y > 58.0 and arch.fx.size == arch.size + Vector2(12, 12) and arch.find_child("Tier", true, false) != null
+		and arch.fx.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	var ph := {}
+	for i in 12:
+		await wait(0.06)
+		ph[arch.fx.phase] = true
+	_check("trait cards: a classified card's light moves (%d phases seen)" % ph.size(), ph.size() >= 4)
+	get_tree().paused = true
+	var held := TraitFx.current_phase()
+	await get_tree().create_timer(0.4, true).timeout
+	var paused_ok := TraitFx.current_phase() == held
+	get_tree().paused = false
+	Features.set_override("features", "trait_card_vfx", false)
+	await wait(0.4)
+	var still_ok := arch.fx.phase == 0
+	Features.set_override("features", "trait_card_vfx", null)
+	_check("trait cards: the light holds while paused, and stands still with trait_card_vfx off", paused_ok and still_ok)
+	arch.queue_free()
+	_check("trait cards: the light cache stays bounded (%d)" % TraitFx._cache.size(), TraitFx._cache.size() <= TraitFx.CACHE_MAX)
+	# --- the crew dossier
+	var hud: HUD = main.hud
+	var crew: Dictionary = {}
+	for d in Game.s.dwellers:
+		if Crew.traits(d).size() >= 2:
+			crew = d
+			break
+	if crew.is_empty():
+		crew = Game.s.dwellers[0]
+		crew["traits"] = ["cook", "glutton"]
+	hud.open_panel("dwellers")
+	(hud.panels.dwellers as DwellersPanel).manage(int(crew.id))
+	await wait(0.6)
+	var dp: ModalPanel = hud.panels.dwellers
+	var cards: Array = dp.find_children("*", "TraitCard", true, false)
+	var clash := 0
+	for i in cards.size():
+		for j in range(i + 1, cards.size()):
+			if Rect2(cards[i].global_position, cards[i].size).grow(4).intersects(Rect2(cards[j].global_position, cards[j].size).grow(4)):
+				clash += 1
+	_check("trait cards: the dossier shows one card per trait, their light never meets (%d cards)" % cards.size(),
+		cards.size() == Crew.traits(crew).size() and clash == 0)
+	await shot("trait_cards_dossier")
+	dp.close()
+	await wait(0.3)
+	Features.set_override("features", "trait_card_style", false)
+	hud.open_panel("dwellers")
+	(hud.panels.dwellers as DwellersPanel).manage(int(crew.id))
+	await wait(0.5)
+	_check("trait cards: style off = the old trait chips", dp.find_children("*", "TraitCard", true, false).is_empty())
+	dp.close()
+	await wait(0.3)
+	Features.set_override("features", "trait_card_style", null)
+	# --- GOD preview
+	hud.open_panel("god")
+	var god = hud.panels.god
+	god.tab = "crew"
+	god.refresh()
+	await wait(0.5)
+	_check("trait cards: GOD previews all twelve profiles + fallbacks", god.find_children("*", "TraitCard", true, false).size() >= 16)
+	await shot("trait_cards_god")
+	god.close()
+	await wait(0.3)
+	Settings.set_value("tips", keep_tips)

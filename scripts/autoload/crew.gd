@@ -75,6 +75,16 @@ func roll_traits(d: Dictionary) -> void:
 	d["traits"] = out
 
 
+## MV-483 / MV-497: the visual tier of each trait card (0 common .. 5 mythic). Explicit and approved only: nothing is
+## inferred from item rarity, the bad flag, the size of a bonus or a roll. Empty until MV-497 is approved; an
+## unlisted trait shows the quiet untiered card. Visual only: no stat, spawn or save uses it.
+const TRAIT_TIERS := {}
+
+
+func trait_tier(t: String) -> int:
+	return int(TRAIT_TIERS.get(t, -1))
+
+
 func traits(d: Dictionary) -> Array:
 	if not d.has("traits"):
 		roll_traits(d)
@@ -105,7 +115,7 @@ func build_mult(d: Dictionary) -> float:
 
 ## work seconds this person adds per real second on a building site (STR helps carry beams)
 func build_speed(d: Dictionary) -> float:
-	return 0.6 * (0.7 + 0.06 * float(d.str)) * build_mult(d)
+	return 0.6 * (0.7 + 0.06 * float(d.str)) * build_mult(d) * work_mult(d)
 
 
 ## the cheapest-build discount: one architect anywhere on board is enough
@@ -167,7 +177,10 @@ func room_mult(slot: int) -> float:
 		m += DUO_BONUS
 	if Game.s.has("meta"):
 		m += 0.05 * Meta.perk("efficient")
-	return m * (1.0 - 0.3 * float(infected_count(workers) > 0) / float(workers.size()))
+	var dep := 0.0       # MV-127: a depressed worker puts in morale.work of their share
+	for d in workers:
+		dep += 1.0 - work_mult(d)
+	return m * (1.0 - 0.3 * float(infected_count(workers) > 0) / float(workers.size())) * (1.0 - dep / float(workers.size()))
 
 
 func synergy_text(slot: int) -> String:
@@ -249,6 +262,9 @@ var _deserters: Array = []
 
 
 func morale_tick(d: Dictionary, dt: float, offline: bool) -> void:
+	if v2():
+		_morale_v2_tick(d, dt, offline)
+		return
 	var h := float(d.happy)
 	if not d.get("strike", false):
 		if h < STRIKE_AT:
@@ -291,7 +307,10 @@ func is_striking(d: Dictionary) -> bool:
 func flush_deserters() -> void:
 	for d in _deserters:
 		if Game.s.dwellers.has(d):
-			desert(d)
+			if v2() and str(d.get("mood", "")) == MOOD_BROKEN:
+				leave_quietly(d)       # MV-127: no stealing
+			else:
+				desert(d)
 	_deserters.clear()
 
 
@@ -322,6 +341,268 @@ func desert(d: Dictionary) -> void:
 	Game.squad_changed.emit()
 	Game.rooms_changed.emit()
 	Game.resources_changed.emit()
+
+
+# ------------------------------------------------------------------ MV-127 morale v2: Depressed → Broken → leaves
+## Switch morale_v2 (off = the strike / desert rules above, unchanged). Stages come from happiness, with a gap before
+## they clear: DEPRESSED below morale.depressed 35 (clears at 42): works at morale.work 70 % (room output share and
+## build speed). BROKEN below morale.broken 20 for 90 s (clears at 30): reuses the strike flag (no work, the crying
+## pose), moves to the first quarters (idle without one; their room is remembered and they go back when they
+## recover and it has a seat), leaves the defence squad and refuses orders (Crew.refuses: room, squad, expedition,
+## Saloon). Still Broken after morale.leave_sec 180 s (warned at 60 s): they leave the vehicle at NIGHT, taking only
+## the gear they wear (no stealing). Desertion never happens offline, like before.
+## TALK: a present, untroubled crew member (best INT first, not in the squad, not already talking, pair not on
+## cooldown) talks a DEPRESSED / BROKEN one up: +morale.talk_gain 10 happiness (+0.5 per INT above 5, 8..15) right
+## away; the talker stops working for morale.talk_sec 60 s; the pair waits morale.talk_cd 300 s. Saved: d.mood,
+## d.mood_room, d.talk_t, Game.s.morale.talk_cd. GOD → ลูกเรือ. Autotest --only=morale.
+const MOOD_OK := ""
+const MOOD_DEPRESSED := "depressed"
+const MOOD_BROKEN := "broken"
+const MOOD_TH := {"": "ปกติ", "depressed": "หดหู่", "broken": "ใจสลาย"}
+
+
+func v2() -> bool:
+	return Features.on("morale_v2")
+
+
+func mood(d: Dictionary) -> String:
+	return str(d.get("mood", "")) if v2() else MOOD_OK
+
+
+func is_depressed(d: Dictionary) -> bool:
+	return mood(d) == MOOD_DEPRESSED
+
+
+func is_broken(d: Dictionary) -> bool:
+	return mood(d) == MOOD_BROKEN
+
+
+## a Broken crew member won't take orders (room, squad, expedition, Saloon)
+func refuses(d: Dictionary) -> bool:
+	return is_broken(d)
+
+
+func refuse_toast(d: Dictionary) -> void:
+	Game.toast.emit(Loc.t("%s ใจสลาย ไม่รับคำสั่ง ลองหาคนไปคุยปลอบใจ") % d.name, "warn")
+
+
+## share of normal work a crew member puts in (room output, building)
+func work_mult(d: Dictionary) -> float:
+	return Features.num("morale.work", 0.7) if is_depressed(d) else 1.0
+
+
+## talking someone up: they are off work for a minute
+func busy(d: Dictionary) -> bool:
+	return v2() and float(d.get("talk_t", 0.0)) > 0.0
+
+
+func _morale_v2_tick(d: Dictionary, dt: float, offline: bool) -> void:
+	var h := float(d.happy)
+	var m := str(d.get("mood", ""))
+	if m != MOOD_BROKEN:
+		if h < Features.num("morale.broken", 20.0):
+			d["strike_t"] = float(d.get("strike_t", 0.0)) + dt
+			if float(d.strike_t) >= 90.0:
+				_set_broken(d, offline)
+				return
+		else:
+			d["strike_t"] = maxf(0.0, float(d.get("strike_t", 0.0)) - dt)
+		var dep := h < Features.num("morale.depressed", 35.0) or (m == MOOD_DEPRESSED and h < Features.num("morale.depressed_clear", 42.0))
+		if dep and m != MOOD_DEPRESSED:
+			d["mood"] = MOOD_DEPRESSED
+			Trace.rec("crew", "depressed: %s" % d.name, {"happy": snappedf(h, 0.1)})
+			if not offline:
+				Game.toast.emit(Loc.t("%s หดหู่ ทำงานช้าลง (คุยปลอบใจ ห้องพัก อาหาร ช่วยได้)") % d.name, "warn")
+			Game.dwellers_changed.emit()
+		elif not dep and m == MOOD_DEPRESSED:
+			d["mood"] = MOOD_OK
+			if not offline:
+				Game.toast.emit(Loc.t("%s ดีขึ้นแล้ว กลับมาทำงานเต็มที่") % d.name, "good")
+			Game.dwellers_changed.emit()
+		return
+	# BROKEN
+	if h >= Features.num("morale.broken_clear", 30.0):
+		_clear_broken(d, offline)
+		return
+	if offline:
+		return
+	d["desert_t"] = float(d.get("desert_t", 0.0)) + dt
+	var leave := Features.num("morale.leave_sec", 180.0)
+	if float(d.desert_t) >= leave / 3.0 and not d.get("desert_warn", false):
+		d["desert_warn"] = true
+		Game.toast.emit(Loc.t("%s เก็บของใส่เป้... คืนนี้อาจลงจากรถไป! รีบคุยปลอบใจ") % d.name, "bad")
+	if float(d.desert_t) >= leave and Game.is_night() and not _deserters.has(d):
+		_deserters.append(d)
+
+
+func _set_broken(d: Dictionary, offline: bool) -> void:
+	d["mood"] = MOOD_BROKEN
+	d["strike"] = true
+	d["desert_t"] = 0.0
+	d.erase("desert_warn")
+	d["mood_room"] = int(d.room)
+	var r := Game.squad_role(d)
+	if r >= 0:
+		Game.s.squad[r] = -1
+		Game.squad_changed.emit()
+	var q := _quarters_for(d)
+	d.room = q
+	Trace.rec("crew", "broken: %s" % d.name, {"happy": snappedf(float(d.happy), 0.1), "squad": r})
+	if not offline:
+		Game.toast.emit(Loc.t("%s ใจสลาย นั่งร้องไห้ในห้องพัก ไม่ทำงาน ไม่รับคำสั่ง") % d.name if q >= 0 else Loc.t("%s ใจสลาย นั่งร้องไห้ ไม่ทำงาน ไม่รับคำสั่ง") % d.name, "bad")
+	Game.dwellers_changed.emit()
+	Game.rooms_changed.emit()
+
+
+func _clear_broken(d: Dictionary, offline: bool) -> void:
+	d["mood"] = MOOD_DEPRESSED
+	d["strike"] = false
+	d["strike_t"] = 0.0
+	d["desert_t"] = 0.0
+	d.erase("desert_warn")
+	var back := int(d.get("mood_room", -1))
+	d.erase("mood_room")
+	d.room = back if _has_seat(back, d) else -1
+	Trace.rec("crew", "recovered from broken: %s" % d.name, {"back": int(d.room)})
+	if not offline:
+		Game.toast.emit(Loc.t("%s ตั้งสติได้แล้ว กลับไปทำงาน (ยังหดหู่อยู่)") % d.name, "good")
+	Game.dwellers_changed.emit()
+	Game.rooms_changed.emit()
+
+
+## the first finished quarters (Broken crew don't take a work seat there), or -1
+func _quarters_for(_d: Dictionary) -> int:
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == "quarters" and Game.is_slot_unlocked(i) and not Game.is_site(i):
+			return i
+	return -1
+
+
+func _has_seat(slot: int, d: Dictionary) -> bool:
+	if slot < 0 or slot >= Game.s.rooms.size() or not Game.is_slot_unlocked(slot) or Game.is_annex(slot):
+		return false
+	if str(Game.room(slot).type) in ["empty", "locked"]:
+		return false
+	var crew := Game.site_crew(slot) if Game.is_site(slot) else Game.room_workers(slot)
+	crew = crew.filter(func(o): return o != d)
+	return crew.size() < Game.room_capacity(slot)
+
+
+## leaving at night after being Broken too long: only the gear they wear goes with them
+func leave_quietly(d: Dictionary) -> void:
+	Trace.rec("crew", "left (broken): %s" % d.name, {"happy": snappedf(float(d.happy), 0.1)})
+	var role := Game.squad_role(d)
+	if role >= 0:
+		Game.s.squad[role] = -1
+	if not Game.s.has("deserters"):
+		Game.s["deserters"] = []
+	Game.s.deserters.append({"name": d.name, "lvl": d.lvl, "km": snappedf(float(Game.s.stats.km_total), 0.1), "stole": ""})
+	Game.s.dwellers.erase(d)
+	Game.toast.emit(Loc.t("%s ลงจากรถไปในความมืดตอนกลางคืน และไม่กลับมาอีก") % d.name, "bad")
+	Game.dwellers_changed.emit()
+	Game.squad_changed.emit()
+	Game.rooms_changed.emit()
+
+
+# --- talk
+func _talk_store() -> Dictionary:
+	if not (Game.s.get("morale") is Dictionary):
+		Game.s["morale"] = {}
+	var m: Dictionary = Game.s.morale
+	if not (m.get("talk_cd") is Dictionary):
+		m["talk_cd"] = {}
+	return m.talk_cd
+
+
+func talk_key(a: int, b: int) -> String:
+	return "%d|%d" % [mini(a, b), maxi(a, b)]
+
+
+func talk_cd_left(a: int, b: int) -> float:
+	return float(_talk_store().get(talk_key(a, b), 0.0))
+
+
+func talk_gain(talker: Dictionary) -> float:
+	var g := Features.num("morale.talk_gain", 10.0)
+	return clampf(g + 0.5 * (float(talker.get("int", 5)) - 5.0), g * 0.8, g * 1.5)
+
+
+## why this person can't talk the other up right now ("" = they can)
+func talker_block(talker: Dictionary, target: Dictionary) -> String:
+	if talker.is_empty() or talker == target or int(talker.id) == int(target.id):
+		return "ไม่มีคนคุย"
+	if Game.is_away(talker):
+		return "ไม่อยู่บนรถ"
+	if mood(talker) != MOOD_OK:
+		return "ตัวเองก็ยังไม่ไหว"
+	if Game.squad_role(talker) >= 0:
+		return "อยู่ทีมป้องกันรถ"
+	if busy(talker):
+		return "กำลังคุยกับคนอื่นอยู่"
+	var cd := talk_cd_left(int(talker.id), int(target.id))
+	if cd > 0.0:
+		return Loc.t("เพิ่งคุยกันไป อีก %s") % Game.fmt_time(cd)
+	return ""
+
+
+## the best person to talk this one up (highest INT among those who can), {} = nobody
+func best_talker(target: Dictionary) -> Dictionary:
+	var best := {}
+	for o in Game.s.dwellers:
+		if talker_block(o, target) != "":
+			continue
+		if best.is_empty() or int(o.int) > int(best.int):
+			best = o
+	return best
+
+
+## why nobody can talk this one up ("" = someone can)
+func talk_block(target: Dictionary) -> String:
+	if not v2():
+		return "ระบบขวัญกำลังใจใหม่ปิดอยู่"
+	if target.is_empty() or Game.is_away(target):
+		return "ไม่อยู่บนรถ"
+	if mood(target) == MOOD_OK:
+		return "ไม่ได้หดหู่"
+	if best_talker(target).is_empty():
+		return "ไม่มีใครว่างคุยด้วย"
+	return ""
+
+
+## talk them up: returns the happiness gained (0 = nobody could)
+func talk(target_id: int) -> float:
+	var target := Game.dweller_by_id(target_id)
+	if talk_block(target) != "":
+		return 0.0
+	var talker := best_talker(target)
+	var gain := talk_gain(talker)
+	target.happy = minf(100.0, float(target.happy) + gain)
+	talker["talk_t"] = Features.num("morale.talk_sec", 60.0)
+	_talk_store()[talk_key(int(talker.id), target_id)] = Features.num("morale.talk_cd", 300.0)
+	Trace.rec("crew", "talk: %s -> %s" % [talker.name, target.name], {"gain": snappedf(gain, 0.1)})
+	Game.toast.emit(Loc.t("%s นั่งคุยกับ %s ความสุข +%d (%s พักงาน %s)") % [talker.name, target.name, int(gain), talker.name,
+		Game.fmt_time(Features.num("morale.talk_sec", 60.0))], "good")
+	Game.dwellers_changed.emit()
+	Game.rooms_changed.emit()
+	return gain
+
+
+## talk timers and pair cooldowns (game clock; frozen with morale_v2 off)
+func morale_v2_global_tick(dt: float) -> void:
+	if not v2() or Game.s.is_empty():
+		return
+	var freed := false
+	for d in Game.s.dwellers:
+		if float(d.get("talk_t", 0.0)) > 0.0:
+			d.talk_t = maxf(0.0, float(d.talk_t) - dt)
+			freed = freed or float(d.talk_t) <= 0.0
+	var cd := _talk_store()
+	for k in cd.keys():
+		cd[k] = float(cd[k]) - dt
+		if float(cd[k]) <= 0.0:
+			cd.erase(k)
+	if freed:
+		Game.rooms_changed.emit()
 
 
 func cure(d: Dictionary) -> void:

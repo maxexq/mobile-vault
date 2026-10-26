@@ -93,6 +93,7 @@ func _note(text: String) -> void:
 
 # ------------------------------------------------------------------ tabs
 func _tab_icons() -> void:
+	_gear_slots_preview()
 	_head("ICON ATLAS", "16x16 / 1x / 2x / 3x")
 	var sizes := []
 	for scale in [1, 2, 3]:
@@ -125,6 +126,37 @@ func _tab_icons() -> void:
 		cell.add_child(label)
 
 
+## MV-473: every rarity at every tile width with real icons, the empty / locked / +N / disabled states, and the
+## presentation (switches / base / neon / aura / still) with frame stepping
+func _gear_slots_preview() -> void:
+	_head("EQUIPMENT SLOTS", "ช่องอุปกรณ์เหล็ก + แสงตามความหายาก (MV-473) · gear_slot_style %s · gear_slot_vfx %s · ตอนนี้ %s" % [
+		"เปิด" if Features.on("gear_slot_style") else "ปิด", "เปิด" if Features.on("gear_slot_vfx") else "ปิด", GearFx.presentation()])
+	var modes := []
+	for m in [["", "ตามสวิตช์"], ["base", "ฐาน"], ["neon", "นีออน"], ["aura", "ออร่า"], ["still", "นิ่ง"]]:
+		var mm: String = m[0]
+		modes.append(_b(m[1], func(): Dev.gear_preview(mm), "yellow" if GearFx.preview == mm else "gray"))
+	_row(modes, "แสดง")
+	_row([_b("เฟรมถัดไป", func(): Dev.gear_step(), "green"), _b("เล่นต่อ", func(): Dev.gear_preview(GearFx.preview), "gray")],
+		"เฟรม %d/16%s" % [GearFx.current_phase() + 1, " (หยุด)" if GearFx.paused_preview else ""])
+	var slots := ["weapon", "armor", "helmet", "boots", "gadget", "backpack"]
+	var grid := GridContainer.new()
+	grid.name = "GearSlotGrid"
+	grid.columns = GearFx.WIDTHS.size()
+	grid.add_theme_constant_override("h_separation", UIKit.gear_gap(6))
+	grid.add_theme_constant_override("v_separation", UIKit.gear_gap(6))
+	for r in 6:
+		for j in GearFx.WIDTHS.size():
+			var w: int = GearFx.WIDTHS[j]
+			grid.add_child(UIKit.gear_tile(Dev.gear_sample(r, slots[(r + j) % slots.size()], r if j % 2 == 0 else 0, r == 2), slots[(r + j) % slots.size()], w))
+	for j in GearFx.WIDTHS.size():
+		var w: int = GearFx.WIDTHS[j]
+		var t := UIKit.gear_tile({} if j < 3 else Dev.gear_sample(j, slots[j]), slots[j], w)
+		t.disabled = j >= 3
+		grid.add_child(t)
+	_list.add_child(UIKit.gear_pad(grid))
+	_note("แถว: ทั่วไป · ดี · หายาก (ล็อก) · มหากาพย์ · ตำนาน · ปฐมกาล · ล่างสุด: ช่องว่าง 3 ขนาด + ปุ่มกดไม่ได้ · คอลัมน์ 28 / 30 / 32 / 36 / 40 px")
+
+
 func _tab_main() -> void:
 	var cheated: bool = Game.s.stats.get("cheated", false)
 	_note("ทุกการกดถูกบันทึกลง LOG · เซฟนี้%s" % (" ถูกทำเครื่องหมายว่า 'ใช้ god mode แล้ว'" if cheated else "ยังไม่เคยใช้ god mode"))
@@ -155,7 +187,9 @@ func _tab_main() -> void:
 	_note(Dev.view_info())
 	if not OS.has_feature("web"):
 		var sizes := [[Vector2i(720, 1280), "มือถือ 720x1280"], [Vector2i(780, 1688), "มือถือ 780x1688"], [Vector2i(1170, 2532), "iPhone 1170x2532"],
-			[Vector2i(1280, 640), "แนวนอน 1280x640"], [Vector2i(1366, 1024), "แท็บเล็ต 1366x1024"]]
+			[Vector2i(1280, 640), "แนวนอน 1280x640"], [Vector2i(1366, 1024), "แท็บเล็ต 1366x1024"],
+			[Vector2i(768, 1024), "แท็บเล็ต 768x1024"], [Vector2i(1024, 768), "โน้ตบุ๊ก 1024x768"], [Vector2i(1366, 768), "โน้ตบุ๊ก 1366x768"],
+			[Vector2i(2560, 1440), "จอใหญ่ 2560x1440"]]     # MV-266
 		var sb := []
 		for it in sizes:
 			var sz: Vector2i = it[0]
@@ -203,6 +237,31 @@ func _tab_res() -> void:
 
 
 func _tab_vehicle() -> void:
+	_head("ROOM EXPANSION", "ห้องใหม่ชุดขยาย (MV-428 / MV-429)")
+	var regd: Array = RoomX.DEFS.keys() + RoomX.extra.keys()
+	_note("สวิตช์ rooms_expansion %s · ลงทะเบียนแล้ว %d ห้อง · สร้างได้ตอนนี้ %d · งานค้าง %d · แอนิเมชัน: %s%s" % [
+		"เปิด" if RoomX.on() else "ปิด", regd.size(), RoomX.buildable().size(), RoomX.jobs().size(),
+		"สด" if RoomAnim.preview == "" else RoomAnim.preview, " (หยุดเฟรม)" if RoomAnim.paused_preview else ""])
+	if not regd.is_empty():
+		var rb := []
+		for t in regd:
+			var tt: String = t
+			rb.append(_b(str(RoomX.room_def(tt).get("th", tt)), func(): Dev.rx_build(tt), "green"))
+		_row(rb, "สร้างทันที")
+	for k in RoomX.jobs():
+		var j: Dictionary = RoomX.jobs()[k]
+		var why := RoomX.paused_why(j)
+		_note("งาน #%d %s · %s · %d%%%s%s" % [int(j.id), str(j.room), str(j.kind), int(RoomX.progress(j) * 100.0),
+			" · เสร็จ รอรับ" if bool(j.done) else "", (" · หยุด: " + why) if why != "" and not bool(j.done) else ""])
+	_row([_b("งานเสร็จทันที", func(): Dev.rx_finish_jobs(), "green"), _b("ยกเลิกงานทั้งหมด", func(): Dev.rx_drop_jobs(), "red")], "งาน")
+	_note("โรงเตี๊ยม (MV-430): กินไปแล้ว %d มื้อ · ติดคูลดาวน์ %d คน · สายสัมพันธ์ %d คู่" % [int(Saloon.st().get("meals", 0)),
+		(Saloon.st().get("cd", {}) as Dictionary).size(), (Saloon.st().get("bonds", {}) as Dictionary).size()])
+	_row([_b("เริ่มมื้อเย็น", func(): Dev.saloon_supper(), "green"), _b("รับมื้อที่เสร็จ", func(): Dev.saloon_claim_all(), "yellow"),
+		_b("ล้างคูลดาวน์", func(): Dev.saloon_clear_cd(), "gray")], "โรงเตี๊ยม")
+	_row([_b("สด", func(): Dev.rx_anim_preview(""), "yellow" if RoomAnim.preview == "" else "gray"),
+		_b("ท่าพัก", func(): Dev.rx_anim_preview("rest"), "yellow" if RoomAnim.preview == "rest" else "gray"),
+		_b("ทำงาน", func(): Dev.rx_anim_preview("active"), "yellow" if RoomAnim.preview == "active" else "gray"),
+		_b("เฟรมถัดไป", func(): Dev.rx_anim_step(), "green")], "แอนิเมชัน")
 	_head("CHASSIS", "เปลี่ยนรถทันที (ห้องที่ยังพอดีอยู่ครบ)")
 	var tb := []
 	for t in Data.TIER_ORDER:
@@ -218,6 +277,10 @@ func _tab_vehicle() -> void:
 	_row(vb, "Vault Lv")
 	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
+	_row([_b("ขั้น 1", func(): Dev.hull_warning_preview(1), "yellow"), _b("ขั้น 2", func(): Dev.hull_warning_preview(2), "red"),
+		_b("ขั้น 3", func(): Dev.hull_warning_preview(3), "red"), _b("เคลียร์", func(): Dev.hull_warning_preview(0), "green")],
+		"เตือนตัวถัง (MV-250) %s · เส้น %d/%d/%d%%" % ["เปิด" if Features.on("hull_warning") else "ปิด",
+		int(HullAlert.line(1) * 100), int(HullAlert.line(2) * 100), int(HullAlert.line(3) * 100)])
 	_row([_b("แหนบช่วงล่าง: " + ("เปิด" if Features.on("vehicle_detail") else "ปิด"), func(): Dev.vehicle_detail_switch(not Features.on("vehicle_detail")),
 		"green" if Features.on("vehicle_detail") else "red")], "รายละเอียดรถ MV-388 (ล้อ/สนิม/แผ่นปะอบในภาพแล้ว)")
 	_head("ENGINE BAY", "ห้องเครื่อง · %s %d°C สภาพ %d%%" % [EngineBay.t().th, int(EngineBay.heat()), int(EngineBay.cond())])
@@ -251,11 +314,56 @@ func _tab_vehicle() -> void:
 		_b("รังสี +40", func(): Dev.hazards("rads")), _b("ติดเชื้อ", func(): Dev.hazards("infect"))])
 
 
+## MV-483: the twelve approved trait-card profiles on real traits, the unclassified fallbacks, a long text card, and
+## the light live / still / off with frame stepping. Tiers here are a preview only (MV-497 decides the real ones).
+func _trait_cards_preview() -> void:
+	_head("TRAIT CARDS", "การ์ดนิสัย (MV-483)")
+	_note("trait_card_style %s · trait_card_vfx %s · จัดระดับแล้ว %d นิสัย (MV-497)" % [
+		"เปิด" if Features.on("trait_card_style") else "ปิด", "เปิด" if Features.on("trait_card_vfx") else "ปิด", Crew.TRAIT_TIERS.size()])
+	var modes := []
+	for m in [["", "สด"], ["still", "นิ่ง"], ["off", "ไม่มีแสง"]]:
+		var mm: String = m[0]
+		modes.append(_b(m[1], func(): Dev.trait_preview(mm), "yellow" if TraitFx.preview == mm else "gray"))
+	modes.append(_b("เฟรมถัดไป", func(): Dev.trait_step(), "green"))
+	_row(modes, "แสง · เฟรม %d/16" % (TraitFx.current_phase() + 1))
+	var g := GridContainer.new()
+	g.name = "TraitCardPreview"
+	g.columns = 2 if box.custom_minimum_size.x - 36.0 >= TraitCard.MIN_W * 2 + TraitCard.GAP else 1
+	g.add_theme_constant_override("h_separation", TraitCard.GAP)
+	g.add_theme_constant_override("v_separation", TraitCard.GAP)
+	var items := []
+	for r in 6:
+		items.append(["cook", r])
+		items.append(["glutton", r])
+	items += [["cook", -1], ["glutton", -1], ["architect", 4], ["coward", -1]]
+	for it in items:
+		var c := TraitCard.new()
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		g.add_child(c)
+		c.setup(str(it[0]), int(it[1]))
+	var m := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		m.add_theme_constant_override("margin_" + side, 6)
+	m.add_child(g)
+	_list.add_child(m)
+	_note("ซ้าย: ข้อดี (พ่อครัว) ทั่วไป..ปฐมกาล · ขวา: ข้อเสีย (กินจุ) · แถวล่าง: ยังไม่จัดระดับ (ค่าเริ่มต้นตอนนี้) และข้อความยาว")
+
+
 func _tab_crew() -> void:
+	_trait_cards_preview()
 	_row([_b("+1 คน", func(): Dev.recruit(1), "green"), _b("+3 คน", func(): Dev.recruit(3), "green"), _b("รักษาทุกคน", func(): Dev.heal_all())])
 	_row([_b("สุข 100", func(): Dev.happy_all(100.0)), _b("สุข 20", func(): Dev.happy_all(20.0)), _b("สุข 0", func(): Dev.happy_all(0.0), "red")], "ทุกคน")
 	_row([_b("หมา", func(): Dev.add_pet("dog")), _b("แมว", func(): Dev.add_pet("cat")), _b("ไก่", func(): Dev.add_pet("hen")), _b("ล้าง", func(): Dev.clear_pets())],
 		"สัตว์เลี้ยง %d" % (Game.s.get("pets", []) as Array).size())
+	_head("BARKS", "พูดตามสถานการณ์ (MV-427)")
+	var m = get_tree().current_scene
+	_note("สวิตช์ barks %s · เว้นซ้ำ %.0f วิ · ล่าสุด: %s" % ["เปิด" if Features.on("barks") else "ปิด", Features.num("barks.cooldown", 12.0),
+		str(m.chatter.last_bark).replace("|", ": ") if m and m.get("chatter") and str(m.chatter.last_bark) != "" else "-"])
+	var bk := [_b("สุ่ม", func(): Dev.bark(), "green")]
+	for k in Lore.BARKS:
+		var kk: String = k
+		bk.append(_b(kk, func(): Dev.bark(kk), "gray"))
+	_row(bk)
 	_head("BUILDERS", "ช่างก่อสร้าง (หมวกเหลือง) + trait ด้านช่าง")
 	var bb := [_b("ช่างธรรมดา", func(): Dev.spawn_builder(""), "green")]
 	for t in ["engineer", "quick_hands", "architect", "clumsy"]:
@@ -272,7 +380,11 @@ func _tab_crew() -> void:
 			sb.append(_b(str(Inspection.KINDS[k].th), func(): Dev.stranger(kid, gid), "green" if k == "human" else "red"))
 		_row(sb, str(Inspection.GRADES[g].th))
 	_row([_b("ล้างคิว", func(): Dev.stranger_clear(), "red")])
+	_note("โบกรถ (MV-244): สวิตช์ stop_for_strangers %s · %s · สร้างคนแปลกหน้าตอนรถวิ่ง = รถจอดและเปิดหน้าต่างตรวจเอง" % [
+		"เปิด" if Features.on("stop_for_strangers") else "ปิด", "รถจอดรับคนอยู่" if Inspection.halting() else "ไม่ได้จอดรับใคร"])
 	_head("CREW", "ทีละคน")
+	if Crew.v2():
+		_row([_b("ล้างคูลดาวน์คุยปลอบใจ", func(): Dev.talk_reset())], "ขวัญ v2 (MV-127)")
 	for d in Game.s.dwellers:
 		var dd: Dictionary = d
 		var tags := []
@@ -280,6 +392,10 @@ func _tab_crew() -> void:
 			tags.append("ออกสำรวจ")
 		if Crew.is_striking(dd):
 			tags.append("ประท้วง")
+		if Crew.mood(dd) != "":
+			tags.append(str(Crew.MOOD_TH[Crew.mood(dd)]))
+		if Crew.busy(dd):
+			tags.append("กำลังคุยปลอบใจ")
 		_list.add_child(UIKit.label("%s Lv%d · HP %d · สุข %d %s" % [dd.name, dd.lvl, int(dd.hp), int(dd.happy), " · ".join(tags)], UIKit.FS_SMALL, UIKit.C_TEXT))
 		var tl := []
 		for t in Crew.traits(dd):
@@ -289,6 +405,10 @@ func _tab_crew() -> void:
 			_b("ตาย", func(): Dev.kill(dd), "red")])
 		_row([_b("เลิกเป็นช่าง" if Crew.is_builder(dd) else "เป็นช่าง", func(): Dev.toggle_builder(dd), "yellow" if Crew.is_builder(dd) else "gray"),
 			_b("สุ่ม trait ใหม่", func(): Dev.reroll_traits(dd))])
+		if Crew.v2():
+			_row([_b("ปกติ", func(): Dev.mood_force(dd, ""), "green"), _b("หดหู่", func(): Dev.mood_force(dd, "depressed"), "yellow"),
+				_b("ใจสลาย", func(): Dev.mood_force(dd, "broken"), "red"), _b("ลงรถคืนนี้", func(): Dev.mood_force(dd, "leaving"), "red"),
+				_b("คุยปลอบใจ", func(): Crew.talk(int(dd.id)), "blue")], "ขวัญ (MV-127)")
 
 
 ## MV-170: every named crew sprite (any animation) + portrait, and a button that boards that one
@@ -388,6 +508,9 @@ func _tab_world() -> void:
 	_row([_b("จั่วใบถัดไป", func(): Dev.event_draw(), "yellow", true), _b("สับสำรับใหม่", func(): Dev.event_deck_reset())])
 	_note("จับเวลาตัดสินใจ: %s · ตั้งค่า %s · x%.2f" % ["เปิด" if Features.on("event_timer") else "ปิด", str(Settings.get_value("event_timer")), Features.num("events.decide_scale", 1.0)])
 	_row([_b("อีเว้นต์สุ่ม หมดเวลาใน 2 วิ", func(): Dev.event_quick_timeout(), "red", true)], "จับเวลา")
+	_note("ห้ามหนีตอนรถออกตัวไม่ได้ (MV-243): สวิตช์ flee_guard %s · ตอนนี้: %s" % ["เปิด" if Features.on("flee_guard") else "ปิด",
+		Game.drive_block() if Game.drive_block() != "" else "รถออกตัวได้"])
+	_row([_b("หมาป่าตอนรถจอดรอ 45 วิ", func(): Dev.event_flee_stuck(), "red", true)], "หนีไม่ได้")
 	var eb := []
 	for id in Data.EVENTS:
 		var eid: String = id
@@ -511,6 +634,19 @@ func _tab_sys() -> void:
 	if Telemetry.last_error != "":
 		_note("ผิดพลาดล่าสุด: " + Telemetry.last_error)
 	_row([_b("ส่ง log ตอนนี้", func(): Dev.logs_flush(), "green"), _b("ส่ง error ทดสอบ", func(): Dev.logs_test_error(), "yellow")])
+	_head("GAMEANALYTICS", "สถิติบน GameAnalytics (MV-423)")
+	_note("สถานะ: %s · โปรเจกต์ %s · เซ็นโดย %s · คิว %d · ส่งแล้ว %d · error ที่ส่งรอบนี้ %d/%d%s" % [Analytics.status(), BuildInfo.cloud_project(), Analytics.mode(),
+		Analytics.queue.size(), Analytics.sent_total, Analytics.errors_sent, Analytics.ERRORS_MAX,
+		"" if Analytics.last_error == "" else " · ผิดพลาดล่าสุด: " + Analytics.last_error])
+	_row([_b("ส่ง event ทดสอบ (Test:GodMode)", func(): Dev.ga_test_event(), "green")])
+	_head("OUTBOX", "คิวส่งขึ้นเซิร์ฟเวอร์ (MV-424)")
+	var ob: Dictionary = Outbox.lane(Outbox.SUPABASE)
+	_note("%s · ล้มเหลวติดกัน %d · รอคิว %d · ผ่าน %d · พักไปแล้ว %d ครั้ง · คำตอบล่าสุด %s%s" % [
+		"เปิด" if Outbox.open(Outbox.SUPABASE) else "พักอยู่อีก %d วิ" % ceili(Outbox.hold_left(Outbox.SUPABASE)),
+		int(ob.fails), (ob.waiting as Array).size(), int(ob.ok), int(ob.holds),
+		"-" if int(ob.last_code) < 0 else ("ไม่ตอบ" if int(ob.last_code) == 0 else str(ob.last_code)),
+		"" if Outbox.on() else " · สวิตช์ server_outbox ปิด (ส่งตรงแบบเดิม)"])
+	_row([_b("จำลองเซิร์ฟเวอร์ล่ม (503)", func(): Dev.outbox_fail(), "yellow"), _b("เปิดคิวตอนนี้", func(): Dev.outbox_open(), "green")])
 	_head("ANTI-CHEAT", "กันโกง (MV-174)")
 	var seen := "ยังไม่รู้ (คลาวด์ยังไม่ตอบ)" if Cloud.server_seen <= 0.0 else Time.get_datetime_string_from_unix_time(int(Cloud.server_seen + 7 * 3600), true)
 	_note("เซิร์ฟเวอร์รับเซฟล่าสุด: %s · เวลาจำลองสะสม %.1f ชม. · ถูกจำกัดความถี่ %d ครั้ง%s" % [seen,
@@ -521,6 +657,7 @@ func _tab_sys() -> void:
 	_head("SETTINGS", "การตั้งค่า")
 	_note("ขนาดเซฟ %.1f KB · FPS %s · ภาษา %s" % [Settings.save_size_bytes() / 1024.0, str(Settings.get_value("fps")), str(Settings.get_value("lang"))])
 	_row([_b("คืนค่าเริ่มต้น", Dev.settings_reset)])
+	_row([_b("ทดสอบหน้าต่างยืนยัน", Dev.confirm_preview, "red", true)])
 
 
 func _tab_features() -> void:

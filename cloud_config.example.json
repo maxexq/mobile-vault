@@ -10,5 +10,14 @@
       "anon_key": "YOUR-TEST-ANON-OR-PUBLISHABLE-KEY",
       "site_url": "https://YOUR-STAGING-URL.vercel.app/"
     }
+  },
+  "analytics": {
+    "_doc": "MV-426: game keys only. The secret keys live in Vercel env vars GA_SECRET_PROD / GA_SECRET_TEST (api/ga.mjs signs); never put a secret_key here before an export",
+    "prod": {
+      "game_key": "YOUR-GAMEANALYTICS-PROD-GAME-KEY"
+    },
+    "test": {
+      "game_key": "YOUR-GAMEANALYTICS-TEST-GAME-KEY"
+    }
   }
 }

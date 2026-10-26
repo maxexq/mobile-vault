@@ -287,7 +287,7 @@ const EVENTS := {
 			{"action": "adopt", "pet": {"kind": "dog", "name": "ข้าวตัง"}, "cost": {"food": 10}, "th": "รับเลี้ยง ตั้งชื่อว่า ข้าวตัง", "en": "ADOPT IT", "sub": "-10 อาหาร · ทุกคนมีความสุข +15 · มันจะวิ่งเล่นทั่วรถ", "color": "green", "lore": "khaotang"},
 			{"action": "gift", "cost": {"food": 5}, "th": "โยนเนื้อแห้งให้", "en": "TOSS SOME FOOD", "sub": "-5 อาหาร · ความสุข +", "color": "yellow",
 				"result": "มันงับเนื้อแห้งแล้วกระดิกหาง ก่อนวิ่งหายเข้าพุ่มไม้ข้างทาง ทุกคนยิ้มออก (+ความสุข)", "stamp": ["GOOD BOY", "ใจดีจัง"]},
-			{"action": "ignore", "th": "เร่งเครื่องหนี", "en": "DRIVE AWAY", "sub": "ความสุขลด", "color": "gray", "happy": -6},
+			{"action": "ignore", "th": "ปล่อยมันไป", "en": "LEAVE IT BE", "sub": "ความสุขลด", "color": "gray", "happy": -6},
 		],
 	},
 	"stray_cat": {
@@ -476,7 +476,19 @@ const CREW_ROSTER := {
 
 
 func room_def(t: String) -> Dictionary:
-	return ROOMS.get(t, {})
+	if ROOMS.has(t):
+		return ROOMS[t]
+	return RoomX.room_def(t)     # MV-429: the optional expansion rooms register there
+
+
+## every room the build menu offers: the original ten, then the expansion rooms that are switched on (MV-429)
+func buildable() -> Array:
+	return BUILDABLE + RoomX.buildable()
+
+
+## atlas key of a room's 64x52 art
+func room_art(t: String) -> String:
+	return RoomX.art_key(t) if RoomX.is_rx(t) else "room_" + t
 
 
 # ------------------------------------------------------------------ MV-247: raw food (crops + meat)

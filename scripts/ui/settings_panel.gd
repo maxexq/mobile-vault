@@ -29,6 +29,7 @@ func _build() -> void:
 	body.add_child(_note)
 	Settings.changed.connect(func(_k): _sync())
 	Settings.import_failed.connect(func(why): _say(why, UIKit.C_RED))
+	Settings.import_ready.connect(_confirm_import)
 	Cloud.account_changed.connect(func():
 		if is_open and tab == "data":
 			refresh())
@@ -232,7 +233,7 @@ func _tab_game() -> void:
 	_choice(Loc.t("มุมกล้อง"), "zoom", [["auto", "AUTO"], ["wide", Loc.t("กว้าง")], ["normal", Loc.t("ปกติ")]], Loc.t("AUTO จะถอยกล้องเองตอนสู้บอสหรือลากโบกี้"))
 	_toggle(Loc.t("ฟิลเตอร์จอ CRT"), "crt")
 	_choice(Loc.t("เอฟเฟกต์อนุภาค"), "fx_gpu", [[true, "GPU"], [false, "CPU"]], Loc.t("เลือก CPU ถ้าเครื่องช้าหรือเครื่องเก่า"))
-	_choice(Loc.t("เฟรมเรต"), "fps", [[60, "60"], [30, "30"]], Loc.t("30 FPS ช่วยประหยัดแบตเตอรี่"))
+	_choice(Loc.t("เฟรมเรต"), "fps", [[30, "30"], [60, "60"], [120, "120"]], Loc.t("30 FPS ประหยัดแบตเตอรี่ · 120 FPS ลื่นสุดบนจอ 120Hz (จอ 60Hz จะได้ 60)"))
 	_toggle(Loc.t("เต็มจอ"), "fullscreen", Loc.t("บน iPhone (Safari) ให้ใช้ แชร์ > เพิ่มไปยังหน้าจอโฮม แทน"))
 
 	_head("FEEL", Loc.t("ความรู้สึก"))
@@ -248,7 +249,7 @@ func _tab_game() -> void:
 
 	if Features.on("cloud_logs"):
 		_head("PRIVACY", Loc.t("ความเป็นส่วนตัว"))
-		_toggle(Loc.t("ส่งบันทึกการเล่นเพื่อพัฒนาเกม"), "telemetry", Loc.t("ส่งเหตุการณ์ในเกม ข้อผิดพลาด ทรัพยากร เวอร์ชันเกม และขนาดจอ พร้อมไอดีผู้เล่น ไปเก็บที่เซิร์ฟเวอร์ของเกม เพื่อแก้บั๊กและปรับสมดุล ไม่ส่งอีเมลหรือข้อมูลอื่นในเครื่อง ปิดแล้ว log จะอยู่ในเครื่องนี้อย่างเดียว"))
+		_toggle(Loc.t("ส่งบันทึกการเล่นเพื่อพัฒนาเกม"), "telemetry", Loc.t("ส่งเหตุการณ์ในเกม ข้อผิดพลาด ทรัพยากร เวอร์ชันเกม และขนาดจอ พร้อมไอดีผู้เล่น ไปเก็บที่เซิร์ฟเวอร์ของเกม และสถิติการเล่นแบบไม่ระบุตัวตน (แผนที่ ห้อง อีเว้นต์ ระยะเวลาเล่น) ไปที่ GameAnalytics เพื่อแก้บั๊กและปรับสมดุล ไม่ส่งอีเมลหรือข้อมูลอื่นในเครื่อง ปิดแล้วไม่ส่งทั้งสองอย่าง"))
 
 	_head("TUTORIAL", Loc.t("บทแนะนำ"))
 	var tb := _action(Loc.t("ดูบทแนะนำอีกครั้ง"), "blue", "book", func():
@@ -264,8 +265,9 @@ func _tab_game() -> void:
 			_say(Loc.t("คำแนะนำจะขึ้นอีกครั้งเมื่อเปิดแต่ละระบบ")))
 		rb.disabled = not Game.started
 	_action(Loc.t("คืนค่าตั้งค่าเริ่มต้น"), "gray", "cog", func():
-		Settings.reset_defaults()
-		_say(Loc.t("คืนค่าตั้งค่าทั้งหมดแล้ว")))
+		ConfirmPanel.ask(self, Loc.t("คืนค่าตั้งค่าเริ่มต้น"), Loc.t("ค่าตั้งค่าเสียง ภาษา ภาพ และการควบคุมจะกลับเป็นค่าเริ่มต้น ความคืบหน้าเกมยังอยู่"), Loc.t("คืนค่าเริ่มต้น"), func():
+			Settings.reset_defaults()
+			_say(Loc.t("คืนค่าตั้งค่าทั้งหมดแล้ว"))))
 
 
 func _tab_data() -> void:
@@ -332,12 +334,12 @@ func _cloud_rows() -> void:
 		_info("CLOUD", _run_text(rd))
 		_info("DEVICE", _run_text(ld))
 		_action(Loc.t("ใช้เซฟจากคลาวด์"), "blue", "up", func():
-			_say(Loc.t("กำลังโหลดเซฟจากคลาวด์..."))
-			Cloud.use_cloud())
+			ConfirmPanel.ask(self, Loc.t("ใช้เซฟจากคลาวด์"), Loc.t("เซฟในเครื่องนี้จะถูกแทนที่ด้วยเซฟคลาวด์ ย้อนคืนไม่ได้ ควรส่งออกเซฟเก็บไว้ก่อน"), Loc.t("แทนที่เซฟในเครื่อง"), Cloud.use_cloud,
+				func(): return Cloud.state == Cloud.State.CONFLICT and is_same(Cloud.remote, r)))
 		_action(Loc.t("ใช้เซฟเครื่องนี้ (ทับคลาวด์)"), "red", "chest", func():
-			_say(Loc.t("กำลังส่งเซฟเครื่องนี้ขึ้นคลาวด์..."))
-			await Cloud.use_local()
-			refresh())
+			ConfirmPanel.ask(self, Loc.t("ใช้เซฟเครื่องนี้ (ทับคลาวด์)"), Loc.t("เซฟคลาวด์จะถูกแทนที่ด้วยเซฟเครื่องนี้ ความคืบหน้าจากอีกเครื่องอาจหายไป ย้อนคืนไม่ได้"), Loc.t("แทนที่เซฟคลาวด์"), func():
+				await Cloud.use_local()
+				refresh(), func(): return Cloud.state == Cloud.State.CONFLICT and is_same(Cloud.remote, r)))
 		return
 	_action(Loc.t("ซิงก์ตอนนี้"), "green", "up", func():
 		if Game.started:
@@ -367,11 +369,12 @@ func _account_rows() -> void:
 				_action(Loc.t("เปิดเกมในแท็บใหม่"), "blue", "up", func(): OS.shell_open(Cloud.site_url))
 	else:
 		_action(Loc.t("ออกจากระบบ (กลับไปเป็น Guest)"), "gray", "skull", func():
-			_say(Loc.t("กำลังส่งเซฟขึ้นคลาวด์ก่อนออกจากระบบ..."))
-			if await Cloud.sign_out():
-				_say(Loc.t("ออกจากระบบแล้ว เซฟยังอยู่ในบัญชี Google"))
-			else:
-				refresh())
+			ConfirmPanel.ask(self, Loc.t("ออกจากระบบ (กลับไปเป็น Guest)"), Loc.t("เกมจะส่งเซฟขึ้นบัญชี Google แล้วลบสำเนาในเครื่องนี้เพื่อเริ่ม Guest ใหม่ ต้องล็อกอินบัญชีเดิมเพื่อเล่นต่อ"), Loc.t("ยืนยันออกจากระบบ"), func():
+				_say(Loc.t("กำลังส่งเซฟขึ้นคลาวด์ก่อนออกจากระบบ..."))
+				if await Cloud.sign_out():
+					_say(Loc.t("ออกจากระบบแล้ว เซฟยังอยู่ในบัญชี Google"))
+				else:
+					refresh()))
 
 
 func _when(unix: float) -> String:
@@ -387,12 +390,21 @@ func _run_text(d: Dictionary) -> String:
 
 
 func _on_reset_pressed() -> void:
+	if Features.on("confirm_actions"):
+		ConfirmPanel.ask(self, Loc.t("รีเซ็ตความคืบหน้า"), Loc.t("ลบไอดีนี้ทั้งหมด: รถ ลูกเรือ ของ ทุกรุ่น แต้มวิจัย และบันทึก แล้วกลับไปหน้าแรก ย้อนคืนไม่ได้ (ค่าตั้งค่ายังอยู่)"), Loc.t("ยืนยันลบทั้งหมด"), Settings.reset_progress)
+		return
 	if _reset_t <= 0.0:
 		_reset_t = RESET_CONFIRM_SEC
 		_say(Loc.t("แตะปุ่มแดงอีกครั้งภายใน %d วินาทีเพื่อยืนยัน") % int(RESET_CONFIRM_SEC), UIKit.C_RED)
 		return
 	_reset_t = 0.0
 	Settings.reset_progress()
+
+
+func _confirm_import(text: String) -> void:
+	if not is_open:
+		return
+	ConfirmPanel.ask(self, Loc.t("นำเข้าเซฟจากไฟล์"), Loc.t("ไฟล์นี้จะทับรถ ลูกเรือ ของ และความคืบหน้าปัจจุบัน ย้อนคืนไม่ได้ ควรส่งออกเซฟเก็บไว้ก่อน"), Loc.t("นำเข้าและแทนที่เซฟ"), func(): Settings.apply_import(text))
 
 
 func _process(delta: float) -> void:

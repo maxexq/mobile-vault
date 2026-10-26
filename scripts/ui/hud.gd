@@ -30,6 +30,8 @@ var hull_bar: ProgressBar
 var go_btn: Button
 var biome_lbl: Label
 var toast_box: VBoxContainer
+var hull_alert: HullAlert     # MV-250: red frame + strip before the hull breaks
+var _hull_col := Color.TRANSPARENT
 var banner: PanelContainer
 var banner_lbl: Label
 var biome_bar: BiomeBar
@@ -74,6 +76,7 @@ var _god_btn: Button
 var tutorial_overlay: TutorialOverlay
 var tip_card: TipCard
 var settings_panel: SettingsPanel
+var confirmation: ConfirmPanel
 var _settings_btn: Button
 signal zoom_pressed
 signal xray_toggled(on: bool)
@@ -126,6 +129,8 @@ func _ready() -> void:
 	toast_box = UIKit.vbox(2)
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toast_box)
+	hull_alert = HullAlert.new()
+	add_child(hull_alert)
 	_build_banner()
 	resized.connect(_apply_layout)
 
@@ -197,6 +202,8 @@ func _ready() -> void:
 	tip_card = TipCard.new()
 	tip_card.hud = self
 	add_child(tip_card)
+	confirmation = ConfirmPanel.new()
+	add_child(confirmation)
 
 
 func _set_hud_visible(v: bool) -> void:
@@ -499,6 +506,7 @@ func _apply_layout() -> void:
 		_view_box.position = Vector2(M, _top.position.y + _top.size.y + 2)
 		boss_bar.position = Vector2(M + 60, _top.position.y + _top.size.y + 2)
 		boss_bar.size = Vector2(vp.x - 52 - M * 2 - 160, 32)
+	hull_alert.place(M, _bottom.position.y, (vp.x - M * 2) if _portrait else minf(360.0, vp.x - 52 - M * 2))
 	# below the boss bar and the toasts that stack under it, in the open sky
 	boss_intro.band_y = roundf(maxf(boss_bar.position.y + BossBar.H + 14.0, vp.y * 0.36))
 	_place_toasts()
@@ -556,6 +564,7 @@ var _combat_t := 0.0
 func _process(d: float) -> void:
 	if not Game.started:
 		return
+	_update_hull_bar()
 	_combat_t -= d
 	if _combat_t <= 0.0:
 		_combat_t = 0.5
@@ -571,6 +580,24 @@ func _process(d: float) -> void:
 		_refresh_hazards()
 		_refresh_expedition()
 		_refresh_door()
+
+
+## MV-250: the hull bar follows every hit (it used to move only on travel events, so combat damage didn't show);
+## the fill style changes only with its colour, and blinks while the hull warning is CRITICAL
+func _update_hull_bar() -> void:
+	if Game.s.is_empty():
+		return
+	var hp := clampf(float(Game.s.hull) / maxf(1.0, Game.hull_max()), 0.0, 1.0)
+	if not is_equal_approx(hull_bar.value, hp):
+		hull_bar.value = hp
+	var col: Color = UIKit.C_GREEN if hp > 0.5 else (UIKit.C_GOLD if hp > 0.25 else UIKit.C_RED)
+	if col != _hull_col:
+		_hull_col = col
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = col
+		hull_bar.add_theme_stylebox_override("fill", fill)
+	var blink := hull_alert.stage >= HullAlert.CRITICAL and int(Time.get_ticks_msec() / 400) % 2 == 1
+	hull_bar.modulate.a = 0.35 if blink else 1.0
 
 
 func _refresh_res() -> void:
@@ -595,11 +622,7 @@ func _refresh_travel() -> void:
 		return
 	var b := Data.biome(Game.s.biome)
 	biome_lbl.text = b.th + ((Loc.t(" ·รอบ%d") % (int(Game.s.lap) + 1)) if int(Game.s.lap) > 0 else "")
-	hull_bar.value = float(Game.s.hull) / Game.hull_max()
-	var fill := StyleBoxFlat.new()
-	var hp := hull_bar.value
-	fill.bg_color = UIKit.C_GREEN if hp > 0.5 else (UIKit.C_GOLD if hp > 0.25 else UIKit.C_RED)
-	hull_bar.add_theme_stylebox_override("fill", fill)
+	_update_hull_bar()
 	go_btn.icon = Atlas.icon("pause" if Game.s.traveling else "play")
 	UIKit.style_button(go_btn, "gray" if Game.s.traveling else "green")
 	_refresh_status()
@@ -672,6 +695,11 @@ func _refresh_door() -> void:
 		var c := Inspection.current()
 		_door_lbl.text = Loc.t("มีคนเคาะประตู! %s [%s] · %s") % [c.name, Inspection.GRADES[c.grade].th, Game.fmt_time(float(c.wait))]
 		_door_box.modulate.a = 1.0 if int(Time.get_ticks_msec() / 500) % 2 == 0 else 0.75
+		# MV-244: someone flagged the vehicle down: it parks, and the door window opens once nothing else is showing
+		# (marked on the stranger, not by cid: the cid counter starts again with a new run)
+		if Inspection.halting() and bool(c.get("halt", false)) and not bool(c.get("auto_shown", false)) and not any_modal_open():
+			c["auto_shown"] = true
+			open_door()
 
 
 func open_door() -> void:
@@ -825,7 +853,8 @@ func _refresh_threat(boss: bool) -> void:
 func set_closeup_mode(on: bool) -> void:
 	if not Game.started:
 		return
-	for c in [_info_row, _route_row, _combat_box, _bottom, _tools]:
+	# MV-482: the view buttons too: they sat on the zoomed room's corner
+	for c in [_info_row, _route_row, _combat_box, _bottom, _tools, _view_box]:
 		c.visible = not on
 	_top.reset_size()
 	_closeup_on = on
@@ -878,6 +907,8 @@ func _touch_pass_later(n) -> void:
 
 
 func any_modal_open() -> bool:
+	if confirmation != null and confirmation.is_open:
+		return true
 	for k in panels:
 		if panels[k].is_open:
 			return true
@@ -890,6 +921,8 @@ func _sync_god_btn() -> void:
 
 
 func _unhandled_key_input(e: InputEvent) -> void:
+	if confirmation.is_open:
+		return
 	if Dev.unlocked and e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_F1 or e.keycode == KEY_QUOTELEFT):
 		if panels.god.is_open:
 			panels.god.close()

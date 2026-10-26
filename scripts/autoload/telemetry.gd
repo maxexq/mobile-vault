@@ -10,6 +10,7 @@ extends Node
 ##    can turn it off any time (Settings "telemetry", ตั้งค่า > ความเป็นส่วนตัว). Logging starts at the first session
 ##    it runs in: older local entries are never uploaded
 ## Switch cloud_logs; tune logs.flush_sec, logs.batch. GOD → ระบบ → CLOUD LOGS.
+## Requests go through the Outbox lane (MV-424): behind the save, and paused while the server is held off.
 
 const FLUSH_SEC := 60.0
 const BATCH := 100
@@ -22,7 +23,7 @@ var _t := 0.0
 
 
 func _ready() -> void:
-	Save.flush_requested.connect(flush)
+	Save.flush_requested.connect(_on_hide)
 
 
 ## the player agreed (setting on), the build allows it and the cloud is signed in
@@ -37,8 +38,14 @@ func _process(delta: float) -> void:
 		_notice()
 		return
 	_t += delta
-	if _t >= Features.num("logs.flush_sec", FLUSH_SEC):
+	# MV-424: while the server is held off the batch waits in the Trace (nothing is lost) and goes once it opens
+	if _t >= Features.num("logs.flush_sec", FLUSH_SEC) and Outbox.open(Outbox.SUPABASE):
 		_t = 0.0
+		flush()
+
+
+func _on_hide() -> void:
+	if Outbox.open(Outbox.SUPABASE):
 		flush()
 
 
@@ -48,7 +55,7 @@ func _notice() -> void:
 		return
 	Cloud.meta.log_notice = true
 	Cloud._save_meta()
-	Game.toast.emit("เกมส่งบันทึกการเล่นพร้อมไอดีผู้เล่นไปที่เซิร์ฟเวอร์ เพื่อแก้บั๊กและปรับเกม ปิดได้ที่ ตั้งค่า > ความเป็นส่วนตัว", "info")
+	Game.toast.emit("เกมส่งบันทึกการเล่นพร้อมไอดีผู้เล่นไปที่เซิร์ฟเวอร์ และสถิติการเล่นแบบไม่ระบุตัวตนไปที่ GameAnalytics เพื่อแก้บั๊กและปรับเกม ปิดได้ที่ ตั้งค่า > ความเป็นส่วนตัว", "info")
 	Trace.rec("session", "log notice shown")
 
 

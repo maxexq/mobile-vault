@@ -7,6 +7,8 @@
 | **production** | `main` | ผู้เล่นจริง | `https://apocarlypse-mobile-vault.vercel.app/` | โปรเจกต์ **prod** (ของเดิม) |
 | **UAT** | `uat` | เทสแบบเปิด (ผู้เล่นทดสอบ alpha / beta) | `https://apocarlypse-mobile-vault-git-uat-<ทีม>.vercel.app/` | โปรเจกต์ **test** |
 | **staging** | `staging` | เทสภายใน (ทีม) | `https://apocarlypse-mobile-vault-git-staging-<ทีม>.vercel.app/` | โปรเจกต์ **test** |
+
+> **กำลังย้ายไป Cloudflare Pages (MV-499):** ใช้คู่กับ Vercel จนกว่าจะตรวจผ่าน URL ของ Pages: `main` → `https://apocarlypse-mobile-vault.pages.dev/`, `uat` → `https://uat.apocarlypse-mobile-vault.pages.dev/`, `staging` → `https://staging.apocarlypse-mobile-vault.pages.dev/` ขั้นตอนตั้งค่า: [hosting-cloudflare.md](hosting-cloudflare.md)
 | **dev** | branch งาน / PR preview / เครื่องตัวเอง | นักพัฒนา | URL preview ของแต่ละ PR | โปรเจกต์ **test** |
 
 - **บิลด์เดียวใช้ได้ทุกที่:** เกมดูชื่อโดเมนของหน้าเว็บแล้วรู้เองว่าอยู่ env ไหน (`config/environments.json`) จึง merge `staging` → `uat` → `main` ได้โดยไม่ต้อง export ใหม่ และไม่มีทางเอาค่าของ staging หลุดไป production
@@ -60,6 +62,9 @@
 6. Project Settings → API → คัดลอก **Project URL** และ **anon / publishable key** (ห้ามใช้ service_role)
 
 ### 4. `cloud_config.json` บนเครื่องที่ export (git-ignore ไม่ขึ้น git)
+> MV-423 / MV-426: ใส่ **game key** ของ GameAnalytics ไว้ในไฟล์เดียวกันที่ `"analytics": {"prod": {"game_key"}, "test": {"game_key"}}` (สร้างเกม 2 เกมใน GameAnalytics: ของจริง + ทดสอบ) ดูตัวอย่างใน `cloud_config.example.json` ไม่ใส่ = ไม่ส่งสถิติ
+> **ห้ามใส่ secret key ในไฟล์นี้** เพราะไฟล์นี้ถูกรวมเข้าไปในบิลด์ และ repo เป็นสาธารณะ ให้ใส่ใน Vercel → Project Settings → Environment Variables แทน (ทุก environment): `GA_GAME_KEY_PROD`, `GA_SECRET_PROD`, `GA_GAME_KEY_TEST`, `GA_SECRET_TEST` แล้ว `api/ga.mjs` จะเซ็นให้
+
 เปลี่ยนเป็นรูปแบบใหม่ (ดู `cloud_config.example.json`):
 ```json
 {

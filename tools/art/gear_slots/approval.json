@@ -1,0 +1,18 @@
+{
+  "status": "Approved by Parames; queued for Claude implementation",
+  "date": "2026-10-26",
+  "epic": "MV-473",
+  "integration": "MV-481",
+  "assets": {
+    "ui_gear_slot_frame": "MV-474",
+    "fx_gear_common": "MV-475",
+    "fx_gear_uncommon": "MV-476",
+    "fx_gear_rare": "MV-477",
+    "fx_gear_epic": "MV-478",
+    "fx_gear_legendary": "MV-479",
+    "fx_gear_mythic": "MV-480"
+  },
+  "approved_gif_sha256": "4240b7534ef425576f7ce880109abe29bbbc9d91cbc9f7ef3aa52e18a68b5a55",
+  "approved_preview": "tools/art/micro/previews/equipment-slots-v3-animated/all-rarities-neon-aura.gif",
+  "scope": "Validated art specs and implementation tickets created. No game implementation, commit, PR or deployment performed."
+}

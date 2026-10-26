@@ -3,7 +3,7 @@
 # Used by .github/workflows/discord-notify.yml. Needs only bash, jq and curl (all on
 # ubuntu-latest runners).
 #
-#   EVENT_NAME   github.event_name (pull_request_target, pull_request_review, status,
+#   EVENT_NAME   github.event_name (pull_request_target, pull_request_review, status, check_run,
 #                deployment_status, workflow_run, workflow_dispatch)
 #   EVENT_PATH   path to the event JSON (GITHUB_EVENT_PATH)
 #   DISCORD_WEBHOOK_URL   repo secret; when empty the script prints a notice and exits 0
@@ -118,6 +118,34 @@ case "$EVENT_NAME" in
     [ "$env_name" = "Production" ] && [ "$state" = "success" ] && \
       add_field "เว็บ" "https://apocarlypse-mobile-vault.vercel.app/" false
     add_field "Commit message" "$(short "$(ev .commit.commit.message | head -n1)" 200)" false ;;
+
+  check_run)
+    # Cloudflare Pages (MV-499) reports deploys as a check run "Cloudflare Pages"; other apps' runs aren't news
+    name=$(ev .check_run.name); conclusion=$(ev .check_run.conclusion)
+    [[ "$name" == "Cloudflare Pages"* ]] || { echo "check run '$name' not notified"; exit 0; }
+    branch=$(ev .check_run.check_suite.head_branch)
+    case "$branch" in main) env_name=Production ;; uat) env_name=UAT ;; staging) env_name=Staging ;; *) env_name=Preview ;; esac
+    case "$conclusion" in
+      success)
+        if [ "${SKIP_PREVIEW_SUCCESS:-}" = "true" ] && [ "$env_name" = "Preview" ]; then
+          echo "Preview success skipped (SKIP_PREVIEW_SUCCESS)"; exit 0
+        fi
+        title="🚀 Deploy สำเร็จ ($env_name · Cloudflare)"; color=$GREEN ;;
+      failure|timed_out|action_required) title="🔥 Deploy ล้มเหลว ($env_name · Cloudflare)"; color=$RED ;;
+      *) echo "Cloudflare conclusion '$conclusion' not notified"; exit 0 ;;
+    esac
+    url=$(ev .check_run.details_url)
+    desc=$(short "$(ev .check_run.output.summary)" 200)
+    sha=$(ev .check_run.head_sha)
+    [ -n "$branch" ] && add_field "Branch" "\`$branch\`"
+    add_field "Commit" "[\`${sha:0:7}\`](https://github.com/$REPO/commit/$sha)"
+    case "$env_name" in
+      Production) site="https://apocarlypse-mobile-vault.pages.dev/" ;;
+      UAT) site="https://uat.apocarlypse-mobile-vault.pages.dev/" ;;
+      Staging) site="https://staging.apocarlypse-mobile-vault.pages.dev/" ;;
+      *) site="" ;;
+    esac
+    [ -n "$site" ] && [ "$conclusion" = "success" ] && add_field "เว็บ" "$site" false ;;
 
   workflow_run)
     conclusion=$(ev .workflow_run.conclusion); name=$(ev .workflow_run.name)

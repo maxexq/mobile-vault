@@ -39,6 +39,8 @@ var _t := 0.0
 var _is_dark := false
 var ambience: RoomAmbience
 var _amb_ok := false
+var anims: Array = []        # MV-429: the room's own RoomAnim strips (expansion rooms), rebuilt only when the type changes
+var _anim_type := ""
 static var _add_mat: CanvasItemMaterial
 
 
@@ -89,7 +91,7 @@ func refresh() -> void:
 		tex_key = wide_key(t).trim_prefix("room_")
 	if tex_key != _type:
 		_type = tex_key
-		interior.texture = Atlas.tex("room_" + tex_key)
+		interior.texture = Atlas.tex(Data.room_art(tex_key))
 		_reveal_h = -1
 	_reveal.visible = site
 	while _scaffolds.size() < cell_xs.size():
@@ -108,6 +110,7 @@ func refresh() -> void:
 	_amb_ok = unlocked and not site and cell_xs.size() == 1 and t != "locked"
 	if _amb_ok:
 		ambience.setup(t)
+	_refresh_anims(t if _amb_ok else "")
 	_update_reveal()
 	var want: Array = []
 	if unlocked and t != "empty":
@@ -236,7 +239,7 @@ func _update_reveal() -> void:
 	if h <= 0:
 		_reveal.texture = null
 		return
-	_reveal.texture = Atlas.sub("room_" + str(Game.s.rooms[slot].type), Rect2(0, H - h, W, h))
+	_reveal.texture = Atlas.sub(Data.room_art(str(Game.s.rooms[slot].type)), Rect2(0, H - h, W, h))
 	_reveal.position = Vector2(0, H - h)
 
 
@@ -359,3 +362,22 @@ func _draw_construction() -> void:
 func _draw_plus(c: Vector2, col: Color) -> void:
 	_top.draw_rect(Rect2(c.x - 1, c.y - 6, 3, 13), col)
 	_top.draw_rect(Rect2(c.x - 6, c.y - 1, 13, 3), col)
+
+
+## MV-429: one RoomAnim per strip the room type declares (RoomX.anims), placed between the room art and the crew.
+## Rebuilt only when the room type changes; a room that isn't finished, is wide or is locked has none.
+func _refresh_anims(t: String) -> void:
+	if t == _anim_type:
+		return
+	_anim_type = t
+	for a in anims:
+		a.queue_free()
+	anims.clear()
+	if t == "":
+		return
+	for spec in RoomX.anims(t):
+		var a := RoomAnim.new()
+		add_child(a)
+		move_child(a, actors_root.get_index())
+		a.setup(slot, spec)
+		anims.append(a)

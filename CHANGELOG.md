@@ -8,11 +8,56 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
-### Fixed
-- The engine room's "park to rest" button works again when the engine is already cool; it now holds until you tap "set off again" (MV-419)
-- You can no longer tear down (or split) living quarters when your crew would end up with fewer beds than people; the button says how many beds would be left (MV-420)
+## [4.7.0-alpha.3] - 2026-10-26
+
+### Merged pull requests
+- MV-275: refine all 92 native game icons ([#74](https://github.com/maxexq/mobile-vault/pull/74))
+- MV-189: approved V2 scene art (23 events, 6 encounters, 7 interiors, 13 landmarks) ([#75](https://github.com/maxexq/mobile-vault/pull/75))
+- MV-247: raw food (crops + meat) and sensible recipe inputs ([#76](https://github.com/maxexq/mobile-vault/pull/76))
+- MV-369: industrial map: wide parallax, game-clock sky, sun/moon and pixel ambience ([#77](https://github.com/maxexq/mobile-vault/pull/77))
+- MV-378: checkpoint boss no longer respawns forever after a save load ([#78](https://github.com/maxexq/mobile-vault/pull/78))
+- MV-47: loot pity - guaranteed Epic+ / Legendary+ after bad luck ([#79](https://github.com/maxexq/mobile-vault/pull/79))
+- MV-387: boss / warlord / elite entrance animation and effects ([#80](https://github.com/maxexq/mobile-vault/pull/80))
+- MV-388: vehicle detail phase 1 - wheels, shell wear, leaf springs ([#81](https://github.com/maxexq/mobile-vault/pull/81))
+- MV-388: vehicle detail phase 3 - flag, chain, mudflap, exhaust puffs, roof drip ([#83](https://github.com/maxexq/mobile-vault/pull/83))
+- MV-388: vehicle detail phase 4 - environment micro sprites (art only) ([#84](https://github.com/maxexq/mobile-vault/pull/84))
+- MV-419: engine panel park-to-rest works on a cool engine ([#85](https://github.com/maxexq/mobile-vault/pull/85))
+- MV-420: block demolishing living quarters when the crew would outnumber the beds ([#86](https://github.com/maxexq/mobile-vault/pull/86))
+- MV-418: improve button skins while preserving existing UI ([#87](https://github.com/maxexq/mobile-vault/pull/87))
+- MV-421: document the live branching strategy (staging / uat / main) ([#88](https://github.com/maxexq/mobile-vault/pull/88))
+- MV-423: GameAnalytics dashboards via the Collection API (keep Supabase logs) ([#90](https://github.com/maxexq/mobile-vault/pull/90))
+- MV-424: shared server outbox (backoff with jitter on 429/5xx) ([#91](https://github.com/maxexq/mobile-vault/pull/91))
+- MV-425: staging cloud: build with prod + test Supabase projects ([#92](https://github.com/maxexq/mobile-vault/pull/92))
+- MV-426: signing function's 403 says what the deployment sees ([#94](https://github.com/maxexq/mobile-vault/pull/94))
+- MV-422: confirm destructive player actions before applying them ([#95](https://github.com/maxexq/mobile-vault/pull/95))
+- MV-243: no "speed up and flee" while the vehicle can't move ([#96](https://github.com/maxexq/mobile-vault/pull/96))
+- MV-427: situational speech bubbles for fights, exploring and travel ([#97](https://github.com/maxexq/mobile-vault/pull/97))
+- MV-244: a stranger flags the vehicle down; it pulls over before the door opens ([#98](https://github.com/maxexq/mobile-vault/pull/98))
+- MV-429: room expansion foundation + permanent room art-style reference ([#99](https://github.com/maxexq/mobile-vault/pull/99))
+- MV-430: Salvagers' Saloon room (shared supper, bonds, steam) ([#100](https://github.com/maxexq/mobile-vault/pull/100))
+- MV-250: clear hull warning before the vehicle breaks down ([#101](https://github.com/maxexq/mobile-vault/pull/101))
+- MV-127: morale stages (Depressed, Broken, leaving) and talk action ([#102](https://github.com/maxexq/mobile-vault/pull/102))
+- MV-266: responsive layout for phones, tablets, laptops and large screens ([#103](https://github.com/maxexq/mobile-vault/pull/103))
+- MV-113: hold 60 fps on busy vehicles, 30/60/120 fps setting ([#104](https://github.com/maxexq/mobile-vault/pull/104))
+- MV-482: windows fit their content height; room close-up shows the whole room ([#105](https://github.com/maxexq/mobile-vault/pull/105))
+- MV-473: approved steel equipment slots and animated rarity light ([#106](https://github.com/maxexq/mobile-vault/pull/106))
+- MV-483: compact trait cards with positive / trade-off light ([#107](https://github.com/maxexq/mobile-vault/pull/107))
+- MV-499: Cloudflare Pages hosting alongside Vercel ([#108](https://github.com/maxexq/mobile-vault/pull/108))
+
+### Added
+- Crew morale has stages now: a Depressed survivor works slower, a Broken one sits crying in the quarters and won't take orders, and if nobody helps they slip away from the vehicle at night (they no longer steal on the way out). Open a survivor's dossier and have a friend talk them up; the Salvagers' Saloon supper helps the Depressed too (MV-127)
+- A clear warning before the vehicle breaks down: at 50 %, 25 % and 10 % hull you get a message saying what happens next and a light screen shake; from 25 % the phone buzzes, a red frame pulses round the screen and a strip offers a one-tap repair. The hull bar now drops with every hit and blinks when it's critical (MV-250)
+- New room: the Salvagers' Saloon (Vault Lv.2). Seat one or two crew for a shared supper (8 food, 4 water): they take a break from work, come back happier and closer, and have a little chat afterwards. Steam rises from a cup while they eat (MV-430)
+- Confirmation windows explain what will be lost before room demolition, construction cancellation, gear salvage/synthesis, save replacement/reset and other irreversible actions (MV-422).
+- The crew now speaks up when things happen: raid warnings, a boss showing up, someone badly hurt, a kill, the van taking hits, the expedition team leaving and coming back, a new area, finished rooms; the main characters say it in their own voice, and bubbles no longer cover each other (MV-427)
 
 ### Changed
+- Equipment slots are riveted worn-steel frames now, and gear glows by rarity: a quiet silver rim for Common, a green pulse, cyan motes, violet highlights, amber embers and a crimson double-beat with sparks for Mythic. Empty slots show a grey silhouette of what goes there (MV-473)
+- Crew traits show as compact cards in the dossier: icon, name and the real effect; a downside trait is marked with a warning and shows its cost in red while keeping its upside (MV-483)
+- Smoother play: the game does its economy maths 20 times a second instead of on every frame and much more cheaply, so busy vehicles hold 60 FPS, and Settings now offers 30 / 60 / 120 FPS (120 on high-refresh screens) (MV-113)
+- Windows are as tall as what they show (no empty space at the bottom) and grow or shrink smoothly when their content changes. Zooming into a room now shows the whole room with nothing on top of it, centred on phones above the room panel (MV-482)
+- Anonymous play statistics (maps reached, rooms built, events, play time) now also go to GameAnalytics so we can see how the game is played; the privacy notice and the Settings switch cover it, and turning it off stops both (MV-423)
+- Buttons use worn painted-steel faces with small fasteners and matching hover, pressed and disabled states; existing windows, layouts, fonts and hit areas stay the same (MV-418)
 - The vehicle moves a little even when parked: the roof flag waves, a rear chain sways, a mudflap flutters in the wind, the exhaust puffs instead of smoking non-stop (electric and fusion engines stay clean), and rain drips off the roof (MV-388)
 - The engine room comes alive: a turning cooling fan, a quivering coolant hose, detailed engine castings, and wisps of steam when the engine runs hot (MV-388)
 - More detailed vehicles: new tyre tread and rims on road, off-road and rail wheels, chipped and rusty pillars, weld patches, fuel-tank straps, a caged front lamp, riveted train bogies and leaf springs over the wheels (MV-388)
@@ -23,6 +68,11 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - New artwork for every road event, expedition encounter, expedition interior and landmark (49 images), in the same dark 16-bit style with the crew and the truck as you know them (MV-189)
 
 ### Fixed
+- Windows fit every screen: the build menu no longer slides off to the right on wide screens, no window can run past a screen edge, the room close-up never covers the room on narrow laptops, and tablets / smaller laptop windows get a readable 2× interface instead of tiny 1× (MV-266)
+- A stranger who turns up while you drive now flags the vehicle down: it pulls over and the door window opens; let them in, turn them away, or "drive past" and leave them by the road (MV-244)
+- You can no longer "speed up and flee" from wolves or bugs while the vehicle can't move (waiting for the expedition team, out of power, broken hull, engine resting, parked); the button says why, the crew fights instead when time runs out, and with nobody aboard they lock the doors and brace. The stray dog's "drive away" is now "leave it be" (MV-243)
+- The engine room's "park to rest" button works again when the engine is already cool; it now holds until you tap "set off again" (MV-419)
+- You can no longer tear down (or split) living quarters when your crew would end up with fewer beds than people; the button says how many beds would be left (MV-420)
 - Beating the checkpoint boss at the end of a map now opens the road to the next map; after reloading the game it used to respawn forever. Saves stuck at a checkpoint are repaired on load (MV-378)
 
 ## [4.7.0-alpha.2] - 2026-10-24

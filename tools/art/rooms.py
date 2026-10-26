@@ -725,8 +725,57 @@ def gen_rooms():
         if lx is not None:
             ceiling_lamp(img, lx)
         add("room_" + k, img)
+    gen_rooms_x()
     gen_construction()
     gen_wide_rooms()
+
+
+# ------------------------------------------------------------------ MV-428 room expansion (approved native art)
+# Parames approved finished 64x52 rooms (docs/art/room-style-reference.md). Each one is committed as its native PNG in
+# tools/art/rooms_x/ and used as is (already grimed and lit, so no grime()/light() pass): a full regeneration
+# reproduces the approved pixels. The hash guards against an accidental edit; a redesign changes the file and the hash.
+RX_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rooms_x")
+RX_ROOMS = {
+    "room_salvagers_saloon": "8151d1be66b74c911700800b861f9c6236714f94aa172dae901858538809c16f",   # MV-440
+}
+
+
+def rx_room(name):
+    import hashlib
+    p = os.path.join(RX_DIR, name + ".png")
+    with open(p, "rb") as f:
+        h = hashlib.sha256(f.read()).hexdigest()
+    if h != RX_ROOMS[name]:
+        raise ValueError(f"{name}.png changed (sha256 {h}); update RX_ROOMS only for an approved redesign")
+    img = Image.open(p).convert("RGBA")
+    if img.size != (RW, RH):
+        raise ValueError(f"{name}.png is {img.size}, a room is {(RW, RH)}")
+    return img
+
+
+def room_salvagers_saloon():
+    return rx_room("room_salvagers_saloon")
+
+
+def fx_room_saloon_steam(f):
+    """MV-441: 6x8 steam over the right-hand cup (cup at room x24, y26; strip at 22,19). Frame 0 is the empty
+    rest frame; two 1px wisps rise a pixel a frame, drift apart and fade out, then the loop restarts."""
+    img = new(6, 8)
+    for x, y, col in (
+        (),
+        ((2, 6, "cream2"), (2, 5, "cream1"), (3, 4, "gray4")),
+        ((2, 5, "cream1"), (1, 4, "cream2"), (3, 3, "cream1"), (4, 2, "gray4")),
+        ((1, 3, "gray4"), (1, 2, "gray3"), (4, 1, "gray3")),
+    )[f]:
+        px(img, x, y, c(col))
+    return img
+
+
+def gen_rooms_x():
+    for name in RX_ROOMS:
+        add(name, globals()[name]())
+    for f in range(4):
+        add("fx_room_saloon_steam_%d" % f, fx_room_saloon_steam(f))
 
 
 # ------------------------------------------------------------------ v4.3 construction site

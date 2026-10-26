@@ -6,6 +6,7 @@ extends Node
 
 signal changed(key: String)
 signal import_failed(reason: String)
+signal import_ready(text: String)
 
 const KEY := "mobile_vault_settings_v1"
 const FILE_PATH := "user://settings.json"
@@ -20,7 +21,7 @@ const DEFAULTS := {
 	"zoom": "auto",          # camera default: auto | wide | normal
 	"crt": true,             # CRT scanlines / vignette overlay
 	"fx_gpu": true,          # GPU particles (pretty) / CPU (weak phones)
-	"fps": 60,               # 60 | 30 (battery saver)
+	"fps": 60,               # 60 | 30 (battery saver) | 120 (high refresh screens, MV-113)
 	"fullscreen": false,
 	"shake": true,
 	"car_shake": true,       # the vehicle body rumbles with the engine and bumps on the road (MV-176)
@@ -31,6 +32,8 @@ const DEFAULTS := {
 	"event_timer": "normal",  # road events: normal | long (x2 time) | off (no timer) (MV-134)
 	"telemetry": true,       # send play logs with the player id to the game's server (Telemetry, MV-116); opt-out
 }
+
+const FPS_CHOICES := [30, 60, 120]    # MV-113: the frame-rate cap a player can pick
 
 var v: Dictionary = DEFAULTS.duplicate()
 var _import_poll := false
@@ -76,7 +79,7 @@ func _merge(d: Dictionary) -> void:
 			v[k] = clampf(float(d[k]), 0.0, 1.0)
 		elif typeof(d[k]) == typeof(def):
 			v[k] = d[k]
-	v.fps = 30 if int(v.fps) == 30 else 60
+	v.fps = int(v.fps) if int(v.fps) in FPS_CHOICES else 60
 	if not v.ui_scale in ["auto", "small"]:
 		v.ui_scale = "auto"
 	if not v.zoom in ["auto", "wide", "normal"]:
@@ -230,7 +233,10 @@ func _finish_import(text: String) -> void:
 	if why != "":
 		import_failed.emit(why)
 		return
-	apply_import(text)
+	if Features.on("confirm_actions"):
+		import_ready.emit(text)
+	else:
+		apply_import(text)
 
 
 ## erases progress (settings stay) and goes back to the title screen
