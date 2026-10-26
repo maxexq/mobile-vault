@@ -18,6 +18,7 @@ var frame_color := UIKit.C_LINE
 var dim_alpha := 0.6
 var is_open := false
 var margin := 6
+var centered := true        # MV-266: keep the window in the middle of the screen at its real size (the close-up docks)
 var media: PanelContainer   # illustration frame built by the last media_layout()
 
 
@@ -32,6 +33,7 @@ func _ready() -> void:
 	add_child(dim)
 	box = PanelContainer.new()
 	box.add_theme_stylebox_override("panel", UIKit.window_style())
+	box.resized.connect(_recenter)
 	add_child(box)
 	var v := UIKit.vbox(4)
 	box.add_child(v)
@@ -79,7 +81,19 @@ func _layout() -> void:
 	var sz := Vector2(minf(max_size.x, vp.x - margin * 2), minf(max_size.y, vp.y - margin * 2)).floor()
 	box.custom_minimum_size = sz
 	box.size = sz
-	box.position = ((vp - sz) * 0.5).floor()
+	_recenter()
+
+
+## MV-266: place on the box's REAL size: content wider than max_size (the build menu's two columns) grows the box,
+## and placing it by the requested size pushed it off to the right. Centred windows stay centred; docked ones
+## (centered = false, e.g. the room close-up) keep their spot. Either way the window is kept inside the screen.
+func _recenter() -> void:
+	if box == null:
+		return
+	var vp := get_viewport_rect().size
+	if centered:
+		box.position = ((vp - box.size) * 0.5).floor()
+	box.position = box.position.clamp(Vector2.ZERO, (vp - box.size).max(Vector2.ZERO)).floor()
 
 
 ## "EN TITLE / ไทย" -> pixel tag line + Thai heading
