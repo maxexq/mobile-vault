@@ -571,6 +571,27 @@ func trait_step() -> void:
 	Trace.rec("god", "trait step %d" % TraitFx.current_phase())
 
 
+# ------------------------------------------------------------------ MV-500 / MV-129 seeded world map
+## a brand-new world for this run from a random seed (GOD only: in play a world is made once per run / lap)
+func world_new(seed_text: String = "") -> void:
+	var w := WorldMap.create(seed_text if seed_text != "" else WorldMap.random_seed())
+	act("world new", {"seed": w.seed})
+
+
+## regenerate from the saved seed and compare with the saved graph (nothing is replaced); read-only, not cheated
+func world_verify() -> bool:
+	var w := WorldMap.world()
+	if w.is_empty():
+		return false
+	var again := WorldMap.generate(str(w.seed), int(w.lap))
+	# both through JSON first: a loaded save holds floats (84.0) where a fresh world holds ints (84)
+	var norm := func(x): return JSON.stringify(JSON.parse_string(JSON.stringify(x)))
+	var same: bool = norm.call(again.nodes) == norm.call(w.nodes) and norm.call(again.edges) == norm.call(w.edges)
+	Trace.rec("god", "world verify", {"seed": w.seed, "same": same})
+	Game.toast.emit("seed %s สร้างซ้ำได้โลกเดิม" % w.seed if same else "seed %s สร้างซ้ำแล้วไม่ตรง!" % w.seed, "info" if same else "warn")
+	return same
+
+
 func finish_construction() -> void:
 	for slot in Game.s.rooms.size():
 		if Game.is_constructing(slot):

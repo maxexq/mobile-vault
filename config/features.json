@@ -30,6 +30,7 @@
     "gear_slot_vfx": true,
     "trait_card_style": true,
     "trait_card_vfx": true,
+    "seeded_world_map": false,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,

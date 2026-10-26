@@ -196,6 +196,11 @@ func _run() -> void:
 		await _saloon_test()
 		_finish()
 		return
+	if "--only=world_map" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_map_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -915,6 +920,7 @@ func _run() -> void:
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _world_map_test()
 	await _rooms_x_test()
 	await _saloon_test()
 	await _flagged_test()
@@ -3194,8 +3200,9 @@ func _features_test() -> void:
 		Tutorial.skip()
 	Features.clear_overrides()
 	Features.layers.remote = {}
-	# switches that ship off on purpose: english until all three MV-151 PRs are in
-	var ships_off := ["english"]
+	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
+	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it)
+	var ships_off := ["english", "seeded_world_map"]
 	var all_on := true
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
@@ -7097,3 +7104,73 @@ func _trait_cards_test() -> void:
 	god.close()
 	await wait(0.3)
 	Settings.set_value("tips", keep_tips)
+
+## MV-129 (MV-500 phase 1): the seeded world map is generated the same way from the same seed, holds all six regions
+## (each bordering the next) and all 13 landmarks once, every stop is reachable at Vault 6 and only the first region at
+## Vault 1, border roads carry the gate + warlord, routes are shortest and respect gates, a save round trip keeps it,
+## opening never regenerates it, and the switch off makes no world
+func _world_map_test() -> void:
+	var keep = Game.s.get("world")
+	Game.s.erase("world")
+	_check("world map: switch off (shipped default) = no world", not Features.on("seeded_world_map") and WorldMap.ensure().is_empty() and not Game.s.has("world"))
+	Features.set_override("features", "seeded_world_map", true)
+	var a := WorldMap.generate("ASH-271")
+	var b := WorldMap.generate("ASH-271")
+	var c := WorldMap.generate("RUN-042")
+	_check("world map: same seed = same world, another seed = another", JSON.stringify(a) == JSON.stringify(b) and JSON.stringify(a.nodes) != JSON.stringify(c.nodes)
+		and int(a.gen) == WorldMap.GEN_VERSION)
+	var w := WorldMap.create("ASH-271")
+	_check("world map: six regions, each bordering the next on the 2 x 3 grid", (w.regions as Array).size() == 6 and range(1, 6).all(func(i):
+		var p: Dictionary = w.regions[i - 1]
+		var q: Dictionary = w.regions[i]
+		return absi(int(p.x) - int(q.x)) + absi(int(p.y) - int(q.y)) < 200))
+	var sites := (w.nodes as Array).filter(func(n): return n.has("site")).map(func(n): return str(n.site))
+	var all_sites := Expedition.SITES.keys()
+	_check("world map: all %d landmarks, each once, in its own biome (%d)" % [all_sites.size(), sites.size()], sites.size() == all_sites.size()
+		and all_sites.all(func(id): return sites.count(id) == 1)
+		and (w.nodes as Array).filter(func(n): return n.has("site")).all(func(n): return str(Data.biome(int(n.biome)).id) == str(Expedition.SITES[n.site].biome)))
+	_check("world map: a start in the first region and an exit in the last", WorldMap.node("start").get("biome", -1) == 0
+		and int(WorldMap.node("world_exit").get("biome", -1)) == 5 and str(w.at) == "start")
+	var ids := (w.nodes as Array).map(func(n): return str(n.id))
+	var uniq := {}
+	for id in ids:
+		uniq[id] = true
+	_check("world map: stop and road ids are unique", uniq.size() == ids.size())
+	var r6 := WorldMap.reachable("start", 6)
+	var r1 := WorldMap.reachable("start", 1)
+	_check("world map: every stop reachable at Vault 6 (%d/%d)" % [r6.size(), ids.size()], r6.size() == ids.size())
+	_check("world map: Vault 1 reaches only the first region", r1.keys().all(func(id): return int(WorldMap.node(id).biome) == 0) and r1.size() >= 4)
+	var borders := (w.edges as Array).filter(func(e): return int(WorldMap.node(e.a).biome) != int(WorldMap.node(e.c).biome))
+	_check("world map: 5 border roads, each with the next region's Vault level and the warlord of the one it leaves", borders.size() == 5
+		and borders.all(func(e):
+			var hi := maxi(int(WorldMap.node(e.a).biome), int(WorldMap.node(e.c).biome))
+			return int(e.gate) == int(Data.biome(hi).req) and int(e.boss) == hi - 1))
+	var rt := WorldMap.route("start", "helios", 6)
+	_check("world map: a route reaches the last region (%.1f km, %d stops)" % [float(rt.get("km", 0)), (rt.get("ids", []) as Array).size()], not rt.is_empty()
+		and rt.ids[0] == "start" and rt.ids[-1] == "helios" and (rt.edges as Array).size() == (rt.ids as Array).size() - 1)
+	_check("world map: gates hold (no route to the last region at Vault 3)", WorldMap.route("start", "helios", 3).is_empty())
+	var direct := (w.edges as Array).filter(func(e): return str(e.a) == "market" or str(e.c) == "market")
+	var one: Dictionary = direct[0]
+	var other: String = str(one.c) if str(one.a) == "market" else str(one.a)
+	_check("world map: neighbours route along their road", is_equal_approx(float(WorldMap.route("market", other, 6).km), float(one.km)))
+	var km_total := 0.0
+	for e in w.edges:
+		km_total += float(e.km)
+	_check("world map: roads have sensible lengths (%.1f km in all)" % km_total, (w.edges as Array).all(func(e): return float(e.km) >= 0.1 and float(e.km) < 30.0))
+	# save round trip (JSON turns numbers into floats) and no regeneration on open
+	Game.s.world = JSON.parse_string(JSON.stringify(Game.s.world))
+	var rt2 := WorldMap.route("start", "helios", 6)
+	_check("world map: still routes after a save round trip", not rt2.is_empty() and is_equal_approx(float(rt2.km), float(rt.km)))
+	var snap := JSON.stringify(Game.s.world)
+	WorldMap.ensure()
+	Game.game_started.emit()
+	_check("world map: opening / starting again never regenerates it", JSON.stringify(Game.s.world) == snap)
+	_check("world map: GOD verify regenerates the same world from the saved seed", Dev.world_verify())
+	Dev.world_new("XYZ-001")
+	_check("world map: GOD new world changes the seed", str(WorldMap.world().seed) == "XYZ-001")
+	Features.set_override("features", "seeded_world_map", null)
+	if keep == null:
+		Game.s.erase("world")
+	else:
+		Game.s.world = keep
+
