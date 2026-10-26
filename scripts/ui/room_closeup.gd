@@ -471,7 +471,7 @@ func _request_split() -> void:
 func _build_empty() -> void:
 	set_title(Loc.t("EMPTY SLOT / ช่องว่าง — เลือกห้องที่จะสร้าง"))
 	_section("SCRAP %d" % int(Game.s.res.scrap), Loc.t("วัสดุ"))
-	for t in Data.BUILDABLE:
+	for t in Data.buildable():
 		var def := Data.room_def(t)
 		var ul := Game.room_unlock_level(t)
 		var locked := ul > int(Game.s.vault_level)

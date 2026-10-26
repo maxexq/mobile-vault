@@ -149,6 +149,20 @@ Fallout-Shelter style: two or three rooms of the **same type and level**, side b
 | View | The anchor's `RoomView` spans the cells (actors wander and use equipment across it); the strips the hull's partition / shaft would hide are redrawn above the shell by `Vehicle._sync_large_rooms()`. The close-up frames the whole room (drops to 1× zoom if 3 cells don't fit). |
 | Modules (planned) | Turret bays / defence modules from the modular-chassis design are not in `Data.MERGEABLE`, so they stay single-cell. |
 
+## 4j. Room expansion foundation (MV-428 epic, MV-429)
+
+Ten optional new rooms (Salvagers' Saloon, Scout Dispatch, Decontamination Bay, Companion Den, Jury-Rig Drone Dock, Battery Reserve, Stormwatch Station, Wasteland Barter Counter, Scrapyard Training Cage, Relic & Memory Room) arrive one PR each, every one with its gameplay, its 64x52 background and one micro-animation. Art style: **[docs/art/room-style-reference.md](docs/art/room-style-reference.md)** (approved 2026-10-26; use a real existing room sprite as the visual input). The foundation ships no room by itself.
+
+| Part | How it works |
+|---|---|
+| Registry | `RoomX.DEFS[type]` (`scripts/autoload/room_x.gd`) uses the `Data.ROOMS` fields plus `anims` and `art`. `Data.room_def()` falls back to it and `Data.buildable()` (= `BUILDABLE` + switched-on expansion rooms with art) feeds the build menu and the close-up, so construction levels 1..3 and the two-worker cap work unchanged. Single-cell only: not in `MERGEABLE` until wide art and a wide-job rule exist. |
+| Save | One namespace `Game.s.rx` `{v, seq, jobs}`, made on first use (an old save gains nothing else). No new localStorage keys; account keepsakes (Relic room) only through the existing account envelope. |
+| Jobs | One per room. `RoomX.start_job(slot, kind, sec, cost, data)` checks and pays in one step and stores room type, slot, cost, seed, remaining time, done / claimed. It counts down only while the room is still that type, finished and lit (`paused_why`: off / building / dark), is dropped without refund when the room is demolished or changed, and `claim(id)` hands it out exactly once (repeated taps, double callbacks, JSON float ids). Offline time is the normal capped catch-up and a finished job waits to be claimed. |
+| Animation | `RoomAnim` (`scripts/world/room_anim.gd`): one Sprite2D per strip, between the room art and the crew. It moves only while `RoomX.active(slot, kind)` (job running and lit) and both `rooms_expansion` and `room_ambience` are on; otherwise it holds the rest frame (rest frame + background = the approved room). Its clock runs only while visible and unpaused, with a per-instance phase. One-shot strips return to rest after the last frame. `RoomAnim.reduced()` is the hook for a future reduced-effects setting (none exists yet). |
+| Switch | `rooms_expansion` off: the rooms leave the build menu, jobs and their clocks freeze (no catch-up when it comes back), built rooms and keepsakes stay. |
+| GOD | รถ → ROOM EXPANSION: build any registered room in an empty slot, job list with pause reason, finish / drop all jobs, animation live / rest / active preview and frame step. |
+| Test | `--only=rooms_x` (a stand-in room on radio art + the weld strip). |
+
 ## 4i. v4.4 — strangers at the door (inspection)
 
 Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins (radio, road event, SOS broadcast, expedition loot, boss captive, expedition encounters) goes through `Game.offer_recruit(source)`. Usually they board at once; **rarely (~6 % rare, ~1.5 % very rare)** the stranger is exceptional (top stat 7–9 / 9–11, +2/+4 levels, 2–3 good traits) and waits at the door for inspection instead.

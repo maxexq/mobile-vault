@@ -46,3 +46,8 @@ fractional scaling, so every size is in whole native pixels. Rooms are 64x52, th
 vehicle floor, lit by one caged bulb. A detail that cannot be read at 1x is not worth a ticket.
 
 Ticket text in English; Thai is fine in `notes` and when talking to Parames.
+
+For every future room, read `docs/art/room-style-reference.md` and use the actual existing
+room sprites and approved examples there as visual inputs. Keep the coarse 64x52 style;
+include a separate micro-animation spec for each new furnished room. The old detailed,
+thick-framed concept paintings are superseded by the approved in-game-style references.
