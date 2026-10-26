@@ -557,6 +557,18 @@ func gear_sample(r: int, slot: String, plus: int = 0, lock: bool = false) -> Dic
 			base = str(k)
 			break
 	return {"uid": -1, "base": base, "slot": slot, "rar": r, "ilvl": 5 + r * 4, "plus": plus, "aff": [], "lock": lock}
+# ------------------------------------------------------------------ MV-483 trait cards
+## every trait card's light: "" = live, "still", "off" (read-only, not cheated)
+func trait_preview(mode: String) -> void:
+	TraitFx.preview = mode
+	TraitFx.paused_preview = false
+	Trace.rec("god", "trait preview %s" % mode)
+
+
+## hold every trait card light and move it one phase (read-only)
+func trait_step() -> void:
+	TraitFx.frame_step()
+	Trace.rec("god", "trait step %d" % TraitFx.current_phase())
 
 
 func finish_construction() -> void:

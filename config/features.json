@@ -28,6 +28,8 @@
     "window_fit": true,
     "gear_slot_style": true,
     "gear_slot_vfx": true,
+    "trait_card_style": true,
+    "trait_card_vfx": true,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,

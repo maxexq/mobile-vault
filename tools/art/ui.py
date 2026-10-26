@@ -624,3 +624,177 @@ def gen_gear_slots():
         for rank, name in enumerate(GEAR_RARITIES):
             for i in range(GEAR_PHASES):
                 add("fx_gear_%s%s_%d" % (name, _gear_suffix(w), i), fx_gear_mask(rank, i, w))
+
+
+# ------------------------------------------------------------------ MV-483 trait cards (approved v2 compact + v4 light)
+# A quiet compact trait card (MV-484) and twelve light loops (MV-485..496): six beneficial, six trade-off. The light is
+# a mask in three grey codes (gray2 faint / gray4 lit / gray6 hot) coloured at runtime (TraitFx), so the atlas keeps
+# the master palette. The masks follow the approved preview helper (tools/art/trait_cards/build_preview.py) at native
+# scale: phase (index + rank*2) % 16, the stepped pulse / uneven flicker lookups, glint lengths, mote and ember counts,
+# integer paths. The canonical card is 160x58 in a 172x70 cell (card at 6,6); the game draws the SAME algorithm for a
+# card's real size (scripts/ui/trait_fx.gd, checked against these masks by the autotest).
+TRAIT_W, TRAIT_H, TRAIT_PAD = 160, 58, 6
+TRAIT_FLICKER = [0.62, 0.70, 0.66, 0.84, 0.73, 0.97, 0.76, 0.82, 0.68, 0.73, 0.92, 0.80, 0.66, 0.71, 0.78, 0.68]
+TRAIT_HOT = 1.25
+
+
+def ui_trait_card_frame():
+    """MV-484: charcoal panel, one thin neutral steel outline, a one-pixel corner bevel, a dark 20x20 icon recess.
+    No rivets, plates or nested frames. 9-slice with fixed 3 px corners (the game sizes it to the content)."""
+    w, h = TRAIT_W, TRAIT_H
+    img = new(w, h)
+    for y in range(h):
+        for x in range(w):
+            corner = min(x, w - 1 - x) + min(y, h - 1 - y)
+            if corner < 1:
+                continue
+            d = min(x, y, w - 1 - x, h - 1 - y)
+            if d == 0 or corner == 1:
+                col = "gray4" if (y == 0 or x == 0) and corner > 1 else "gray3"
+            elif d == 1:
+                col = "ol0"
+            else:
+                col = "gray1"
+            px(img, x, y, c(col))
+    return img
+
+
+def _trait_path(x0, y0, x1, y1, ch):
+    v = [(x0 + ch, y0), (x1 - ch, y0), (x1, y0 + ch), (x1, y1 - ch), (x1 - ch, y1), (x0 + ch, y1), (x0, y1 - ch), (x0, y0 + ch)]
+    pts = []
+    for (ax, ay), (bx, by) in zip(v, v[1:] + v[:1]):
+        steps = max(abs(bx - ax), abs(by - ay))
+        for i in range(steps):
+            p = (round(ax + (bx - ax) * i / steps), round(ay + (by - ay) * i / steps))
+            if not pts or pts[-1] != p:
+                pts.append(p)
+    return pts
+
+
+def trait_light(negative, rank, index, w=TRAIT_W, h=TRAIT_H, still=False):
+    """light strengths {(x, y): s} for one phase of one profile, in a (w+12)x(h+12) cell with the card at (6,6).
+    still = the static semantic look (no pulse, glint, motes or embers). Mirrors TraitFx.light() in the game."""
+    lit = {}
+    x0, y0, x1, y1 = TRAIT_PAD, TRAIT_PAD, TRAIT_PAD + w - 1, TRAIT_PAD + h - 1
+    rim = _trait_path(x0, y0, x1, y1, 2)
+    n = 16
+    phase = 0 if still else (index + rank * 2) % n
+    # the semantic accent: a two-pixel bar down the left inside edge
+    for y in range(y0 + 3, y1 - 2):
+        lit[(x0 + 1, y)] = 0.6
+        lit[(x0 + 2, y)] = 0.6
+    if not negative:
+        pulse = round((1 - math.cos(math.tau * phase / n)) * 2) / 4
+        s = 0.5 if rank == 0 else 0.3 + 0.7 * pulse
+        if still:
+            s = 0.5
+        for p in rim:
+            lit[p] = s
+        if rank >= 2 and not still:
+            for ring in range(1, min(rank - 1, 2) + 1):
+                for i, p in enumerate(_trait_path(x0 - ring, y0 - ring, x1 + ring, y1 + ring, 2 + ring)):
+                    if (i + phase + ring) % 3 != 0:
+                        lit.setdefault(p, 0.25)
+        if not still:
+            head = phase * len(rim) // n
+            length = round((3 if rank == 0 else 5 + rank) * 1.4)
+            for offset in ([0, len(rim) // 2] if rank >= 3 else [0]):
+                for k in range(length):
+                    lit[rim[(head + offset - k) % len(rim)]] = 0.6 + 0.65 * (length - k) / length
+            count = [0, 1, 2, 3, 4, 5][rank]
+            orbit = _trait_path(x0 - 3, y0 - 3, x1 + 3, y1 + 3, 5)
+            for m in range(count):
+                x, y = orbit[(phase * len(orbit) // n + m * len(orbit) // count) % len(orbit)]
+                size = 1 if rank < 4 else 2
+                for dx in range(size):
+                    for dy in range(size):
+                        lit[(x + dx, y + dy)] = 0.6 + 0.6 * ((phase + m) % 4) / 3
+    else:
+        flicker = TRAIT_FLICKER[phase]
+        gain = 0.86 + (flicker - 0.75) * (0.35 + rank * 0.13)
+        if still:
+            gain = 0.86
+        for i, p in enumerate(rim):
+            if (i * 7 + 3) % 23 < 3:
+                continue                               # fixed cracks in the broken edge
+            lit[p] = 0.6 * gain
+        if rank >= 1 and not still:
+            for ring in range(1, min(rank, 2) + 1):
+                for i, p in enumerate(_trait_path(x0 - ring, y0 - ring, x1 + ring, y1 + ring, 2 + ring)):
+                    if (i + phase * 2 + ring) % 4 == 0:
+                        lit.setdefault(p, 0.25)
+        if not still:
+            head = (phase * len(rim) // n + rank * 15) % len(rim)
+            length = round((3 + rank) * 1.4)
+            for k in range(length):
+                if k % 3 == 2:
+                    continue
+                lit[rim[(head + k) % len(rim)]] = 1.0 - 0.3 * k / length
+            count = [0, 1, 2, 3, 4, 6][rank]
+            for m in range(count):
+                age = (phase + m * 5) % n
+                x = (x0 - 3 if m % 2 == 0 else x1 + 2) + ((age // 4 + m) % 2)
+                y = y0 + age * h // n
+                size = 2 if rank == 5 and m % 3 == 0 else 1
+                for dx in range(size):
+                    for dy in range(size):
+                        lit[(x + dx, y + dy)] = 0.35 + 0.65 * (n - age) / n
+            if rank >= 4:
+                bx, by = rim[(rank * 43 + phase // 2 * 6) % len(rim)]
+                for dx in range(2):
+                    for dy in range(2):
+                        lit.pop((bx + dx, by + dy), None)          # a soot-dark break
+    # the content never lights
+    for (x, y) in list(lit):
+        if x0 + 4 <= x < x1 - 3 and y0 + 4 <= y < y1 - 3:
+            del lit[(x, y)]
+    return lit
+
+
+def trait_mask_code(s):
+    if s < 0.02:
+        return None
+    if s < 0.45:
+        return "gray2"
+    if s < 0.9:
+        return "gray4"
+    return "gray6"
+
+
+def fx_trait_mask(negative, rank, index):
+    cw, ch = TRAIT_W + 2 * TRAIT_PAD, TRAIT_H + 2 * TRAIT_PAD
+    img = new(cw, ch)
+    for (x, y), s in trait_light(negative, rank, index).items():
+        code = trait_mask_code(s)
+        if code and 0 <= x < cw and 0 <= y < ch:
+            px(img, x, y, c(code))
+    return img
+
+
+TRAIT_TIER_NAMES = ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
+TRAIT_MASK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trait_cards")
+
+
+def gen_trait_cards():
+    """the frame goes into the atlas; the 192 canonical light masks go into a reference sheet that is NOT shipped
+    (tools/art/trait_cards/fx_trait_masks.png + .json): the game draws the same light for each card's real size, and
+    the autotest checks its 160x58 output against this sheet pixel for pixel. Keeping them out of the atlas keeps it
+    at 2048x2048 on phones."""
+    import json
+    add("ui_trait_card_frame", ui_trait_card_frame())
+    cw, ch = TRAIT_W + 2 * TRAIT_PAD, TRAIT_H + 2 * TRAIT_PAD
+    cols = 16
+    sheet = new(cw * cols, ch * 12)
+    regions = {}
+    row = 0
+    for negative, kind in ((False, "benefit"), (True, "tradeoff")):
+        for rank, name in enumerate(TRAIT_TIER_NAMES):
+            for i in range(16):
+                key = "fx_trait_%s_%s_%d" % (kind, name, i)
+                sheet.paste(fx_trait_mask(negative, rank, i), (i * cw, row * ch))
+                regions[key] = [i * cw, row * ch, cw, ch]
+            row += 1
+    os.makedirs(TRAIT_MASK_DIR, exist_ok=True)
+    sheet.save(os.path.join(TRAIT_MASK_DIR, "fx_trait_masks.png"), optimize=True)
+    with open(os.path.join(TRAIT_MASK_DIR, "fx_trait_masks.json"), "w") as f:
+        json.dump(regions, f, indent=0, sort_keys=True)
