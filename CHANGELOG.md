@@ -8,6 +8,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Changed
+- Monsters look bigger and more threatening: normal monsters ×2, elites ×3, bosses and checkpoint warlords ×3, still in crisp whole pixels (MV-517)
+
 ## [4.7.0-alpha.3] - 2026-10-26
 
 ### Merged pull requests
