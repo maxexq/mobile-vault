@@ -118,6 +118,8 @@ static func diner_block(d: Dictionary) -> String:
 		return "ไม่อยู่บนรถ"
 	if Game.squad_role(d) >= 0:
 		return "อยู่ทีมป้องกันรถ"
+	if Crew.refuses(d):
+		return "ใจสลาย ไม่ยอมลุกไปไหน"     # MV-127: a supper helps the Depressed, not the Broken
 	if at_table(int(d.id)):
 		return "นั่งกินอยู่อีกโต๊ะ"
 	var cd := cd_left(int(d.id))

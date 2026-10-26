@@ -604,7 +604,7 @@ func room_workers(slot: int) -> Array:
 	if is_site(slot):
 		return out
 	for d in s.dwellers:
-		if int(d.room) == slot and not is_away(d) and not d.get("strike", false):
+		if int(d.room) == slot and not is_away(d) and not d.get("strike", false) and not Crew.busy(d):
 			out.append(d)
 	return out
 
@@ -613,7 +613,7 @@ func room_workers(slot: int) -> Array:
 func site_crew(slot: int) -> Array:
 	var out := []
 	for d in s.dwellers:
-		if int(d.room) == slot and not is_away(d) and not d.get("strike", false):
+		if int(d.room) == slot and not is_away(d) and not d.get("strike", false) and not Crew.busy(d):
 			out.append(d)
 	return out
 
@@ -706,6 +706,9 @@ func set_squad(role: int, did: int) -> void:
 	if did >= 0:
 		var d := dweller_by_id(did)
 		if d.is_empty() or is_away(d):
+			return
+		if Crew.refuses(d):
+			Crew.refuse_toast(d)
 			return
 		d.room = -1
 	s.squad[role] = did
@@ -1100,6 +1103,7 @@ func _simulate(dt: float, offline: bool) -> void:
 		Crew.morale_tick(d, dt, offline)
 
 	Crew.flush_deserters()
+	Crew.morale_v2_global_tick(dt)
 
 	# --- travel
 	if is_moving():
@@ -1349,6 +1353,9 @@ func recruit_random() -> Dictionary:
 
 
 func assign(d: Dictionary, slot: int) -> bool:
+	if slot >= 0 and Crew.refuses(d):      # MV-127: Broken crew won't take orders
+		Crew.refuse_toast(d)
+		return false
 	if slot >= 0:
 		slot = room_anchor(slot)
 		if (site_crew(slot) if is_site(slot) else room_workers(slot)).size() >= room_capacity(slot):
@@ -1391,6 +1398,9 @@ func use_item(item: String) -> void:
 
 
 func send_explore(d: Dictionary, minutes: float) -> void:
+	if Crew.refuses(d):
+		Crew.refuse_toast(d)
+		return
 	d.away_until = Time.get_unix_time_from_system() + minutes * 60.0
 	d["explore_min"] = minutes
 	d.room = -1
