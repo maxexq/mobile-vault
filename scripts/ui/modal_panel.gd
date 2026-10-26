@@ -34,6 +34,7 @@ var _col: VBoxContainer     # the window's column: title plate, divider, body
 var _fit_tw: Tween
 var _fit_queued := false
 var _opened_ms := 0
+var _layout_vp := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -94,11 +95,25 @@ func _on_backdrop_tap() -> void:
 
 func _layout() -> void:
 	var vp := get_viewport_rect().size
+	# MV-537: a panel that re-lays itself out while open (new tab, new content) keeps its top edge too, or the
+	# window would jump between re-centred and kept-top under the finger; a new screen size still re-centres
+	var keep := Features.on("window_still") and is_open and vp == _layout_vp and Time.get_ticks_msec() - _opened_ms >= 250
+	_layout_vp = vp
+	var top := box.position.y
 	var sz := Vector2(minf(max_size.x, vp.x - margin * 2), max_height()).floor()
 	if fit_height:
 		sz.y = fit_target()
 	if _fit_tw:
 		_fit_tw.kill()
+	if keep and centered and fit_height:
+		# the rows the panel just replaced are still in the tree this frame and would measure it too tall (pushing
+		# the window up for good): set the width now, the height next frame
+		box.custom_minimum_size.x = sz.x
+		box.size.x = sz.x
+		box.position = Vector2(floorf((vp.x - box.size.x) * 0.5), top)
+		box.position = box.position.clamp(Vector2.ZERO, (vp - box.size).max(Vector2.ZERO)).floor()
+		_queue_fit(true)
+		return
 	box.custom_minimum_size = sz
 	box.size = sz
 	_recenter()
@@ -150,12 +165,16 @@ func fit_target() -> float:
 	return floorf(clampf(natural_height(), minf(MIN_H, max_height()), max_height()))
 
 
-## content changed size: fit the height at the end of the frame (several changes in one frame fit once)
-func _queue_fit() -> void:
+## content changed size: fit the height at the end of the frame (several changes in one frame fit once);
+## next_frame = after the nodes freed this frame are gone (MV-537)
+func _queue_fit(next_frame: bool = false) -> void:
 	if not fit_height or not is_open or _fit_queued:
 		return
 	_fit_queued = true
-	_apply_fit.call_deferred()
+	if next_frame:
+		get_tree().process_frame.connect(_apply_fit, CONNECT_ONE_SHOT)
+	else:
+		_apply_fit.call_deferred()
 
 
 func _apply_fit() -> void:

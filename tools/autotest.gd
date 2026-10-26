@@ -7091,6 +7091,25 @@ func _window_fit_test() -> void:
 	Game.s.dwellers = keep_dw
 	Game.dwellers_changed.emit()
 	await wait(0.3)
+	# MV-537: a panel that rebuilds itself on a tab switch (the Loot panel calls _layout) keeps its tabs under the finger
+	hud.open_panel("inventory")
+	await wait(0.6)
+	var lp: LootPanel = hud.panels.inventory
+	var tab_y := []
+	var moved_ok := true
+	for t in ["gear", "items", "forge", "gear"]:
+		lp.tab = t
+		lp.refresh()
+		await wait(0.4)
+		var y := lp._tabs.get_global_rect().position.y
+		# it may only move up when the taller tab would otherwise run off the bottom (then it sits on the edge)
+		if not tab_y.is_empty() and absf(y - float(tab_y[-1])) > 0.5 and lp.box.position.y + lp.box.size.y < vp.y - 0.5:
+			moved_ok = false
+		tab_y.append(y)
+	_check("window still: switching Loot tabs leaves the tab row where it was, unless it must stay on screen %s" % [tab_y],
+		moved_ok and absf(float(tab_y[-1]) - float(tab_y[0])) <= 2.0)
+	lp.close()
+	await wait(0.3)
 	# --- the room close-up: the whole room, nothing over it, centred on portrait
 	var slot := -1
 	for i in Game.s.rooms.size():
