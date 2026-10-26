@@ -1,0 +1,578 @@
+{
+  "status": "visual proposal; not yet approved production artwork",
+  "reference": "first vehicle tier: actual blue van",
+  "native_cleanup": "integer-grid simplification of generated hardware; readable bolt/slot/hinge clusters; draft only",
+  "scope": "4 main vehicles plus shared trailer/wagon fittings",
+  "parts": {
+    "decal_vehicle_pillar_joint": {
+      "tier": "van",
+      "source_box": [
+        38,
+        153,
+        7,
+        7
+      ],
+      "size": [
+        6,
+        6
+      ],
+      "palette": [
+        "ol0",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "orange1",
+        "orange2"
+      ],
+      "label": "PILLAR JOINT",
+      "native_rgba_sha256": "a40414944110df20fbcb1321aae7d0bebc093f3e4ab2d8e9e51962094b9c9b44"
+    },
+    "decal_vehicle_roof_seam": {
+      "tier": "van",
+      "source_box": [
+        215,
+        148,
+        14,
+        6
+      ],
+      "size": [
+        12,
+        6
+      ],
+      "palette": [
+        "ol0",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "orange1",
+        "orange2"
+      ],
+      "label": "ROOF SEAM",
+      "native_rgba_sha256": "f6ceb60d2ed143f3e95d7260ce4f5fffe0efea82bcb2fca037a9d6984648b729"
+    },
+    "decal_vehicle_fuel_cap": {
+      "tier": "van",
+      "source_box": [
+        74,
+        274,
+        9,
+        9
+      ],
+      "size": [
+        8,
+        8
+      ],
+      "palette": [
+        "ol0",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "orange1",
+        "orange2"
+      ],
+      "label": "FUEL CAP",
+      "native_rgba_sha256": "81450a24809ed13f738e6ccbe717c5addb996a4da68b27ccc54ea659f68d9c63"
+    },
+    "decal_van_door_hardware": {
+      "tier": "van",
+      "source_box": [
+        16,
+        185,
+        14,
+        10
+      ],
+      "size": [
+        14,
+        10
+      ],
+      "palette": [
+        "ol0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "gray3",
+        "gray5",
+        "orange1"
+      ],
+      "label": "VAN HANDLE",
+      "native_rgba_sha256": "d5a0e668bc8e99df7dfea67874059d8519b1ea32801d911abbc76a4f9c847a7d"
+    },
+    "decal_bus_service_vent": {
+      "tier": "bus",
+      "source_box": [
+        10,
+        153,
+        20,
+        13
+      ],
+      "size": [
+        12,
+        8
+      ],
+      "palette": [
+        "ol0",
+        "yellow1",
+        "yellow2",
+        "gray1",
+        "gray3",
+        "gray5",
+        "orange1"
+      ],
+      "label": "BUS VENT",
+      "native_rgba_sha256": "d939e0f07b3ec68f33c794542bc80ad3fade75c1b3f4a879e65c349bf42de4ee"
+    },
+    "decal_rig_door_latch": {
+      "tier": "rig",
+      "source_box": [
+        21,
+        213,
+        13,
+        7
+      ],
+      "size": [
+        8,
+        6
+      ],
+      "palette": [
+        "ol0",
+        "red1",
+        "red2",
+        "gray1",
+        "gray3",
+        "gray5",
+        "orange1"
+      ],
+      "label": "RIG LATCH",
+      "native_rgba_sha256": "d77824ce91fd8c820b9c1acacbf7cb7a1b2f37433af82b481a8810faf8335ed9"
+    },
+    "decal_train_access_hinges": {
+      "tier": "train",
+      "source_box": [
+        9,
+        116,
+        15,
+        17
+      ],
+      "size": [
+        10,
+        8
+      ],
+      "palette": [
+        "ol0",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "orange1"
+      ],
+      "label": "TRAIN HINGES",
+      "native_rgba_sha256": "3209cbb9ffab5de7da5aad0a521dfc4cec44ad3786c56703a6aad6b51cd6e55f"
+    }
+  },
+  "placements": {
+    "van": [
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_roof_seam",
+        "anchor": [
+          216,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_fuel_cap",
+        "anchor": [
+          74,
+          274
+        ]
+      },
+      {
+        "id": "decal_van_door_hardware",
+        "anchor": [
+          16,
+          185
+        ]
+      }
+    ],
+    "bus": [
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          92
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          92
+        ]
+      },
+      {
+        "id": "decal_vehicle_roof_seam",
+        "anchor": [
+          216,
+          92
+        ]
+      },
+      {
+        "id": "decal_vehicle_fuel_cap",
+        "anchor": [
+          74,
+          274
+        ]
+      },
+      {
+        "id": "decal_bus_service_vent",
+        "anchor": [
+          20,
+          182
+        ]
+      }
+    ],
+    "rig": [
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          92
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          92
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          36
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          36
+        ]
+      },
+      {
+        "id": "decal_vehicle_roof_seam",
+        "anchor": [
+          216,
+          36
+        ]
+      },
+      {
+        "id": "decal_vehicle_fuel_cap",
+        "anchor": [
+          74,
+          274
+        ]
+      },
+      {
+        "id": "decal_rig_door_latch",
+        "anchor": [
+          26,
+          214
+        ]
+      }
+    ],
+    "train": [
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          92
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          92
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          38,
+          36
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          248,
+          36
+        ]
+      },
+      {
+        "id": "decal_vehicle_roof_seam",
+        "anchor": [
+          216,
+          36
+        ]
+      },
+      {
+        "id": "decal_train_access_hinges",
+        "anchor": [
+          10,
+          118
+        ]
+      }
+    ],
+    "trailer": [
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          16,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          218,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          16,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          218,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_roof_seam",
+        "anchor": [
+          206,
+          148
+        ]
+      }
+    ],
+    "wagon": [
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          16,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          218,
+          204
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          16,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_pillar_joint",
+        "anchor": [
+          218,
+          148
+        ]
+      },
+      {
+        "id": "decal_vehicle_roof_seam",
+        "anchor": [
+          206,
+          148
+        ]
+      }
+    ]
+  },
+  "vehicles": {
+    "van": {
+      "size": [
+        280,
+        300
+      ],
+      "sha256": "08aa97671c15003abf77204e0dd2b222f8e779514d0886ea2d21a56b56f0b1e8",
+      "outside_fittings_unchanged": true,
+      "silhouette_alpha_unchanged": true
+    },
+    "bus": {
+      "size": [
+        280,
+        300
+      ],
+      "sha256": "9ee51a07e2a338503887718c8a120fb3d71d7163215bdca0f5c9092011cd9c17",
+      "outside_fittings_unchanged": true,
+      "silhouette_alpha_unchanged": true
+    },
+    "rig": {
+      "size": [
+        280,
+        300
+      ],
+      "sha256": "5f9a103dd64ed9e71a7a8544b8c35a8de1618c2a3bc86e90774df307534cb15f",
+      "outside_fittings_unchanged": true,
+      "silhouette_alpha_unchanged": true
+    },
+    "train": {
+      "size": [
+        280,
+        300
+      ],
+      "sha256": "15cd5275779b280d04faf5dbca7027b66e2a06e5313b85a86763510ad20e01e1",
+      "outside_fittings_unchanged": true,
+      "silhouette_alpha_unchanged": true
+    },
+    "trailer": {
+      "size": [
+        248,
+        300
+      ],
+      "sha256": "b84233c4ca2fca4c1e6870feded0e5690b00c59ca1eb05aa475a891ae80d5960",
+      "outside_fittings_unchanged": true,
+      "silhouette_alpha_unchanged": true
+    },
+    "wagon": {
+      "size": [
+        248,
+        300
+      ],
+      "sha256": "9aee9df7d7e376badf5306d685d18f83ede298a95fb4a90285d5dcdad87df7d3",
+      "outside_fittings_unchanged": true,
+      "silhouette_alpha_unchanged": true
+    }
+  }
+}
