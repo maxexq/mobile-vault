@@ -9,7 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
-- The game has sound: every area has its own ambience (factory wind and clanks, desert wind with glass chimes, forest crickets and crows, swamp frogs, icy wind, a dead city's radio) over the engine's rumble, and the weather is heard too, from calm rain on the metal roof to thunderstorms, sandstorms, snow, fog, acid rain and ashfall. Fights, bosses, building, loot, road events, expeditions and buttons have sound effects. Settings has volume sliders for ambience, effects and buttons; on the web sound starts after your first tap (MV-536)
+- The game has sound: every area has its own ambience (factory wind and clanks, desert wind with glass chimes, forest crickets and crows, swamp frogs, icy wind, a dead city's radio) over the engine's rumble, and the weather is heard too, from calm rain on the metal roof to thunderstorms, sandstorms, snow, fog, acid rain and ashfall. Fights, bosses, building, loot, road events, expeditions and buttons have sound effects. The title screen plays a cozy lo-fi theme. Settings has volume sliders for music, ambience, effects and buttons; on the web sound starts after your first tap. High, sharp sounds were softened so nothing stings your ears (MV-536)
 
 ### Changed
 - New icons for the three main stats so they are told apart at a glance: STR is a fist, INT a lightbulb, AGI a zigzag (MV-524..526)

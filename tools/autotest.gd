@@ -49,6 +49,7 @@ func _run() -> void:
 	Settings.set_value("event_timer", "off")
 	await wait(1.2)
 	await shot("title")
+	_check("audio: the lo-fi title music plays on the title screen", Sound.is_playing("title_lofi") or not Sound.bgm_on())
 	_title_backdrop_test()
 	main.hud.title_screen._settings_btn.pressed.emit()
 	await wait(0.6)
@@ -6433,6 +6434,11 @@ func _audio_test() -> void:
 	await wait(0.8)
 	_check("audio: industrial bed plays in biome 1", Sound.is_playing("industrial") and float(Sound.layer("industrial").cur) > 0.5)
 	_check("audio: engine layer runs while the game runs", Sound.is_playing("engine") or Sound._engine_now() == "off")
+	var sample_beds := []
+	for id in Sound.layers:
+		if (Sound.layers[id].p as AudioStreamPlayer).playback_type != AudioServer.PLAYBACK_TYPE_STREAM:
+			sample_beds.append(id)
+	_check("audio: beds use stream playback, web samples drop the loop %s" % [sample_beds], sample_beds.is_empty())
 	Dev.goto_biome(1)
 	await wait(0.05)
 	_check("audio: biome change crossfades (desert up, industrial down)", float(Sound.layer("desert").target) > 0.0 and float(Sound.layer("industrial").target) == 0.0)
@@ -6491,6 +6497,15 @@ func _audio_test() -> void:
 	Dev.sound_preview("bed", "metro")
 	await wait(0.8)
 	_check("audio: GOD bed preview plays the metro bed alone", Sound.is_playing("metro") and not Sound.is_playing("acid_rain") and not Sound.is_playing("desert") and Sound.want_weather() == "")
+	_check("audio: no title music during a run", float(Sound.layer("title_lofi").target) == 0.0)
+	Dev.sound_preview("bgm")
+	await wait(0.8)
+	var bgm_bus := (Sound.layers["title_lofi"].p as AudioStreamPlayer).bus if Sound.layers.has("title_lofi") else &""
+	_check("audio: GOD music preview plays the title BGM on the Music bus", Sound.is_playing("title_lofi") and bgm_bus == &"Music")
+	Features.set_override("features", "audio_bgm", false)
+	await wait(0.8)
+	_check("audio: audio_bgm off = no music", not Sound.is_playing("title_lofi"))
+	Features.set_override("features", "audio_bgm", null)
 	var n_ui := int(Sound.played.get("confirm", 0))
 	Dev.sound_preview("group", "ui")
 	await wait(1.0)

@@ -8,12 +8,16 @@ extends Node
 ##  - sfx(id) on bus "SFX" from a small voice pool, ui(id) on bus "UI"; every BaseButton in the tree taps
 ##    (meta "sfx" picks another sound, "" = silent)
 ## Browsers only allow sound after a tap, so on the web nothing plays until the first input (unlocked).
-## Switches: audio_ambience (beds + weather), audio_sfx (effects + UI). Volumes: Settings master / ambience / sfx / ui.
+##  - music: the cozy lo-fi title theme on bus "Music" while the title screen shows (switch audio_bgm)
+## Switches: audio_ambience (beds + weather), audio_sfx (effects + UI), audio_bgm (title music).
+## Volumes: Settings master / music / ambience / sfx / ui.
 
 const AMB_DIR := "res://assets/audio/amb/"
 const WEATHER_DIR := "res://assets/audio/weather/"
 const SFX_DIR := "res://assets/audio/sfx/"
 const UI_DIR := "res://assets/audio/ui/"
+const MUSIC_DIR := "res://assets/audio/music/"
+const MUSIC := ["title_lofi"]      # title-screen BGM, cozy lo-fi (bus "Music", switch audio_bgm)
 const WEATHER_SOUNDS := ["overcast", "rain", "storm", "sandstorm", "snow", "fog", "acid_rain", "ashfall"]
 const SFX := ["thunder_1", "thunder_2", "shot", "shot_heavy", "shot_energy", "hit", "hit_crit", "hit_metal", "hit_hero",
 	"enemy_die", "heal", "skill", "boss_roar", "alarm", "build", "build_done", "demolish", "loot", "loot_rare",
@@ -31,11 +35,12 @@ const GROUPS := {
 	"ui": ["tap", "confirm", "cancel", "open", "toast_good", "toast_bad"],
 }
 ## per-sound level (dB) so the set sits together; the files are loudness-matched only roughly
+## (MV-536 ear check: the bright and signal-like sounds sit lower so they never sting)
 const TRIM := {
-	"engine": -9.0, "alarm": -9.0, "toast_bad": -8.0, "toast_good": -6.0, "shot": -6.0, "shot_heavy": -4.0,
-	"shot_energy": -9.0, "hit": -7.0, "hit_crit": -5.0, "hit_metal": -6.0, "hit_hero": -7.0, "enemy_die": -6.0,
-	"heal": -8.0, "skill": -6.0, "loot": -6.0, "tap": -10.0, "confirm": -8.0, "cancel": -8.0, "open": -10.0,
-	"knock": -2.0, "thunder_1": -2.0, "thunder_2": -2.0,
+	"engine": -9.0, "alarm": -12.0, "toast_bad": -10.0, "toast_good": -9.0, "shot": -7.0, "shot_heavy": -5.0,
+	"shot_energy": -11.0, "hit": -7.0, "hit_crit": -6.0, "hit_metal": -7.0, "hit_hero": -7.0, "enemy_die": -7.0,
+	"heal": -10.0, "skill": -8.0, "loot": -8.0, "loot_rare": -3.0, "radio": -4.0, "tap": -14.0, "confirm": -11.0,
+	"cancel": -11.0, "open": -13.0, "knock": -2.0, "thunder_1": -2.0, "thunder_2": -2.0,
 }
 const SFX_VOICES := 10
 const UI_VOICES := 3
@@ -49,6 +54,7 @@ const ENGINE_GAIN := 0.8
 const THUNDER_GAP := 22.0
 const SFX_GAP := 0.06
 const IDLE_PITCH := 0.72
+const BGM_GAIN := 1.0
 
 var unlocked := false
 var layers := {}             # id -> {"p": AudioStreamPlayer, "cur": float, "target": float, "pitch": float}
@@ -147,11 +153,13 @@ func _path(id: String) -> String:
 		return SFX_DIR + id + ".wav"
 	if id in UI:
 		return UI_DIR + id + ".wav"
+	if id in MUSIC:
+		return MUSIC_DIR + id + ".wav"
 	return ""
 
 
 func _is_loop(id: String) -> bool:
-	return _path(id).begins_with(AMB_DIR) or id in WEATHER_SOUNDS
+	return _path(id).begins_with(AMB_DIR) or id in WEATHER_SOUNDS or id in MUSIC
 
 
 ## every sound id the game can play (autotest checks each one loads)
@@ -159,7 +167,20 @@ func all_ids() -> Array:
 	var out: Array = ["engine"]
 	for b in Data.BIOMES:
 		out.append(b.id)
-	return out + WEATHER_SOUNDS + SFX + UI
+	return out + WEATHER_SOUNDS + SFX + UI + MUSIC
+
+
+func bgm_on() -> bool:
+	return Features.on("audio_bgm")
+
+
+## the music the game wants right now: the lo-fi theme on the title screen, nothing in a run ("" = none)
+func want_bgm() -> String:
+	if preview.has("bgm"):
+		return str(preview.bgm)
+	if not preview.is_empty() or Game.started:
+		return ""
+	return MUSIC[0]
 
 
 func layer(id: String) -> Dictionary:
@@ -167,7 +188,7 @@ func layer(id: String) -> Dictionary:
 
 
 func is_playing(id: String) -> bool:
-	return layers.has(id) and layers[id].p.playing
+	return layers.has(id) and bool(layers[id].on)
 
 
 ## the bed / weather the game wants right now ("" = none)
@@ -196,8 +217,13 @@ func _refresh() -> void:
 	var bed := want_bed()
 	var weather := want_weather()
 	var targets := {}
+	var bgm := want_bgm() if bgm_on() and unlocked else ""
+	for m in MUSIC:
+		targets[m] = Features.num("audio.bgm_gain", BGM_GAIN) if m == bgm else 0.0
+	# on the title the biome bed sits quietly under the music
+	var title_bed := 0.3 if bgm != "" else 0.6
 	for b in Data.BIOMES:
-		targets[b.id] = Features.num("audio.bed_gain", BED_GAIN) * (1.0 if Game.started or preview.has("bed") else 0.6) if amb and b.id == bed else 0.0
+		targets[b.id] = Features.num("audio.bed_gain", BED_GAIN) * (1.0 if Game.started or preview.has("bed") else title_bed) if amb and b.id == bed else 0.0
 	for w in WEATHER_SOUNDS:
 		targets[w] = Features.num("audio.weather_gain", WEATHER_GAIN) if amb and w == weather else 0.0
 	targets["engine"] = _engine_target() if amb else 0.0
@@ -234,10 +260,18 @@ func _set_target(id: String, t: float) -> void:
 		var st := stream(id)
 		if st == null:
 			return
-		var p := _player("Ambience")
+		var p := _player("Music" if id in MUSIC else "Ambience")
+		# the web build plays through browser samples by default, and those drop the loop (the bed stopped at the
+		# end of the file and restarted from the same spot); Godot's own mixer loops it (MV-536 web fix)
+		p.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 		p.stream = st
 		p.volume_db = -80.0
-		layers[id] = {"p": p, "cur": 0.0, "target": 0.0, "pitch": 1.0}
+		# "on" is ours, not p.playing, so a bed is started once and never re-triggered by a stale `playing`;
+		# finished re-arms a loop that really ended (a re-import without the loop chunk).
+		layers[id] = {"p": p, "cur": 0.0, "target": 0.0, "pitch": 1.0, "on": false}
+		p.finished.connect(func():
+			if layers[id].on:
+				p.play())
 	layers[id].target = t
 
 
@@ -255,15 +289,17 @@ func _process(dt: float) -> void:
 		L.cur = move_toward(float(L.cur), float(L.target), step)
 		var p: AudioStreamPlayer = L.p
 		if L.cur <= 0.001 and L.target <= 0.0:
-			if p.playing:
+			if L.on:
+				L.on = false
 				p.stop()
 			continue
 		if id == "engine":
 			L.pitch = move_toward(float(L.pitch), 1.0 if _engine_now() == "run" else IDLE_PITCH, dt * 0.4)
 			p.pitch_scale = float(L.pitch)
 		p.volume_db = linear_to_db(maxf(0.0001, float(L.cur))) + float(TRIM.get(id, 0.0))
-		if not p.playing:
+		if not L.on:
 			# start beds at a random spot so two loops of the same length don't line up
+			L.on = true
 			p.play(randf() * maxf(0.0, p.stream.get_length() - 0.5))
 	_thunder(dt)
 
@@ -414,6 +450,12 @@ func preview_bed(id: String) -> void:
 
 func preview_weather(id: String) -> void:
 	preview = {"bed": want_bed(), "weather": id}
+	_fast_fade = 0.6
+	_refresh()
+
+
+func preview_bgm() -> void:
+	preview = {"bgm": MUSIC[0]}
 	_fast_fade = 0.6
 	_refresh()
 

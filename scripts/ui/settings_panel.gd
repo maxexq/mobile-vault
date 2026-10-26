@@ -218,6 +218,7 @@ func _tab_game() -> void:
 
 	_head("AUDIO", Loc.t("เสียง"))
 	_volume(Loc.t("เสียงรวม"), "master")
+	_volume(Loc.t("ดนตรี"), "music")
 	_volume(Loc.t("บรรยากาศ"), "ambience")
 	_volume(Loc.t("เอฟเฟกต์"), "sfx")
 	_volume(Loc.t("ปุ่มกด"), "ui")
