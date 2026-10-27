@@ -11,7 +11,9 @@ func prepare(biome: int, lap: int, profile: String, seed_value: int) -> void:
 	Game.s.van_gear = {"turret": null, "plating": null, "engine": null, "spikes": null}
 	Game.s.hull = Game.hull_max()
 	Game.s.gear = []
+	if profile == "two_weapons": Game.s.squad[2] = -1
 	for role in Game.s.squad.size():
+		if int(Game.s.squad[role]) < 0: continue
 		var d := Game.dweller_by_id(int(Game.s.squad[role]))
 		d.lvl = 5
 		d.str = 4

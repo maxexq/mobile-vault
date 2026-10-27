@@ -606,7 +606,7 @@ func _spawn(q: Dictionary) -> void:
 		combat_level = maxf(1.0, L - WARLORD_OFFSET)
 		hp_growth = Loot.ILVL_GROWTH
 		dmg_growth = Loot.ILVL_GROWTH
-		mult_hp = Features.num("warlord.hp", 8.0) if e.warlord else Features.num("warlord.add_hp", 1.0)
+		mult_hp = Features.num("warlord.hp", 6.0) if e.warlord else Features.num("warlord.add_hp", 1.0)
 		mult_dmg = Features.num("warlord.damage", 0.6)
 	e.max = float(def.hp) * pow(hp_growth, combat_level - 1.0) * mult_hp * Modes.mul("enemy_hp")
 	e.hp = e.max
@@ -887,7 +887,7 @@ func van_hit_damage(e: Dictionary, raw: float, special: bool = false, defense: f
 	var red := defense / (defense + def_k(float(e.lvl)))
 	var damage := raw * (1.0 - red)
 	if checkpoint:
-		damage = minf(damage, Game.hull_max() * Features.num("warlord.hull_hit_cap", 0.02))
+		damage = minf(damage, Game.hull_max() * Features.num("warlord.hull_hit_cap", 0.01))
 	elif balanced:
 		damage = minf(damage, Game.hull_max() * Features.num("boss.hull_hit_cap", 0.12))
 	return damage
@@ -978,7 +978,7 @@ func _damage_hero(slot: int, raw: float, source: Dictionary = {}) -> void:
 	var red := float(st.def) / (float(st.def) + def_k(lvl))
 	var dmg := raw * (1.0 - red)
 	if warlord_balanced(source):
-		dmg = minf(dmg, float(h.max) * Features.num("warlord.hero_hit_cap", 0.04))
+		dmg = minf(dmg, float(h.max) * Features.num("warlord.hero_hit_cap", 0.02))
 	h.hp = float(h.hp) - dmg
 	hit.emit("hero", slot, dmg, false)
 	if float(h.hp) <= 0.0:

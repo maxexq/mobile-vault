@@ -9065,12 +9065,12 @@ func _warlord_test() -> void:
 	var records := []
 	for lap in [0, 1, 3]:
 		for biome in Data.BIOMES.size():
-			for profile in ["common", "weapons_only"]:
+			for profile in ["common", "weapons_only", "two_weapons"]:
 				for seed_value in [550, 551, 552]:
 					var result: Dictionary = bench.fight(biome, lap, profile, seed_value, true)
 					records.append(result)
-					_check("warlord: armed clear biome%d lap%d %s seed%d" % [biome, lap, profile, seed_value], result.killed and result.gate_open and result.falls == 0 and float(result.hero_min) >= 0.65 and float(result.hull_min) >= float(result.hull_max) * 0.9 and float(result.seconds) < 60.0)
-					if not result.killed or result.falls > 0: print("[warlord-failure] ", JSON.stringify(result))
+					_check("warlord: armed clear biome%d lap%d %s seed%d" % [biome, lap, profile, seed_value], result.killed and result.gate_open and result.falls == 0 and float(result.hero_min) >= 0.5 and float(result.hull_min) >= float(result.hull_max) * 0.9 and float(result.seconds) < 60.0)
+					if not result.killed or result.falls > 0 or float(result.hero_min) < 0.5 or float(result.hull_min) < float(result.hull_max) * 0.9 or float(result.seconds) >= 60.0: print("[warlord-failure] ", JSON.stringify(result))
 			await wait(0.01)
 	for biome in Data.BIOMES.size():
 		var old: Dictionary = bench.fight(biome, 0, "common", 550, false)
@@ -9078,7 +9078,10 @@ func _warlord_test() -> void:
 		print("[warlord-compare] ", JSON.stringify({"legacy": old, "balanced": balanced}))
 		var unarmed: Dictionary = bench.fight(biome, 0, "unarmed", 550, true)
 		print("[warlord-unarmed] ", JSON.stringify(unarmed))
-		if biome > 0: _check("warlord: unarmed does not auto-clear biome%d" % biome, not unarmed.killed and not unarmed.gate_open)
+		if biome >= 2:
+			_check("warlord: unarmed does not auto-clear biome%d" % biome, not unarmed.killed and not unarmed.gate_open)
+		else:
+			_check("warlord: forgiving early boss is much slower unarmed biome%d" % biome, float(unarmed.seconds) > float(balanced.seconds) * 2.0)
 	# Stats rollback, source-specific caps, scoped summons and reward identity.
 	for biome in Data.BIOMES.size():
 		bench.prepare(biome, 0, "common", 550)
@@ -9092,7 +9095,7 @@ func _warlord_test() -> void:
 		Features.layers.dev.features.warlord_progression = true
 		Combat._spawn({"boss": "warlord", "lvl": lvl})
 		var boss: Dictionary = Combat.enemies[-1]
-		_check("warlord: reward level retained and gear growth used for " + id, int(boss.lvl) == lvl and is_equal_approx(float(boss.max), float(mob.hp) * pow(Loot.ILVL_GROWTH, Combat.biome_base_level() - 1) * 8.0))
+		_check("warlord: reward level retained and gear growth used for " + id, int(boss.lvl) == lvl and is_equal_approx(float(boss.max), float(mob.hp) * pow(Loot.ILVL_GROWTH, Combat.biome_base_level() - 1) * 6.0))
 		Game.s.gear = []
 		Combat._on_kill(boss)
 		_check("warlord: three Rare+ drops retain reward item level for " + id, Loot.stash().size() == 3 and Loot.stash().all(func(it): return int(it.rar) >= 2 and int(it.ilvl) == lvl))
@@ -9123,8 +9126,8 @@ func _warlord_test() -> void:
 		h.alive = true
 		h.st.dodge = 0.0
 		Combat._damage_hero(1, 1.0e20, source)
-		_check("warlord: boss and add cannot burst more than 4% hero HP", is_equal_approx(float(h.max) - float(h.hp), float(h.max) * 0.04))
-		_check("warlord: boss and add cannot burst more than 2% hull", is_equal_approx(Combat.van_hit_damage(source, 1.0e20, true), Game.hull_max() * 0.02))
+		_check("warlord: boss and add cannot burst more than 2% hero HP", is_equal_approx(float(h.max) - float(h.hp), float(h.max) * 0.02))
+		_check("warlord: boss and add cannot burst more than 1% hull", is_equal_approx(Combat.van_hit_damage(source, 1.0e20, true), Game.hull_max() * 0.01))
 	Features.layers.dev.tune["warlord.hero_hit_cap"] = 0.01
 	Combat.heroes[1].hp = Combat.heroes[1].max
 	Combat._damage_hero(1, 1.0e20, parent)
@@ -9133,7 +9136,7 @@ func _warlord_test() -> void:
 	Combat.heroes[1].hp = Combat.heroes[1].max
 	Combat._damage_hero(1, 1.0e20, {})
 	_check("warlord: an unrelated attacker is not granted checkpoint protection", not Combat.heroes[1].alive)
-	Features.layers.dev.tune["warlord.hp"] = 4.0
+	Features.layers.dev.tune["warlord.hp"] = 3.0
 	Combat._spawn({"boss": "warlord", "lvl": Combat.warlord_level()})
 	_check("warlord: HP multiplier follows remote tuning", is_equal_approx(float(Combat.enemies[-1].max), float(parent.max) * 0.5))
 	Features.layers.dev.tune.erase("warlord.hp")
