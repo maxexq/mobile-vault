@@ -9,7 +9,14 @@ extends Node
 ##    (meta "sfx" picks another sound, "" = silent)
 ## Browsers only allow sound after a tap, so on the web nothing plays until the first input (unlocked).
 ##  - music: the cozy lo-fi title theme on bus "Music" while the title screen shows (switch audio_bgm)
-## Switches: audio_ambience (beds + weather), audio_sfx (effects + UI), audio_bgm (title music).
+##  - MV-555 (switch audio_clean): a loop is played by two players that take turns, overlapping over the file's
+##    LOOP_TAIL (the cycle's first seconds repeated after its end, identical audio, so the crossfade is exact). The web
+##    build then keeps every loop on browser samples; MV-536 forced them onto Godot's mixer, which a single-threaded
+##    web build runs on the main thread, and every frame hitch underran it (the hiss / crackle). A hard limiter sits
+##    on Master for whatever Godot mixes itself.
+##  - MV-555 cues (switch audio_cues): resources in, road event good / bad, expedition out / encounter / home / failed /
+##    haul unpacked
+## Switches: audio_ambience (beds + weather), audio_sfx (effects + UI), audio_bgm (title music), audio_clean, audio_cues.
 ## Volumes: Settings master / music / ambience / sfx / ui.
 
 const AMB_DIR := "res://assets/audio/amb/"
@@ -21,7 +28,10 @@ const MUSIC := ["title_lofi"]      # title-screen BGM, cozy lo-fi (bus "Music", 
 const WEATHER_SOUNDS := ["overcast", "rain", "storm", "sandstorm", "snow", "fog", "acid_rain", "ashfall"]
 const SFX := ["thunder_1", "thunder_2", "shot", "shot_heavy", "shot_energy", "hit", "hit_crit", "hit_metal", "hit_hero",
 	"enemy_die", "heal", "skill", "boss_roar", "alarm", "build", "build_done", "demolish", "loot", "loot_rare",
-	"engine_start", "engine_stall", "radio", "depart", "return", "checkpoint", "knock", "wreck", "toast_good", "toast_bad"]
+	"engine_start", "engine_stall", "radio", "depart", "return", "checkpoint", "knock", "wreck", "toast_good", "toast_bad",
+	"res_gain", "event_good", "event_bad", "exp_start", "exp_encounter", "exp_home", "exp_fail", "exp_loot"]
+## MV-555 cue sounds (switch audio_cues, level audio.cue_gain); a cue keeps the toast that comes with it quiet
+const CUES := ["res_gain", "event_good", "event_bad", "exp_start", "exp_encounter", "exp_home", "exp_fail", "exp_loot"]
 const UI := ["tap", "confirm", "cancel", "open"]
 ## GOD MODE preview groups (Dev.sound_group)
 const GROUPS := {
@@ -31,7 +41,8 @@ const GROUPS := {
 	"loot": ["loot", "loot_rare"],
 	"engine": ["engine_start", "engine_stall"],
 	"road": ["radio", "knock", "checkpoint", "wreck", "thunder_1", "thunder_2"],
-	"expedition": ["depart", "return"],
+	"expedition": ["exp_start", "exp_encounter", "exp_home", "exp_loot", "exp_fail", "depart", "return"],
+	"events": ["res_gain", "event_good", "event_bad", "radio"],
 	"ui": ["tap", "confirm", "cancel", "open", "toast_good", "toast_bad"],
 }
 ## per-sound level (dB) so the set sits together; the files are loudness-matched only roughly
@@ -41,6 +52,8 @@ const TRIM := {
 	"shot_energy": -11.0, "hit": -7.0, "hit_crit": -6.0, "hit_metal": -7.0, "hit_hero": -7.0, "enemy_die": -7.0,
 	"heal": -10.0, "skill": -8.0, "loot": -8.0, "loot_rare": -3.0, "radio": -4.0, "tap": -14.0, "confirm": -11.0,
 	"cancel": -11.0, "open": -13.0, "knock": -2.0, "thunder_1": -2.0, "thunder_2": -2.0,
+	"res_gain": -15.0, "event_good": -7.0, "event_bad": -6.0, "exp_start": -4.0, "exp_encounter": -6.0,
+	"exp_home": -5.0, "exp_fail": -6.0, "exp_loot": -6.0,
 }
 const SFX_VOICES := 10
 const UI_VOICES := 3
@@ -57,9 +70,16 @@ const IDLE_PITCH := 0.72
 const BGM_GAIN := 1.0
 ## a GOD preview ends by itself after this long, so a forgotten one never plays over the game (MV-538)
 const PREVIEW_SEC := 45.0
+## MV-555: seconds of each loop file repeated after its cycle (tools/gen_audio.py LOOP_TAIL) = the A/B crossfade
+const LOOP_TAIL := 0.5
+const RES_GAP := 1.5          # resources-in plays at most this often (audio.res_gap)
+const CUE_GAIN := 1.0
+const LIMITER_DB := -1.0      # Master hard-limiter ceiling (audio.limiter_db)
+const TOAST_HUSH_MS := 600    # a toast within this long of a cue stays quiet (the cue already said it)
 
 var unlocked := false
-var layers := {}             # id -> {"p": AudioStreamPlayer, "cur": float, "target": float, "pitch": float}
+var layers := {}             # id -> {"p": player now leading, "q": the other (clean mode), "cur", "target", "pitch",
+                             #        "pos": seconds into the cycle of p, "xf": seconds into a handover (-1 = none)}
 var played := {}             # sound id -> times started (autotest / GOD readout)
 var last_sfx := ""
 var preview := {}            # GOD: {"bed": id} / {"weather": id} overrides what the game asks for
@@ -76,6 +96,11 @@ var _engine_state := ""
 var _at_checkpoint := false
 var _strangers := 0
 var _poll := 0.0
+var _clean := false          # the loop mode the current layers were built for (audio_clean)
+var _real_us := 0            # Time.get_ticks_usec of the last frame (loops run on real time, not Engine.time_scale)
+var _cue_at := -100000       # ticks msec of the last cue (a toast right after it stays quiet)
+var _toast := ""             # a toast sound waiting for the end of the frame
+var _limiter: AudioEffectHardLimiter
 
 
 func _ready() -> void:
@@ -110,11 +135,20 @@ func _ready() -> void:
 	Combat.boss_event.connect(func(kind: String, _e: Dictionary):
 		if kind == "enrage":
 			sfx("boss_roar", 0.05))
-	Expedition.expedition_started.connect(func(): sfx("depart"))
-	Expedition.expedition_finished.connect(func(_r: Dictionary): sfx("return"))
+	Expedition.expedition_started.connect(_on_expedition_started)
+	Expedition.expedition_finished.connect(_on_expedition_finished)
+	Encounter.encounter_ready.connect(func(_id: String): cue("exp_encounter"))   # the team found something
+	Encounter.encounter_resolved.connect(func(_id: String, r: Dictionary): cue("event_good" if bool(r.get("ok", true)) else "event_bad"))
+	Game.event_resolved.connect(_on_event_resolved)
+	Game.floating_text.connect(_on_floating_text)
 	Inspection.queue_changed.connect(_on_strangers)
 	Meta.wrecked.connect(func(): sfx("wreck"))
 	Features.changed.connect(_refresh)
+	_real_us = Time.get_ticks_usec()
+	_clean = clean_on()
+	_limiter = AudioEffectHardLimiter.new()
+	AudioServer.add_bus_effect(0, _limiter)
+	_sync_limiter()
 
 
 func _player(bus: String) -> AudioStreamPlayer:
@@ -133,18 +167,57 @@ func sfx_on() -> bool:
 	return Features.on("audio_sfx")
 
 
+func clean_on() -> bool:
+	return Features.on("audio_clean")
+
+
+func cues_on() -> bool:
+	return Features.on("audio_cues") and sfx_on()
+
+
+## the Master limiter follows audio_clean and audio.limiter_db
+func _sync_limiter() -> void:
+	for i in AudioServer.get_bus_effect_count(0):
+		if AudioServer.get_bus_effect(0, i) == _limiter:
+			AudioServer.set_bus_effect_enabled(0, i, clean_on())
+	_limiter.ceiling_db = Features.num("audio.limiter_db", LIMITER_DB)
+
+
+func limiter_on() -> bool:
+	for i in AudioServer.get_bus_effect_count(0):
+		if AudioServer.get_bus_effect(0, i) == _limiter:
+			return AudioServer.is_bus_effect_enabled(0, i)
+	return false
+
+
 func stream(id: String) -> AudioStream:
 	if _streams.has(id):
 		return _streams[id]
 	var path := _path(id)
 	var st: AudioStream = load(path) if path != "" and ResourceLoader.exists(path) else null
-	if st is AudioStreamWAV and _is_loop(id) and st.loop_mode == AudioStreamWAV.LOOP_DISABLED:
-		# the 'smpl' chunk normally sets this on import; a re-import without it must not stop the bed
-		st.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		st.loop_begin = 0
-		st.loop_end = int(st.get_length() * st.mix_rate)
+	if st is AudioStreamWAV and _is_loop(id):
+		# MV-555: a loop file is its cycle + LOOP_TAIL; clean mode plays it once per turn (no loop, the next player
+		# takes over), the MV-536 fallback loops a copy over the cycle alone
+		st.loop_mode = AudioStreamWAV.LOOP_DISABLED
+		var fb := st.duplicate() as AudioStreamWAV
+		fb.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		fb.loop_begin = 0
+		fb.loop_end = int(cycle_sec(id, st) * st.mix_rate)
+		_streams[id + "#loop"] = fb
 	_streams[id] = st
 	return st
+
+
+## the stream the MV-536 fallback loops (the cycle without the tail)
+func loop_stream(id: String) -> AudioStream:
+	stream(id)
+	return _streams.get(id + "#loop")
+
+
+## seconds of one loop cycle (the file minus its LOOP_TAIL)
+func cycle_sec(id: String, st: AudioStream = null) -> float:
+	st = st if st != null else stream(id)
+	return maxf(0.5, st.get_length() - LOOP_TAIL) if st != null else 0.0
 
 
 func _path(id: String) -> String:
@@ -263,27 +336,55 @@ func _set_target(id: String, t: float) -> void:
 		var st := stream(id)
 		if st == null:
 			return
-		var p := _player("Music" if id in MUSIC else "Ambience")
-		# the web build plays through browser samples by default, and those drop the loop (the bed stopped at the
-		# end of the file and restarted from the same spot); Godot's own mixer loops it (MV-536 web fix)
-		p.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
-		p.stream = st
+		var bus := "Music" if id in MUSIC else "Ambience"
+		var p := _player(bus)
 		p.volume_db = -80.0
-		# "on" is ours, not p.playing, so a bed is started once and never re-triggered by a stale `playing`;
-		# finished re-arms a loop that really ended (a re-import without the loop chunk).
-		layers[id] = {"p": p, "cur": 0.0, "target": 0.0, "pitch": 1.0, "on": false}
-		p.finished.connect(func():
-			if layers[id].on:
-				p.play())
+		# "on" is ours, not p.playing, so a bed is started once and never re-triggered by a stale `playing`
+		var L := {"p": p, "q": null, "cur": 0.0, "target": 0.0, "pitch": 1.0, "on": false, "pos": 0.0, "xf": -1.0}
+		if _clean:
+			# MV-555: both players keep the default playback type (browser samples on the web)
+			p.stream = st
+			var q := _player(bus)
+			q.stream = st
+			q.volume_db = -80.0
+			L.q = q
+		else:
+			# MV-536 fallback: the web's sample playback drops the loop (it restarts from the play() offset after
+			# an 'ended' gap), so Godot's own mixer loops it
+			p.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+			p.stream = loop_stream(id)
+			# finished re-arms a loop that really ended
+			p.finished.connect(func():
+				if layers.has(id) and layers[id].on and not _clean:
+					p.play())
+		layers[id] = L
 	layers[id].target = t
 
 
+## audio_clean switched: every layer is rebuilt for the other loop mode (they fade back in)
+func _rebuild_layers() -> void:
+	for id in layers:
+		for k in ["p", "q"]:
+			if layers[id][k] != null:
+				(layers[id][k] as AudioStreamPlayer).queue_free()
+	layers.clear()
+	_clean = clean_on()
+	_sync_limiter()
+	_refresh()
+
+
 func _process(dt: float) -> void:
+	var now_us := Time.get_ticks_usec()
+	var real := clampf(float(now_us - _real_us) / 1000000.0, 0.0, 0.25)
+	_real_us = now_us
+	if _clean != clean_on():
+		_rebuild_layers()
 	_poll -= dt
 	if _poll <= 0.0:
 		_poll = 0.25
 		_watch()
 		_refresh()
+		_sync_limiter()
 	if not preview.is_empty():
 		preview_left -= dt
 		if preview_left <= 0.0:
@@ -298,17 +399,61 @@ func _process(dt: float) -> void:
 		if L.cur <= 0.001 and L.target <= 0.0:
 			if L.on:
 				L.on = false
+				L.xf = -1.0
 				p.stop()
+				if L.q != null:
+					(L.q as AudioStreamPlayer).stop()
 			continue
 		if id == "engine":
 			L.pitch = move_toward(float(L.pitch), 1.0 if _engine_now() == "run" else IDLE_PITCH, dt * 0.4)
 			p.pitch_scale = float(L.pitch)
-		p.volume_db = linear_to_db(maxf(0.0001, float(L.cur))) + float(TRIM.get(id, 0.0))
+			if L.q != null:
+				(L.q as AudioStreamPlayer).pitch_scale = float(L.pitch)
+		var db := linear_to_db(maxf(0.0001, float(L.cur))) + float(TRIM.get(id, 0.0))
 		if not L.on:
 			# start beds at a random spot so two loops of the same length don't line up
 			L.on = true
-			p.play(randf() * maxf(0.0, p.stream.get_length() - 0.5))
+			L.xf = -1.0
+			L.pos = randf() * maxf(0.0, cycle_sec(id) - 0.5)
+			p.play(float(L.pos))
+		if L.q == null:
+			p.volume_db = db
+			continue
+		_turn(id, L, real * float(L.pitch), db)
 	_thunder(dt)
+	if _toast != "":
+		if Time.get_ticks_msec() - _cue_at > TOAST_HUSH_MS:
+			sfx(_toast, 0.0)
+		_toast = ""
+
+
+## clean mode: the leading player p runs through its cycle; at the end the other player starts at the top and the
+## two share the LOOP_TAIL (the same audio in both), p fading out as q fades in, then they swap roles
+func _turn(id: String, L: Dictionary, adv: float, db: float) -> void:
+	var p: AudioStreamPlayer = L.p
+	var q: AudioStreamPlayer = L.q
+	var cyc := cycle_sec(id)
+	L.pos = float(L.pos) + adv
+	if float(L.xf) < 0.0 and float(L.pos) >= cyc:
+		# the handover: q starts where p's tail is now, so both play the same samples
+		L.xf = float(L.pos) - cyc
+		q.play(float(L.xf))
+		L.p = q
+		L.q = p
+		L.pos = float(L.xf)
+		p = L.p
+		q = L.q
+	elif float(L.xf) >= 0.0:
+		L.xf = float(L.xf) + adv
+	if float(L.xf) >= 0.0:
+		var w := clampf(float(L.xf) / LOOP_TAIL, 0.0, 1.0)
+		p.volume_db = db + linear_to_db(maxf(0.0001, w))
+		q.volume_db = db + linear_to_db(maxf(0.0001, 1.0 - w))
+		if w >= 1.0:
+			L.xf = -1.0
+			q.stop()
+	else:
+		p.volume_db = db
 
 
 ## edges the game has no signal for: engine start / stall, arriving at a checkpoint
@@ -392,13 +537,60 @@ func _start(p: AudioStreamPlayer, id: String, bus: String, pitch: float) -> bool
 	return true
 
 
+## MV-555: a toast's sound waits for the end of the frame, so a cue fired by the same moment (an expedition back,
+## an encounter) speaks for it instead of both playing at once
 func _on_toast(_text: String, kind: String) -> void:
 	match kind:
 		"good":
-			sfx("toast_good", 0.0)
+			_toast = "toast_good"
 		"bad", "warn":
 			if Time.get_ticks_msec() - int(_last_at.get("toast_bad", -100000)) > 1500:
-				sfx("toast_bad", 0.0)
+				_toast = "toast_bad"
+
+
+## MV-555: plays a cue sound when audio_cues is on (false = off or rate limited, the caller may fall back)
+func cue(id: String, spread: float = 0.0, pitch: float = 1.0) -> bool:
+	if not cues_on() or not unlocked or not _ready_for(id):
+		return false
+	var p := _voice(_sfx_pool, id)
+	if not _start(p, id, "SFX", pitch * (1.0 + randf_range(-spread, spread))):
+		return false
+	p.volume_db += linear_to_db(maxf(0.0001, Features.num("audio.cue_gain", CUE_GAIN)))
+	_cue_at = Time.get_ticks_msec()
+	return true
+
+
+## resources in: the "+N" a working room floats up, or a craft finishing. Rooms pay out all the time, so it is a
+## quiet pluck at most every audio.res_gap seconds, its pitch stepping through a pentatonic scale
+func _on_floating_text(_slot: int, text: String, icon: String) -> void:
+	if not (text.begins_with("+") or (text == "DONE" and icon != "hammer")):
+		return
+	if Time.get_ticks_msec() - int(_last_at.get("res_gain", -100000)) < int(Features.num("audio.res_gap", RES_GAP) * 1000.0):
+		return
+	var semis: Array = [0, 2, 4, 7, 9]
+	cue("res_gain", 0.0, pow(2.0, float(semis[randi() % semis.size()]) / 12.0))
+
+
+func _on_event_resolved(_id: String, action: String, result: Dictionary) -> void:
+	if action == "ignore":
+		return              # driving on is neither a win nor a loss
+	cue("event_good" if bool(result.get("ok", true)) else "event_bad")
+
+
+func _on_expedition_started() -> void:
+	if not cue("exp_start"):
+		sfx("depart")
+
+
+func _on_expedition_finished(rep: Dictionary) -> void:
+	var ok := bool(rep.get("ok", false))
+	if not cue("exp_home" if ok else "exp_fail"):
+		sfx("return")
+		return
+	var haul := not (rep.get("gain", {}) as Dictionary).is_empty() or int(rep.get("gear", 0)) > 0
+	if haul:
+		# the haul comes off after the hatch closes
+		get_tree().create_timer(1.4).timeout.connect(func(): cue("exp_loot"))
 
 
 func _on_shot(from_kind: String, _from_id: int, _to_kind: String, _to_id: int, style: String) -> void:
