@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- The Build menu and the build list of an empty room slot say what each room does (food, water, healing, defence...) (MV-557).
 - New sounds: getting resources, a road event won or lost, and the expedition moments (team heads out, finds something, comes home, fails, unpacks the haul) (MV-555).
 - World map (test builds): clearer, calmer ground with region borders and name plates, and each region dotted with its own landmarks: factories, dunes and glass, forests, swamp pools and shacks, snowy pines, city towers (MV-556).
 - Salvage several gear items at once: tick them in the stash and confirm once (MV-554).

@@ -297,6 +297,9 @@ func _tab_vehicle() -> void:
 	if int(Game.s.vault_level) < Data.MAX_VAULT_LEVEL:
 		_note("การ์ดอัปเกรด: " + BuildPanel.vault_card_text(int(Game.s.vault_level), "", ""))
 	_row([_b("แบบเดิม" if vv2 else "แบบใหม่", func(): Dev.vault_upgrade_v2(not vv2), "yellow" if vv2 else "gray")], "อัปเกรดโครงรถ")
+	var bre := Features.on("build_room_effects")
+	_row([_b("เมนูสร้าง", func(): Dev.build_list_preview("menu"), "green", true), _b("ช่องว่าง", func(): Dev.build_list_preview("slot"), "green", true),
+		_b("ปิด" if bre else "เปิด", func(): Dev.build_room_effects(not bre), "yellow" if bre else "gray")], "ห้องทำอะไร (MV-557) %s" % ("เปิด" if bre else "ปิด"))
 	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
 	var rv2 := Features.on("hull_repair_v2")

@@ -377,6 +377,29 @@ func vault_upgrade_v2(on: bool) -> void:
 	act("vault upgrade v2 %s" % ("on" if on else "off"))
 
 
+## MV-557: session override of the build_room_effects switch (what each room does, in both build lists)
+func build_room_effects(on: bool) -> void:
+	Features.set_override("features", "build_room_effects", on)
+	act("build room effects %s" % ("on" if on else "off"))
+
+
+## MV-557: open a build list like the player does: "menu" = the Build window, "slot" = the list of the first empty
+## slot (the slot tapped in the vehicle). Returns false when there is no empty slot to show.
+func build_list_preview(where: String) -> bool:
+	var m = get_tree().current_scene
+	if m == null or m.get("hud") == null:
+		return false
+	act("build list preview: " + where)
+	if where == "menu":
+		m.hud.open_panel("build")
+		return true
+	for i in Game.s.rooms.size():
+		if Game.is_slot_unlocked(i) and str(Game.s.rooms[i].type) == "empty" and not Game.is_constructing(i):
+			m.open_closeup(i)
+			return true
+	return false
+
+
 func set_hull(frac: float) -> void:
 	Game.s.hull = Game.hull_max() * frac
 	act("hull %d%%" % int(frac * 100))

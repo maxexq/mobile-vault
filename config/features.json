@@ -32,6 +32,7 @@
     "drive_help": true,
     "hull_repair_v2": true,
     "vault_upgrade_v2": true,
+    "build_room_effects": true,
     "morale_v2": true,
     "fixed_sim": true,
     "responsive_scale": true,

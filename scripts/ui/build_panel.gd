@@ -148,6 +148,11 @@ func _card(t: String) -> Control:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(UIKit.label("%s" % def.th, UIKit.FS_SMALL, UIKit.C_TEXT))
 	v.add_child(UIKit.label(def.en, UIKit.FP, UIKit.C_DIM, true))
+	if Features.on("build_room_effects"):
+		# MV-557: what the room does, before the player commits scrap to it
+		var fx := UIKit.wrap_label(Data.room_effect(t), UIKit.FS_SMALL, UIKit.C_GREEN)
+		fx.name = "Effect"
+		v.add_child(fx)
 	var ch := UIKit.hbox(2)
 	ch.add_child(UIKit.icon_rect("scrap", 16))
 	var cl := UIKit.label("%d  %s" % [Game.build_cost(t), Game.fmt_time(Game.build_time(t))], UIKit.FP, UIKit.C_GOLD, true)
