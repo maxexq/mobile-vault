@@ -9,12 +9,12 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Auto Equip for one survivor in Crew details and Squad / roof-reserve cards (MV-547).
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
 
 ### Changed
 - Industrial Ruins now uses twenty approved native pixel-art panels: pale broken skyline, rusted factories, roadside wrecks, thin smog and cracked asphalt, with smoke and lamp effects anchored to the new scenery (MV-548)
 
-### Changed
 - Every-10th-wave bosses have one-third less HP and damage; their special hull hits now respect vehicle armor and each hit is limited to 12% of maximum hull, helping prevent boss wins from turning into a scrap-draining repair bill (MV-544)
 - Upgrading the Mobile Vault frame always does something now: +15 max hull and +5 % production per level, and when your vehicle has no space for the room a level unlocks, you get +10 % production instead until a bigger vehicle can use it. The upgrade card shows the real number of rooms and tells you which vehicle to switch to when this one is full (MV-545)
 
