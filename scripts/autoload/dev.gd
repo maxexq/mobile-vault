@@ -608,6 +608,41 @@ func gear_sample(r: int, slot: String, plus: int = 0, lock: bool = false) -> Dic
 			base = str(k)
 			break
 	return {"uid": -1, "base": base, "slot": slot, "rar": r, "ilvl": 5 + r * 4, "plus": plus, "aff": [], "lock": lock}
+
+
+# ------------------------------------------------------------------ MV-552 item detail stat table
+## open the loot window on a stash weapon next to the squad lead's weapon, so the +/- column has something to show;
+## gives an epic weapon (and a common one to hold) when there is none
+func gear_detail_demo() -> void:
+	act("gear detail demo")
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud == null or Game.s.dwellers.is_empty():
+		return
+	var d: Dictionary = Game.s.dwellers[0]
+	for did in Game.s.squad:
+		if int(did) >= 0 and not Game.dweller_by_id(int(did)).is_empty():
+			d = Game.dweller_by_id(int(did))
+			break
+	var lvl := maxi(1, int(Game.s.combat.get("wave", 1)) / 2)
+	if Loot.equipped_on(d, "weapon").is_empty():
+		var held := Loot.roll_item("weapon", lvl, 0)
+		Loot.add_to_stash(held)
+		Loot.equip_from_stash(int(held.uid), d)
+	var pick := {}
+	for it in Loot.stash():
+		if it.slot == "weapon" and (pick.is_empty() or Loot.power_score(it) > Loot.power_score(pick)):
+			pick = it
+	if pick.is_empty():
+		pick = Loot.roll_item("weapon", lvl + 2, 3)
+		Loot.add_to_stash(pick)
+	for k in hud.panels:
+		if k != "inventory" and hud.panels[k].is_open:
+			hud.panels[k].close()
+	var inv: LootPanel = hud.panels.inventory
+	inv.open_pick("weapon", int(d.id))
+	inv.detail_uid = int(pick.uid)
+	inv.refresh()
+
 # ------------------------------------------------------------------ MV-483 trait cards
 ## every trait card's light: "" = live, "still", "off" (read-only, not cheated)
 func trait_preview(mode: String) -> void:

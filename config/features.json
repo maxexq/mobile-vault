@@ -4,6 +4,7 @@
     "event_progression": true,
     "warlord_progression": true,
 
+    "gear_detail_v2": true,
     "individual_auto_equip": true,
     "smooth_ui_text": true,
     "confirm_actions": true,
