@@ -23,6 +23,7 @@
     "barks": true,
     "tutorial_tips": true,
     "hull_warning": true,
+    "drive_help": true,
     "hull_repair_v2": true,
     "morale_v2": true,
     "fixed_sim": true,

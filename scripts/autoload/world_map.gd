@@ -37,6 +37,10 @@ extends Node
 
 signal world_changed
 
+## MV-542: the destination reached during the offline catch-up (its arrival toast is skipped there), for the
+## "while you were away" summary; "" = none. Game._offline_progress reads and clears it
+var offline_arrival := ""
+
 const GEN_VERSION := 2      # 2 (MV-515): the exit sits clear of its neighbour stop. Saved worlds keep their own graph
 const SAVE_VERSION := 1                  # Game.s.world.v this build reads
 const PLACE_VERSION := 1                 # MV-514 placement rule (recorded in world.placed)
@@ -599,6 +603,8 @@ func _arrive(id: String, offline: bool) -> bool:
 		w.erase("trip")
 		if not offline:
 			Game.toast.emit("ถึงปลายทางแล้ว รถจอดรอคำสั่ง", "info")
+		else:
+			offline_arrival = str(Expedition.SITES[n.site].th) if n.has("site") else Loc.t("ปลายทาง")
 	elif int(t.i) >= (t.ids as Array).size() - 1:
 		w.erase("trip")
 	Trace.rec("travel", "arrived %s" % id, {"dest": last})
