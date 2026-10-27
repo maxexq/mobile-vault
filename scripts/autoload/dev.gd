@@ -1042,7 +1042,12 @@ func spawn_boss(id: String) -> void:
 	act("spawn boss " + id)
 
 
-## MV-544: compare the same roaming boss under the current / legacy balance rules.
+## MV-550: compare this biome checkpoint under the progression / legacy rules.
+func warlord_preview(enabled: bool) -> void:
+	feature_set("warlord_progression", enabled)
+	spawn_boss("warlord")
+
+
 func roaming_boss_preview(enabled: bool) -> void:
 	feature_set("roaming_boss_balance", enabled)
 	spawn_boss("bloat_king")
