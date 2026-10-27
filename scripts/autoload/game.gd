@@ -64,7 +64,7 @@ func new_game() -> void:
 
 
 ## fresh state (also used as the live backdrop behind the title screen)
-func setup_default_state(keep_meta: bool = false) -> void:
+func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = true) -> void:
 	var meta: Dictionary = s.get("meta", {}) if keep_meta else {}
 	var tier_id: String = str(s.get("tier", "van")) if keep_meta else "van"
 	s = {
@@ -94,15 +94,17 @@ func setup_default_state(keep_meta: bool = false) -> void:
 	s.rooms[1].type = "kitchen"
 	s.rooms[2].type = "water"
 	if keep_meta:
-		# a new generation starts with three fresh volunteers (+ the veterans the caller adds)
-		for i in 3:
-			var d := recruit_random()
-			d.lvl = 1 + Meta.generation() / 2
-		s.dwellers[0].room = Data.CAB_SLOT
-		s.dwellers[1].room = 1
+		# MV-559: an existing whole crew needs no extra copies/recruits. Empty-crew recovery and rollback keep volunteers.
+		if recruit_volunteers:
+			for i in 3:
+				var d := recruit_random()
+				d.lvl = 1 + Meta.generation() / 2
+			s.dwellers[0].room = Data.CAB_SLOT
+			s.dwellers[1].room = 1
 		s.van_gear.turret = Loot.roll_item("turret", 1, 0, "mg_turret")
 		s.items["components"] = 20
-		s.squad = [-1, int(s.dwellers[2].id), -1]
+		if recruit_volunteers:
+			s.squad = [-1, int(s.dwellers[2].id), -1]
 		return
 	var mark := _add_dweller({"name": "จ่ามาร์ค", "lore": "mark", "variant": "dw_army_brown", "str": 7, "int": 3, "agi": 4, "room": -1, "lvl": 3})
 	var leo := _add_dweller({"name": "ลีโอ", "lore": "leo", "variant": "dw_scav_brown", "str": 4, "int": 3, "agi": 7, "room": -1, "lvl": 2})

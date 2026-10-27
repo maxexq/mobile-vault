@@ -9,6 +9,7 @@ var out_dir := "user://autotest"
 var n := 0
 var _fails := 0
 var _warlord_checks_completed := false
+var _nextgen_crew_checks_completed := false
 
 var _individual_auto_equip_checks_completed := false
 var _multi_salvage_checks_completed := false
@@ -68,6 +69,12 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=nextgen_crew" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _nextgen_crew_test()
+		_check("nextgen crew: all checks completed", _nextgen_crew_checks_completed)
+		_finish()
+		return
 	if "--only=event_progression" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _event_progression_test()
@@ -1076,6 +1083,8 @@ func _run() -> void:
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
+	await _nextgen_crew_test()
+	_check("nextgen crew: all checks completed", _nextgen_crew_checks_completed)
 	await _event_progression_test()
 	_check("event progression: all checks completed", _event_progression_checks_completed)
 	await _warlord_test()
@@ -5874,6 +5883,9 @@ func _driver_cab_test() -> void:
 	Dev.driver_cab_switch(true)
 	for t in ["van", "bus", "rig", "train"]:
 		Dev.set_tier(t)
+		# Same-tier previews do not rebuild, and an old idle timer can fire during this static check.
+		v.rebuild()
+		v._driver_t = 60.0 # manual actions below reset it; automatic motion is checked separately
 		await wait(0.1)
 		_check("driver cab %s: overlay sits on the baked window (%s)" % [t, str(v.driver_cab.position)],
 			v.driver_cab.position == Vehicle.DRIVER_CAB[t] and not v.driver_cab.visible)
@@ -10091,3 +10103,225 @@ func _event_progression_test() -> void:
 	Threat.phase_changed.emit(Threat.phase)
 	Game.set_process(saved_processing)
 	_event_progression_checks_completed = true
+
+
+## MV-559: whole-roster transfer must retain invested progress, including JSON float IDs and every worn slot.
+func _nextgen_crew_fixture(count: int) -> void:
+	Game._acc_world = 0.0
+	Game._acc_crew = 0.0
+	Account.a = {}
+	Game.s = {}
+	Game.setup_default_state()
+	Account.attach(Game.s)
+	Game.s.dwellers.clear()
+	Game.s.next_id = 101
+	Game.s.tier = "train"
+	while Game.s.rooms.size() < 12:
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	Game.s.rooms[10].type = "medical"
+	Game.s.vault_level = 6
+	Game.s.res.scrap = 1200.0
+	Game.s.items.components = 80
+	Game.s.meta = {"gen": 3, "legacy": 40, "perks": {"veterans": 2, "training": 2, "efficient": 1}, "blueprints": ["bp_bus"], "best_km": 40.0}
+	Account.collect(Game.s)
+	for i in count:
+		var d := Game._add_dweller({"name": "MV559 Crew %02d" % i, "lore": "crew-%d" % i, "variant": "dw_army_brown", "lvl": 12 + i, "str": 7, "int": 5, "agi": 6, "role": "builder"})
+		d.xp = 17.5 + i
+		d.skills = {"c1": 2, "s1": 1, "p1": 2}
+		d.traits = ["mechanic", "tough"]
+		d.custom_progress = {"medal": i}
+		d.room = [Data.CAB_SLOT, 1, 2, 10][i % 4]
+		d.away_until = 1000.0 if i % 3 == 0 else 0.0
+		d["talk_t"] = 12.0
+		d["mood_room"] = 10
+		for slot in Loot.HERO_SLOTS:
+			var item := Loot.roll_item(slot, 9, 2)
+			item.plus = 3
+			item.lock = true
+			d.gear[slot] = item
+	Game.s.gear = []
+	for i in (Loot.STASH_CAP if count == 24 else 3):
+		var item := Loot.roll_item("weapon", 4, 0)
+		item.plus = 2
+		item.lock = false # auto-salvage would consume these: transfer must bypass it
+		Game.s.gear.append(item)
+	for slot in Loot.VAN_SLOTS:
+		Game.s.van_gear[slot] = Loot.roll_item(slot, 12, 2, "diesel_electric" if slot == "engine" else "")
+	Game.s.mods = {"spike_ram": 2, "armor_plates": 1}
+	Game.s.solar = {"panels": 3, "battery": 2, "tracking": true, "dirt": 0.2}
+	Game.s.combat.auto_salvage = 5
+	Game.s.next_id = 1 # even old/stale counters must not collide after transfer
+	Game.s.next_uid = 1
+	if count >= 5:
+		Game.s.squad = [int(Game.s.dwellers[count - 1].id), int(Game.s.dwellers[count - 2].id), -1]
+	else:
+		Game.s.squad = [-1, -1, -1]
+	Game.s.exp = {"site": "market", "ids": [101], "start": 1.0}
+	Game.s.memorial.append({"name": "Already lost", "lvl": 4, "cause": "test", "km": 0.0})
+	Game.active_event = ""
+	Game.started = false
+	_no_events()
+
+
+func _nextgen_crew_test() -> void:
+	var saved_state := Game.s
+	var saved_account := Account.a
+	var saved_started := Game.started
+	var saved_processing := Game.is_processing()
+	var saved_event := Game.active_event
+	var saved_size := get_window().size
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_flags := Dev.flags.duplicate(true)
+	Game.set_process(false)
+	Features.set_override("features", "nextgen_all_crew", true)
+	Features.set_override("features", "english", true)
+	Features.set_override("features", "confirm_actions", true)
+	for count in [1, 5, 12, 24]:
+		for forced in [false, true]:
+			_nextgen_crew_fixture(count)
+			Game.s["wrecked"] = forced
+			var old := Game.s
+			var previous: Dictionary = Game.s.duplicate(true)
+			Crew._deserters.append(Game.s.dwellers[0])
+			Meta.next_generation([101.0, 101.0, -999.0], "van")
+			_check("nextgen crew: %d/%s all people once, no extra volunteers" % [count, forced], Game.s.dwellers.size() == count and Game.tier() == "van" and Meta.generation() == 4)
+			_check("nextgen crew: old roster data is untouched", old.dwellers == previous.dwellers)
+			_check("nextgen crew: vehicle jobs/route reset but shared account stays", Game.s.exp.is_empty() and int(Game.s.vault_level) == 1 and int(Game.s.biome) == 0 and int(Game.s.lap) == 0 and Game.s.memorial.size() == 1 and Meta.has_blueprint("bp_bus"))
+			_check("nextgen crew: existing resource carry rules", is_equal_approx(float(Game.s.res.scrap), 450.0) and int(Game.s.items.components) == 40)
+			_check("nextgen crew: obsolete research refunded once", int(Meta.m().legacy) == 76 and Meta.retired_research_refund() == 0 and Meta.refund_retired_research() == 0 and Meta.perk("efficient") == 1)
+			_check("nextgen crew: obsolete research cannot be bought", not Meta.can_buy("veterans", 9999) and not Meta.can_buy("training", 9999))
+			var uids := {}
+			for i in count:
+				var d: Dictionary = Game.s.dwellers[i]
+				var before: Dictionary = previous.dwellers[i]
+				var same := int(d.id) == int(before.id)
+				for key in ["name", "lore", "variant", "lvl", "xp", "str", "int", "agi", "skills", "traits", "role", "gear", "custom_progress"]:
+					same = same and d[key] == before[key]
+				_check("nextgen crew: %s keeps identity and full invested progress" % d.name, same)
+				_check("nextgen crew: %s returns from old duties safely" % d.name, not Game.is_away(d) and not Crew.busy(d) and not d.has("mood_room") and (int(d.room) in [-1, Data.CAB_SLOT, 1, 2]))
+				for slot in Loot.HERO_SLOTS:
+					var uid := int(d.gear[slot].uid)
+					_check("nextgen crew: %s %s item identity is unique" % [d.name, slot], not uids.has(uid))
+					uids[uid] = true
+			var gear_copy := true
+			for i in previous.gear.size():
+				gear_copy = gear_copy and Game.s.gear[i] == previous.gear[i]
+			_check("nextgen crew: all stash equipment and oversized engine retained", gear_copy and Game.s.gear.size() == previous.gear.size() + 1 and Game.s.gear[-1] == previous.van_gear.engine and Loot.van_equipped("engine").is_empty())
+			_check("nextgen crew: vehicle gear identities retained without a free turret", Game.s.van_gear.turret == previous.van_gear.turret and Game.s.van_gear.plating == previous.van_gear.plating and Game.s.van_gear.spikes == previous.van_gear.spikes)
+			_check("nextgen crew: garage mods and solar equipment retained, new hull full", Game.s.mods == previous.mods and Game.s.solar == previous.solar and is_equal_approx(float(Game.s.hull), Game.hull_max()))
+			var moved_items: Array = (Game.s.gear as Array).duplicate()
+			moved_items.append_array((Game.s.van_gear as Dictionary).values())
+			for item in moved_items:
+				if item is Dictionary:
+					var uid := int(item.uid)
+					_check("nextgen crew: stash/vehicle UID %d unique and allocator safe" % uid, not uids.has(uid) and int(Game.s.next_uid) > uid)
+					uids[uid] = true
+			if count == 24:
+				_check("nextgen crew: full stash never auto-salvages during transfer", Game.s.gear.size() == Loot.STASH_CAP + 1)
+
+			_check("nextgen crew: next survivor ID does not collide", int(Game.s.next_id) > int(Game.s.dwellers[count - 1].id))
+			_check("nextgen crew: pending old departure queue cleared", Crew._deserters.is_empty())
+			if count > Data.BASE_POP_CAP:
+				_check("nextgen crew: everyone transfers above the smaller vehicle bed cap", Game.s.dwellers.size() > Game.pop_cap())
+			if count >= 5:
+				_check("nextgen crew: defender assignments preserved by ID", Game.s.squad == previous.squad)
+			# Serialization makes integer IDs floats. A second real transfer must keep the same crew and gear.
+			var unpacked := Account.unwrap(JSON.parse_string(JSON.stringify(Account.envelope(Game.s))))
+			Account.a = unpacked.account
+			Game.s = unpacked.main
+			Account.attach(Game.s)
+			Meta.next_generation([], "van")
+			_check("nextgen crew: save round trip and repeat transfer keep everyone once", Game.s.dwellers.size() == count and int(Game.s.dwellers[0].id) == 101 and int(Game.s.dwellers[0].lvl) == 12 and int(Game.s.dwellers[0].skills.c1) == 2 and Game.s.dwellers[0].gear.size() == Loot.HERO_SLOTS.size() and Game.s.gear.size() == previous.gear.size() + 1 and int(Game.s.van_gear.turret.uid) == int(previous.van_gear.turret.uid))
+			_check("nextgen crew: save/repeat cannot refund again", int(Meta.m().legacy) == 76)
+			Game.s.dwellers[0].gear.weapon.plus = 8
+			_check("nextgen crew: gear/skills are deep copies", int(old.dwellers[0].gear.weapon.plus) == 3)
+	_nextgen_crew_fixture(5)
+	Meta.m().perks["tier_train"] = 1
+	var fitted_engine: Dictionary = Game.s.van_gear.engine.duplicate(true)
+	Meta.next_generation([], "train")
+	_check("nextgen crew: fitting engine stays installed on larger vehicle", Game.s.van_gear.engine == fitted_engine and EngineBay.fits(Loot.van_equipped("engine")))
+	Game.s.gear[0].plus = 7
+	_check("nextgen crew: equipment still usable after transfer", Loot.equip_from_stash(int(Game.s.gear[0].uid), Game.s.dwellers[0]))
+	_nextgen_crew_fixture(0)
+	Meta.next_generation([], "van")
+	_check("nextgen crew: empty wreck recovery still receives volunteers", Game.s.dwellers.size() == 3 and Game.room_workers(Data.CAB_SLOT).size() == 1 and Game.s.gear.size() == 4)
+	# Refund only the paid ranks; opening research repeatedly or loading cannot mint points.
+	for ranks in [[0, 0, 0], [1, 0, 6], [1, 1, 12], [2, 1, 24], [2, 2, 36]]:
+		_nextgen_crew_fixture(5)
+		Meta.m().perks.veterans = ranks[0]
+		Meta.m().perks.training = ranks[1]
+		_check("nextgen crew: exact research refund %s" % str(ranks), Meta.refund_retired_research() == ranks[2] and Meta.refund_retired_research() == 0 and int(Meta.m().legacy) == 40 + int(ranks[2]))
+	_nextgen_crew_fixture(12)
+	var panel: NextGenPanel = main.hud.panels.nextgen
+	var dialog: ConfirmPanel = main.hud.confirmation
+	for language in ["th", "en"]:
+		Settings.set_value("lang", language)
+		for size in [Vector2i(360, 780), Vector2i(1280, 720)]:
+			get_window().size = size
+			panel.open_retire(false)
+			panel.step = "crew"
+			panel.refresh()
+			await wait(0.15)
+			_check("nextgen crew: all-crew review %s/%s" % [language, size], panel.carry.size() == 12 and panel.title_lbl.text.contains("CREW 12"))
+			await shot("nextgen_all_crew_%s_%dx%d" % [language, size.x, size.y])
+			var current := Game.s
+			panel._request_next_generation()
+			await wait(0.1)
+			_check("nextgen crew: confirmation and cancel retain all people", dialog.is_open and is_same(Game.s, current) and dialog.box.get_global_rect().encloses(dialog.confirm_button.get_global_rect()))
+			await shot("nextgen_all_confirm_%s_%dx%d" % [language, size.x, size.y])
+			dialog.close()
+			panel.close()
+	panel.open_retire(false)
+	panel.step = "crew"
+	panel.refresh()
+	panel._request_next_generation()
+	var gen := Meta.generation()
+	Game._add_dweller({"name": "Joined during prompt", "lvl": 2})
+	dialog.confirm_button.pressed.emit()
+	_check("nextgen crew: changed live roster invalidates stale confirmation", Meta.generation() == gen and Game.s.dwellers.size() == 13)
+	dialog.close()
+	panel.close()
+	# The final fractional simulation tick belongs to the old crew, not the new vehicle.
+	_nextgen_crew_fixture(5)
+	var tick_old := Game.s
+	Game._acc_crew = 0.1
+	Meta.next_generation([], "van")
+	_check("nextgen crew: pending old simulation finishes before capturing XP", is_equal_approx(float(Game.s.dwellers[0].xp), float(tick_old.dwellers[0].xp)) and is_zero_approx(Game._acc_crew))
+	_nextgen_crew_fixture(5)
+	panel.open_retire(false)
+	panel.step = "summary"
+	panel.refresh()
+	for button in panel.find_children("*", "Button", true, false):
+		if button.text == Loc.t("ถัดไป: งานวิจัย"):
+			button.pressed.emit()
+			break
+	_check("nextgen crew: entering research refunds paid ranks through UI", panel.step == "perks" and panel.refunded == 36 and Meta.perk("veterans") == 0 and Meta.perk("training") == 0)
+	panel.step = "crew"
+	panel.refresh()
+	panel._request_next_generation()
+	dialog.confirm_button.pressed.emit()
+	_check("nextgen crew: confirmed UI transfers full team and closes review", Meta.generation() == 4 and Game.s.dwellers.size() == 5 and not panel.is_open and Game.s.dwellers[0].gear.size() == 6)
+	# Rollback still has its original paid-cap/level and weapon-only future-transfer behavior.
+	Features.set_override("features", "nextgen_all_crew", false)
+	_nextgen_crew_fixture(5)
+	_check("nextgen crew: rollback restores old research and no refund", Meta.carry_slots() == 4 and is_equal_approx(Meta.carry_level_keep(), 0.9) and Meta.refund_retired_research() == 0)
+	Meta.next_generation([101.0], "van")
+	_check("nextgen crew: rollback transfers only chosen crew plus volunteers", Game.s.dwellers.size() == 4 and int(Game.s.dwellers[3].lvl) == 11 and Game.s.dwellers[3].gear.size() == 1 and Game.s.dwellers[3].skills.is_empty() and Game.s.gear.is_empty() and Game.s.mods.is_empty())
+	Dev.nextgen_crew_preview(true)
+	_check("nextgen crew: GOD preview enables whole team", Meta.all_crew_on())
+	Dev.nextgen_crew_preview(false)
+	_check("nextgen crew: GOD preview restores old rules", not Meta.all_crew_on())
+	Game.s = saved_state
+	Account.a = saved_account
+	Game.active_event = saved_event
+	Game.started = saved_started
+	get_window().size = saved_size
+	Settings.v = saved_settings
+	Features.layers = saved_layers
+	Dev.flags = saved_flags
+	Loc.apply()
+	Game.game_started.emit()
+	Game._emit_all(true)
+	Game.set_process(saved_processing)
+	_nextgen_crew_checks_completed = true

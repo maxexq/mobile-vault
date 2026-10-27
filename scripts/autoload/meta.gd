@@ -1,7 +1,7 @@
 extends Node
 ## Prestige / meta-progression: "The Next Generation".
 ## When the truck is wrecked (hull 0 for 2 minutes) or the player retires it after the first warlord,
-## part of the crew, resources and every blueprint escape to build a new, bigger vehicle.
+## the whole crew (MV-559), part of the resources and every blueprint return to build a new vehicle.
 ## Genetic-research points (stored as "legacy") buy permanent perks; vehicle blueprints + research unlock the
 ## next vehicle tier: camper van -> armoured bus -> 18-wheeler rig -> armoured train. Every rebirth is told as a
 ## short story (a radio SOS from the wreck, handing the blueprints to Command...).
@@ -124,11 +124,25 @@ func legacy_earned() -> int:
 	return maxi(1, int(p))
 
 
+## MV-559: the transfer authority is the live roster, never the UI's old limited selection.
+func all_crew_on() -> bool:
+	return Features.on("nextgen_all_crew")
+
+
+func all_crew_ids() -> Array:
+	var ids := []
+	for d in Game.s.get("dwellers", []):
+		ids.append(int(d.id))
+	return ids
+
+
 func carry_slots() -> int:
-	return 2 + perk("veterans")
+	return all_crew_ids().size() if all_crew_on() else 2 + perk("veterans")
 
 
 func carry_level_keep() -> float:
+	if all_crew_on():
+		return 1.0
 	return [0.5, 0.7, 0.9][clampi(perk("training"), 0, 2)]
 
 
@@ -143,6 +157,8 @@ func perk_cost(id: String) -> int:
 
 
 func can_buy(id: String, legacy: int) -> bool:
+	if all_crew_on() and id in ["veterans", "training"]:
+		return false
 	var p: Dictionary = PERKS[id]
 	if perk(id) >= int(p.max):
 		return false
@@ -160,6 +176,28 @@ func buy(id: String) -> bool:
 	mm.legacy = int(mm.legacy) - perk_cost(id)
 	mm.perks[id] = perk(id) + 1
 	return true
+
+
+## Refund the actual paid ranks, then erase them: reopening/reloading cannot pay twice.
+func retired_research_refund() -> int:
+	if not all_crew_on():
+		return 0
+	var total := 0
+	for id in ["veterans", "training"]:
+		for rank in clampi(perk(id), 0, int(PERKS[id].max)):
+			total += int(PERKS[id].cost[rank])
+	return total
+
+
+func refund_retired_research() -> int:
+	if not all_crew_on():
+		return 0
+	var refund := retired_research_refund()
+	var mm := m()
+	mm.legacy = int(mm.get("legacy", 0)) + refund
+	for id in ["veterans", "training"]:
+		(mm.get("perks", {}) as Dictionary).erase(id)
+	return refund
 
 
 ## bank this run's legacy (once) — called when the Next Generation screen opens
@@ -183,29 +221,42 @@ func story_key() -> String:
 
 ## build the next vehicle. carry_ids = survivors who escape, tier_id = vehicle to build ("" = best unlocked)
 func next_generation(carry_ids: Array, tier_id: String = "") -> void:
+	if all_crew_on():
+		Game._flush_sim() # finish the old vehicle tick before capturing its crew/progress
+	refund_retired_research()
 	var old := Game.s
+	var whole_crew := all_crew_on()
 	Account.collect(old)
 	var meta: Dictionary = (old.meta as Dictionary).duplicate(true)
 	meta.gen = int(meta.gen) + 1
 	var carried := []
-	for did in carry_ids.slice(0, carry_slots()):
-		for d in old.dwellers:
-			if int(d.id) == int(did):
-				carried.append((d as Dictionary).duplicate(true))
+	if whole_crew:
+		carried = (old.dwellers as Array).duplicate(true)
+	else:
+		for did in carry_ids.slice(0, carry_slots()):
+			for d in old.dwellers:
+				if int(d.id) == int(did):
+					carried.append((d as Dictionary).duplicate(true))
 	var res_scrap := float(old.res.scrap) * carry_res_ratio()
 	var comps := int(float(old.items.get("components", 0)) * carry_res_ratio())
 	# --- fresh state with the meta carried over
 	var tid := tier_id if tier_id != "" and tier_unlocked(tier_id) else best_tier()
 	Game.s = {"meta": meta, "tier": tid}
-	Game.setup_default_state(true)
+	Game.setup_default_state(true, not whole_crew or carried.is_empty())
 	# the account (research, perks, blueprints, logbook, memorial, tutorial) carries on as it is
 	Account.a.meta = meta
 	Account.attach(Game.s)
 	Game.s.mode = Account.main_mode()
+	if whole_crew:
+		_restore_all_equipment(old)
 	var hs := perk("head_start")
 	Game.s.res.scrap = minf(Game.cap("scrap"), float(Game.s.res.scrap) + res_scrap + 250.0 * hs)
 	Game.s.items["components"] = int(Game.s.items.get("components", 0)) + comps + 20 * hs
-	for d in carried:
+	if whole_crew and not carried.is_empty():
+		_restore_whole_crew(carried, old)
+	if whole_crew:
+		Game.s.hull = Game.hull_max()
+	for d in ([] if whole_crew else carried):
 		var keep := carry_level_keep()
 		var nd := Game._add_dweller({"name": d.name, "lore": d.get("lore", ""), "variant": d.variant, "str": d.str, "int": d.int, "agi": d.agi,
 			"lvl": maxi(1, int(round(float(d.lvl) * keep)))})
@@ -222,3 +273,62 @@ func next_generation(carry_ids: Array, tier_id: String = "") -> void:
 	Mods.mods_changed.emit()
 	generation_started.emit(int(meta.gen))
 	Game.toast.emit("รุ่นที่ %d: %s ออกเดินทาง!" % [int(meta.gen), vehicle_name()], "biome")
+
+
+## Keep character/item identities and progress; only assignments and recovery state belong to the old vehicle.
+func _restore_whole_crew(carried: Array, old: Dictionary) -> void:
+	Crew._deserters.clear()
+	Game.s.dwellers = carried
+	Game.s.next_id = maxi(1, int(old.get("next_id", 1)))
+	Game.s.next_uid = maxi(int(Game.s.next_uid), int(old.get("next_uid", 1)))
+	var seats := {Data.CAB_SLOT: 0, 1: 0, 2: 0}
+	for d in carried:
+		d.id = int(d.id)
+		Game.s.next_id = maxi(int(Game.s.next_id), int(d.id) + 1)
+		var previous_room := int(d.get("room", -1))
+		d.room = -1
+		d.away_until = 0.0
+		d.hp = float(d.max_hp)
+		d.rads = 0.0
+		d.infection = 0.0
+		d.happy = 75.0
+		for key in ["talk_t", "mood_room", "talk_room", "strike", "strike_t", "mood", "desert_t", "desert_warn"]:
+			d.erase(key)
+		d["veteran"] = int(d.get("veteran", 0)) + 1
+		for item in (d.get("gear", {}) as Dictionary).values():
+			if item is Dictionary:
+				Game.s.next_uid = maxi(int(Game.s.next_uid), int(item.get("uid", 0)) + 1)
+		var room_type := ""
+		if previous_room == Data.CAB_SLOT:
+			room_type = "engine"
+		elif previous_room >= 0 and previous_room < old.rooms.size():
+			room_type = str(old.rooms[previous_room].type)
+		var target := int({"engine": Data.CAB_SLOT, "kitchen": 1, "water": 2}.get(room_type, -1))
+		if target >= 0 and int(seats[target]) < (Data.CAB_WORKERS if target == Data.CAB_SLOT else Data.ROOM_WORKERS):
+			d.room = target
+			seats[target] = int(seats[target]) + 1
+	for role in mini(3, (old.get("squad", []) as Array).size()):
+		var did := int(old.squad[role])
+		var d := Game.dweller_by_id(did)
+		if not d.is_empty():
+			d.room = -1
+			Game.s.squad[role] = did
+
+
+## Transfer directly: the normal loot-add path may auto-salvage low-rarity or over-cap items.
+func _restore_all_equipment(old: Dictionary) -> void:
+	Game.s.gear = (old.get("gear", []) as Array).duplicate(true)
+	Game.s.van_gear = (old.get("van_gear", {}) as Dictionary).duplicate(true)
+	Game.s.mods = (old.get("mods", {}) as Dictionary).duplicate(true)
+	Game.s.solar = (old.get("solar", Game.s.solar) as Dictionary).duplicate(true)
+	Game.s.next_uid = maxi(int(Game.s.next_uid), int(old.get("next_uid", 1)))
+	# A large engine cannot be installed in a smaller cab, but must never be lost or salvaged.
+	var engine: Variant = Game.s.van_gear.get("engine")
+	if engine is Dictionary and not EngineBay.fits(engine):
+		Game.s.gear.append(engine)
+		Game.s.van_gear["engine"] = null
+	var items: Array = (Game.s.gear as Array).duplicate()
+	items.append_array((Game.s.van_gear as Dictionary).values())
+	for item in items:
+		if item is Dictionary:
+			Game.s.next_uid = maxi(int(Game.s.next_uid), int(item.get("uid", 0)) + 1)
