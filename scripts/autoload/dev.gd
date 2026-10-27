@@ -1547,6 +1547,13 @@ func squad_auto() -> void:
 	Combat.rebuild_heroes()
 
 
+## MV-561: the Squad window's "จัดคนอัตโนมัติ" (best role stat per slot, skips busy crew)
+func squad_auto_pick() -> int:
+	var n := Combat.auto_pick_squad()
+	act("squad auto pick: %d changed" % n)
+	return n
+
+
 func squad_clear() -> void:
 	for role in (Game.s.squad as Array).size():
 		Game.set_squad(role, -1)

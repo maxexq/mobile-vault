@@ -7,6 +7,7 @@
 
     "multi_salvage": true,
     "gear_detail_v2": true,
+    "squad_auto_pick": true,
     "individual_auto_equip": true,
     "smooth_ui_text": true,
     "confirm_actions": true,
@@ -91,6 +92,7 @@
     "industrial_background.near_speed": 0.6,
     "industrial_background.road_speed": 1.0,
     "industrial_background.cloud_wind": 4.0,
+    "squad_auto_pick.min_hp": 0.25,
     "world_map.props": 0.7
   }
 }
