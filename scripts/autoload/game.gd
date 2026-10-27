@@ -500,6 +500,44 @@ func slot_cell(slot: int) -> Vector2i:
 	return Vector2i(local % Data.ROOMS_PER_FLOOR, local / Data.ROOMS_PER_FLOOR)
 
 
+## MV-545 (switch vault_upgrade_v2): what a Vault level really gives on this vehicle. Rooms stop at the body's size
+## (floors x 3 minus the engine room), so on a small vehicle later levels used to promise a room and add none.
+## rooms usable at Vault level lv on this vehicle
+func vault_rooms_at(lv: int) -> int:
+	return mini(int(Data.SLOTS_PER_LEVEL[clampi(lv, 0, Data.MAX_VAULT_LEVEL)]), main_slots() - 1)
+
+
+## levels reached that would add a room but this vehicle has no space for (they open on a bigger one)
+func vault_banked_rooms() -> int:
+	var n := 0
+	for k in range(2, int(s.vault_level) + 1):
+		if int(Data.SLOTS_PER_LEVEL[k]) > int(Data.SLOTS_PER_LEVEL[k - 1]) and vault_rooms_at(k) == vault_rooms_at(k - 1):
+			n += 1
+	return n
+
+
+## production multiplier from the Vault: per level above 1, plus per banked room (until a bigger vehicle uses it)
+func vault_prod_mult() -> float:
+	if s.is_empty() or not Features.on("vault_upgrade_v2"):
+		return 1.0
+	return 1.0 + Features.num("vault.prod_per_level", 0.05) * float(int(s.vault_level) - 1) 		+ Features.num("vault.prod_per_banked_room", 0.10) * float(vault_banked_rooms())
+
+
+func vault_hull_bonus() -> float:
+	if s.is_empty() or not Features.on("vault_upgrade_v2"):
+		return 0.0
+	return Features.num("vault.hull_per_level", 15.0) * float(maxi(0, int(s.vault_level) - 1))
+
+
+## the next vehicle with more floors than this one ("" = none bigger)
+func bigger_vehicle() -> String:
+	var f := floors()
+	for t in Data.TIER_ORDER:
+		if int(Data.VEHICLES[t].floors) > f:
+			return t
+	return ""
+
+
 func unlocked_slots() -> Array:
 	var n: int = Data.SLOTS_PER_LEVEL[clampi(s.vault_level, 0, Data.MAX_VAULT_LEVEL)]
 	n = mini(n, main_slots() - 1)
@@ -576,7 +614,7 @@ func power_flow_pm() -> float:
 func hull_max() -> float:
 	if s.is_empty() or not s.has("van_gear"):
 		return 100.0
-	return 100.0 + float(vehicle_def().hull) + float(Combat.van_stats().hull) + Mods.val("armor_plates")
+	return 100.0 + float(vehicle_def().hull) + float(Combat.van_stats().hull) + Mods.val("armor_plates") + vault_hull_bonus()
 
 
 func speed_factor() -> float:
@@ -915,7 +953,7 @@ func room_rate_pm(slot: int) -> Dictionary:
 	var lvl_mult := 1.0 + 0.6 * float(r.level - 1)
 	var stat_mult := 0.5 * float(work_span(slot)) + stat_sum(slot) / 10.0          # 1 avg worker per cell = 1.0 per cell
 	var happy_mult := 0.6 + avg_happiness() / 250.0
-	var mult := lvl_mult * stat_mult * span_efficiency(slot) * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
+	var mult := lvl_mult * stat_mult * span_efficiency(slot) * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot) * vault_prod_mult()
 	if def.get("weather_crop", false):
 		mult *= float(weather_def().crop)
 	if def.power > 0.0 and s.res.power <= 0.5:
@@ -981,7 +1019,7 @@ func craft_speed(slot: int) -> float:
 	for d in workers:
 		sk += Skills.val(d, "craft") / workers.size()
 	var n := float(work_span(slot))
-	return (0.6 + stat_sum(slot) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
+	return (0.6 + stat_sum(slot) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot) * vault_prod_mult()
 
 
 func medical_power() -> float:
@@ -2100,7 +2138,13 @@ func upgrade_vault() -> bool:
 		return false
 	s.vault_level = int(s.vault_level) + 1
 	s.hull = hull_max()
-	toast.emit("MOBILE VAULT อัปเกรดเป็น Lv.%d! ปลดล็อกห้องใหม่" % s.vault_level, "biome")
+	if Features.on("vault_upgrade_v2"):
+		# MV-545: say what it really gave on this vehicle
+		var gain := vault_rooms_at(int(s.vault_level)) - vault_rooms_at(int(s.vault_level) - 1)
+		toast.emit(("MOBILE VAULT Lv.%d! ห้อง +%d" % [s.vault_level, gain]) if gain > 0
+			else ("MOBILE VAULT Lv.%d! ห้องเต็มรถแล้ว การผลิตรวม +%d%%" % [s.vault_level, roundi((vault_prod_mult() - 1.0) * 100.0)]), "biome")
+	else:
+		toast.emit("MOBILE VAULT อัปเกรดเป็น Lv.%d! ปลดล็อกห้องใหม่" % s.vault_level, "biome")
 	vault_level_changed.emit(s.vault_level)
 	rooms_changed.emit()
 	travel_changed.emit()
