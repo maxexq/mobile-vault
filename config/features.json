@@ -1,6 +1,7 @@
 {
   "tz_hours": 7,
   "features": {
+    "warlord_progression": true,
     "smooth_ui_text": true,
     "confirm_actions": true,
     "industrial_parallax": true,

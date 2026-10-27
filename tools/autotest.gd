@@ -8,6 +8,7 @@ var main: Node
 var out_dir := "user://autotest"
 var n := 0
 var _fails := 0
+var _warlord_checks_completed := false
 var _font_checks_completed := false
 var _roaming_boss_checks_completed := false
 
@@ -62,6 +63,12 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=warlord" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _warlord_test()
+		_check("warlord: all progression checks completed", _warlord_checks_completed)
+		_finish()
+		return
 	if "--only=roaming_boss" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _roaming_boss_test()
@@ -1023,6 +1030,8 @@ func _run() -> void:
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
+	await _warlord_test()
+	_check("warlord: all progression checks completed", _warlord_checks_completed)
 	await _roaming_boss_test()
 	_check("roaming boss: all combat and economy checks completed", _roaming_boss_checks_completed)
 	await _smooth_ui_text_test()
@@ -1556,7 +1565,7 @@ func _roaming_boss_test() -> void:
 				Combat.disconnect(sig.name, connection.callable)
 	Game.set_process(false)
 	Dev.flags = {}
-	Features.layers.dev = {"features": {"road_events": false, "boss_intro": false, "hull_repair_v2": true}, "tune": {}}
+	Features.layers.dev = {"features": {"road_events": false, "boss_intro": false, "hull_repair_v2": true, "warlord_progression": false}, "tune": {}}
 	Features.layers.mode = {}
 	Features.layers.remote = {}
 	Settings.v["pacing"] = "classic"
@@ -9000,4 +9009,145 @@ func _world_screen_test() -> void:
 	Game.dwellers_changed.emit()
 	Game.resources_changed.emit()
 	await wait(0.3)
+
+
+
+## MV-550: checkpoint progression at Common +0 and with weapons only, all biomes and repeat laps.
+func _warlord_test() -> void:
+	var saved_state := Game.s
+	var saved_account := Account.a
+	var saved_started := Game.started
+	var saved_processing := Game.is_processing()
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_flags := Dev.flags.duplicate(true)
+	var saved_rng := []
+	for generator in [Game.rng, Loot.rng, Combat.rng, Threat.rng]:
+		saved_rng.append([generator, generator.seed, generator.state])
+	var saved_runtime := []
+	for entry in [[Combat, ["enemies", "heroes", "turret", "wave_active", "wave_is_boss", "wave_is_warlord", "spawn_queue", "gap_t", "wave_t", "warlord_cd", "_acc", "_next_id", "_kill_window", "_clock", "dps_meter", "_dmg_window", "sub", "sub_out", "tag_t"]],
+		[Threat, ["phase", "phase_t", "raid_left", "_gap", "_roll_t", "_scav_t", "_blood", "_raid_kills", "_raid_time", "_raid_scrap", "_last_sign", "stats"]]]:
+		var values := {}
+		for key in entry[1]:
+			var value: Variant = entry[0].get(key)
+			values[key] = value.duplicate(true) if value is Array or value is Dictionary else value
+		saved_runtime.append([entry[0], values])
+	var disconnected := []
+	for sig in Combat.get_signal_list():
+		for connection in Combat.get_signal_connection_list(sig.name):
+			if connection.callable.get_object() == main.combat_view:
+				disconnected.append([sig.name, connection.callable])
+				Combat.disconnect(sig.name, connection.callable)
+	Game.set_process(false)
+	Dev.flags = {}
+	Features.layers.dev = {"features": {"road_events": false, "boss_intro": false, "hull_repair_v2": true, "warlord_progression": true}, "tune": {}}
+	Features.layers.mode = {}
+	Features.layers.remote = {}
+	Settings.v["pacing"] = "classic"
+	# Keep the old runtime's collections untouched while the fixture clears its own enemies.
+	Combat.enemies = []
+	Combat.heroes = []
+	Combat.spawn_queue = []
+	Combat.sub = {}
+	Combat.sub_out = {}
+	var bench = load("res://tools/warlord_bench.gd").new()
+	var records := []
+	for lap in [0, 1, 3]:
+		for biome in Data.BIOMES.size():
+			for profile in ["common", "weapons_only"]:
+				for seed_value in [550, 551, 552]:
+					var result: Dictionary = bench.fight(biome, lap, profile, seed_value, true)
+					records.append(result)
+					_check("warlord: armed clear biome%d lap%d %s seed%d" % [biome, lap, profile, seed_value], result.killed and result.gate_open and result.falls == 0 and float(result.hero_min) >= 0.65 and float(result.hull_min) >= float(result.hull_max) * 0.9 and float(result.seconds) < 60.0)
+					if not result.killed or result.falls > 0: print("[warlord-failure] ", JSON.stringify(result))
+			await wait(0.01)
+	for biome in Data.BIOMES.size():
+		var old: Dictionary = bench.fight(biome, 0, "common", 550, false)
+		var balanced: Dictionary = bench.fight(biome, 0, "common", 550, true)
+		print("[warlord-compare] ", JSON.stringify({"legacy": old, "balanced": balanced}))
+		var unarmed: Dictionary = bench.fight(biome, 0, "unarmed", 550, true)
+		print("[warlord-unarmed] ", JSON.stringify(unarmed))
+		if biome > 0: _check("warlord: unarmed does not auto-clear biome%d" % biome, not unarmed.killed and not unarmed.gate_open)
+	# Stats rollback, source-specific caps, scoped summons and reward identity.
+	for biome in Data.BIOMES.size():
+		bench.prepare(biome, 0, "common", 550)
+		var id: String = Combat.biome_id()
+		var lvl := Combat.warlord_level()
+		var mob: Dictionary = Combat.MOBS[Combat.BOSSES[id].base]
+		Features.layers.dev.features.warlord_progression = false
+		Combat._spawn({"boss": "warlord", "lvl": lvl})
+		var original: Dictionary = Combat.enemies[-1]
+		_check("warlord: legacy HP/damage restored for " + id, is_equal_approx(float(original.max), float(mob.hp) * pow(Combat.HP_GROWTH, lvl - 1) * 26.0) and is_equal_approx(float(original.dmg), float(mob.dmg) * pow(Combat.DMG_GROWTH, lvl - 1) * 3.2))
+		Features.layers.dev.features.warlord_progression = true
+		Combat._spawn({"boss": "warlord", "lvl": lvl})
+		var boss: Dictionary = Combat.enemies[-1]
+		_check("warlord: reward level retained and gear growth used for " + id, int(boss.lvl) == lvl and is_equal_approx(float(boss.max), float(mob.hp) * pow(Loot.ILVL_GROWTH, Combat.biome_base_level() - 1) * 8.0))
+		Game.s.gear = []
+		Combat._on_kill(boss)
+		_check("warlord: three Rare+ drops retain reward item level for " + id, Loot.stash().size() == 3 and Loot.stash().all(func(it): return int(it.rar) >= 2 and int(it.ilvl) == lvl))
+	for q in [{"mob": "scorpion", "lvl": 49, "no_mutate": true}, {"mob": "scorpion", "lvl": 49, "no_mutate": true, "elite": true}, {"boss": "boss", "boss_id": "bloat_king", "lvl": 49}]:
+		bench.prepare(1, 0, "common", 550)
+		Features.layers.dev.features.warlord_progression = false
+		Combat._spawn(q)
+		var old: Dictionary = Combat.enemies[-1]
+		var old_hit := Combat.van_hit_damage(old, 1000.0, true)
+		Features.layers.dev.features.warlord_progression = true
+		Combat._spawn(q)
+		var unchanged: Dictionary = Combat.enemies[-1]
+		_check("warlord: ordinary, elite and roaming rules unaffected " + str(q), old.max == unchanged.max and old.dmg == unchanged.dmg and is_equal_approx(old_hit, Combat.van_hit_damage(unchanged, 1000.0, true)))
+	bench.prepare(2, 0, "weapons_only", 550)
+	Features.layers.dev.features.warlord_progression = true
+	Combat._spawn({"boss": "warlord", "lvl": Combat.warlord_level()})
+	var parent: Dictionary = Combat.enemies[-1]
+	parent.mech_t = 0.0
+	Combat._tick_mechanics(0.1)
+	_check("warlord: actual summon queue inherits checkpoint tag", Combat.spawn_queue.size() == 2 and Combat.spawn_queue.all(func(q): return bool(q.get("warlord_add", false))))
+	Combat._spawn(Combat.spawn_queue[0])
+	var add: Dictionary = Combat.enemies[-1]
+	var add_base: Dictionary = Combat.MOBS[add.mob]
+	_check("warlord: summons use gear growth and ordinary reward type", Combat.warlord_balanced(add) and not add.boss and not add.warlord and is_equal_approx(float(add.max), float(add_base.hp) * pow(Loot.ILVL_GROWTH, maxi(1, int(add.lvl) - Combat.WARLORD_OFFSET) - 1)))
+	for source in [parent, add]:
+		var h: Dictionary = Combat.heroes[1]
+		h.hp = h.max
+		h.alive = true
+		h.st.dodge = 0.0
+		Combat._damage_hero(1, 1.0e20, source)
+		_check("warlord: boss and add cannot burst more than 4% hero HP", is_equal_approx(float(h.max) - float(h.hp), float(h.max) * 0.04))
+		_check("warlord: boss and add cannot burst more than 2% hull", is_equal_approx(Combat.van_hit_damage(source, 1.0e20, true), Game.hull_max() * 0.02))
+	Features.layers.dev.tune["warlord.hero_hit_cap"] = 0.01
+	Combat.heroes[1].hp = Combat.heroes[1].max
+	Combat._damage_hero(1, 1.0e20, parent)
+	_check("warlord: hero cap follows remote tuning", is_equal_approx(float(Combat.heroes[1].max) - float(Combat.heroes[1].hp), float(Combat.heroes[1].max) * 0.01))
+	Features.layers.dev.tune.erase("warlord.hero_hit_cap")
+	Combat.heroes[1].hp = Combat.heroes[1].max
+	Combat._damage_hero(1, 1.0e20, {})
+	_check("warlord: an unrelated attacker is not granted checkpoint protection", not Combat.heroes[1].alive)
+	Features.layers.dev.tune["warlord.hp"] = 4.0
+	Combat._spawn({"boss": "warlord", "lvl": Combat.warlord_level()})
+	_check("warlord: HP multiplier follows remote tuning", is_equal_approx(float(Combat.enemies[-1].max), float(parent.max) * 0.5))
+	Features.layers.dev.tune.erase("warlord.hp")
+	var output := FileAccess.open(out_dir + "/warlord-bench.json", FileAccess.WRITE)
+	output.store_string(JSON.stringify(records, "\t"))
+	output.close()
+	Combat._clear_enemies()
+	Game.s = saved_state
+	Account.a = saved_account
+	Game.started = saved_started
+	Settings.v = saved_settings
+	Dev.flags = saved_flags
+	Features.layers = saved_layers
+	for entry in saved_runtime:
+		for key in entry[1]:
+			entry[0].set(key, entry[1][key])
+	for entry in saved_rng:
+		entry[0].seed = entry[1]
+		entry[0].state = entry[2]
+	for connection in disconnected:
+		Combat.connect(connection[0], connection[1])
+	Features.changed.emit()
+	Combat.heroes_changed.emit()
+	Combat.wave_changed.emit()
+	Threat.phase_changed.emit(Threat.phase)
+	Game.set_process(saved_processing)
+	_warlord_checks_completed = true
 
