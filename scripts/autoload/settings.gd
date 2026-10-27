@@ -55,7 +55,8 @@ func _ensure_buses() -> void:
 			AudioServer.add_bus()
 			var i := AudioServer.get_bus_count() - 1
 			AudioServer.set_bus_name(i, b)
-			AudioServer.set_bus_send(i, "Master")
+			# a new bus has no send, which mixes into Master (and the web samples default to bus 0). MV-560: never call set_bus_send here: on the 4.7.2 web build it
+			# rewires the browser-sample Master into the new bus (a loop with no way out), and every sample is silent
 
 
 func _load() -> void:
