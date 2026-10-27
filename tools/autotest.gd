@@ -4998,13 +4998,51 @@ func _industrial_background_test() -> void:
 		long_layers = long_layers and px.repeat_size.x >= 1920 and px.repeat_size.x == (px.get_child(0) as Sprite2D).texture.get_width()
 		periods[int(px.repeat_size.x)] = true
 	_check("background: actual texture widths drive long independent repeats", long_layers and periods.size() >= 4)
+	# MV-548: accepted native layer contract and road-relative motion, including parking.
+	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
+	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
+	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
+	for key in dimensions:
+		var sprite := live.layers[key].node.get_child(0) as Sprite2D
+		native = native and sprite.texture.get_size() == Vector2(dimensions[key]) and sprite.scale == Vector2.ONE
+		if key != "clouds" and key != "road":
+			native = native and sprite.position.y + sprite.texture.get_height() == Background.ROAD_Y
+	_check("industrial ruins: exact five native sizes, nearest pixels and ground alignment", native)
+	var nodes := live.get_child_count()
+	live.set_process(false)
+	Features.set_override("tune", "industrial_background.cloud_wind", 0.0)
+	live.preview_offset(0.0)
+	live.road_speed = 100.0
+	live._process(1.0)
+	var rates := true
+	for key in speeds:
+		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
+	_check("industrial ruins: road speed drives .03/.08/.25/.60/1.0 scroll", rates)
+	Features.set_override("tune", "industrial_background.mid_speed", 0.4)
+	live.preview_offset(0.0)
+	live._process(1.0)
+	_check("industrial ruins: live motion tuning keeps the node count stable", is_equal_approx(float(live.layers.mid.offset), 40.0) and live.get_child_count() == nodes)
+	Features.set_override("tune", "industrial_background.mid_speed", 0.25)
+	Features.set_override("tune", "industrial_background.cloud_wind", 4.0)
+	live.preview_offset(0.0)
+	live.road_speed = 0.0
+	live._process(1.0)
+	var parked := true
+	for key in ["far", "mid", "near", "road"]:
+		parked = parked and is_zero_approx(float(live.layers[key].offset))
+	_check("industrial ruins: parked land stays still while smog drifts", parked and is_equal_approx(float(live.layers.clouds.offset), 4.0))
+	live.preview_offset(0.0)
+	live.road_speed = 100.0
+	live._process(23.04)
+	_check("industrial ruins: full road loop returns to its starting pixel", is_zero_approx(float(live.layers.road.offset)))
+	live.set_process(true)
 	var child_count := live.get_child_count()
 	for entry in [[0.25, "sunrise", true, 1], [0.5, "daylight", true, 2], [0.75, "sunset", false, 3], [0.0, "moonlight", false, 0]]:
 		Game.s.tod = float(entry[0])
 		live.update_clock()
 		_check("background: simulation clock selects %s sky and celestial body" % entry[1], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]))
 		_check("background: %s celestial position stays on the pixel grid" % entry[1], live.celestial_position == live.celestial_position.round())
-		await wait(0.5)
+		await wait(3.0)
 		await shot("industrial_" + str(entry[1]))
 	Game.s.tod = 0.35
 	live.update_clock()
@@ -5021,8 +5059,11 @@ func _industrial_background_test() -> void:
 		var px: Parallax2D = live.layers[key].node
 		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
 	_check("background: large travel offsets wrap on whole pixels", snapped)
+	await shot("industrial_full_wrap")
 	Features.set_override("features", "industrial_parallax", false)
 	_check("background: feature off restores the old industrial background", not live.visible and main.background.groups.industrial.legacy[0].visible)
+	await wait(0.3)
+	await shot("industrial_legacy_fallback")
 	Features.set_override("features", "industrial_parallax", true)
 	main.background._on_biome_changed(1, true)
 	phase0 = live.phase
@@ -5033,6 +5074,10 @@ func _industrial_background_test() -> void:
 	get_window().size = Vector2i(405, 720)
 	await wait(0.8)
 	await shot("industrial_portrait_moonlight")
+	Game.s.tod = 0.5
+	live.update_clock()
+	await wait(3.0)
+	await shot("industrial_portrait_daylight")
 	main.hud.open_panel("god")
 	var god = main.hud.panels.god
 	god.tab = "world"

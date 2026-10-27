@@ -222,7 +222,7 @@ func set_tod(v: float) -> void:
 	act("time of day %.2f" % v)
 
 
-## MV-369: one-click real map preview at an exact simulation time.
+## MV-548: one-click approved Industrial Ruins map preview at an exact simulation time.
 func background_preview(tod: float, biome: int = 0) -> void:
 	goto_biome(biome)
 	weather("clear")
