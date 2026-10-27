@@ -25,6 +25,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Every-10th-wave bosses have one-third less HP and damage; their special hull hits now respect vehicle armor and each hit is limited to 12% of maximum hull, helping prevent boss wins from turning into a scrap-draining repair bill (MV-544)
 - Upgrading the Mobile Vault frame always does something now: +15 max hull and +5 % production per level, and when your vehicle has no space for the room a level unlocks, you get +10 % production instead until a bigger vehicle can use it. The upgrade card shows the real number of rooms and tells you which vehicle to switch to when this one is full (MV-545)
 
+### Fixed
+- Web: no sound at all after the sound update; the game is audible again (MV-560).
+
 ## [4.7.0-alpha.4] - 2026-10-27
 
 ### Merged pull requests

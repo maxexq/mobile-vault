@@ -110,6 +110,11 @@ func _run() -> void:
 		_check("fonts: rendering and layout checks completed", _font_checks_completed)
 		_finish()
 		return
+	if "--only=settings" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _settings_test()
+		_finish()
+		return
 	if "--only=confirm" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		if "--confirm-ui-sequence" in OS.get_cmdline_user_args():
@@ -2037,6 +2042,11 @@ func _settings_test() -> void:
 	await wait(1.2)
 	Settings.reset_defaults()
 	_check("settings: Music + SFX buses exist", AudioServer.get_bus_index("Music") > 0 and AudioServer.get_bus_index("SFX") > 0)
+	# no send (or Master) = mixed into Master
+	var sends := Settings.BUSES.filter(func(b): return AudioServer.get_bus_index(b) <= 0 or not str(AudioServer.get_bus_send(AudioServer.get_bus_index(b))) in ["", "Master"])
+	_check("settings: every game bus mixes into Master (MV-560) %s" % [sends], sends.is_empty())
+	var src := FileAccess.get_file_as_string("res://scripts/autoload/settings.gd")
+	_check("settings: no set_bus_send call (MV-560: it silences the web build's samples)", src != "" and not src.contains("AudioServer.set_bus_send("))
 	Settings.set_value("master", 0.3)
 	Settings.set_value("sfx", 0.5)
 	_check("settings: master volume applied", absf(AudioServer.get_bus_volume_linear(0) - 0.3) < 0.01)
@@ -7030,7 +7040,8 @@ func _audio_test() -> void:
 	var keep_weather := str(Game.s.weather)
 	Features.set_override("tune", "audio.fade_sec", 0.3)
 	for b in ["Music", "Ambience", "SFX", "UI"]:
-		_check("audio: bus %s exists and sends to Master" % b, AudioServer.get_bus_index(b) > 0 and AudioServer.get_bus_send(AudioServer.get_bus_index(b)) == &"Master")
+		# no send = mixed into Master (MV-560: set_bus_send silenced the web build)
+		_check("audio: bus %s exists and mixes into Master" % b, AudioServer.get_bus_index(b) > 0 and str(AudioServer.get_bus_send(AudioServer.get_bus_index(b))) in ["", "Master"])
 	var keep_amb = Settings.get_value("ambience")
 	var keep_ui = Settings.get_value("ui")
 	Settings.set_value("ambience", 0.4)
