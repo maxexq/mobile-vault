@@ -595,6 +595,15 @@ func _tab_world() -> void:
 		_row([_b("จบถนนนี้", func(): Dev.world_finish_road()), _b("ออฟไลน์ 10 นาที", func(): Dev.world_offline(10.0)),
 			_b("ยกเลิก", func(): Dev.world_cancel(), "red")], "ทดสอบ")
 	_note("โลกใหม่ = สุ่ม seed ใหม่แทนโลกนี้ · ตรวจ seed = สร้างซ้ำจาก seed ที่เก็บไว้แล้วเทียบว่าตรงกัน")
+	_head("BLUEPRINT CACHE", "กล่องพิมพ์เขียวบนแผนที่ (MV-546)")
+	var bc := WorldMap.cache_state()
+	if not bc.is_empty():
+		_note("กล่องที่ %s · %s · ขับมาแล้ว %.1f กม. · สุ่มไป %d ครั้ง · ได้: %s" % [str(bc.n), ("อยู่ที่ " + str(bc.at)) if str(bc.at) != "" else "ไม่มีกล่องตอนนี้",
+			float(bc.km), int(bc.rolls), ", ".join(bc.got) if not (bc.got as Array).is_empty() else "-"])
+	_row([_b("วางกล่องเลย", func(): Dev.bpcache_spawn(), "green"), _b("ขับไปที่กล่อง", func(): Dev.bpcache_drive(), "yellow"),
+		_b("ดูพิมพ์เขียวที่สุ่มได้", func(): Dev.bpcache_pool()), _b("ล้างกล่อง+ตัวนับ", func(): Dev.bpcache_clear(), "red")], "กล่อง")
+	_row([_b("กล่องพิมพ์เขียว: " + ("เปิด" if Features.on("map_blueprint_caches") else "ปิด"), func(): Dev.feature_set("map_blueprint_caches", not Features.on("map_blueprint_caches")),
+		"green" if Features.on("map_blueprint_caches") else "red")], "สวิตช์")
 	_head("INDUSTRIAL SKY", "นิคมอุตสาหกรรม 20 พาเนล (MV-548) ตามเวลาในเกม")
 	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
 	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])

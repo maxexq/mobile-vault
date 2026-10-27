@@ -578,6 +578,7 @@ func step(km: float, offline: bool) -> float:
 		t.i = int(t.i) + 1
 		if _arrive(str(t.ids[int(t.i)]), offline):
 			break
+	_cache_drive(used)
 	return used
 
 
@@ -607,6 +608,7 @@ func _arrive(id: String, offline: bool) -> bool:
 			offline_arrival = str(Expedition.SITES[n.site].th) if n.has("site") else Loc.t("ปลายทาง")
 	elif int(t.i) >= (t.ids as Array).size() - 1:
 		w.erase("trip")
+	_cache_arrive(id, offline)      # MV-546: after the trip is settled (it redraws the map)
 	Trace.rec("travel", "arrived %s" % id, {"dest": last})
 	world_changed.emit()
 	if n.has("site") and not Expedition.is_done(str(n.site)):
@@ -617,3 +619,167 @@ func _arrive(id: String, offline: bool) -> bool:
 			Game.toast.emit("พบสถานที่สำคัญ: %s! รถจอด — ส่งทีมสำรวจหรือขับผ่าน" % Expedition.SITES[n.site].th, "biome")
 			return true
 	return last
+
+
+# =================================================================== MV-546: random blueprint caches on the map
+## One cache at a time sits on a reachable stop; driving onto it (destination or passing through) grants one blueprint
+## the account doesn't own yet, or a supply crate when every eligible one is owned. Approved numbers (Parames
+## 2026-10-27): the first after bpcache.first_km driven in a world, then every bpcache.every_km a bpcache.chance roll,
+## at most bpcache.max_per_lap per world; an unclaimed cache goes with its world. Every roll, the stop and the reward
+## come from the world seed + lap + the saved counters (world.bpcache), so a reload never rerolls. Blueprints from the
+## regions the Vault level opens plus one ahead; bp_train stays the OVERSEER reward. Switch map_blueprint_caches.
+## GOD → โลก → BLUEPRINT CACHE. Autotest --only=bp_cache.
+const BP_WEIGHT := {"bp_engine_tune": 3, "bp_air_filter": 3, "bp_roof_turret": 3, "bp_solar_covers": 3, "bp_heater": 3,
+	"bp_rad_shield": 3, "bp_tracks": 3, "bp_workshop": 2, "bp_refinery": 2, "bp_repair_bay": 2, "bp_trailer": 2,
+	"bp_bus": 1, "bp_rig": 1}
+const SUPPLY := {"scrap": 80, "components": 10}
+
+## blueprints found in caches while away (Game._offline_progress reads and clears it)
+var offline_caches: Array = []
+
+
+func caches_on() -> bool:
+	return usable() and Features.on("map_blueprint_caches")
+
+
+## the saved cache state of this world: n = caches spawned, km = driven since the last spawn / pickup, rolls = chance
+## rolls made, at = the stop holding the cache ("" = none), got = what each pickup gave
+func cache_state() -> Dictionary:
+	var w := world()
+	if w.is_empty():
+		return {}
+	if not (w.get("bpcache") is Dictionary):
+		w["bpcache"] = {"n": 0, "km": 0.0, "rolls": 0, "at": "", "got": []}
+	return w.bpcache
+
+
+## the stop holding the cache ("" = none, or the switch is off)
+func cache_at() -> String:
+	return str(cache_state().get("at", "")) if caches_on() else ""
+
+
+func _cache_rng(tag: String, a: int, b: int = 0) -> RandomNumberGenerator:
+	var w := world()
+	var r := RandomNumberGenerator.new()
+	r.seed = fnv1a("%s/%d/bpc/%s/%d/%d" % [str(w.get("seed", "")), int(w.get("lap", 0)), tag, a, b])
+	return r
+
+
+## the region (biome index) whose landmark gives this blueprint
+static func bp_region(bp: String) -> int:
+	for id in Expedition.SITES:
+		var s: Dictionary = Expedition.SITES[id]
+		if (s.loot.get("bp", []) as Array).has(bp):
+			for i in Data.BIOMES.size():
+				if str(Data.BIOMES[i].id) == str(s.biome):
+					return i
+	return Data.BIOMES.size() - 1
+
+
+## blueprints a cache can give now: weighted, from regions open at this Vault level + one ahead, not owned yet
+func cache_pool() -> Dictionary:
+	var out := {}
+	var vault := int(Game.s.get("vault_level", 1))
+	for bp in BP_WEIGHT:
+		if not Meta.has_blueprint(bp) and int(Data.biome(bp_region(bp)).req) <= vault + 1:
+			out[bp] = int(BP_WEIGHT[bp])
+	return out
+
+
+## km driven on the map (step): count towards the next cache and roll when it is due
+func _cache_drive(km: float) -> void:
+	if not caches_on() or km <= 0.0:
+		return
+	var st := cache_state()
+	if str(st.at) != "" or int(st.n) >= int(Features.num("bpcache.max_per_lap", 3.0)):
+		return
+	st.km = float(st.km) + km
+	if int(st.n) == 0:
+		if float(st.km) >= Features.num("bpcache.first_km", 3.0):
+			spawn_cache()
+		return
+	var every := Features.num("bpcache.every_km", 2.0)
+	while float(st.km) >= every and str(st.at) == "":
+		st.km = float(st.km) - every
+		var roll := _cache_rng("roll", int(st.n), int(st.rolls)).randf()
+		st.rolls = int(st.rolls) + 1
+		if roll < Features.num("bpcache.chance", 0.35):
+			spawn_cache()
+
+
+## put the next cache on a stop (true = placed). Prefers junctions / signal stops of this region and the next
+## reachable one, then any reachable non-landmark, then landmarks; never the vehicle's stop, the start or the exit.
+func spawn_cache() -> bool:
+	var st := cache_state()
+	if st.is_empty():
+		return false
+	var from := _route_start()
+	var reach := reachable(from, int(Game.s.vault_level))
+	var near := []
+	var other := []
+	var marks := []
+	var b := int(Game.s.biome)
+	for n in world().nodes:
+		var id := str(n.id)
+		if not reach.has(id) or id == from or id == here() or str(n.type) in ["start", "exit"] 				or int(Data.biome(int(n.biome)).req) > int(Game.s.vault_level):
+			continue
+		if str(n.type) == "landmark":
+			marks.append(id)
+		elif int(n.biome) == b or int(n.biome) == b + 1:
+			near.append(id)
+		else:
+			other.append(id)
+	var pick: Array = near if not near.is_empty() else (other if not other.is_empty() else marks)
+	if pick.is_empty():
+		return false
+	pick.sort()
+	var at: String = pick[_cache_rng("at", int(st.n)).randi() % pick.size()]
+	st.at = at
+	st.n = int(st.n) + 1
+	st.km = 0.0
+	Trace.rec("travel", "blueprint cache at %s" % at, {"n": st.n})
+	world_changed.emit()
+	return true
+
+
+## the vehicle reached a stop: pick up the cache there; returns what it gave ("" = no cache here)
+func _cache_arrive(id: String, offline: bool) -> String:
+	if not caches_on() or cache_at() != id:
+		return ""
+	var st := cache_state()
+	var pool := cache_pool()
+	var got := ""
+	if not pool.is_empty():
+		var keys := pool.keys()
+		keys.sort()
+		var total := 0
+		for k in keys:
+			total += int(pool[k])
+		var r := _cache_rng("bp", int(st.n)).randi() % total
+		var bp: String = keys[0]
+		for k in keys:
+			r -= int(pool[k])
+			if r < 0:
+				bp = k
+				break
+		Meta.add_blueprint(bp)
+		got = str(Mods.BLUEPRINT_TH.get(bp, bp))
+		(st.got as Array).append(bp)
+		if not offline:
+			Game.toast.emit(Loc.t("เปิดกล่องพิมพ์เขียว! ได้%s") % got, "good")
+	else:
+		var m := 1.0 + 0.5 * float(int(node(id).get("biome", 0)))
+		var rew := {}
+		for k in SUPPLY:
+			rew[k] = int(round(float(SUPPLY[k]) * m))
+		got = Loc.t("กล่องเสบียง (%s)") % Game.give_rewards(rew)
+		(st.got as Array).append("supply")
+		if not offline:
+			Game.toast.emit(Loc.t("มีพิมพ์เขียวครบแล้ว กล่องนี้ได้%s") % got, "good")
+	if offline:
+		offline_caches.append(got)
+	st.at = ""
+	st.km = 0.0
+	Trace.rec("travel", "blueprint cache picked up at %s" % id, {"got": got, "offline": offline})
+	world_changed.emit()
+	return got
