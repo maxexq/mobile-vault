@@ -512,6 +512,9 @@ func _tab_fight() -> void:
 	_head("SQUAD", "ทีมป้องกัน %s (ปลดล็อก %d ช่อง · DPS %d)" % [" / ".join(names), Combat.slots_unlocked(), int(Combat.squad_dps())])
 	_row([_b("จัดทีมอัตโนมัติ", func(): Dev.squad_auto(), "green"), _b("ใส่อุปกรณ์ดีสุด", func(): Dev.squad_gear()), _b("ถอดทั้งทีม", func(): Dev.squad_clear(), "red")])
 	_head("BOSSES", "เรียกบอส (ปิดแผงเพื่อดูศึก)")
+	_row([_b("บอสเวฟ: สมดุลใหม่", func(): Dev.roaming_boss_preview(true), "green", true), _b("บอสเวฟ: สมดุลเดิม", func(): Dev.roaming_boss_preview(false), "gray", true)])
+	var wave_balance := Features.on("roaming_boss_balance")
+	_note("สมดุลบอสเวฟ (MV-544) %s · HP ×%.1f / ดาเมจ ×%.1f · %s" % ["เปิด" if wave_balance else "ปิด", Features.num("boss.wave_hp", 8.0) if wave_balance else 12.0, Features.num("boss.wave_damage", 1.6) if wave_balance else 2.4, ("ความเสียหายรถต่อครั้ง ≤%d%% หลังคิดเกราะ" % int(round(Features.num("boss.hull_hit_cap", 0.12) * 100.0))) if wave_balance else "ความเสียหายพิเศษแบบเดิม"])
 	var bb := [_b("บอสด่าน: " + str(Combat.BOSSES[Combat.biome_id()].th), func(): Dev.spawn_boss("warlord"), "red", true)]
 	for id in Combat.WAVE_BOSSES:
 		var bid: String = id
