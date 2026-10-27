@@ -8710,6 +8710,7 @@ func _bp_cache_test() -> void:
 	for bp in WorldMap.BP_WEIGHT:
 		Meta.add_blueprint(bp)
 	_check("bp cache: GOD lists the pool (empty = supply)", WorldMap.cache_pool().is_empty() and Dev.bpcache_pool().contains("กล่องเสบียง"))
+	Game.s.res.scrap = 0.0          # a full store (earlier groups) would swallow the crate
 	var scrap0 := float(Game.s.res.scrap)
 	var at4 := Dev.bpcache_spawn()
 	WorldMap.drive_to(at4)
