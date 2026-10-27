@@ -14,6 +14,9 @@ var _list: VBoxContainer
 var _comp_label: Label
 var _amounts := {}                # res/item id -> amount Label on the items tab (updated in place)
 var _sig := ""                    # layout signature of the open tab, see _layout_sig()
+var salvage_pick := false         # MV-554: grid taps tick items for salvage instead of opening them
+var salvage_sel := {}             # MV-554: ticked uid -> true
+var _footer: PanelContainer       # MV-554: sticky bar under the list: count, value, salvage button
 
 const FILTERS := [["all", "ALL"], ["weapon", "rifle"], ["armor", "armor"], ["helmet", "helmet"], ["boots", "boots"], ["backpack", "backpack"], ["gadget", "chip"], ["van", "engine"]]
 const AUTO_SALV := [[-1, "ปิด"], [0, "ทั่วไป"], [1, "ทั่วไป+ดี"]]
@@ -24,6 +27,10 @@ func _build() -> void:
 	_tabs = UIKit.hbox(3)
 	body.add_child(_tabs)
 	_list = make_list(4)
+	_footer = UIKit.panel(UIKit.C_BG2, UIKit.C_RED.darkened(0.4))
+	_footer.name = "SalvageFooter"
+	_footer.visible = false
+	body.add_child(_footer)
 	Game.gear_changed.connect(func(): if is_open: refresh())
 	Game.resources_changed.connect(_on_resources_changed)
 
@@ -89,6 +96,7 @@ func open_equipped(item: Dictionary, did: int) -> void:
 
 
 func close() -> void:
+	_salvage_reset()
 	pick_slot = ""
 	pick_did = -1
 	detail_uid = -1
@@ -111,6 +119,7 @@ func refresh() -> void:
 			tab = key
 			detail_uid = -1
 			detail_equipped = {}
+			_salvage_reset()
 			refresh())
 		_tabs.add_child(b)
 	_tabs.add_child(UIKit.spacer())
@@ -133,6 +142,7 @@ func refresh() -> void:
 			_build_items()
 		"forge":
 			_build_forge()
+	_build_salvage_footer()
 	_sig = _layout_sig()
 	if is_open:
 		_layout()        # a narrower tab / grid lets the window shrink back to its size for this screen
@@ -191,21 +201,25 @@ func _build_grid() -> void:
 				refresh())
 			fh.add_child(b)
 		_list.add_child(fh)
+		if Features.on("multi_salvage"):
+			var sh := UIKit.hbox(3)
+			var tg := UIKit.button(Loc.t("เลิกเลือก") if salvage_pick else Loc.t("เลือกแยกหลายชิ้น"), "gray" if salvage_pick else "red", "close" if salvage_pick else "cog")
+			tg.name = "MultiSalvageToggle"
+			tg.pressed.connect(func():
+				salvage_pick = not salvage_pick
+				salvage_sel = {}
+				refresh())
+			sh.add_child(tg)
+			if salvage_pick:
+				var hint := UIKit.wrap_label(Loc.t("แตะอุปกรณ์เพื่อเลือก · ของล็อกเลือกไม่ได้"))
+				hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				sh.add_child(hint)
+			_list.add_child(sh)
 		if Features.on("loot_pity"):
 			var pl := UIKit.label(Loc.t("การันตี: มหากาพย์ในอีก %d ดรอป · ตำนานในอีก %d ดรอป") % [Loot.pity_left(3), Loot.pity_left(4)], UIKit.FS_SMALL, UIKit.C_DIM)
 			pl.name = "PityLine"
 			_list.add_child(pl)
-	var items: Array = []
-	for it in Loot.stash():
-		if pick_slot != "":
-			if it.slot != pick_slot:
-				continue
-		elif filter == "van":
-			if not Loot.VAN_SLOTS.has(it.slot):
-				continue
-		elif filter != "all" and it.slot != filter:
-			continue
-		items.append(it)
+	var items := _filtered_stash()
 	items.sort_custom(func(a, b):
 		if int(a.rar) != int(b.rar):
 			return int(a.rar) > int(b.rar)
@@ -233,9 +247,17 @@ func _build_grid() -> void:
 			up.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			t.add_child(up)
 		var uid: int = it.uid
-		t.pressed.connect(func():
-			detail_uid = uid
-			refresh())
+		if salvage_pick and pick_slot == "" and Features.on("multi_salvage"):
+			t.disabled = it.lock
+			if salvage_sel.has(uid):
+				t.add_child(_picked_mark(36))
+			t.pressed.connect(func():
+				_toggle_sel(uid)
+				refresh())
+		else:
+			t.pressed.connect(func():
+				detail_uid = uid
+				refresh())
 		grid.add_child(t)
 	_list.add_child(UIKit.gear_pad(grid))
 
@@ -725,3 +747,123 @@ func _request_auto_salvage(value: int) -> void:
 		ConfirmPanel.ask(self, Loc.t("เปิดแยกอัตโนมัติ"), Loc.t("อุปกรณ์ที่ดรอปใหม่ระดับ ≤ %s จะถูกแยกเป็นวัสดุทันทีและเก็บคืนไม่ได้ ของที่อยู่ในคลังตอนนี้ยังอยู่") % Loot.rarity(value).th, Loc.t("เปิดแยกอัตโนมัติ"), apply, func(): return is_same(Game.s, state))
 	else:
 		apply.call()
+
+
+# ------------------------------------------------------------------ MV-554 multi-salvage
+func _salvage_reset() -> void:
+	salvage_pick = false
+	salvage_sel = {}
+
+
+## the stash items the grid shows for the current pick slot / filter
+func _filtered_stash() -> Array:
+	var items: Array = []
+	for it in Loot.stash():
+		if pick_slot != "":
+			if it.slot != pick_slot:
+				continue
+		elif filter == "van":
+			if not Loot.VAN_SLOTS.has(it.slot):
+				continue
+		elif filter != "all" and it.slot != filter:
+			continue
+		items.append(it)
+	return items
+
+
+func _toggle_sel(uid: int) -> void:
+	if salvage_sel.has(uid):
+		salvage_sel.erase(uid)
+	else:
+		salvage_sel[uid] = true
+
+
+## red veil + X in the corner of a ticked tile
+func _picked_mark(px: int) -> Control:
+	var c := Control.new()
+	c.name = "PickedMark"
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var veil := ColorRect.new()
+	veil.color = Color(UIKit.C_RED, 0.35)
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	c.add_child(veil)
+	var x := UIKit.icon_rect("close", 16)
+	x.position = Vector2(px - 14, -2)        # the lock's corner (a ticked item is never locked), icon stays visible
+	c.add_child(x)
+	return c
+
+
+## ticked items still in the stash and unlocked (a drop, a lock or a salvage elsewhere can change the set)
+func _salvage_targets() -> Array:
+	var out: Array = []
+	for it in Loot.stash():
+		if not it.lock and salvage_sel.has(int(it.uid)):
+			out.append(it)
+	return out
+
+
+func _salvage_total(targets: Array) -> Dictionary:
+	var t := {"components": 0, "scrap": 0}
+	for it in targets:
+		var v := Loot.salvage_value(it)
+		t.components += int(v.components)
+		t.scrap += int(v.scrap)
+	return t
+
+
+## sticky bar under the grid in select mode: count, what it gives, select all shown / clear, salvage
+func _build_salvage_footer() -> void:
+	for c in _footer.get_children():
+		_footer.remove_child(c)
+		c.queue_free()
+	_footer.visible = Features.on("multi_salvage") and tab == "gear" and salvage_pick and pick_slot == "" and detail_uid < 0 and detail_equipped.is_empty()
+	if not _footer.visible:
+		return
+	var targets := _salvage_targets()
+	var tot := _salvage_total(targets)
+	var v := UIKit.vbox(3)
+	_footer.add_child(v)
+	var line := UIKit.hbox(4)
+	line.add_child(UIKit.icon_rect("cog", 16))
+	var ll := UIKit.wrap_label(Loc.t("เลือก %d ชิ้น · ได้ %d ชิ้นส่วน + %d เศษเหล็ก") % [targets.size(), tot.components, tot.scrap], UIKit.FS_SMALL, UIKit.C_TEXT)
+	ll.name = "SalvageTotal"
+	line.add_child(ll)
+	v.add_child(line)
+	var h := UIKit.hbox(3)
+	var all := UIKit.button(Loc.t("เลือกทั้งหมด"), "gray")
+	all.name = "SalvageSelectAll"
+	all.pressed.connect(func():
+		for it in _filtered_stash():
+			if not it.lock:
+				salvage_sel[int(it.uid)] = true
+		refresh())
+	h.add_child(all)
+	var clr := UIKit.button(Loc.t("ล้าง"), "gray")
+	clr.name = "SalvageClear"
+	clr.pressed.connect(func():
+		salvage_sel = {}
+		refresh())
+	h.add_child(clr)
+	h.add_child(UIKit.spacer())
+	var go := UIKit.button(Loc.t("แยก %d ชิ้น") % targets.size(), "red", "cog")
+	go.name = "MultiSalvageGo"
+	go.disabled = targets.is_empty()
+	go.pressed.connect(func(): _request_multi_salvage(_salvage_targets()))
+	h.add_child(go)
+	v.add_child(h)
+
+
+func _request_multi_salvage(targets: Array) -> void:
+	if targets.is_empty():
+		return
+	var ids: Array = []
+	for it in targets:
+		ids.append(int(it.uid))
+	var tot := _salvage_total(targets)
+	ConfirmPanel.ask(self, Loc.t("แยกอุปกรณ์หลายชิ้น"), Loc.t("อุปกรณ์ที่เลือก %d ชิ้นจะหายไปถาวร ได้ %d ชิ้นส่วน และ %d เศษเหล็ก ย้อนคืนไม่ได้") % [targets.size(), tot.components, tot.scrap], Loc.t("ยืนยันแยก %d ชิ้น") % targets.size(), func():
+		var total := Loot.salvage_bulk(Loot.RARITY.size(), ids)
+		Game.toast.emit(Loc.t("แยก %d ชิ้น ได้ %d ชิ้นส่วน + %d เศษเหล็ก") % [total.count, total.components, total.scrap], "good")
+		salvage_sel = {}
+		refresh(), func(): return _gear_available(targets))

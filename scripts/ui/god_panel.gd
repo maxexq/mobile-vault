@@ -157,6 +157,10 @@ func _gear_slots_preview() -> void:
 		grid.add_child(t)
 	_list.add_child(UIKit.gear_pad(grid))
 	_note("แถว: ทั่วไป · ดี · หายาก (ล็อก) · มหากาพย์ · ตำนาน · ปฐมกาล · ล่างสุด: ช่องว่าง 3 ขนาด + ปุ่มกดไม่ได้ · คอลัมน์ 28 / 30 / 32 / 36 / 40 px")
+	_head("MULTI SALVAGE", "แยกหลายชิ้นพร้อมกัน (MV-554) · multi_salvage %s" % ("เปิด" if Features.on("multi_salvage") else "ปิด"))
+	var ms := _b("ใส่ของ 8 ชิ้นแล้วเปิดโหมดเลือกแยก", func(): Dev.multi_salvage_demo(), "green", true)
+	ms.name = "MultiSalvageDemo"
+	_row([ms])
 	_gear_detail_preview()
 
 

@@ -11,6 +11,7 @@ var _fails := 0
 var _warlord_checks_completed := false
 
 var _individual_auto_equip_checks_completed := false
+var _multi_salvage_checks_completed := false
 var _gear_detail_checks_completed := false
 var _event_progression_checks_completed := false
 var _font_checks_completed := false
@@ -83,6 +84,12 @@ func _run() -> void:
 		Tutorial.skip()
 		await _gear_detail_test()
 		_check("gear detail: all checks completed", _gear_detail_checks_completed)
+		_finish()
+		return
+	if "--only=multi_salvage" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _multi_salvage_test()
+		_check("multi salvage: all checks completed", _multi_salvage_checks_completed)
 		_finish()
 		return
 	if "--only=individual_auto_equip" in OS.get_cmdline_user_args():
@@ -1059,6 +1066,8 @@ func _run() -> void:
 
 	await _individual_auto_equip_test()
 	_check("individual gear: all checks completed", _individual_auto_equip_checks_completed)
+	await _multi_salvage_test()
+	_check("multi salvage: all checks completed", _multi_salvage_checks_completed)
 	await _gear_detail_test()
 	_check("gear detail: all checks completed", _gear_detail_checks_completed)
 	await _roaming_boss_test()
@@ -9270,6 +9279,128 @@ func _gear_detail_text(n: Node) -> String:
 	for c in n.get_children():
 		out += _gear_detail_text(c)
 	return out
+
+
+## MV-554: select mode in the stash grid ticks several items, the sticky bar totals them, one confirmation salvages
+## exactly the ticked unlocked items (not later drops), locked gear can't be ticked, and the GOD demo opens it
+func _multi_salvage_test() -> void:
+	var saved_state := Game.s
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_size := get_window().size
+	Settings.v.tips = false
+	main.hud.tip_card.hide()
+	var saved_processing := [Game.is_processing(), Combat.is_processing()]
+	Game.set_process(false)
+	Combat.set_process(false)
+	Game.s = saved_state.duplicate(true)
+	Features.layers.dev = {"features": {"multi_salvage": false, "confirm_actions": true}, "tune": {}}
+	Features.layers.remote = {}
+	Features.layers.mode = {}
+	get_window().size = Vector2i(780, 1688)
+	await wait(0.3)
+	var items: Array = []
+	for i in 6:
+		var it := _auto_item(["pipe_pistol", "pipe_wrench", "hunting_rifle"][i % 3], 9960 + i, 3 + i)
+		it.rar = i % 3
+		items.append(it)
+	items[5].lock = true
+	Game.s.gear = items.duplicate()
+	Game.s.items["components"] = 0
+	var loot: LootPanel = main.hud.panels.inventory
+	var dialog: ConfirmPanel = main.hud.confirmation
+	main.hud.open_panel("inventory")
+	loot.tab = "gear"
+	loot.filter = "all"
+	loot.refresh()
+	_check("multi salvage: switch off has no select button", loot.find_child("MultiSalvageToggle", true, false) == null)
+	Features.layers.dev.features.multi_salvage = true
+	loot.refresh()
+	var toggle := loot.find_child("MultiSalvageToggle", true, false) as Button
+	_check("multi salvage: switch on adds the select button to the stash grid", toggle != null and not loot._footer.visible)
+	toggle.pressed.emit()
+	_check("multi salvage: select mode shows the bar with nothing ticked", loot.salvage_pick and loot._footer.visible and (loot.find_child("MultiSalvageGo", true, false) as Button).disabled)
+	# tap three real tiles; tapping one twice unticks it
+	for uid in [9960, 9961, 9962, 9961, 9963]:
+		var tile := _ms_tile(loot, uid)
+		if tile:
+			tile.pressed.emit()
+	_check("multi salvage: tapping tiles ticks them instead of opening the item", loot.detail_uid < 0 and loot.salvage_sel.size() == 3 and loot.salvage_sel.has(9960) and not loot.salvage_sel.has(9961))
+	_check("multi salvage: ticked tiles carry the red mark", _ms_marks(loot) == 3)
+	_check("multi salvage: a locked tile can't be ticked", _ms_tile(loot, 9965) != null and _ms_tile(loot, 9965).disabled)
+	var want := loot._salvage_total([items[0], items[2], items[3]])
+	var total_label := loot.find_child("SalvageTotal", true, false) as Label
+	_check("multi salvage: the bar counts the ticked items and what they give", total_label != null and total_label.text.contains("3") and total_label.text.contains(str(want.components)) and total_label.text.contains(str(want.scrap)))
+	await wait(0.8)      # let the window finish opening before the shot
+	await shot("multi_salvage_select")
+	(loot.find_child("MultiSalvageGo", true, false) as Button).pressed.emit()
+	_check("multi salvage: salvage asks once and names the count", dialog.is_open and dialog.confirm_button.text.contains("3") and Loot.stash().size() == 6)
+	await shot("multi_salvage_confirm")
+	dialog.cancel_button.pressed.emit()
+	_check("multi salvage: cancelling keeps every item and the ticks", Loot.stash().size() == 6 and loot.salvage_sel.size() == 3)
+	(loot.find_child("MultiSalvageGo", true, false) as Button).pressed.emit()
+	var later := _auto_item("pipe_pistol", 9970, 1)
+	Game.s.gear.append(later)
+	dialog.confirm_button.pressed.emit()
+	var left: Array = []
+	for it in Loot.stash():
+		left.append(int(it.uid))
+	left.sort()
+	_check("multi salvage: confirming salvages only the ticked items (%s)" % str(left), left == [9961, 9964, 9965, 9970])
+	_check("multi salvage: the ticked items pay their components", int(Game.s.items.get("components", 0)) == int(want.components))
+	_check("multi salvage: select mode stays on with the ticks cleared", loot.salvage_pick and loot.salvage_sel.is_empty())
+	(loot.find_child("SalvageSelectAll", true, false) as Button).pressed.emit()
+	_check("multi salvage: select all takes every unlocked item shown", loot.salvage_sel.size() == 3 and not loot.salvage_sel.has(9965))
+	loot.filter = "weapon"
+	loot.salvage_sel = {}
+	loot.refresh()
+	(loot.find_child("SalvageClear", true, false) as Button).pressed.emit()
+	_check("multi salvage: clear empties the ticks", loot.salvage_sel.is_empty())
+	loot.filter = "all"
+	(loot._tabs.get_child(1) as Button).pressed.emit()
+	_check("multi salvage: switching tab leaves select mode and hides the bar", not loot.salvage_pick and not loot._footer.visible)
+	loot.close()
+	main.hud.open_panel("god")
+	var god: Node = main.hud.panels.god
+	god.tab = "icons"
+	god.refresh()
+	_check("multi salvage: GOD Icons tab has the demo", god.find_child("MultiSalvageDemo", true, false) != null)
+	god.close()
+	Game.s.gear = []
+	Dev.multi_salvage_demo()
+	await wait(0.2)
+	_check("multi salvage: GOD demo opens select mode with items ticked", loot.is_open and loot.salvage_pick and loot.salvage_sel.size() == 3 and loot._footer.visible and Loot.stash().size() == 8)
+	loot.close()
+	await wait(0.2)
+	Game.s = saved_state
+	Features.layers = saved_layers
+	get_window().size = saved_size
+	Game.set_process(saved_processing[0])
+	Combat.set_process(saved_processing[1])
+	Features.changed.emit()
+	_multi_salvage_checks_completed = true
+
+
+## the stash grid tile of item uid (gear tiles in the grid are built in stash-sort order, so match by the uid bound
+## to the tile's press through LootPanel's grid order)
+func _ms_tile(loot: LootPanel, uid: int) -> Button:
+	var grid: GridContainer = null
+	for g in loot.find_children("*", "GridContainer", true, false):
+		grid = g
+	if grid == null:
+		return null
+	var shown := loot._filtered_stash()
+	shown.sort_custom(func(a, b):
+		if int(a.rar) != int(b.rar):
+			return int(a.rar) > int(b.rar)
+		return Loot.power_score(a) > Loot.power_score(b))
+	for i in shown.size():
+		if int(shown[i].uid) == uid and i < grid.get_child_count():
+			return grid.get_child(i) as Button
+	return null
+
+
+func _ms_marks(loot: LootPanel) -> int:
+	return loot.find_children("PickedMark", "", true, false).size()
 
 
 func _individual_auto_equip_test() -> void:
