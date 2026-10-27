@@ -11,6 +11,7 @@ signal biome_changed(index: int, instant: bool)
 signal weather_changed(weather: String)
 signal vault_level_changed(level: int)
 signal event_triggered(event_id: String)
+signal event_resolved(event_id: String, action: String, result: Dictionary)   # MV-555: a road event was answered
 signal toast(text: String, kind: String)
 signal floating_text(slot: int, text: String, icon: String)
 signal game_started
@@ -2632,6 +2633,7 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 	dwellers_changed.emit()
 	travel_changed.emit()
 	save_game()
+	event_resolved.emit(id, str(ch.action), res)
 	return res
 
 

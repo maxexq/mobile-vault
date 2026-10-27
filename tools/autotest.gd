@@ -6938,6 +6938,85 @@ func _saloon_restore(res: Dictionary, rooms: Array, dw: Array, squad: Array, rx)
 ## strip's repair button, shake only with the setting on, switch off = nothing
 ## MV-536: buses + settings, every stream loads (beds loop), biome / weather crossfade, thunder, effects from game
 ## signals and button taps, the switches off = silence, GOD previews
+## MV-555: loops crossfade between two players on the default playback type (browser samples on the web), the Master
+## limiter follows audio_clean, and switching it off falls back to the MV-536 stream loops
+func _audio_clean_test() -> void:
+	Features.set_override("features", "audio_clean", null)
+	await wait(0.1)
+	var bad := []
+	for id in Sound.layers:
+		var L: Dictionary = Sound.layers[id]
+		if L.q == null or (L.p as AudioStreamPlayer).playback_type != AudioServer.PLAYBACK_TYPE_DEFAULT 				or (L.q as AudioStreamPlayer).playback_type != AudioServer.PLAYBACK_TYPE_DEFAULT:
+			bad.append(id)
+	_check("audio: clean loops use two players on the default (web sample) playback %s" % [bad], bad.is_empty() and Sound.layers.has("industrial"))
+	_check("audio: the Master hard limiter is on", Sound.limiter_on())
+	var L: Dictionary = Sound.layers["industrial"]
+	var first: AudioStreamPlayer = L.p
+	L.pos = Sound.cycle_sec("industrial") - 0.05
+	await wait(0.2)
+	_check("audio: at the end of a cycle the other player takes over and both share the tail",
+		L.p != first and float(L.xf) >= 0.0 and (L.p as AudioStreamPlayer).playing and first.playing and float(L.pos) < 0.5)
+	await wait(Sound.LOOP_TAIL + 0.3)
+	_check("audio: after the tail only the new player runs and the bed still plays",
+		float(L.xf) < 0.0 and not first.playing and (L.p as AudioStreamPlayer).playing and Sound.is_playing("industrial"))
+	Features.set_override("features", "audio_clean", false)
+	await wait(0.6)
+	var stream_ok := Sound.layers.has("industrial") and Sound.layers["industrial"].q == null 		and (Sound.layers["industrial"].p as AudioStreamPlayer).playback_type == AudioServer.PLAYBACK_TYPE_STREAM 		and ((Sound.layers["industrial"].p as AudioStreamPlayer).stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD
+	_check("audio: audio_clean off = MV-536 stream loops, limiter off", stream_ok and Sound.is_playing("industrial") and not Sound.limiter_on())
+	Features.set_override("features", "audio_clean", null)
+	await wait(0.6)
+	_check("audio: audio_clean back on rebuilds the crossfading layers", Sound.layers.has("industrial") and Sound.layers["industrial"].q != null
+		and Sound.is_playing("industrial") and Sound.limiter_on())
+
+
+## MV-555: resources in, road event good / bad, expedition out / encounter / home / failed / haul
+func _audio_cues_test() -> void:
+	var grew := func(id: String, before: Dictionary): return int(Sound.played.get(id, 0)) > int(before.get(id, 0))
+	Features.set_override("tune", "audio.res_gap", 1.0)
+	await wait(1.1)
+	var b := Sound.played.duplicate()
+	Sound._on_floating_text(0, "+5", "food")
+	Sound._on_floating_text(1, "+7", "water")
+	_check("audio: a room's +N plays resources-in once, then waits audio.res_gap", int(Sound.played.get("res_gain", 0)) == int(b.get("res_gain", 0)) + 1)
+	Sound._on_floating_text(2, "DONE", "hammer")
+	_check("audio: a finished build is not a resource sound", int(Sound.played.get("res_gain", 0)) == int(b.get("res_gain", 0)) + 1)
+	Sound._on_event_resolved("x", "fight", {"ok": true})
+	Sound._on_event_resolved("x", "fight", {"ok": false})
+	Sound._on_event_resolved("x", "ignore", {"ok": true})
+	_check("audio: road event won = event_good, lost = event_bad", grew.call("event_good", b) and grew.call("event_bad", b)
+		and int(Sound.played.get("event_good", 0)) == int(b.get("event_good", 0)) + 1)
+	await wait(0.1)
+	b = Sound.played.duplicate()
+	Sound._on_expedition_started()
+	Sound.cue("exp_encounter")
+	Game.toast.emit("test", "good")
+	await wait(0.1)
+	_check("audio: expedition out + encounter cues play and keep the toast quiet", grew.call("exp_start", b) and grew.call("exp_encounter", b)
+		and not grew.call("depart", b) and not grew.call("toast_good", b))
+	b = Sound.played.duplicate()
+	Sound._on_expedition_finished({"ok": true, "gain": {"food": 10}, "gear": 0})
+	await wait(1.6)
+	_check("audio: expedition home safe, then the haul is unpacked", grew.call("exp_home", b) and grew.call("exp_loot", b))
+	b = Sound.played.duplicate()
+	Sound._on_expedition_finished({"ok": false, "gain": {}, "gear": 0})
+	await wait(1.6)
+	_check("audio: a failed expedition plays exp_fail and no haul", grew.call("exp_fail", b) and not grew.call("exp_loot", b))
+	Features.set_override("features", "audio_cues", false)
+	await wait(0.1)
+	b = Sound.played.duplicate()
+	Sound._on_expedition_started()
+	Sound._on_expedition_finished({"ok": true, "gain": {"food": 1}, "gear": 0})
+	Sound._on_event_resolved("x", "fight", {"ok": true})
+	await wait(0.1)
+	_check("audio: audio_cues off = the MV-536 depart / return, no cues", grew.call("depart", b) and grew.call("return", b)
+		and not grew.call("exp_start", b) and not grew.call("event_good", b))
+	Features.set_override("features", "audio_cues", null)
+	Features.set_override("tune", "audio.res_gap", null)
+	b = Sound.played.duplicate()
+	Dev.sound_preview("sound", "exp_loot")
+	_check("audio: GOD plays a single cue", grew.call("exp_loot", b))
+
+
 func _audio_test() -> void:
 	_no_events()
 	var keep_biome := int(Game.s.biome)
@@ -6959,21 +7038,20 @@ func _audio_test() -> void:
 		var st := Sound.stream(id)
 		if st == null:
 			missing.append(id)
-		elif Sound._is_loop(id) and (not st is AudioStreamWAV or (st as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_DISABLED):
-			not_looping.append(id)
+		elif Sound._is_loop(id):
+			# MV-555: cycle + LOOP_TAIL, played once per turn; the fallback copy loops over the cycle alone
+			var fb := Sound.loop_stream(id) as AudioStreamWAV
+			if not st is AudioStreamWAV or (st as AudioStreamWAV).loop_mode != AudioStreamWAV.LOOP_DISABLED or fb == null 					or fb.loop_mode != AudioStreamWAV.LOOP_FORWARD or absf(float(fb.loop_end) / float(fb.mix_rate) - Sound.cycle_sec(id)) > 0.01 					or Sound.cycle_sec(id) < 3.0:
+				not_looping.append(id)
 	_check("audio: all %d sounds load %s" % [Sound.all_ids().size(), missing], missing.is_empty())
-	_check("audio: every bed / weather layer loops %s" % [not_looping], not_looping.is_empty())
+	_check("audio: every bed / weather / music file is a cycle + crossfade tail, the fallback loops the cycle %s" % [not_looping], not_looping.is_empty())
 	_check("audio: unlocked on desktop (web waits for the first tap)", Sound.unlocked)
 	# biome bed + engine
 	Dev.goto_biome(0)
 	await wait(0.8)
 	_check("audio: industrial bed plays in biome 1", Sound.is_playing("industrial") and float(Sound.layer("industrial").cur) > 0.5)
 	_check("audio: engine layer runs while the game runs", Sound.is_playing("engine") or Sound._engine_now() == "off")
-	var sample_beds := []
-	for id in Sound.layers:
-		if (Sound.layers[id].p as AudioStreamPlayer).playback_type != AudioServer.PLAYBACK_TYPE_STREAM:
-			sample_beds.append(id)
-	_check("audio: beds use stream playback, web samples drop the loop %s" % [sample_beds], sample_beds.is_empty())
+	await _audio_clean_test()
 	Dev.goto_biome(1)
 	await wait(0.05)
 	_check("audio: biome change crossfades (desert up, industrial down)", float(Sound.layer("desert").target) > 0.0 and float(Sound.layer("industrial").target) == 0.0)
@@ -7045,6 +7123,7 @@ func _audio_test() -> void:
 	Dev.sound_preview("group", "ui")
 	await wait(1.0)
 	_check("audio: GOD effect group plays its sounds in turn", int(Sound.played.get("confirm", 0)) > n_ui)
+	await _audio_cues_test()
 	main.hud.open_panel("god")
 	main.hud.panels.god.tab = "sound"
 	main.hud.panels.god.refresh()

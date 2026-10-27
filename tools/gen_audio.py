@@ -6,8 +6,9 @@ here from noise, oscillators and simple filters, so no audio is downloaded and t
     python tools/gen_audio.py rain boss  # only the sounds whose name contains one of the words
 
 Stdlib only (no numpy). Mono 16-bit 22050 Hz WAV; Godot imports them with QOA compression (the default), so the
-pck stays small. Loops carry a RIFF 'smpl' chunk with a forward loop over the whole file (Godot's importer reads it,
-loop_mode "Detect from WAV"); the loop seam is crossfaded, so there is no click. The random seed is fixed per sound:
+pck stays small. A loop is a seamless cycle followed by its first LOOP_TAIL seconds again (MV-555): Sound plays it
+on two players that take turns and overlap over that tail, so the web build keeps loops on browser samples (no
+main-thread mixing, no crackle); the cycle's own seam is crossfaded, so there is no click. The random seed is fixed per sound:
 re-running gives the same bytes. Phone speakers barely play below ~120 Hz, so every low sound also has body
 between 120 and 400 Hz.
 """
@@ -21,6 +22,7 @@ import zlib
 
 SR = 22050
 BED_FC = 2800.0      # MV-538: biome beds roll off above this (lo-fi, cozy)
+LOOP_TAIL = 0.5      # MV-555: seconds of the loop repeated after its end (Sound.LOOP_TAIL), the A/B crossfade
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "audio")
 
 
@@ -135,15 +137,11 @@ def adsr(t, a, d_tau, length):
     return math.exp(-(t - a) / d_tau)
 
 
-def crush(x, bits=10, hold=1):
-    """16-bit console flavour: fewer amplitude steps and sample-and-hold (hold=2 -> 11 kHz)"""
-    q = float(2 ** (bits - 1))
-    out, last = [], 0.0
-    for i, v in enumerate(x):
-        if i % hold == 0:
-            last = round(v * q) / q
-        out.append(last)
-    return out
+def retro(x, bits=10, hold=1):
+    """MV-555: was crush(), a bit-crusher (8-10 bit steps and an 11 kHz sample-and-hold). Its quantisation grit and
+    aliasing were part of the hiss / crackle Parames heard, so the "16-bit" dullness is now a clean low-pass at the
+    old hold rate; bits is kept so the call sites still read the same and is ignored."""
+    return lp(lp(x, SR / (2.0 * max(1, hold)) * 0.7), SR / (2.0 * max(1, hold)) * 0.7)
 
 
 def osc(freq, sec, shape="sine", phase=0.0):
@@ -225,7 +223,7 @@ def soften(x, fc=6500.0):
     return lp(lp(x, fc), fc)
 
 
-def write(path, x, loop=False, peak=0.85, fc=6500.0):
+def write(path, x, loop=False, peak=0.7, fc=6500.0, rms_to=0.10, peak_cap=0.42):
     if loop:
         # filter a doubled copy and keep the second half: the filters are already settled at the seam
         L = len(x)
@@ -233,10 +231,20 @@ def write(path, x, loop=False, peak=0.85, fc=6500.0):
     else:
         x = soften(hp(x, 25.0), fc)       # no DC offset, no harsh top
     if loop:
-        # beds are matched by loudness (RMS), not by peak, so a sparse bed is not quieter than a dense one;
-        # tanh catches the odd peak above full scale. Loops keep their crossfaded seam (no fade).
+        # beds are matched by loudness (RMS), not by peak, so a sparse bed is not quieter than a dense one.
+        # MV-555: no more tanh on the loud bits (it flattened every raindrop and gust into distortion); a bed whose
+        # peaks would pass peak_cap is simply turned down, so bed + weather + engine + effects keep headroom on the
+        # web, where browser samples are summed without a limiter.
         rms = math.sqrt(sum(v * v for v in x) / len(x)) or 1.0
-        x = [math.tanh(v * 0.14 / rms * 1.6) / 1.6 for v in x]
+        k = rms_to / rms
+        m = max(abs(v) for v in x) * k
+        if m > peak_cap:
+            k *= peak_cap / m
+        x = [v * k for v in x]
+        # MV-555: the seamless loop plus its first LOOP_TAIL seconds again. Sound plays a loop as two players that
+        # take turns and overlap over the tail (identical audio, so the crossfade is exact), which keeps beds on
+        # the web's browser samples; the stream fallback loops over the first len - tail samples. No 'smpl' chunk.
+        x = x + x[:n(LOOP_TAIL)]
     else:
         x = norm(x, peak)
         fi, fo = n(0.002), n(0.012)       # no click at the start or the cut-off end
@@ -245,22 +253,12 @@ def write(path, x, loop=False, peak=0.85, fc=6500.0):
         for i in range(min(fo, len(x))):
             x[-1 - i] *= i / fo
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    pcm = b"".join(struct.pack("<h", max(-32767, min(32767, int(v * 32767)))) for v in x)
+    pcm = b"".join(struct.pack("<h", max(-32767, min(32767, int(round(v * 32767))))) for v in x)
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes(pcm)
-    if loop:
-        # RIFF 'smpl' chunk: one forward loop over the whole file (start, end inclusive)
-        smpl = struct.pack("<9I", 0, 0, int(1e9 / SR), 60, 0, 0, 0, 1, 0)
-        smpl += struct.pack("<6I", 0, 0, 0, len(x) - 1, 0, 0)
-        with open(path, "r+b") as f:
-            f.seek(0, 2)
-            f.write(b"smpl" + struct.pack("<I", len(smpl)) + smpl)
-            size = f.tell() - 8
-            f.seek(4)
-            f.write(struct.pack("<I", size))
     print("  %-34s %5.2f s %s" % (os.path.relpath(path, ROOT), len(x) / SR, "loop" if loop else ""))
 
 
@@ -281,16 +279,6 @@ def clank(rnd, base=None, sec=1.4, tau=0.35):
     return mix(x, hit, 0, 0.6)
 
 
-def droplet(rnd, f=None, tau=None):
-    f = f or rnd.uniform(1200.0, 3800.0)
-    tau = tau or rnd.uniform(0.003, 0.012)
-    out = []
-    for i in range(n(tau * 6)):
-        t = i / SR
-        out.append(math.sin(math.tau * f * (1.0 + t * 8.0) * t) * math.exp(-t / tau))
-    return out
-
-
 def scatter(sec, rnd, per_sec, make, g=(0.3, 1.0), wrap=True):
     x = zeros(sec)
     count = int(sec * per_sec)
@@ -299,22 +287,8 @@ def scatter(sec, rnd, per_sec, make, g=(0.3, 1.0), wrap=True):
     return x
 
 
-def rain_layer(sec, rnd, density=260, heavy=False):
-    """calm rain on a metal roof: soft wash + many fine droplets + a few tinks on the sheet metal + gutter drips"""
-    L = sec
-    wash = hp(lp(pink(n(L), rnd), 2000 if not heavy else 2600), 180)
-    wash = env_mul(wash, slow_lfo(L, rnd, 2, 0.7, 1.0, 0.05, 0.15))
-    x = gain(wash, 0.35 if not heavy else 0.55)
-    mix(x, scatter(L, rnd, density, lambda r: droplet(r), (0.04, 0.22)), 0, 1.0)
-    tinks = scatter(L, rnd, 7 if not heavy else 14,
-                    lambda r: ping(r.uniform(800, 1700), 0.12, 0.03, 1.0, ((1.0, 1.0), (2.3, 0.3))), (0.04, 0.12))
-    mix(x, tinks)
-    drips = scatter(L, rnd, 0.8, lambda r: droplet(r, r.uniform(700, 1100), 0.025), (0.15, 0.3))
-    mix(x, drips)
-    return x
-
-
 def crackle(sec, rnd, per_sec, fc=3500.0, g=(0.2, 1.0)):
+    """sharp pops (demolish debris; cozy() dust when asked). MV-555: no weather loop uses it any more"""
     def pop(r):
         return hp(env_mul(white(n(0.006), r), lambda t: decay(t, 0.0015)), fc)
     return scatter(sec, rnd, per_sec, pop, g)
@@ -351,9 +325,10 @@ def amb_engine(rnd):
     return seam(x, F)
 
 
-def cozy(x, rnd, chord, pad=0.22, wobble=0.0018, dust=3.0):
+def cozy(x, rnd, chord, pad=0.22, wobble=0.0018, dust=0.0):
     """MV-538 lo-fi treatment of a finished loop (exact length, seamless): a soft tonal pad in the biome's chord
-    (whole cycles per loop, slow swells), vinyl dust, tape wobble and a gentle saturation. write() then rolls the
+    (whole cycles per loop, slow swells), tape wobble and a gentle saturation (MV-555: the vinyl dust is off by
+    default; its random pops read as the sound breaking up). write() then rolls the
     top off at BED_FC. Everything wraps around the loop, so the seam stays clean."""
     L = len(x)
     rms = math.sqrt(sum(v * v for v in x) / L) or 1.0
@@ -368,7 +343,8 @@ def cozy(x, rnd, chord, pad=0.22, wobble=0.0018, dust=3.0):
             pd[i] += (math.sin(ang) + 0.18 * math.sin(2 * ang)) * amp / len(chord)
     prms = math.sqrt(sum(v * v for v in pd) / L) or 1.0
     y = [a + b * pad * rms / prms for a, b in zip(x, pd)]
-    mix(y, lp(crackle(L / SR, rnd, dust, 900, (0.05, 0.25)), 2500), 0, rms * 1.2)
+    if dust > 0.0:
+        mix(y, lp(crackle(L / SR, rnd, dust, 900, (0.05, 0.25)), 2500), 0, rms * 1.2)
     out, pos = [], 0.0
     cyc = rnd.randint(2, 4)
     for i in range(L):        # tape wobble: whole cycles over the loop, read with wrap-around
@@ -495,89 +471,163 @@ def amb_metro(rnd):
 
 
 # ------------------------------------------------------------------ weather (loops)
+# MV-555 rework: rain is made of noise grains (tiny filtered noise bursts with a soft attack), not chirped sine
+# droplets; those were 3 ms clicks by the hundred and read as crackle. Every layer has its own body for phone
+# speakers and nothing above ~6 kHz is left bright.
+def grain(rnd, f, q=1.5, tau=0.004, att=0.0008):
+    """one drop / grain of sand: a tiny band of noise with a soft attack and a quick decay"""
+    sec = att + tau * 6
+    x = env_mul(white(n(sec), rnd), lambda t: min(1.0, t / att) * decay(max(0.0, t - att), tau))
+    return bp(x, f, q)
+
+
+def bubble(rnd, f=None, tau=0.03):
+    """a drip into a puddle: a sine whose pitch rises as the bubble closes, with a soft attack (no click)"""
+    f = f or rnd.uniform(500, 900)
+    sec = tau * 6
+    out = []
+    for i in range(n(sec)):
+        t = i / SR
+        out.append(math.sin(math.tau * f * (1.0 + 2.5 * t / sec) * t) * min(1.0, t / 0.0015) * decay(t, tau))
+    return out
+
+
+def rain_bed(sec, rnd, amount=1.0, gust=None):
+    """rain on the truck: a soft wash, a muffled roof body, dense fine patter, a few heavier taps on the roof and
+    the odd drip; amount scales density and weight, gust (a function of time) swells it"""
+    g = gust or slow_lfo(sec, rnd, 3, 0.75, 1.0, 0.04, 0.12)
+    wash = lp(lp(hp(pink(n(sec), rnd), 450), 4800), 4800)
+    body = lp(hp(pink(n(sec), rnd), 140), 900)          # the roof's drum-like body (phones need 120-400 Hz)
+    x = [0.30 * w + 0.22 * amount * bo for w, bo in zip(wash, body)]
+    patter = scatter(sec, rnd, 420 * amount, lambda r: grain(r, r.uniform(1800, 5200), 1.4, r.uniform(0.0015, 0.004)),
+                     (0.05, 0.16))
+    mix(x, lp(patter, 5500))
+    taps = scatter(sec, rnd, 5 + 6 * amount, lambda r: grain(r, r.uniform(450, 1000), 3.0, r.uniform(0.012, 0.025),
+                                                             0.0015), (0.10, 0.25))
+    mix(x, taps)
+    mix(x, scatter(sec, rnd, 0.7, lambda r: bubble(r), (0.06, 0.12)))
+    return env_mul(x, g)
+
+
 def w_overcast(rnd):
-    L, F = 6.0, 0.6
-    return seam(wind(L + F, rnd, 200, 500, 0.8, (0.3, 0.7)), F)
+    """grey sky: a soft, slow breeze and a faint rustle of loose tarp and dry weeds"""
+    L, F = 8.0, 0.6
+    sec = L + F
+    x = lp(wind(sec, rnd, 200, 500, 0.8, (0.3, 0.75)), 1100)
+    rustle = env_mul(lp(hp(pink(n(sec), rnd), 700), 2600), slow_lfo(sec, rnd, 3, 0.0, 1.0, 0.1, 0.4))
+    mix(x, rustle, 0, 0.05)
+    return seam(x, F)
 
 
 def w_rain(rnd):
-    L, F = 8.0, 0.5
-    return seam(rain_layer(L + F, rnd), F)
+    """steady rain on the roof: calm, even, a little ASMR"""
+    L, F = 10.0, 0.8
+    return seam(rain_bed(L + F, rnd, 1.0), F)
 
 
 def w_storm(rnd):
-    L, F = 8.0, 0.6
+    """a downpour pushed by gusts: the rain swells with the wind, the wind howls past the hull, a low rumble under it"""
+    L, F = 12.0, 1.0
     sec = L + F
-    x = rain_layer(sec, rnd, 520, True)
-    mix(x, wind(sec, rnd, 200, 700, 0.9, (0.3, 1.0), 0.4), 0, 0.6)
-    mix(x, lp(brown(n(sec), rnd), 120), 0, 0.3)
+    gust = slow_lfo(sec, rnd, 3, 0.45, 1.0, 0.06, 0.22)
+    x = rain_bed(sec, rnd, 1.9, lambda t: 0.6 + 0.4 * gust(t))
+    howl = bp(pink(n(sec), rnd), lambda t: 260 + 520 * gust(t), 1.4)
+    mix(x, env_mul(howl, lambda t: gust(t) ** 2), 0, 0.55)
+    whistle = bp(pink(n(sec), rnd), lambda t: 650 + 380 * gust(t), 7.0)
+    mix(x, env_mul(whistle, lambda t: max(0.0, gust(t) - 0.7) * 3.0), 0, 0.25)
+    rumble = lp(brown(n(sec), rnd), 110)
+    mix(x, rumble, 0, 0.35)
+    mix(x, lp(bp(brown(n(sec), rnd), 200, 0.8), 400), 0, 0.25)
     return seam(x, F)
 
 
 def w_sandstorm(rnd):
-    L, F = 8.0, 0.6
+    """a wall of sand: a deep roar, sand hissing along the plates and grains rattling on the hull in each gust"""
+    L, F = 10.0, 0.8
     sec = L + F
-    x = wind(sec, rnd, 250, 750, 0.7, (0.5, 1.0), 0.5)
-    mix(x, bp(pink(n(sec), rnd), 1500, 0.6), 0, 0.08)               # blowing sand, no white hiss
-    mix(x, lp(crackle(sec, rnd, 70, 900, (0.1, 0.4)), 3000))         # grit on the hull, dull ticks
+    gust = slow_lfo(sec, rnd, 3, 0.4, 1.0, 0.07, 0.3)
+    x = env_mul(lp(brown(n(sec), rnd), 380), lambda t: 0.6 + 0.4 * gust(t))
+    roar = bp(pink(n(sec), rnd), lambda t: 300 + 500 * gust(t), 0.8)
+    mix(x, env_mul(roar, gust), 0, 0.6)
+    hiss = lp(lp(hp(pink(n(sec), rnd), 1800), 5000), 5000)
+    mix(x, env_mul(hiss, lambda t: gust(t) ** 1.5), 0, 0.10)
+    grains = scatter(sec, rnd, 260, lambda r: grain(r, r.uniform(2200, 4800), 2.0, 0.0015, 0.0005), (0.03, 0.10))
+    mix(x, env_mul(lp(grains, 5200), lambda t: gust(t) ** 2))
+    gap = bp(pink(n(sec), rnd), lambda t: 900 + 250 * math.sin(t * 0.7), 8.0)      # wind through a hull gap
+    mix(x, env_mul(gap, lambda t: max(0.0, gust(t) - 0.75) * 4.0), 0, 0.18)
     return seam(x, F)
 
 
 def w_snow(rnd):
-    L, F = 8.0, 0.6
+    """snowfall: hushed, a low soft wind, a faint airy shimmer and now and then a far, lonely gust"""
+    L, F = 10.0, 0.8
     sec = L + F
-    x = lp(wind(sec, rnd, 250, 600, 0.7, (0.2, 0.6)), 900)
-    mix(x, hp(lp(pink(n(sec), rnd), 6000), 3000), 0, 0.03)
+    x = lp(wind(sec, rnd, 200, 450, 0.7, (0.25, 0.6), 0.15), 700)
+    air = env_mul(lp(hp(pink(n(sec), rnd), 2500), 5500), slow_lfo(sec, rnd, 2, 0.3, 1.0, 0.05, 0.15))
+    mix(x, air, 0, 0.018)
+    far = bp(pink(n(sec), rnd), lambda t: 380 + 120 * math.sin(t * 0.5), 3.0)
+    mix(x, env_mul(far, slow_lfo(sec, rnd, 2, 0.0, 1.0, 0.05, 0.12)), 0, 0.12)
     return seam(x, F)
 
 
 def w_fog(rnd):
-    L, F = 8.0, 0.6
+    """thick fog: almost still air, slow drips off the hull and a foghorn far away"""
+    L, F = 10.0, 0.8
     sec = L + F
-    x = lp(wind(sec, rnd, 120, 300, 0.7, (0.3, 0.8)), 400)
-    mix(x, scatter(sec, rnd, 0.6, lambda r: droplet(r, r.uniform(600, 900), 0.03), (0.2, 0.35)))
-    horn = osc(110, 2.4, "saw")
-    horn = lp(env_mul(horn, lambda t: math.sin(math.pi * t / 2.4) ** 2), 500)
-    mix(x, verb(horn + [0.0] * n(1.5), 0.7, 1.6, 0.8), n(4.5), 0.18, True)
+    x = lp(wind(sec, rnd, 120, 300, 0.7, (0.3, 0.7)), 400)
+    mix(x, scatter(sec, rnd, 0.8, lambda r: bubble(r, r.uniform(550, 850), 0.035), (0.15, 0.3)))
+    horn = [math.sin(math.tau * 98 * i / SR) + 0.5 * math.sin(math.tau * 147 * i / SR) + 0.25 * math.sin(math.tau * 196 * i / SR)
+            for i in range(n(2.6))]
+    horn = lp(env_mul(horn, lambda t: math.sin(math.pi * t / 2.6) ** 2), 450)
+    mix(x, verb(horn + [0.0] * n(1.5), 0.75, 1.6, 0.8), n(5.0), 0.16, True)
     return seam(x, F)
 
 
 def w_acid_rain(rnd):
-    L, F = 8.0, 0.5
+    """acid rain: a lighter rain whose drops sizzle softly on the hot hull, a low simmer and acid pooling"""
+    L, F = 10.0, 0.8
     sec = L + F
-    # MV-536 rework: thick, slow drops that hiss softly on the hot hull and a low simmer, not a high fizz
-    x = gain(rain_layer(sec, rnd, 110), 0.8)
-    simmer = env_mul(bp(pink(n(sec), rnd), 700, 0.9), slow_lfo(sec, rnd, 3, 0.3, 1.0, 0.15, 0.5))
-    mix(x, simmer, 0, 0.25)
-    def hiss(r):           # a drop sizzling on metal: a short, warm breath of noise
-        d = r.uniform(0.25, 0.5)
-        return lp(bp(env_mul(pink(n(d), r), lambda t: math.sin(math.pi * t / d) ** 2), r.uniform(900, 1500), 1.2), 2200)
-    mix(x, scatter(sec, rnd, 2.2, hiss, (0.15, 0.35)))
-    bubbles = scatter(sec, rnd, 5, lambda r: env_mul(osc(lambda t, f=r.uniform(220, 380): f * (1 + 3 * t), 0.07),
-                                                       lambda t: adsr(t, 0.004, 0.02, 0.07)), (0.05, 0.12))
-    mix(x, bubbles)                 # acid pooling in the gutters
+    x = gain(rain_bed(sec, rnd, 0.7), 0.85)
+    simmer = env_mul(bp(pink(n(sec), rnd), 650, 0.9), slow_lfo(sec, rnd, 3, 0.3, 1.0, 0.15, 0.5))
+    mix(x, simmer, 0, 0.22)
+    def sizzle(r):          # a drop hissing on metal: a short, soft breath of noise that fades away
+        d = r.uniform(0.3, 0.6)
+        z = env_mul(pink(n(d), r), lambda t: min(1.0, t / 0.02) * decay(t, d / 3))
+        return lp(bp(z, r.uniform(1600, 2600), 1.0), 4000)
+    mix(x, scatter(sec, rnd, 2.5, sizzle, (0.10, 0.22)))
+    mix(x, scatter(sec, rnd, 4, lambda r: bubble(r, r.uniform(260, 420), 0.02), (0.05, 0.10)))
     return seam(x, F)
 
 
 def w_ashfall(rnd):
-    L, F = 8.0, 0.6
+    """ash falling: a muffled low wind, a far fire breathing and a few soft ember pops"""
+    L, F = 10.0, 0.8
     sec = L + F
-    x = lp(wind(sec, rnd, 150, 400, 0.8, (0.3, 0.7)), 600)
-    embers = crackle(sec, rnd, 9, 1500, (0.2, 0.7))
-    mix(x, lp(embers, 5000))
+    x = lp(wind(sec, rnd, 150, 380, 0.8, (0.3, 0.7)), 600)
+    fire = env_mul(lp(brown(n(sec), rnd), 260), slow_lfo(sec, rnd, 3, 0.4, 1.0, 0.2, 0.8))
+    mix(x, fire, 0, 0.35)
+    pops = scatter(sec, rnd, 3, lambda r: grain(r, r.uniform(700, 1500), 2.0, 0.003, 0.001), (0.10, 0.25))
+    mix(x, lp(pops, 2500))
     return seam(x, F)
 
 
 # ------------------------------------------------------------------ one-shots
 def sfx_thunder(rnd, crack=True):
-    sec = 5.0
+    """MV-555: a near strike is a few rolling cracks (soft attack, nothing above ~3 kHz) into a long low roll with
+    body at 200 Hz for phones; a far one is the roll alone"""
+    sec = 5.5
     x = zeros(sec)
     if crack:
-        c = hp(env_mul(white(n(0.4), rnd), lambda t: decay(t, 0.07)), 800)
-        mix(x, c, 0, 0.6)
-    roll = lp(brown(n(sec), rnd), 160)
-    lvl = slow_lfo(sec, rnd, 4, 0.2, 1.0, 0.6, 2.5)
-    roll = env_mul(roll, lambda t: lvl(t) * adsr(t, 0.15, 1.3, sec))
+        at = 0.0
+        for k in range(rnd.randint(3, 5)):
+            tau = rnd.uniform(0.04, 0.09)
+            c = env_mul(white(n(0.5), rnd), lambda t: min(1.0, t / 0.004) * decay(t, tau))
+            mix(x, lp(bp(c, rnd.uniform(900, 2000), 0.7), 3000), n(at), 0.8 / (1 + k * 0.4))
+            at += rnd.uniform(0.04, 0.12)
+    roll = lp(brown(n(sec), rnd), 140)
+    mix(roll, lp(bp(brown(n(sec), rnd), 220, 0.8), 450), 0, 0.6)
+    lvl = slow_lfo(sec, rnd, 4, 0.25, 1.0, 0.5, 2.2)
+    roll = env_mul(roll, lambda t: lvl(t) * adsr(t, 0.12 if crack else 0.5, 1.5, sec))
     mix(x, roll, n(0.05))
     return verb(x, 0.3, 1.6, 0.6)
 
@@ -587,34 +637,34 @@ def sfx_shot(rnd, heavy=False):
     nz = env_mul(white(n(sec), rnd), lambda t: adsr(t, 0.002, 0.05 if heavy else 0.025, sec))
     nz = bp(nz, lambda t: 1500 * math.exp(-t * 12) + 300, 0.7)
     x = mix(nz, thump(rnd, 140 if heavy else 170, 50, sec, 0.3), 0, 1.0 if heavy else 0.7)
-    return crush(lp(x, 3500), 10, 2)
+    return retro(lp(x, 3500), 10, 2)
 
 
 def sfx_energy(rnd):
     x = osc(lambda t: 700 * math.exp(-t * 7) + 200, 0.25, "tri")
-    return crush(env_mul(lp(x, 2000), lambda t: adsr(t, 0.004, 0.07, 0.25)), 10, 2)
+    return retro(env_mul(lp(x, 2000), lambda t: adsr(t, 0.004, 0.07, 0.25)), 10, 2)
 
 
 def sfx_hit(rnd):
-    return crush(thump(rnd, 160, 60, 0.18, 0.8), 9, 2)
+    return retro(thump(rnd, 160, 60, 0.18, 0.8), 9, 2)
 
 
 def sfx_crit(rnd):
     x = thump(rnd, 200, 60, 0.3, 0.8)
     mix(x, env_mul(osc(1200, 0.25), lambda t: adsr(t, 0.003, 0.05, 0.25)), 0, 0.25)
-    return crush(x, 10, 2)
+    return retro(x, 10, 2)
 
 
 def sfx_hit_metal(rnd):
     x = clank(rnd, 330, 0.6, 0.12)
     mix(x, thump(rnd, 120, 60, 0.2, 0.6), 0, 0.7)
-    return crush(x, 10, 2)
+    return retro(x, 10, 2)
 
 
 def sfx_hit_hero(rnd):
     x = thump(rnd, 130, 70, 0.22, 0.5)
     grunt = bp(env_mul(osc(lambda t: 150 - 60 * t, 0.2, "saw"), lambda t: adsr(t, 0.01, 0.05, 0.2)), 700, 2)
-    return crush(mix(x, grunt, 0, 0.5), 9, 2)
+    return retro(mix(x, grunt, 0, 0.5), 9, 2)
 
 
 def sfx_enemy_die(rnd):
@@ -622,14 +672,14 @@ def sfx_enemy_die(rnd):
     sq = env_mul(white(n(sec), rnd), lambda t: adsr(t, 0.01, 0.12, sec))
     sq = bp(sq, lambda t: 1600 * math.exp(-t * 6) + 150, 2.5)
     groan = bp(env_mul(osc(lambda t: 120 - 60 * t, sec, "saw"), lambda t: adsr(t, 0.03, 0.2, sec)), 500, 2)
-    return crush(mix(sq, groan, 0, 0.6), 9, 2)
+    return retro(mix(sq, groan, 0, 0.6), 9, 2)
 
 
 def sfx_heal(rnd):
     x = zeros(0.6)
     for k, f in enumerate((523.3, 659.3, 784.0, 1046.5)):
         mix(x, env_mul(osc(f, 0.25, "tri"), lambda t: decay(t, 0.08)), n(k * 0.07), 0.5)
-    return crush(x, 8, 2)
+    return retro(x, 8, 2)
 
 
 def sfx_skill(rnd):
@@ -666,7 +716,7 @@ def sfx_build(rnd):
         mix(x, clank(rnd, 520 + 40 * k, 0.4, 0.06), n(k * 0.22), 0.8)
     for k in range(6):        # ratchet
         mix(x, hp(env_mul(white(n(0.01), rnd), lambda t: decay(t, 0.002)), 2000), n(0.7 + k * 0.035), 0.6)
-    return crush(x, 10, 2)
+    return retro(x, 10, 2)
 
 
 def sfx_build_done(rnd):
@@ -681,7 +731,7 @@ def sfx_demolish(rnd):
     for k in range(5):
         mix(x, clank(rnd, rnd.uniform(200, 500), 0.5, 0.08), n(0.05 + k * rnd.uniform(0.08, 0.18)), 0.5)
     mix(x, crackle(sec, rnd, 40, 2000, (0.2, 0.6)), 0, 0.6)
-    return crush(x, 10, 2)
+    return retro(x, 10, 2)
 
 
 def sfx_loot(rnd):
@@ -749,7 +799,7 @@ def sfx_horn(rnd):
     sec = 0.9
     x = [a + b for a, b in zip(osc(330, sec, "saw"), osc(415, sec, "saw"))]
     x = bp(env_mul(x, lambda t: (1.0 if t < 0.28 or 0.4 < t < 0.75 else 0.0) * 0.8), 900, 1.0)
-    return crush(lp(x, 2500), 9, 2)
+    return retro(lp(x, 2500), 9, 2)
 
 
 def sfx_return(rnd):
@@ -817,6 +867,119 @@ def toast_bad(rnd):
     return lp(x, 1200)
 
 
+# ------------------------------------------------------------------ MV-555 cues: resources, road events, expeditions
+def bell(f, sec, tau=0.35, vel=1.0):
+    """a soft, round tone (sine + a little 2nd / 3rd) with a gentle attack: the cue voice, never shrill"""
+    out = []
+    for i in range(n(sec)):
+        t = i / SR
+        a = min(1.0, t / 0.006) * math.exp(-t / tau)
+        out.append(vel * a * (math.sin(math.tau * f * t) + 0.25 * math.sin(math.tau * 2 * f * t) * math.exp(-t / (tau * 0.4))
+                              + 0.06 * math.sin(math.tau * 3 * f * t)))
+    return out
+
+
+def steps(rnd, count, gap=0.22, start=0.0, sec=None, grow=0.0):
+    """boots on gravel: soft bands of noise; grow > 0 makes them come closer, < 0 walk away"""
+    sec = sec or start + count * gap + 0.2
+    x = zeros(sec)
+    for k in range(count):
+        st = env_mul(white(n(0.1), rnd), lambda t: min(1.0, t / 0.003) * decay(t, 0.022))
+        st = lp(bp(st, rnd.uniform(900, 1400), 0.8), 2500)
+        mix(st, thump(rnd, 120, 70, 0.08, 0.2), 0, 0.5)
+        lvl = max(0.15, min(1.0, 0.6 + grow * (k - count / 2) / count))
+        mix(x, st, n(start + k * gap * rnd.uniform(0.92, 1.08)), 0.45 * lvl)
+    return x
+
+
+def sfx_res_gain(rnd):
+    """resources in: a soft wooden pluck and a quiet fifth above (Sound varies the pitch, so it never repeats)"""
+    x = bell(659.3, 0.3, 0.07)
+    mix(x, bell(987.8, 0.25, 0.06), n(0.045), 0.45)
+    mix(x, env_mul(lp(bp(white(n(0.03), rnd), 1800, 1.0), 3000), lambda t: decay(t, 0.006)), 0, 0.15)
+    return lp(x, 3200)
+
+
+def sfx_event_good(rnd):
+    """road event went well: a warm rising C - E - G with a soft chord swelling under it"""
+    x = zeros(1.4)
+    for k, f in enumerate((523.3, 659.3, 784.0)):
+        mix(x, bell(f, 1.0, 0.4, 0.55), n(k * 0.09))
+    pad = [math.sin(math.tau * 261.6 * i / SR) + 0.6 * math.sin(math.tau * 392.0 * i / SR) for i in range(n(1.3))]
+    mix(x, env_mul(pad, lambda t: math.sin(math.pi * min(1.0, t / 1.3)) ** 2), 0, 0.12)
+    return lp(verb(x, 0.3, 1.2), 3200)
+
+
+def sfx_event_bad(rnd):
+    """road event went wrong: a muffled thud on the hull and two low notes falling a minor step, without alarm"""
+    x = zeros(1.3)
+    mix(x, thump(rnd, 120, 50, 0.35, 0.6), 0, 0.7)
+    for k, f in enumerate((293.7, 261.6, 220.0)):
+        tone = env_mul(osc(f, 0.6, "tri"), lambda t: adsr(t, 0.015, 0.22, 0.6))
+        mix(x, lp(tone, 1000), n(0.12 + k * 0.22), 0.4)
+    return lp(verb(x, 0.3, 1.3), 2200)
+
+
+def sfx_exp_start(rnd):
+    """team heads out: the hatch clunks open, boots walk away on gravel and a short radio check"""
+    x = sfx_door(rnd) + [0.0] * n(1.4)
+    mix(x, steps(rnd, 6, 0.2, 0.0, 1.4, -1.2), n(0.35))
+    chirp = env_mul(lp(bp(pink(n(0.18), rnd), 1100, 0.9), 2200), lambda t: math.sin(math.pi * t / 0.18))
+    mix(x, chirp, n(1.45), 0.35)
+    mix(x, env_mul(osc(587.3, 0.09), lambda t: min(1.0, t / 0.006) * decay(t, 0.04)), n(1.6), 0.25)
+    return x
+
+
+def sfx_exp_encounter(rnd):
+    """the team finds something: a burst of radio static, two low pulses and a suspended chord that waits"""
+    x = zeros(1.6)
+    st = env_mul(lp(bp(pink(n(0.3), rnd), 1000, 0.7), 2400), lambda t: math.sin(math.pi * t / 0.3))
+    mix(x, st, 0, 0.45)
+    for k in range(2):
+        mix(x, thump(rnd, 110, 60, 0.25, 0.3), n(0.32 + k * 0.28), 0.55)
+    for f in (220.0, 293.7, 329.6):        # A sus4: open, waiting for an answer
+        tone = env_mul(osc(f, 1.1, "tri"), lambda t: min(1.0, t / 0.08) * decay(t, 0.45) * (1 - 0.25 * math.sin(math.tau * 6 * t)))
+        mix(x, lp(tone, 1200), n(0.45), 0.18)
+    return lp(verb(x, 0.3, 1.3), 2600)
+
+
+def sfx_exp_home(rnd):
+    """team back safe: boots coming closer, the hatch, and a warm two-note welcome"""
+    x = steps(rnd, 5, 0.2, 0.0, 1.9, 1.2)
+    mix(x, sfx_door(rnd), n(1.05), 0.8)
+    mix(x, bell(523.3, 0.7, 0.3, 0.45), n(1.25))
+    mix(x, bell(784.0, 0.6, 0.3, 0.4), n(1.37))
+    return lp(x, 3200)
+
+
+def sfx_exp_fail(rnd):
+    """the mission failed: a slow, falling three-note phrase over a cold gust, then a heavy hatch"""
+    x = zeros(1.9)
+    gust = env_mul(bp(pink(n(1.4), rnd), lambda t: 500 - 200 * t, 1.2), lambda t: math.sin(math.pi * t / 1.4) ** 2)
+    mix(x, gust, 0, 0.25)
+    for k, f in enumerate((246.9, 220.0, 174.6)):
+        tone = env_mul(osc(f, 0.7, "tri"), lambda t: adsr(t, 0.03, 0.3, 0.7))
+        mix(x, lp(tone, 900), n(0.1 + k * 0.3), 0.4)
+    mix(x, thump(rnd, 90, 45, 0.4, 0.5), n(1.2), 0.55)
+    return lp(verb(x, 0.35, 1.4), 2000)
+
+
+def sfx_exp_loot(rnd):
+    """haul unpacked: a bag dropped on the deck, cans and parts clinking out of it and a small bright sparkle"""
+    x = zeros(1.2)
+    bag = env_mul(lp(bp(pink(n(0.3), rnd), 900, 0.7), 2000), lambda t: math.sin(math.pi * t / 0.3))
+    mix(x, bag, 0, 0.45)
+    mix(x, thump(rnd, 100, 60, 0.2, 0.6), n(0.05), 0.5)
+    at = 0.22
+    for _ in range(4):
+        f = rnd.uniform(1100, 1900)
+        mix(x, lp(ping(f, 0.25, 0.04, 1.0, ((1.0, 1.0), (2.4, 0.35), (4.1, 0.1))), 3200), n(at), rnd.uniform(0.18, 0.3))
+        at += rnd.uniform(0.07, 0.12)
+    for k, f in enumerate((1046.5, 1318.5)):
+        mix(x, bell(f, 0.45, 0.15, 0.25), n(0.7 + k * 0.07))
+    return lp(x, 3400)
+
+
 # ------------------------------------------------------------------ music (loops)
 def midi(m):
     return 440.0 * 2 ** ((m - 69) / 12.0)
@@ -882,9 +1045,7 @@ def music_title(rnd):
             mix(mel, tone, at(p * 8 + b), 0.12, True)
     mel = verb(mel, 0.35, 1.3)
     x = [k + b + d + m for k, b, d, m in zip(lp(keys, 3200), lp(bass, 400), drums, mel)]
-    # vinyl: soft hiss and dust crackle
-    mix(x, gain(hp(lp(pink(L, rnd), 3000), 900), 0.012))
-    mix(x, lp(crackle(L / SR, rnd, 7, 1200, (0.05, 0.2)), 3500))
+    # MV-555: no vinyl hiss or dust crackle any more (Parames: it sounded like the speaker breaking up)
     # tape wobble: read the loop at a gently varying speed (whole cycles over the loop, so it still loops)
     cyc = 3
     out = []
@@ -895,7 +1056,7 @@ def music_title(rnd):
         fr = pos - int(pos)
         out.append(v0 * (1 - fr) + v1 * fr)
         pos += 1.0 + 0.0025 * math.cos(math.tau * cyc * i / L)
-    out = [math.tanh(v * 1.4) for v in lp(out, 4200)]           # warm, rolled-off top
+    out = lp(out, 4200)           # warm, rolled-off top (MV-555: no tanh drive, write() levels it cleanly)
     return out
 
 
@@ -945,6 +1106,14 @@ SOUNDS = {
     "wreck": ("sfx", sfx_wreck, False),
     "toast_good": ("sfx", toast_good, False),
     "toast_bad": ("sfx", toast_bad, False),
+    "res_gain": ("sfx", sfx_res_gain, False),
+    "event_good": ("sfx", sfx_event_good, False),
+    "event_bad": ("sfx", sfx_event_bad, False),
+    "exp_start": ("sfx", sfx_exp_start, False),
+    "exp_encounter": ("sfx", sfx_exp_encounter, False),
+    "exp_home": ("sfx", sfx_exp_home, False),
+    "exp_fail": ("sfx", sfx_exp_fail, False),
+    "exp_loot": ("sfx", sfx_exp_loot, False),
     "title_lofi": ("music", music_title, True),
     "tap": ("ui", ui_tap, False),
     "confirm": ("ui", ui_confirm, False),
@@ -961,8 +1130,9 @@ def main():
         rnd = random.Random(zlib.crc32(name.encode()))
         x = fn(rnd)
         # MV-538: the biome beds get a warmer top (lo-fi) than effects and weather
+        # MV-555: the title music has more peak room than a bed, since it plays alone over a quiet bed
         write(os.path.join(ROOT, folder, name + ".wav"), x, loop,
-              fc=BED_FC if folder == "amb" and name != "engine" else 6500.0)
+              fc=BED_FC if folder == "amb" and name != "engine" else 6500.0, peak_cap=0.6 if folder == "music" else 0.42)
 
 
 if __name__ == "__main__":
