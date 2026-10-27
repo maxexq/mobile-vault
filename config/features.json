@@ -1,6 +1,7 @@
 {
   "tz_hours": 7,
   "features": {
+    "event_progression": true,
     "warlord_progression": true,
 
     "individual_auto_equip": true,

@@ -13,6 +13,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
 
 ### Changed
+- Road-event fights and stat checks now grow gently with biome, laps and Vault upgrades, with bounded risks, matching resource rewards and visible stat-check targets/odds (MV-553).
 - Checkpoint Warlords and their summons now scale with ordinary gear, have much less HP/damage and bounded hits, letting armed squads keep progressing without boss wipes (MV-550).
 - Industrial Ruins now uses twenty approved native pixel-art panels: pale broken skyline, rusted factories, roadside wrecks, thin smog and cracked asphalt, with smoke and lamp effects anchored to the new scenery (MV-548)
 

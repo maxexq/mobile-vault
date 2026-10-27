@@ -2094,5 +2094,11 @@
  "สวมอุปกรณ์อัตโนมัติ": "Auto Equip",
  "เลือกอุปกรณ์ที่ดีกว่าจากคลังให้เฉพาะคนนี้": "Equip better gear from the stash for this survivor only",
  "%s: เปลี่ยนอุปกรณ์ %d ชิ้น": "%s: equipped %d items",
- "%s: ไม่มีอุปกรณ์ที่ดีกว่าในคลัง": "%s: no better gear in the stash"
+ "%s: ไม่มีอุปกรณ์ที่ดีกว่าในคลัง": "%s: no better gear in the stash",
+ "ทดสอบ %s · เป้าหมาย %d · โอกาสสำเร็จ %d%%": "%s check · Target %d · Success chance %d%%",
+ "ไม่มีใครอยู่บนรถ ทำได้แค่ปิดประตูตั้งรับ... ตัวถังเสียหาย -%d HP": "Nobody aboard, all you can do is lock the doors and brace... Hull -%d HP",
+ "แพ้... ทีมบาดเจ็บหนัก ตัวถังเสียหาย -%d HP\n(พลังทีม %.0f vs อันตราย %.0f)": "Defeat... The team is badly hurt. Hull -%d HP\n(Team power %.0f vs threat %.0f)",
+ "หนีพ้น แต่โดนโจมตีท้ายรถ! ไฟ -%d ตัวถัง -%d HP": "Escaped, but the rear was hit! Power -%d, hull -%d HP",
+ "ชนฝ่าไปได้! ตัวถังเสียหาย -%d HP": "Rammed through! Hull -%d HP",
+ "ฝ่าไปได้... ตัวถัง -%d HP ทุกคนได้รับรังสี (ใช้ยาต้านรังสีหรือห้องพยาบาลรักษา)": "Made it through... Hull -%d HP. Everyone received radiation (treat with Radaway or the infirmary)"
 }
