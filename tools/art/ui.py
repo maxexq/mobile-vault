@@ -989,7 +989,272 @@ def fx_map_event_beacon():
         add("fx_map_event_beacon_%d" % f, img, q=False)
 
 
+# ------------------------------------------------------------------ MV-556: clearer world map, per-biome detail
+## Calm terrain (two close steps of the biome's own ramp, sparse, so roads / stops / names read on top) and small
+## 3/4-view props the game scatters per region (seeded, clear of roads, stops and names). Props are text rows at native
+## size with the one-pixel ol0 outline; every row keeps a "." margin so the outline fits. Deterministic.
+
+def _terrain(name, base, marks, seed):
+    ## marks: [(colour, count, (w, h))]; whole-pixel flecks anywhere (not the 4px grid: no visible lattice), wrapping
+    img = new(16, 16, c(base))
+    r = random.Random(seed)
+    for col, n, (w, h) in marks:
+        for i in range(n):
+            _wrap_rect(img, r.randrange(16), r.randrange(16), w, h, c(col))
+    add(name, img, q=False)
+
+
+def ui_map_terrain():
+    _terrain("ui_map_terrain_industrial", "gray3", [("gray2", 5, (3, 1)), ("orange0", 4, (2, 1)), ("orange1", 2, (1, 1))], 5561)
+    _terrain("ui_map_terrain_desert", "sand2", [("sand3", 4, (3, 1)), ("sand1", 4, (2, 1))], 5562)
+    _terrain("ui_map_terrain_forest", "green1", [("green2", 6, (2, 2)), ("green0", 3, (2, 1))], 5563)
+    _terrain("ui_map_terrain_swamp", "teal1", [("teal0", 5, (4, 1)), ("teal2", 3, (2, 1))], 5564)
+    _terrain("ui_map_terrain_tundra", "snow1", [("snow2", 5, (3, 1)), ("snow0", 3, (2, 1))], 5565)
+    _terrain("ui_map_terrain_metro", "gray2", [("sky1", 6, (2, 2)), ("gray1", 3, (3, 1))], 5566)
+
+
+MAP_PROPS = {
+    # industrial: brick factory with two stacks, a rust tank, a slag heap
+    "industrial_factory": ([
+        "...............",
+        "..a........a...",
+        "..s........s...",
+        "..s........s...",
+        ".rrrr.rrrr.s...",
+        ".RRRRrRRRRrrrr.",
+        ".RkRRRRkRRRRkR.",
+        ".RRRRRRRRRRRRR.",
+        ".DDDDDDDDDDDDD.",
+        "...............",
+    ], {"a": "gray4", "s": "gray3", "r": "orange2", "R": "orange1", "k": "lamp0", "D": "orange0"}),
+    "industrial_tank": ([
+        "..........",
+        "...hhhh...",
+        "..hTTTTh..",
+        "..TTTTTT..",
+        "..TtTTtT..",
+        "..tttttt..",
+        "..l....l..",
+        "..........",
+    ], {"h": "orange2", "T": "orange1", "t": "orange0", "l": "gray4"}),
+    "industrial_heap": ([
+        "..........",
+        "....gg....",
+        "...gGGg...",
+        "..gGrGGg..",
+        ".GGGGGrGG.",
+        "..........",
+    ], {"g": "gray4", "G": "gray3", "r": "orange1"}),
+    "industrial_pylon": ([
+        ".........",
+        "....m....",
+        "..mmmmm..",
+        "...mmm...",
+        "...m.m...",
+        "..m...m..",
+        "..m...m..",
+        ".........",
+    ], {"m": "gray5"}),
+    # glass desert: a stepped dune, glass shards, a bleached rib cage, a dead stump
+    "desert_dune": ([
+        "................",
+        "......hhh.......",
+        "....hhSSShh.....",
+        "..hhSSSSSSSdd...",
+        ".SSSSSSSSdddddd.",
+        "................",
+    ], {"h": "sand3", "S": "sand2", "d": "sand1"}),
+    "desert_glass": ([
+        "..........",
+        "...w......",
+        "...gw..w..",
+        "..ggg.gw..",
+        "..gbg.gg..",
+        ".bbbbbbbb.",
+        "..........",
+    ], {"w": "snow3", "g": "teal3", "b": "teal2"}),
+    "desert_bones": ([
+        "..........",
+        "..b.b.b...",
+        ".bcbcbcb..",
+        ".b.b.b.bb.",
+        "..........",
+    ], {"b": "cream3", "c": "cream1"}),
+    "desert_stump": ([
+        "........",
+        "..w..w..",
+        "..ww.w..",
+        "...www..",
+        "...ww...",
+        "..dddd..",
+        "........",
+    ], {"w": "wood2", "d": "sand1"}),
+    "desert_rock": ([
+        "..........",
+        "...hhh....",
+        "..hRRRh...",
+        ".RRRRrRR..",
+        "..........",
+    ], {"h": "cream2", "R": "cream1", "r": "cream0"}),
+    # forest: a broad clump, a pine pair, a bush
+    "forest_clump": ([
+        "..............",
+        "....LL...LL...",
+        "...LLLL.LLLL..",
+        "..LGLLLLLLGLL.",
+        "..GGGLGGGLGGG.",
+        "..dGGGdGGGGd..",
+        "...t...t..t...",
+        "..............",
+    ], {"L": "green3", "G": "green2", "d": "green1", "t": "wood1"}),
+    "forest_pines": ([
+        "..........",
+        "...L....L.",
+        "..LLL..LL.",
+        "..LGL.LLL.",
+        ".LGGGLLGL.",
+        ".GGGGGGGG.",
+        "...t...t..",
+        "..........",
+    ], {"L": "green3", "G": "green2", "t": "wood1"}),
+    "forest_bush": ([
+        "........",
+        "..LLL...",
+        ".LGLLL..",
+        ".GGGGG..",
+        "........",
+    ], {"L": "green3", "G": "green2"}),
+    "forest_log": ([
+        "...........",
+        "..wwwwwwe..",
+        "..dddddde..",
+        "...........",
+    ], {"w": "wood3", "d": "wood1", "e": "wood4"}),
+    # toxic bayou: a dark pool with a glint, a dead tree, reeds
+    "swamp_pool": ([
+        "..............",
+        "...wwwwwww....",
+        ".wwWWWWWWWww..",
+        ".wWWgWWWWWWw..",
+        "..wwWWWWWww...",
+        "....wwwww.....",
+        "..............",
+    ], {"w": "teal2", "W": "teal0", "g": "toxic2"}),
+    "swamp_tree": ([
+        "..........",
+        ".w.....w..",
+        "..w.w.w...",
+        "...www....",
+        "....w.....",
+        "....w.....",
+        "..mmwmm...",
+        "..........",
+    ], {"w": "wood1", "m": "teal3"}),
+    "swamp_reeds": ([
+        "........",
+        "..t..t..",
+        "..r.tr..",
+        ".rr.rr..",
+        ".rrrrrr.",
+        "........",
+    ], {"t": "wood2", "r": "green2"}),
+    "swamp_shack": ([
+        "..........",
+        "...rrrr...",
+        "..rrrrrr..",
+        "..WWdWWW..",
+        "..WWdWWW..",
+        "..l.l..l..",
+        "..........",
+    ], {"r": "gray4", "W": "wood2", "d": "wood0", "l": "wood1"}),
+    # frozen highway: snowy pine, ice rock, a frozen wreck
+    "tundra_pine": ([
+        "........",
+        "...s....",
+        "..sPs...",
+        "..PsP...",
+        ".sPPPs..",
+        ".PPPPP..",
+        "...t....",
+        "........",
+    ], {"s": "snow3", "P": "blue2", "t": "wood1"}),
+    "tundra_rock": ([
+        "..........",
+        "...ss.....",
+        "..sRRss...",
+        ".sRRRRRs..",
+        ".RRrRRRR..",
+        "..........",
+    ], {"s": "snow3", "R": "blue3", "r": "blue2"}),
+    "tundra_wreck": ([
+        "............",
+        "...sssss....",
+        "..sCCwCCs...",
+        ".CCCCCCCCC..",
+        ".CrCCCCCrC..",
+        "............",
+    ], {"s": "snow3", "C": "blue2", "w": "snow2", "r": "gray1"}),
+    "tundra_drift": ([
+        "............",
+        ".....sss....",
+        "...ssSSSss..",
+        ".sSSSSSSSSs.",
+        "............",
+    ], {"s": "snow3", "S": "snow2"}),
+    # signal metropolis: a broken tower, a block with lit windows, a radio mast
+    "metro_tower": ([
+        "........",
+        "...BB...",
+        "..BBBB..",
+        "..BwBB..",
+        "..BBBB..",
+        "..BBwB..",
+        "..BBBB..",
+        "..BwBB..",
+        "..BBBB..",
+        "..dddd..",
+        "........",
+    ], {"B": "sky3", "w": "yellow2", "d": "sky2"}),
+    "metro_block": ([
+        "............",
+        "..rrrr.rrr..",
+        "..BBBB.BBB..",
+        "..BwBB.BBw..",
+        "..BBBBBBBB..",
+        "..BBwBBwBB..",
+        "..dddddddd..",
+        "............",
+    ], {"r": "gray5", "B": "gray4", "w": "yellow2", "d": "gray3"}),
+    "metro_mast": ([
+        ".......",
+        "...r...",
+        "...m...",
+        "..mmm..",
+        "...m...",
+        "..m.m..",
+        "..m.m..",
+        ".m...m.",
+        ".......",
+    ], {"r": "red2", "m": "gray5"}),
+    "metro_wreck": ([
+        "..........",
+        "...rrr....",
+        "..rCCCr...",
+        ".CCCCCCC..",
+        ".k.....k..",
+        "..........",
+    ], {"C": "blue2", "r": "blue3", "k": "gray1"}),
+}
+
+
+def ui_map_props():
+    for k, (rows, key) in MAP_PROPS.items():
+        add("ui_map_prop_" + k, rows_sprite(rows, key), q=False)
+
+
 def gen_world_map():
+    ui_map_terrain()          # MV-556
+    ui_map_props()            # MV-556
     ui_map_ground_industrial()
     ui_map_ground_desert()
     ui_map_ground_forest()

@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- World map (test builds): clearer, calmer ground with region borders and name plates, and each region dotted with its own landmarks: factories, dunes and glass, forests, swamp pools and shacks, snowy pines, city towers (MV-556).
 - Salvage several gear items at once: tick them in the stash and confirm once (MV-554).
 - Auto Equip for one survivor in Crew details and Squad / roof-reserve cards (MV-547).
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
