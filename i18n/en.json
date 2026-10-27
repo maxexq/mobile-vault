@@ -2081,5 +2081,9 @@
  "บรรยากาศ = เสียงพื้นที่ เครื่องยนต์ ฝนและพายุ · บนเว็บเสียงเริ่มหลังแตะจอครั้งแรก": "Ambience = area sounds, the engine, rain and storms · on the web, sound starts after your first tap",
  "รถหยุดอยู่: ": "Stopped: ",
  "ปลายทาง": "the destination",
- "ซ่อมเองฟรี +%.1f HP/นาที (ลูกเรือห้องเครื่อง/โรงช่าง) · ส่วนลดค่าซ่อม %d%%": "Free repair +%.1f HP/min (engine room / workshop crew) · repair discount %d%%"
+ "ซ่อมเองฟรี +%.1f HP/นาที (ลูกเรือห้องเครื่อง/โรงช่าง) · ส่วนลดค่าซ่อม %d%%": "Free repair +%.1f HP/min (engine room / workshop crew) · repair discount %d%%",
+ "สวมอุปกรณ์อัตโนมัติ": "Auto Equip",
+ "เลือกอุปกรณ์ที่ดีกว่าจากคลังให้เฉพาะคนนี้": "Equip better gear from the stash for this survivor only",
+ "%s: เปลี่ยนอุปกรณ์ %d ชิ้น": "%s: equipped %d items",
+ "%s: ไม่มีอุปกรณ์ที่ดีกว่าในคลัง": "%s: no better gear in the stash"
 }

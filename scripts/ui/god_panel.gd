@@ -416,6 +416,7 @@ func _tab_crew() -> void:
 		_row([_b("ล้างคูลดาวน์คุยปลอบใจ", func(): Dev.talk_reset())], "ขวัญ v2 (MV-127)")
 	for d in Game.s.dwellers:
 		var dd: Dictionary = d
+		var did := int(dd.id)
 		var tags := []
 		if Game.is_away(dd):
 			tags.append("ออกสำรวจ")
@@ -430,6 +431,7 @@ func _tab_crew() -> void:
 		for t in Crew.traits(dd):
 			tl.append(str(Crew.TRAITS.get(t, {}).get("th", t)))
 		_note(("[ช่าง] " if Crew.is_builder(dd) else "") + ", ".join(tl))
+		_row([_b("สวมอุปกรณ์รายคน", func(): Dev.auto_equip_dweller(did), "green")], "MV-547")
 		_row([_b("+5 Lv", func(): Dev.level_up(dd, 5)), _b("ประท้วง", func(): Dev.force_strike(dd)), _b("หนีทันที", func(): Dev.desert_now(dd), "red"),
 			_b("ตาย", func(): Dev.kill(dd), "red")])
 		_row([_b("เลิกเป็นช่าง" if Crew.is_builder(dd) else "เป็นช่าง", func(): Dev.toggle_builder(dd), "yellow" if Crew.is_builder(dd) else "gray"),

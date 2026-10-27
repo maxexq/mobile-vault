@@ -34,6 +34,7 @@ const TIMEOUT_SEC := 10.0
 
 ## every switch the game knows; the remote file cannot invent new ones
 const FEATURES := {
+	"individual_auto_equip": "สวมอุปกรณ์อัตโนมัติรายคน (MV-547): ปุ่มในหน้าลูกเรือและการ์ดทีม เลือกของที่ดีกว่าจากคลังให้เฉพาะคนนี้",
 	"smooth_ui_text": "ตัวอักษร Chakra Petch เรียบคมตามความละเอียดจอ (MV-540): ปิด = ขอบพิกเซลแบบเดิม",
 	"confirm_actions": "หน้าต่างยืนยันก่อนลบหรือแทนที่ข้อมูล (MV-422)",
 	"desert_parallax": "ทะเลทรายแก้ว (MV-539): ฉากหลังยาว 5 ชั้น ท้องฟ้าตามเวลาในเกม (ปิด = ฉากเดิม)",
