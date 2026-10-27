@@ -673,6 +673,8 @@ func _tab_world() -> void:
 			sb.append(_b(str(Expedition.SITES[id].th), func(): Dev.arrive(sid), "gray", true))
 		_row(sb)
 	_head("PRESTIGE", "รุ่นต่อไป")
+	_row([_b("พาทุกคน + เก็บครบ", func(): Dev.nextgen_crew_preview(true), "green", true), _b("เลือกหนีแบบเดิม", func(): Dev.nextgen_crew_preview(false), "gray", true)])
+	_note("MV-559: ลูกเรือไปต่อ %d คน · เลเวล %d%% · คืนวิจัยเก่า %d แต้ม" % [Meta.carry_slots(), int(Meta.carry_level_keep() * 100), Meta.retired_research_refund()])
 	var nextgen := UIKit.button("เปิดหน้ารุ่นต่อไป", "yellow")
 	nextgen.pressed.connect(_open_nextgen)
 	_row([nextgen, _b("รถพังใน 3 วิ", func(): Dev.force_wreck(), "red", true)])

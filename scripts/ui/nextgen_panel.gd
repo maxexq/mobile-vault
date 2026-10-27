@@ -8,6 +8,7 @@ var carry: Array = []
 var step := "story"     # story | summary | perks | crew
 var tier_pick := ""
 var earned := 0
+var refunded := 0
 var _list: VBoxContainer
 
 
@@ -25,6 +26,7 @@ func open_retire(is_forced: bool) -> void:
 	close_btn.visible = not forced
 	step = "story"
 	tier_pick = ""
+	refunded = 0
 	carry = []
 	# default picks: highest level survivors
 	var arr: Array = Game.s.dwellers.duplicate()
@@ -55,7 +57,10 @@ func _build_story() -> void:
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		fr.add_child(tr)
 		_list.add_child(fr)
-	var body_l := UIKit.wrap_label(str(st.text) % Meta.vehicle_name(), UIKit.FS, UIKit.C_TEXT)
+	var story := str(st.text)
+	if Meta.all_crew_on() and Meta.is_wrecked():
+		story = Loc.t("%s พังกลางทาง แต่สัญญาณขอความช่วยเหลือส่งถึงศูนย์บัญชาการ หน่วยกู้ภัยรับผู้รอดชีวิตทุกคนพร้อมอุปกรณ์กลับฐาน เพื่อออกเดินทางด้วยรถคันใหม่")
+	var body_l := UIKit.wrap_label(story % Meta.vehicle_name(), UIKit.FS, UIKit.C_TEXT)
 	body_l.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
 	_list.add_child(body_l)
 	body_l.visible_ratio = 0.0
@@ -73,7 +78,7 @@ func _build_summary() -> void:
 	var s := Game.s
 	if forced:
 		_list.add_child(UIKit.label(Loc.t("%s พังทลายแล้ว...") % Meta.vehicle_name(), UIKit.FS_HUGE, UIKit.C_RED))
-		_list.add_child(UIKit.wrap_label(Loc.t("ผู้รอดชีวิตบางส่วนหนีออกมาได้ พร้อมพิมพ์เขียวและเสบียงที่ขนมาได้"), UIKit.FS_SMALL, UIKit.C_TEXT))
+		_list.add_child(UIKit.wrap_label(Loc.t("ผู้รอดชีวิตทุกคนกลับฐานพร้อมอุปกรณ์ เลเวล และทักษะครบ") if Meta.all_crew_on() else Loc.t("ผู้รอดชีวิตบางส่วนหนีออกมาได้ พร้อมพิมพ์เขียวและเสบียงที่ขนมาได้"), UIKit.FS_SMALL, UIKit.C_TEXT))
 	else:
 		_list.add_child(UIKit.label(Loc.t("ปลดระวาง %s") % Meta.vehicle_name(), UIKit.FS_HUGE, UIKit.C_GOLD))
 		_list.add_child(UIKit.wrap_label(Loc.t("รถคันนี้พาทุกคนมาได้ไกลแล้ว ถึงเวลาสร้างพาหนะที่ใหญ่กว่าเดิมเพื่อไปให้ไกลกว่านี้"), UIKit.FS_SMALL, UIKit.C_TEXT))
@@ -101,6 +106,7 @@ func _build_summary() -> void:
 	var nx := UIKit.button(Loc.t("ถัดไป: งานวิจัย"), "yellow", "up")
 	nx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nx.pressed.connect(func():
+		refunded += Meta.refund_retired_research()
 		earned = Meta.bank_legacy()
 		step = "perks"
 		refresh())
@@ -111,7 +117,11 @@ func _build_summary() -> void:
 func _build_perks() -> void:
 	set_title("RESEARCH %d / %s" % [int(Meta.m().legacy), Meta.RESEARCH_TH])
 	_list.add_child(UIKit.wrap_label(Loc.t("ใช้%sซื้อความสามารถถาวรให้ทุกรุ่นถัดไป · พาหนะใหม่ต้องมีพิมพ์เขียวด้วย") % Meta.RESEARCH_TH, UIKit.FS_SMALL))
+	if Meta.all_crew_on():
+		_list.add_child(UIKit.wrap_label(Loc.t("ทุกคนไปต่อพร้อมเลเวลและสกิลครบ ไม่ต้องซื้อวิจัยพาคนเพิ่มหรือรักษาเลเวล · คืนแต้มวิจัยเดิม %d") % refunded, UIKit.FS_SMALL))
 	for id in Meta.PERKS:
+		if Meta.all_crew_on() and id in ["veterans", "training"]:
+			continue
 		var p: Dictionary = Meta.PERKS[id]
 		var lv := Meta.perk(id)
 		var card := UIKit.panel(UIKit.C_BG2, UIKit.C_GOLD if lv > 0 else UIKit.C_LINE_DARK)
@@ -135,7 +145,7 @@ func _build_perks() -> void:
 					refresh())
 			h.add_child(b)
 		_list.add_child(card)
-	var nx := UIKit.button(Loc.t("ถัดไป: เลือกผู้รอดชีวิต"), "yellow", "people")
+	var nx := UIKit.button(Loc.t("ถัดไป: ทีมและพาหนะ") if Meta.all_crew_on() else Loc.t("ถัดไป: เลือกผู้รอดชีวิต"), "yellow", "people")
 	nx.pressed.connect(func():
 		step = "crew"
 		refresh())
@@ -143,8 +153,13 @@ func _build_perks() -> void:
 
 
 func _build_crew() -> void:
-	set_title(Loc.t("ESCAPE %d/%d / ใครจะไปกับรถคันใหม่") % [carry.size(), Meta.carry_slots()])
-	_list.add_child(UIKit.wrap_label(Loc.t("คนที่เลือกจะเก็บนิสัย อาวุธ และ %d%% ของเลเวลไว้ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด") % [int(Meta.carry_level_keep() * 100), int(Meta.carry_res_ratio() * 100)], UIKit.FS_SMALL))
+	if Meta.all_crew_on():
+		carry = Meta.all_crew_ids()
+	set_title(Loc.t("CREW %d / ทุกคนไปกับรถคันใหม่") % carry.size() if Meta.all_crew_on() else Loc.t("ESCAPE %d/%d / ใครจะไปกับรถคันใหม่") % [carry.size(), Meta.carry_slots()])
+	var carry_text := Loc.t("ทุกคนเก็บเลเวล XP สกิล นิสัย และอุปกรณ์ที่สวมใส่ครบ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด") % int(Meta.carry_res_ratio() * 100) if Meta.all_crew_on() else Loc.t("คนที่เลือกจะเก็บนิสัย อาวุธ และ %d%% ของเลเวลไว้ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด") % [int(Meta.carry_level_keep() * 100), int(Meta.carry_res_ratio() * 100)]
+	_list.add_child(UIKit.wrap_label(carry_text, UIKit.FS_SMALL))
+	if Meta.all_crew_on() and carry.size() > Data.BASE_POP_CAP:
+		_list.add_child(UIKit.wrap_label(Loc.t("ทุกคนขึ้นรถได้ แม้เกินที่นอนเริ่มต้น %d ที่ · สร้างห้องพักเพิ่มบนรถใหม่") % Data.BASE_POP_CAP, UIKit.FS_SMALL, UIKit.C_ORANGE))
 	var arr: Array = Game.s.dwellers.duplicate()
 	arr.sort_custom(func(a, b): return int(a.lvl) > int(b.lvl))
 	for d in arr:
@@ -154,7 +169,7 @@ func _build_crew() -> void:
 		b.custom_minimum_size = Vector2(0, 28)
 		b.focus_mode = Control.FOCUS_NONE
 		UIKit.style_button(b, "yellow" if sel else "gray")
-		b.disabled = not sel and carry.size() >= Meta.carry_slots()
+		b.disabled = Meta.all_crew_on() or (not sel and carry.size() >= Meta.carry_slots())
 		var h := UIKit.hbox(4)
 		h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		h.offset_left = 3
@@ -169,6 +184,8 @@ func _build_crew() -> void:
 		h.add_child(l)
 		b.add_child(h)
 		b.pressed.connect(func():
+			if Meta.all_crew_on():
+				return
 			if carry.has(did):
 				carry.erase(did)
 			elif carry.size() < Meta.carry_slots():
@@ -197,7 +214,8 @@ func _build_crew() -> void:
 
 
 func _request_next_generation() -> void:
-	var picks := carry.duplicate()
+	var whole_crew := Meta.all_crew_on()
+	var picks := Meta.all_crew_ids() if whole_crew else carry.duplicate()
 	var tier := tier_pick
 	var state := Game.s
 	var names: Array = []
@@ -205,10 +223,13 @@ func _request_next_generation() -> void:
 		var d := Game.dweller_by_id(int(did))
 		if not d.is_empty():
 			names.append(str(d.name))
-	ConfirmPanel.ask(self, Loc.t("สร้างพาหนะคันใหม่!"), Loc.t("รถและห้องปัจจุบันจะถูกแทนที่ เก็บไว้เฉพาะลูกเรือที่เลือกพร้อมอาวุธ และ %d%% ของเศษเหล็ก/ชิ้นส่วน อุปกรณ์อื่นจะหายไป ย้อนคืนไม่ได้\nผู้รอดชีวิตที่เลือก: %s") % [int(Meta.carry_res_ratio() * 100), ", ".join(names) if not names.is_empty() else Loc.t("ไม่มี")], Loc.t("ยืนยันขึ้นรุ่นถัดไป"), func():
+	var message := Loc.t("รถและห้องปัจจุบันจะถูกแทนที่ เก็บไว้เฉพาะลูกเรือที่เลือกพร้อมอาวุธ และ %d%% ของเศษเหล็ก/ชิ้นส่วน อุปกรณ์อื่นจะหายไป ย้อนคืนไม่ได้\nผู้รอดชีวิตที่เลือก: %s") % [int(Meta.carry_res_ratio() * 100), ", ".join(names) if not names.is_empty() else Loc.t("ไม่มี")]
+	if whole_crew:
+		message = Loc.t("ผู้รอดชีวิตทั้ง %d คนไปต่อ พร้อมเลเวล XP สกิล และอุปกรณ์ที่สวมใส่ครบ\nรถ ห้อง และเส้นทางเริ่มใหม่ เก็บเศษเหล็ก/ชิ้นส่วน %d%% กับพิมพ์เขียวทั้งหมด ของในคลังและอุปกรณ์รถเดิมจะหายไป ย้อนคืนไม่ได้") % [picks.size(), int(Meta.carry_res_ratio() * 100)]
+	ConfirmPanel.ask(self, Loc.t("สร้างพาหนะคันใหม่!"), message, Loc.t("ยืนยันขึ้นรุ่นถัดไป"), func():
 		forced = false
 		close()
-		Meta.next_generation(picks, tier), func(): return is_same(Game.s, state) and carry == picks and tier_pick == tier and _picks_present(picks))
+		Meta.next_generation(picks, tier), func(): return is_same(Game.s, state) and Meta.all_crew_on() == whole_crew and (Meta.all_crew_ids() == picks if whole_crew else carry == picks) and tier_pick == tier and _picks_present(picks))
 
 
 func _picks_present(picks: Array) -> bool:

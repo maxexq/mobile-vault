@@ -16,6 +16,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
 
 ### Changed
+- Next Generation brings every survivor with full levels, XP, skills and all worn equipment; obsolete crew/level research is refunded (MV-559).
 - Clearer sound: fixed the hiss and crackle (most of all on the web), and reworked rain, storm, sandstorm, snow, fog, acid rain, ashfall, overcast and thunder (MV-555).
 - Road-event fights and stat checks now grow gently with biome, laps and Vault upgrades, with bounded risks, matching resource rewards and visible stat-check targets/odds (MV-553).
 - Checkpoint Warlords and their summons now scale with ordinary gear, have much less HP/damage and bounded hits, letting armed squads keep progressing without boss wipes (MV-550).

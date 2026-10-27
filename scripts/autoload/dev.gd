@@ -1871,3 +1871,10 @@ func confirm_preview() -> void:
 	if panel == null:
 		return
 	panel.request(panel.get_parent() as Control, Loc.t("ทดสอบหน้าต่างยืนยัน"), Loc.t("นี่คือตัวอย่างเท่านั้น ยืนยันแล้วจะแสดงข้อความ ไม่มีข้อมูลถูกลบ"), Loc.t("ยืนยันตัวอย่าง"), func(): Game.toast.emit(Loc.t("ยืนยันตัวอย่างแล้ว ไม่มีข้อมูลถูกลบ"), "good"))
+
+
+## MV-559: preview the whole-team transition or its rollback without replacing the current vehicle.
+func nextgen_crew_preview(enabled: bool) -> void:
+	Features.set_override("features", "nextgen_all_crew", enabled)
+	act("next generation whole crew", {"enabled": enabled, "crew": Meta.carry_slots()})
+	changed.emit()

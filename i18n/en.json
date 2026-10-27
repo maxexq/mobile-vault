@@ -2113,5 +2113,13 @@
  "เลือก %d ชิ้น · ได้ %d ชิ้นส่วน + %d เศษเหล็ก": "%d selected · gives %d components + %d scrap",
  "เลือกทั้งหมด": "Select all",
  "แยก %d ชิ้น": "Salvage %d",
- "อุปกรณ์ที่เลือก %d ชิ้นจะหายไปถาวร ได้ %d ชิ้นส่วน และ %d เศษเหล็ก ย้อนคืนไม่ได้": "The %d selected items will be gone for good. You get %d components and %d scrap. This can't be undone."
+ "อุปกรณ์ที่เลือก %d ชิ้นจะหายไปถาวร ได้ %d ชิ้นส่วน และ %d เศษเหล็ก ย้อนคืนไม่ได้": "The %d selected items will be gone for good. You get %d components and %d scrap. This can't be undone.",
+ "%s พังกลางทาง แต่สัญญาณขอความช่วยเหลือส่งถึงศูนย์บัญชาการ หน่วยกู้ภัยรับผู้รอดชีวิตทุกคนพร้อมอุปกรณ์กลับฐาน เพื่อออกเดินทางด้วยรถคันใหม่": "%s broke down, but the distress call reached Command. Rescue brings every survivor and their equipment back to base to set out in a new vehicle.",
+ "CREW %d / ทุกคนไปกับรถคันใหม่": "CREW %d / Everyone joins the new vehicle",
+ "ถัดไป: ทีมและพาหนะ": "Next: crew and vehicle",
+ "ทุกคนขึ้นรถได้ แม้เกินที่นอนเริ่มต้น %d ที่ · สร้างห้องพักเพิ่มบนรถใหม่": "Everyone boards even above the starting %d beds. Build more quarters on the new vehicle.",
+ "ทุกคนเก็บเลเวล XP สกิล นิสัย และอุปกรณ์ที่สวมใส่ครบ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด": "Everyone keeps full levels, XP, skills, traits and all worn equipment. Carry %d%% of scrap/components and all blueprints.",
+ "ทุกคนไปต่อพร้อมเลเวลและสกิลครบ ไม่ต้องซื้อวิจัยพาคนเพิ่มหรือรักษาเลเวล · คืนแต้มวิจัยเดิม %d": "Everyone keeps their full levels and skills. Crew-capacity and level-retention research is no longer needed. Previous research refunded: %d.",
+ "ผู้รอดชีวิตทั้ง %d คนไปต่อ พร้อมเลเวล XP สกิล และอุปกรณ์ที่สวมใส่ครบ\nรถ ห้อง และเส้นทางเริ่มใหม่ เก็บเศษเหล็ก/ชิ้นส่วน %d%% กับพิมพ์เขียวทั้งหมด ของในคลังและอุปกรณ์รถเดิมจะหายไป ย้อนคืนไม่ได้": "All %d survivors continue with full levels, XP, skills and worn equipment.\nThe vehicle, rooms and route restart. Keep %d%% of scrap/components and all blueprints. Stashed items and old vehicle equipment are lost. This cannot be undone.",
+ "ผู้รอดชีวิตทุกคนกลับฐานพร้อมอุปกรณ์ เลเวล และทักษะครบ": "Every survivor returns to base with their equipment, full levels and skills."
 }
