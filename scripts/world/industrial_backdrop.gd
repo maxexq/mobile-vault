@@ -1,6 +1,6 @@
 class_name IndustrialBackdrop
 extends Node2D
-## MV-369: one biome's long independently looping art, clock-driven sky and bounded pixel ambience.
+## MV-548: approved twenty-panel Industrial Ruins art; one biome's long independently looping art, clock-driven sky and bounded pixel ambience.
 ## Factory art is separated from its sky; all scroll offsets, celestial and effect positions are integers.
 
 const DIR := "res://assets/bg/industrial_live/"
@@ -13,8 +13,9 @@ const CONFIG := [
 	["road", 1.0, 1.0, ROAD_Y],
 ]
 const SKY_NAMES := ["night", "dawn", "day", "dusk"]
-const SMOKESTACKS := [Vector2(440, 96), Vector2(1704, 126), Vector2(1732, 116)]
-const LAMPS := [Vector2(282, 202), Vector2(784, 194), Vector2(1504, 204)]
+# Measured on tools/art/industrial/source native art: mid chimney rims, near lamp heads.
+const SMOKESTACKS := [Vector2(425, 85), Vector2(1630, 132), Vector2(1646, 123)]
+const LAMPS := [Vector2(221, 78), Vector2(1794, 89)]
 const DUST := [Color("4e463a"), Color("6e6450"), Color("4c5254")]
 
 var layers: Dictionary = {}
@@ -30,6 +31,7 @@ var _sky_material: ShaderMaterial
 var _sky_textures: Array[Texture2D] = []
 var _celestial: Node2D
 var _factory_fx: Node2D
+var _roadside_fx: Node2D
 var _air: Node2D
 var _sun: Texture2D
 var _moon: Texture2D
@@ -75,6 +77,11 @@ func _ready() -> void:
 			_factory_fx.draw.connect(_draw_factory_fx)
 			px.add_child(_factory_fx)
 		if key == "near":
+			_roadside_fx = Node2D.new()
+			_roadside_fx.position.y = float(cfg[3])
+			_roadside_fx.material = unshaded
+			_roadside_fx.draw.connect(_draw_roadside_fx)
+			px.add_child(_roadside_fx)
 			_air = Node2D.new()
 			_air.draw.connect(_draw_air)
 			px.add_child(_air)
@@ -108,14 +115,16 @@ func _process(delta: float) -> void:
 	for key in layers:
 		var entry: Dictionary = layers[key]
 		var px: Parallax2D = entry.node
-		var wind := 4.0 if key == "clouds" else 0.0
-		entry.offset = fposmod(float(entry.offset) + (road_speed * float(entry.speed) + wind) * delta, px.repeat_size.x)
+		var wind := Features.num("industrial_background.cloud_wind", 4.0) if key == "clouds" else 0.0
+		var speed := Features.num("industrial_background." + str(key) + "_speed", float(entry.speed))
+		entry.offset = fposmod(float(entry.offset) + (road_speed * speed + wind) * delta, px.repeat_size.x)
 		px.scroll_offset = Vector2(roundf(float(entry.offset)), 0)
 	var tick := int(phase * Features.num("background.fps", 8.0))
 	if tick != _tick:
 		_tick = tick
 		update_clock()
 		_factory_fx.queue_redraw()
+		_roadside_fx.queue_redraw()
 		_air.queue_redraw()
 
 
@@ -167,12 +176,16 @@ func _draw_factory_fx() -> void:
 			var pos: Vector2 = (emitter + Vector2(age * 18.0 - 8.0, -age * 42.0 - 16.0)).round()
 			var frame := mini(3, int(age * 4.0))
 			_factory_fx.draw_texture_rect_region(_smoke, Rect2(pos, Vector2(16, 20)), Rect2(frame * 16, 0, 16, 20))
+
+
+func _draw_roadside_fx() -> void:
+	# Street lamps belong to the roadside texture and must repeat/move with near, not mid.
 	var night := 1.0 - Game.sun_level()
 	if night > 0.25 and Features.num("background.lights", 1.0) > 0.0:
 		for i in LAMPS.size():
 			# Rare one-frame dip rather than frequent flashing; a dithered pool is baked into this tiny sprite.
 			if int(phase * 8 + i * 23) % 173 != 0:
-				_factory_fx.draw_texture(_lamp, LAMPS[i] - Vector2(12, 0))
+				_roadside_fx.draw_texture(_lamp, LAMPS[i] - Vector2(12, 0))
 
 
 func _draw_air() -> void:
@@ -188,5 +201,5 @@ func _draw_air() -> void:
 func preview_offset(value: float) -> void:
 	for key in layers:
 		var entry: Dictionary = layers[key]
-		entry.offset = fposmod(value * float(entry.speed), entry.node.repeat_size.x)
+		entry.offset = fposmod(value * Features.num("industrial_background." + str(key) + "_speed", float(entry.speed)), entry.node.repeat_size.x)
 		entry.node.scroll_offset = Vector2(roundf(float(entry.offset)), 0)

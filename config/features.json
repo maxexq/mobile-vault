@@ -71,6 +71,12 @@
     "desert_background.mid_speed": 0.25,
     "desert_background.near_speed": 0.6,
     "desert_background.road_speed": 1.0,
-    "desert_background.cloud_wind": 4.0
+    "desert_background.cloud_wind": 4.0,
+    "industrial_background.clouds_speed": 0.03,
+    "industrial_background.far_speed": 0.08,
+    "industrial_background.mid_speed": 0.25,
+    "industrial_background.near_speed": 0.6,
+    "industrial_background.road_speed": 1.0,
+    "industrial_background.cloud_wind": 4.0
   }
 }

@@ -588,7 +588,7 @@ func _tab_world() -> void:
 		_row([_b("จบถนนนี้", func(): Dev.world_finish_road()), _b("ออฟไลน์ 10 นาที", func(): Dev.world_offline(10.0)),
 			_b("ยกเลิก", func(): Dev.world_cancel(), "red")], "ทดสอบ")
 	_note("โลกใหม่ = สุ่ม seed ใหม่แทนโลกนี้ · ตรวจ seed = สร้างซ้ำจาก seed ที่เก็บไว้แล้วเทียบว่าตรงกัน")
-	_head("INDUSTRIAL SKY", "ฉากนิคมอุตสาหกรรมใหม่ (MV-369) ตามเวลาในเกม")
+	_head("INDUSTRIAL SKY", "นิคมอุตสาหกรรม 20 พาเนล (MV-548) ตามเวลาในเกม")
 	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
 	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])
 	_head("GLASS DESERT", "ทะเลทรายแก้ว (MV-539) ตามเวลาในเกม")

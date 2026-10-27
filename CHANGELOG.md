@@ -9,6 +9,9 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Changed
+- Industrial Ruins now uses twenty approved native pixel-art panels: pale broken skyline, rusted factories, roadside wrecks, thin smog and cracked asphalt, with smoke and lamp effects anchored to the new scenery (MV-548)
+
+### Changed
 - Every-10th-wave bosses have one-third less HP and damage; their special hull hits now respect vehicle armor and each hit is limited to 12% of maximum hull, helping prevent boss wins from turning into a scrap-draining repair bill (MV-544)
 
 ## [4.7.0-alpha.4] - 2026-10-27
