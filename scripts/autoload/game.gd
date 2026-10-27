@@ -2332,6 +2332,55 @@ func event_danger(id: String) -> int:
 	return int(Data.EVENTS[id].danger) + int(s.lap)
 
 
+## MV-553: durable progression, independent of selected defenders or equipped gear.
+func event_progress_rank() -> float:
+	return maxf(0.0, float(s.biome)) + maxf(0.0, float(s.lap)) * Data.BIOMES.size() + maxf(0.0, float(s.vault_level) - 1.0) * Features.num("events.vault_rank", 0.25)
+
+
+func event_fight_need(id: String) -> float:
+	if not Features.on("event_progression"):
+		return 8.0 + event_danger(id) * 6.0
+	var weight := Features.num("events.power_weight", 0.4)
+	var growth := pow(Loot.ILVL_GROWTH, maxf(0.0, float(Combat.biome_base_level()) - 1.0))
+	var frame := 1.0 + maxf(0.0, float(s.vault_level) - 1.0) * Features.num("events.vault_step", 0.035)
+	return (8.0 + float(Data.EVENTS[id].danger) * 6.0) * (1.0 - weight + weight * growth) * frame
+
+
+func event_check_actor(ch: Dictionary) -> Dictionary:
+	var stat: String = ch.get("stat", "agi")
+	var best: Dictionary = {}
+	for d in s.dwellers:
+		if not is_away(d) and (best.is_empty() or int(d[stat]) > int(best[stat])):
+			best = d
+	return best
+
+
+func event_check_dc(ch: Dictionary) -> int:
+	var bonus := int(s.lap) * 2
+	if Features.on("event_progression"):
+		bonus = mini(int(Features.num("events.check_cap", 6.0)), int(floor(event_progress_rank() * Features.num("events.check_step", 0.5))))
+	return int(ch.get("dc", 7)) + 3 + bonus
+
+
+func event_check_chance(ch: Dictionary) -> int:
+	var stat: String = ch.get("stat", "agi")
+	var actor := event_check_actor(ch)
+	var need := event_check_dc(ch) - int(actor.get(stat, 3))
+	return clampi(11 - maxi(1, need), 0, 10) * 10
+
+
+func event_risk_scale() -> float:
+	return minf(Features.num("events.risk_max", 2.5), 1.0 + event_progress_rank() * Features.num("events.risk_step", 0.08)) if Features.on("event_progression") else 1.0
+
+
+func event_hull_loss(raw: float) -> float:
+	return minf(maxf(0.0, raw) * event_risk_scale(), hull_max() * Features.num("events.hull_cap", 0.12)) if Features.on("event_progression") else raw
+
+
+func event_injury(d: Dictionary, raw: float) -> float:
+	return minf(raw * event_risk_scale(), float(d.max_hp) * Features.num("events.injury_cap", 0.3)) if Features.on("event_progression") else raw
+
+
 # ------------------------------------------------------------------ quick-time events (MV-134)
 const DECIDE_MIN := 5.0
 const DECIDE_MAX := 30.0
@@ -2402,7 +2451,7 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 	Trace.rec("event", "choice %s #%d" % [id, choice_idx], {"defenders": defender_ids.size()})
 	var ev: Dictionary = Data.EVENTS[id]
 	var ch: Dictionary = ev.choices[choice_idx]
-	var danger := event_danger(id)
+	var danger := int(ev.danger) if Features.on("event_progression") else event_danger(id)
 	var res := {"ok": true, "text": ""}
 	var blocked := choice_block(ch)
 	if blocked != "":
@@ -2416,10 +2465,10 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 					team.append(dd)
 			if team.is_empty() and nobody_aboard() and Features.on("flee_guard"):
 				# MV-243: nobody to send out and (often) no way to drive off: the vehicle takes the hit
-				var hb := rng.randf_range(6, 12) * danger
+				var hb := event_hull_loss(rng.randf_range(6, 12) * danger)
 				s.hull = maxf(0.0, float(s.hull) - hb)
 				res.ok = false
-				res.text = "ไม่มีใครอยู่บนรถ ทำได้แค่ปิดประตูตั้งรับ... ตัวถังเสียหาย -%d%%" % int(hb)
+				res.text = "ไม่มีใครอยู่บนรถ ทำได้แค่ปิดประตูตั้งรับ... ตัวถังเสียหาย -%d HP" % int(hb)
 			elif team.is_empty():
 				return {"ok": false, "text": "ต้องเลือกผู้ป้องกันอย่างน้อย 1 คน"}
 			else:
@@ -2429,28 +2478,28 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 				if has_item("ammo", 3):
 					power += 4.0
 					add_item("ammo", -3)
-				var need := 8.0 + danger * 6.0
+				var need := event_fight_need(id)
 				var roll := rng.randf_range(0.75, 1.25)
 				if power * roll >= need:
 					var got := give_rewards(_scale_reward(ch.get("reward", {})))
 					for d in team:
-						d.hp = maxf(5.0, float(d.hp) - rng.randf_range(2, 8) * danger)
+						d.hp = maxf(5.0, float(d.hp) - event_injury(d, rng.randf_range(2, 8) * danger))
 						d.xp = float(d.xp) + 4.0 * danger
 					res.text = "ชนะ! ทีมป้องกันขับไล่ศัตรูได้สำเร็จ\nได้รับ: %s" % got
 				else:
 					for d in team:
-						d.hp = maxf(5.0, float(d.hp) - rng.randf_range(10, 20) * danger)
-					var hd := rng.randf_range(6, 12) * danger
+						d.hp = maxf(5.0, float(d.hp) - event_injury(d, rng.randf_range(10, 20) * danger))
+					var hd := event_hull_loss(rng.randf_range(6, 12) * danger)
 					s.hull = maxf(0.0, float(s.hull) - hd)
 					res.ok = false
-					res.text = "แพ้... ทีมบาดเจ็บหนัก ตัวถังเสียหาย -%d%%\n(พลังทีม %.0f vs อันตราย %.0f)" % [int(hd), power * roll, need]
+					res.text = "แพ้... ทีมบาดเจ็บหนัก ตัวถังเสียหาย -%d HP\n(พลังทีม %.0f vs อันตราย %.0f)" % [int(hd), power * roll, need]
 		"flee":
 			var pw := float(s.res.power) * 0.2
 			s.res.power = float(s.res.power) - pw
 			if rng.randf() < 0.35:
-				var hd2 := rng.randf_range(4, 9) * danger
+				var hd2 := event_hull_loss(rng.randf_range(4, 9) * danger)
 				s.hull = maxf(0.0, float(s.hull) - hd2)
-				res.text = "หนีพ้น แต่โดนโจมตีท้ายรถ! ไฟ -%d ตัวถัง -%d%%" % [int(pw), int(hd2)]
+				res.text = "หนีพ้น แต่โดนโจมตีท้ายรถ! ไฟ -%d ตัวถัง -%d HP" % [int(pw), int(hd2)]
 			else:
 				res.text = "เร่งเครื่องหนีพ้นได้สำเร็จ! ไฟ -%d" % int(pw)
 		"pay", "repair":
@@ -2469,12 +2518,12 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 			if ch.has("reward"):
 				res.text += "\nได้รับ: %s" % give_rewards(_scale_reward(ch.reward))
 		"ram":
-			var hd3 := rng.randf_range(5, 14) * danger * 0.6 * (1.0 - Mods.val("spike_ram"))
+			var hd3 := event_hull_loss(rng.randf_range(5, 14) * danger * 0.6 * (1.0 - Mods.val("spike_ram")))
 			s.hull = maxf(0.0, float(s.hull) - hd3)
-			res.text = "ชนฝ่าไปได้! ตัวถังเสียหาย -%d%%" % int(hd3)
+			res.text = "ชนฝ่าไปได้! ตัวถังเสียหาย -%d HP" % int(hd3)
 			if rng.randf() < 0.3:
 				var victim: Dictionary = s.dwellers[rng.randi() % s.dwellers.size()]
-				victim.hp = maxf(5.0, float(victim.hp) - 15.0)
+				victim.hp = maxf(5.0, float(victim.hp) - event_injury(victim, 15.0))
 				res.text += "\n%s ได้รับบาดเจ็บจากแรงกระแทก" % victim.name
 		"loot":
 			var agi := 0
@@ -2482,7 +2531,7 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 				agi = maxi(agi, int(d.agi))
 			if rng.randf() < 0.25 - agi * 0.02:
 				var victim2: Dictionary = s.dwellers[rng.randi() % s.dwellers.size()]
-				victim2.hp = maxf(5.0, float(victim2.hp) - 25.0)
+				victim2.hp = maxf(5.0, float(victim2.hp) - event_injury(victim2, 25.0))
 				res.text = "กับดักระเบิด! %s บาดเจ็บ แต่ยังเก็บของได้บ้าง\n%s" % [victim2.name, give_rewards({"scrap": 15})]
 			else:
 				res.text = "เจอของดี!\nได้รับ: %s" % give_rewards(_scale_reward(ch.reward))
@@ -2512,14 +2561,11 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 		"check":
 			# best present dweller attempts a stat test: d10 + stat vs dc + danger
 			var stat2: String = ch.get("stat", "agi")
-			var best_d: Dictionary = {}
-			for d in s.dwellers:
-				if not is_away(d) and (best_d.is_empty() or int(d[stat2]) > int(best_d[stat2])):
-					best_d = d
+			var best_d := event_check_actor(ch)
 			var roll := rng.randi_range(1, 10) + int(best_d.get(stat2, 3))
-			var dc := int(ch.get("dc", 7)) + int(s.lap) * 2
-			if roll >= dc + 3:
-				res.text = "%s ทำได้สำเร็จ! (%s %d vs %d)\nได้รับ: %s" % [best_d.get("name", "?"), stat2.to_upper(), roll, dc + 3, give_rewards(_scale_reward(ch.get("reward", {})))]
+			var dc := event_check_dc(ch)
+			if roll >= dc:
+				res.text = "%s ทำได้สำเร็จ! (%s %d vs %d)\nได้รับ: %s" % [best_d.get("name", "?"), stat2.to_upper(), roll, dc, give_rewards(_scale_reward(ch.get("reward", {})))]
 				if not best_d.is_empty():
 					give_xp(best_d, 6.0 + danger * 2.0, stat2)
 			else:
@@ -2527,12 +2573,14 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 				var f: Dictionary = ch.get("fail", {})
 				var parts2 := []
 				if f.has("hull"):
-					s.hull = maxf(0.0, float(s.hull) - float(f.hull) * (1.0 + 0.3 * float(s.lap)))
-					parts2.append("ตัวถัง -%d" % int(f.hull))
+					var raw := float(f.hull) * (1.0 if Features.on("event_progression") else 1.0 + 0.3 * float(s.lap))
+					var loss := event_hull_loss(raw)
+					s.hull = maxf(0.0, float(s.hull) - loss)
+					parts2.append("ตัวถัง -%d" % int(loss))
 				if f.has("hp") and not best_d.is_empty():
-					best_d.hp = maxf(5.0, float(best_d.hp) - float(f.hp))
+					best_d.hp = maxf(5.0, float(best_d.hp) - event_injury(best_d, float(f.hp)))
 					parts2.append("%s บาดเจ็บ" % best_d.name)
-				res.text = "ล้มเหลว... (%s %d vs %d) %s" % [stat2.to_upper(), roll, dc + 3, ", ".join(parts2)]
+				res.text = "ล้มเหลว... (%s %d vs %d) %s" % [stat2.to_upper(), roll, dc, ", ".join(parts2)]
 		"gamble":
 			if not pay(ch.cost):
 				return {"ok": false, "text": "เศษเหล็กไม่พอแทง"}
@@ -2555,14 +2603,17 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 			res.text = "%s กระโดดขึ้นรถบ้าน วิ่งวนไปทั่วทุกห้อง ทุกคนยิ้มออก (ความสุข +15 และเพิ่มขึ้นช้าๆ ตลอดไป)" % pet.name
 			pets_changed.emit()
 		"push":
-			var hd4 := rng.randf_range(4, 10) * danger * 0.6
+			var hd4 := event_hull_loss(rng.randf_range(4, 10) * danger * 0.6)
 			s.hull = maxf(0.0, float(s.hull) - hd4)
 			for d in s.dwellers:
 				if not is_away(d):
-					d.rads = float(d.rads) + rng.randf_range(5, 15) * danger * 0.3
+					var rads := rng.randf_range(5, 15) * danger * 0.3
+					if Features.on("event_progression"):
+						rads = minf(rads * event_risk_scale(), Features.num("events.rads_cap", 20.0))
+					d.rads = float(d.rads) + rads
 			if ch.has("dirt"):
 				s.solar.dirt = minf(1.0, float(s.solar.dirt) + float(ch.dirt))
-			res.text = "ฝ่าไปได้... ตัวถัง -%d%% ทุกคนได้รับรังสี (ใช้ยาต้านรังสีหรือห้องพยาบาลรักษา)" % int(hd4)
+			res.text = "ฝ่าไปได้... ตัวถัง -%d HP ทุกคนได้รับรังสี (ใช้ยาต้านรังสีหรือห้องพยาบาลรักษา)" % int(hd4)
 		"detour":
 			if ch.has("cost") and not pay(ch.cost):
 				return {"ok": false, "text": "ไฟไม่พอสำหรับเส้นทางอ้อม"}
@@ -2587,6 +2638,8 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 func _scale_reward(rew: Dictionary) -> Dictionary:
 	var out := {}
 	var m := 1.0 + 0.35 * float(danger_level() - 1)
+	if Features.on("event_progression"):
+		m *= 1.0 + maxf(0.0, float(s.vault_level) - 1.0) * Features.num("events.reward_vault", 0.1)
 	for k in rew:
 		out[k] = int(rew[k]) if k.begins_with("_") or Data.ITEMS.has(k) else int(float(rew[k]) * m)
 	return out

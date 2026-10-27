@@ -11,6 +11,7 @@ var _fails := 0
 var _warlord_checks_completed := false
 
 var _individual_auto_equip_checks_completed := false
+var _event_progression_checks_completed := false
 var _font_checks_completed := false
 var _roaming_boss_checks_completed := false
 
@@ -65,6 +66,12 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=event_progression" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _event_progression_test()
+		_check("event progression: all checks completed", _event_progression_checks_completed)
+		_finish()
+		return
 	if "--only=warlord" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _warlord_test()
@@ -1038,6 +1045,8 @@ func _run() -> void:
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
+	await _event_progression_test()
+	_check("event progression: all checks completed", _event_progression_checks_completed)
 	await _warlord_test()
 	_check("warlord: all progression checks completed", _warlord_checks_completed)
 
@@ -9325,3 +9334,236 @@ func _individual_auto_equip_test() -> void:
 	Combat.heroes_changed.emit()
 	_individual_auto_equip_checks_completed = true
 
+
+
+## MV-553: progression requirements, safe outcomes, exact odds and real popup presentation.
+func _event_progression_test() -> void:
+	var saved_size := get_window().size
+	var saved_event := Game.active_event
+	var saved_closeup := Game.closeup_slot
+	var saved_state := Game.s
+	var saved_account := Account.a
+	var saved_started := Game.started
+	var saved_processing := Game.is_processing()
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_flags := Dev.flags.duplicate(true)
+	var saved_rng := []
+	for generator in [Game.rng, Loot.rng, Combat.rng, Threat.rng]:
+		saved_rng.append([generator, generator.seed, generator.state])
+	var saved_runtime := []
+	for entry in [[Combat, ["enemies", "heroes", "turret", "wave_active", "wave_is_boss", "wave_is_warlord", "spawn_queue", "gap_t", "wave_t", "warlord_cd", "_acc", "_next_id", "_kill_window", "_clock", "dps_meter", "_dmg_window", "sub", "sub_out", "tag_t"]],
+		[Threat, ["phase", "phase_t", "raid_left", "_gap", "_roll_t", "_scav_t", "_blood", "_raid_kills", "_raid_time", "_raid_scrap", "_last_sign", "stats"]]]:
+		var values := {}
+		for key in entry[1]:
+			var value: Variant = entry[0].get(key)
+			values[key] = value.duplicate(true) if value is Array or value is Dictionary else value
+		saved_runtime.append([entry[0], values])
+	var disconnected := []
+	for sig in Combat.get_signal_list():
+		for connection in Combat.get_signal_connection_list(sig.name):
+			if connection.callable.get_object() == main.combat_view:
+				disconnected.append([sig.name, connection.callable])
+				Combat.disconnect(sig.name, connection.callable)
+	Game.set_process(false)
+	Dev.flags = {}
+	Features.layers.dev = {"features": {"road_events": false, "boss_intro": false, "hull_repair_v2": true, "warlord_progression": true, "event_progression": true, "event_timer": false, "english": true, "raids": false}, "tune": {}}
+	Features.layers.mode = {}
+	Features.layers.remote = {}
+	Settings.v["pacing"] = "classic"
+	# Keep the old runtime's collections untouched while the fixture clears its own enemies.
+	Combat.enemies = []
+	Combat.heroes = []
+	Combat.spawn_queue = []
+	Combat.sub = {}
+	Combat.sub_out = {}
+	var bench = load("res://tools/warlord_bench.gd").new()
+	var minimum_chance := 1.0
+	var armed_wins := 0
+	var fights := 0
+	var fight_ids := []
+	var checks := []
+	for id in Data.EVENTS:
+		for ch in Data.EVENTS[id].choices:
+			if ch.action == "fight": fight_ids.append(str(id))
+			if ch.action == "check": checks.append([id, ch])
+	for lap in [0, 1, 3]:
+		for biome in Data.BIOMES.size():
+			for id in fight_ids:
+				for seed_value in [553, 554, 555]:
+					bench.prepare(biome, lap, "two_weapons", seed_value)
+					Game.started = false # exercise real resolution without writing fixture saves
+					Game.s.vault_level = 6
+					Game.s.hull = Game.hull_max()
+					Game.s.items.ammo = 0
+					Game.rng.seed = seed_value
+					var defenders := Game.auto_defenders()
+					var team_power := Game.armory_bonus()
+					for did in defenders: team_power += Game.dweller_power(Game.dweller_by_id(int(did)))
+					minimum_chance = minf(minimum_chance, clampf((1.25 - Game.event_fight_need(id) / team_power) / 0.5, 0.0, 1.0))
+					var before := float(Game.s.hull)
+					var outcome := Game.resolve_event(id, _qte_index(id, "fight"), defenders)
+					fights += 1
+					if outcome.ok: armed_wins += 1
+					_check("event progression: ordinary armed team %s biome%d lap%d seed%d" % [id, biome, lap, seed_value], outcome.ok and float(Game.s.hull) >= before * 0.88 and defenders.all(func(did): return float(Game.dweller_by_id(int(did)).hp) >= 5.0))
+			# A healthy ordinary unarmed team cannot trivialise advanced roadblocks.
+			if biome >= 1 or lap > 0:
+				bench.prepare(biome, lap, "unarmed", 553)
+				Game.started = false
+				Game.s.items.ammo = 0
+				Game.s.hull = Game.hull_max()
+				var hull := float(Game.s.hull)
+				var failed := Game.resolve_event("raiders", _qte_index("raiders", "fight"), Game.auto_defenders())
+				_check("event progression: weak team loses safely biome%d lap%d" % [biome, lap], not failed.ok and float(Game.s.hull) >= hull * 0.88 and float(Game.s.hull) < hull)
+			await wait(0.01)
+	print("[event-progression] ", JSON.stringify({"armed_wins": armed_wins, "fights": fights, "minimum_win_chance": minimum_chance}))
+	_check("event progression: ordinary two-person teams retain at least 85% win chance", minimum_chance >= 0.85)
+	# Exercise every real risky choice, not just the cap helpers, with frail unarmed crews late in a run.
+	Features.layers.dev.features.flee_guard = false
+	for id in Data.EVENTS:
+		for choice_idx in Data.EVENTS[id].choices.size():
+			var choice: Dictionary = Data.EVENTS[id].choices[choice_idx]
+			if str(choice.action) not in ["fight", "flee", "ram", "push", "loot", "check"]: continue
+			for seed_value in [553, 554, 555]:
+				bench.prepare(5, 3, "unarmed", seed_value)
+				Game.started = false
+				Game.s.items.ammo = 0
+				Game.s.hull = Game.hull_max()
+				for survivor in Game.s.dwellers:
+					survivor.str = 1
+					survivor.agi = 1
+					survivor.int = 1
+					survivor.hp = survivor.max_hp
+				Game.rng.seed = seed_value
+				var before_hull := float(Game.s.hull)
+				Game.resolve_event(id, choice_idx, Game.auto_defenders())
+				var crew_safe: bool = Game.s.dwellers.all(func(survivor): return float(survivor.hp) >= float(survivor.max_hp) * 0.7 - 0.001 and float(survivor.rads) <= 20.0)
+				_check("event progression: bounded actual %s/%s/%d" % [id, choice.action, seed_value], float(Game.s.hull) >= before_hull * 0.88 - 0.001 and float(Game.s.hull) <= before_hull and crew_safe)
+	Features.layers.dev.features.erase("flee_guard")
+	# Difficulty follows durable progress; previewing / selecting / equipping cannot move the goalpost.
+	bench.prepare(0, 0, "two_weapons", 553)
+	Game.started = false
+	Game.s.vault_level = 1
+	var early := Game.event_fight_need("raiders")
+	Game.s.vault_level = 6
+	var frame := Game.event_fight_need("raiders")
+	Game.s.biome = 1
+	var desert := Game.event_fight_need("raiders")
+	Game.s.lap = 1
+	var lap_need := Game.event_fight_need("raiders")
+	_check("event progression: frame, biome and lap each raise fight requirement", early < frame and frame < desert and desert < lap_need)
+	var rng_state := Game.rng.state
+	for d in Game.s.dwellers:
+		d.gear = {}
+		d.hp = 5.0
+	_check("event progression: gear/health/selection do not scale the requirement", Game.event_fight_need("raiders") == lap_need and Game.rng.state == rng_state)
+	# Check targets, exact d10 odds and the actual result share one stat actor and one DC.
+	for entry in checks:
+		for biome in [0, 5]:
+			for lap in [0, 3]:
+				for seed_value in [553, 554, 555]:
+					bench.prepare(biome, lap, "common", seed_value)
+					Game.started = false
+					var ch: Dictionary = entry[1]
+					var stat: String = ch.stat
+					for d in Game.s.dwellers: d[stat] = 10
+					var actor := Game.event_check_actor(ch)
+					var dc := Game.event_check_dc(ch)
+					var successes := 0
+					for roll_value in range(1, 11):
+						if roll_value + int(actor[stat]) >= dc: successes += 1
+					_check("event progression: displayed check odds exact %s/%d/%d" % [entry[0], biome, lap], Game.event_check_chance(ch) == successes * 10 and dc <= int(ch.dc) + 9)
+					var probe := RandomNumberGenerator.new()
+					probe.seed = seed_value
+					var expected := probe.randi_range(1, 10) + int(actor[stat]) >= dc
+					Game.rng.seed = seed_value
+					var outcome := Game.resolve_event(entry[0], _qte_index(entry[0], "check"), [])
+					_check("event progression: check resolution uses displayed target %s" % entry[0], outcome.ok == expected)
+	bench.prepare(5, 3, "common", 553)
+	Game.started = false
+	var ch: Dictionary = Data.EVENTS.bunker.choices[0]
+	for d in Game.s.dwellers: d.int = 4
+	var low_chance := Game.event_check_chance(ch)
+	Game.s.dwellers[0].int = 20
+	_check("event progression: a specialist still improves success chance", Game.event_check_chance(ch) > low_chance and Game.event_check_chance(ch) == 100)
+	Game.s.dwellers[0].away_until = 1.0e20
+	_check("event progression: away specialists do not contribute", Game.event_check_chance(ch) == low_chance)
+	# Risk ceilings apply to all event hull/crew damage, even after many laps; costs/items stay stable.
+	Game.s.lap = 20
+	Game.s.hull = Game.hull_max()
+	var d: Dictionary = Game.s.dwellers[1]
+	_check("event progression: late risk is bounded and nonnegative", Game.event_risk_scale() == 2.5 and is_equal_approx(Game.event_hull_loss(1.0e20), Game.hull_max() * 0.12) and is_equal_approx(Game.event_injury(d, 1.0e20), float(d.max_hp) * 0.3) and Game.event_hull_loss(-10.0) == 0.0)
+	var base_cost: Dictionary = Data.EVENTS.trader.choices[0].cost.duplicate(true)
+	var reward := Game._scale_reward({"scrap": 10, "components": 3, "_gear": 1})
+	_check("event progression: rewards increase resources without multiplying item/gear counts", int(reward.scrap) > 10 and reward.components == 3 and reward._gear == 1 and Data.EVENTS.trader.choices[0].cost == base_cost)
+	Features.layers.dev.tune["events.check_cap"] = 2.0
+	_check("event progression: check ceiling is remotely tunable", Game.event_check_dc(ch) == int(ch.dc) + 5)
+	Features.layers.dev.tune.erase("events.check_cap")
+	Features.layers.dev.tune["events.hull_cap"] = 0.05
+	_check("event progression: hull ceiling follows remote tuning", is_equal_approx(Game.event_hull_loss(1.0e20), Game.hull_max() * 0.05))
+	Features.layers.dev.tune.erase("events.hull_cap")
+	Features.layers.dev.features.event_progression = false
+	_check("event progression: switch restores legacy fight and stat formulas", Game.event_fight_need("raiders") == 8.0 + Game.event_danger("raiders") * 6.0 and Game.event_check_dc(ch) == int(ch.dc) + 3 + int(Game.s.lap) * 2 and Game.event_hull_loss(999.0) == 999.0 and Game.event_injury(d, 999.0) == 999.0)
+	var legacy := Game._scale_reward({"scrap": 10})
+	_check("event progression: switch restores original resource reward formula", int(legacy.scrap) == int(10.0 * (1.0 + 0.35 * (Game.danger_level() - 1))))
+	# Real popup controls at phone / desktop sizes in both languages, with progression on and off.
+	Features.layers.dev.features.event_progression = true
+	bench.prepare(1, 0, "two_weapons", 553)
+	Game.started = false
+	Settings.v.tips = false
+	main.hud.tip_card.hide()
+	var ep: EventPopup = main.hud.event_popup
+	for language in ["th", "en"]:
+		Settings.v.lang = language
+		Loc.apply()
+		for window_size in [Vector2i(360, 780), Vector2i(1280, 720)]:
+			get_window().size = window_size
+			await wait(0.2)
+			ep.show_event("bunker")
+			await wait(0.2)
+			var source := Loc.t("ทดสอบ %s · เป้าหมาย %d · โอกาสสำเร็จ %d%%") % ["INT", Game.event_check_dc(ch), Game.event_check_chance(ch)]
+			_check("event progression: popup shows exact check odds %s/%s" % [language, window_size], _find_text(ep, source))
+			_check("event progression: popup fits viewport %s/%s" % [language, window_size], ep.box.size.x <= main.hud.get_viewport_rect().size.x)
+			await shot("event_progression_check_%s_%dx%d" % [language, window_size.x, window_size.y])
+			ep.close()
+			ep.show_event("raiders")
+			ep._choice = _qte_index("raiders", "fight")
+			ep._selected = Game.auto_defenders()
+			ep.refresh()
+			await wait(0.2)
+			var power := Game.armory_bonus()
+			for did in ep._selected: power += Game.dweller_power(Game.dweller_by_id(int(did)))
+			var line := Loc.t("พลังทีม %.0f vs อันตราย ~%.0f (ห้องอาวุธ +%.0f)") % [power, Game.event_fight_need("raiders"), Game.armory_bonus()]
+			_check("event progression: defender screen shares fight requirement %s/%s" % [language, window_size], _find_text(ep, line))
+			await shot("event_progression_fight_%s_%dx%d" % [language, window_size.x, window_size.y])
+			ep.close()
+	Features.layers.dev.features.event_progression = false
+	ep.show_event("bunker")
+	_check("event progression: switch hides new check subtitle", not _find_text(ep, "Success chance"))
+	ep.close()
+	Game.active_event = ""
+	Combat._clear_enemies()
+	Game.s = saved_state
+	Account.a = saved_account
+	Game.active_event = saved_event
+	Game.closeup_slot = saved_closeup
+	get_window().size = saved_size
+	Game.started = saved_started
+	Settings.v = saved_settings
+	Dev.flags = saved_flags
+	Features.layers = saved_layers
+	Loc.apply()
+	for entry in saved_runtime:
+		for key in entry[1]:
+			entry[0].set(key, entry[1][key])
+	for entry in saved_rng:
+		entry[0].seed = entry[1]
+		entry[0].state = entry[2]
+	for connection in disconnected:
+		Combat.connect(connection[0], connection[1])
+	Features.changed.emit()
+	Combat.heroes_changed.emit()
+	Combat.wave_changed.emit()
+	Threat.phase_changed.emit(Threat.phase)
+	Game.set_process(saved_processing)
+	_event_progression_checks_completed = true
