@@ -156,7 +156,7 @@ func _build_crew() -> void:
 	if Meta.all_crew_on():
 		carry = Meta.all_crew_ids()
 	set_title(Loc.t("CREW %d / ทุกคนไปกับรถคันใหม่") % carry.size() if Meta.all_crew_on() else Loc.t("ESCAPE %d/%d / ใครจะไปกับรถคันใหม่") % [carry.size(), Meta.carry_slots()])
-	var carry_text := Loc.t("ทุกคนเก็บเลเวล XP สกิล นิสัย และอุปกรณ์ที่สวมใส่ครบ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด") % int(Meta.carry_res_ratio() * 100) if Meta.all_crew_on() else Loc.t("คนที่เลือกจะเก็บนิสัย อาวุธ และ %d%% ของเลเวลไว้ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด") % [int(Meta.carry_level_keep() * 100), int(Meta.carry_res_ratio() * 100)]
+	var carry_text := Loc.t("ทุกคนเก็บเลเวล XP สกิล นิสัย และอุปกรณ์ครบ ทั้งที่สวมใส่ ในคลัง และติดรถ · เศษเหล็ก/ชิ้นส่วน %d%% · พิมพ์เขียวทั้งหมด") % int(Meta.carry_res_ratio() * 100) if Meta.all_crew_on() else Loc.t("คนที่เลือกจะเก็บนิสัย อาวุธ และ %d%% ของเลเวลไว้ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด") % [int(Meta.carry_level_keep() * 100), int(Meta.carry_res_ratio() * 100)]
 	_list.add_child(UIKit.wrap_label(carry_text, UIKit.FS_SMALL))
 	if Meta.all_crew_on() and carry.size() > Data.BASE_POP_CAP:
 		_list.add_child(UIKit.wrap_label(Loc.t("ทุกคนขึ้นรถได้ แม้เกินที่นอนเริ่มต้น %d ที่ · สร้างห้องพักเพิ่มบนรถใหม่") % Data.BASE_POP_CAP, UIKit.FS_SMALL, UIKit.C_ORANGE))
@@ -225,7 +225,7 @@ func _request_next_generation() -> void:
 			names.append(str(d.name))
 	var message := Loc.t("รถและห้องปัจจุบันจะถูกแทนที่ เก็บไว้เฉพาะลูกเรือที่เลือกพร้อมอาวุธ และ %d%% ของเศษเหล็ก/ชิ้นส่วน อุปกรณ์อื่นจะหายไป ย้อนคืนไม่ได้\nผู้รอดชีวิตที่เลือก: %s") % [int(Meta.carry_res_ratio() * 100), ", ".join(names) if not names.is_empty() else Loc.t("ไม่มี")]
 	if whole_crew:
-		message = Loc.t("ผู้รอดชีวิตทั้ง %d คนไปต่อ พร้อมเลเวล XP สกิล และอุปกรณ์ที่สวมใส่ครบ\nรถ ห้อง และเส้นทางเริ่มใหม่ เก็บเศษเหล็ก/ชิ้นส่วน %d%% กับพิมพ์เขียวทั้งหมด ของในคลังและอุปกรณ์รถเดิมจะหายไป ย้อนคืนไม่ได้") % [picks.size(), int(Meta.carry_res_ratio() * 100)]
+		message = Loc.t("ผู้รอดชีวิตทั้ง %d คนไปต่อ พร้อมเลเวล XP สกิล และอุปกรณ์ทั้งหมด รวมของในคลังและของติดรถ\nรถ ห้อง และเส้นทางเริ่มใหม่ เก็บเศษเหล็ก/ชิ้นส่วน %d%% กับพิมพ์เขียวทั้งหมด เครื่องยนต์ที่ไม่พอดีรถใหม่เก็บในคลัง ย้อนคืนไม่ได้") % [picks.size(), int(Meta.carry_res_ratio() * 100)]
 	ConfirmPanel.ask(self, Loc.t("สร้างพาหนะคันใหม่!"), message, Loc.t("ยืนยันขึ้นรุ่นถัดไป"), func():
 		forced = false
 		close()

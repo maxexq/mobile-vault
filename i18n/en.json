@@ -2118,8 +2118,8 @@
  "CREW %d / ทุกคนไปกับรถคันใหม่": "CREW %d / Everyone joins the new vehicle",
  "ถัดไป: ทีมและพาหนะ": "Next: crew and vehicle",
  "ทุกคนขึ้นรถได้ แม้เกินที่นอนเริ่มต้น %d ที่ · สร้างห้องพักเพิ่มบนรถใหม่": "Everyone boards even above the starting %d beds. Build more quarters on the new vehicle.",
- "ทุกคนเก็บเลเวล XP สกิล นิสัย และอุปกรณ์ที่สวมใส่ครบ · พาเศษเหล็ก/ชิ้นส่วนไปได้ %d%% · พิมพ์เขียวไปทั้งหมด": "Everyone keeps full levels, XP, skills, traits and all worn equipment. Carry %d%% of scrap/components and all blueprints.",
  "ทุกคนไปต่อพร้อมเลเวลและสกิลครบ ไม่ต้องซื้อวิจัยพาคนเพิ่มหรือรักษาเลเวล · คืนแต้มวิจัยเดิม %d": "Everyone keeps their full levels and skills. Crew-capacity and level-retention research is no longer needed. Previous research refunded: %d.",
- "ผู้รอดชีวิตทั้ง %d คนไปต่อ พร้อมเลเวล XP สกิล และอุปกรณ์ที่สวมใส่ครบ\nรถ ห้อง และเส้นทางเริ่มใหม่ เก็บเศษเหล็ก/ชิ้นส่วน %d%% กับพิมพ์เขียวทั้งหมด ของในคลังและอุปกรณ์รถเดิมจะหายไป ย้อนคืนไม่ได้": "All %d survivors continue with full levels, XP, skills and worn equipment.\nThe vehicle, rooms and route restart. Keep %d%% of scrap/components and all blueprints. Stashed items and old vehicle equipment are lost. This cannot be undone.",
- "ผู้รอดชีวิตทุกคนกลับฐานพร้อมอุปกรณ์ เลเวล และทักษะครบ": "Every survivor returns to base with their equipment, full levels and skills."
+ "ผู้รอดชีวิตทุกคนกลับฐานพร้อมอุปกรณ์ เลเวล และทักษะครบ": "Every survivor returns to base with their equipment, full levels and skills.",
+ "ทุกคนเก็บเลเวล XP สกิล นิสัย และอุปกรณ์ครบ ทั้งที่สวมใส่ ในคลัง และติดรถ · เศษเหล็ก/ชิ้นส่วน %d%% · พิมพ์เขียวทั้งหมด": "Everyone keeps full levels, XP, skills, traits and ALL equipment: worn, stashed and fitted to the vehicle. Carry %d%% of scrap/components and all blueprints.",
+ "ผู้รอดชีวิตทั้ง %d คนไปต่อ พร้อมเลเวล XP สกิล และอุปกรณ์ทั้งหมด รวมของในคลังและของติดรถ\nรถ ห้อง และเส้นทางเริ่มใหม่ เก็บเศษเหล็ก/ชิ้นส่วน %d%% กับพิมพ์เขียวทั้งหมด เครื่องยนต์ที่ไม่พอดีรถใหม่เก็บในคลัง ย้อนคืนไม่ได้": "All %d survivors continue with full levels, XP, skills and ALL equipment, including stash and vehicle equipment.\nThe vehicle, rooms and route restart. Keep %d%% of scrap/components and all blueprints. An engine that does not fit the new cab goes into the stash. This cannot be undone."
 }

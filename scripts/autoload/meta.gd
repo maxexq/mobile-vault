@@ -247,11 +247,15 @@ func next_generation(carry_ids: Array, tier_id: String = "") -> void:
 	Account.a.meta = meta
 	Account.attach(Game.s)
 	Game.s.mode = Account.main_mode()
+	if whole_crew:
+		_restore_all_equipment(old)
 	var hs := perk("head_start")
 	Game.s.res.scrap = minf(Game.cap("scrap"), float(Game.s.res.scrap) + res_scrap + 250.0 * hs)
 	Game.s.items["components"] = int(Game.s.items.get("components", 0)) + comps + 20 * hs
 	if whole_crew and not carried.is_empty():
 		_restore_whole_crew(carried, old)
+	if whole_crew:
+		Game.s.hull = Game.hull_max()
 	for d in ([] if whole_crew else carried):
 		var keep := carry_level_keep()
 		var nd := Game._add_dweller({"name": d.name, "lore": d.get("lore", ""), "variant": d.variant, "str": d.str, "int": d.int, "agi": d.agi,
@@ -303,14 +307,28 @@ func _restore_whole_crew(carried: Array, old: Dictionary) -> void:
 		if target >= 0 and int(seats[target]) < (Data.CAB_WORKERS if target == Data.CAB_SLOT else Data.ROOM_WORKERS):
 			d.room = target
 			seats[target] = int(seats[target]) + 1
-	# The new stock turret must not reuse an equipped survivor item's preserved UID.
-	var turret: Variant = Game.s.van_gear.get("turret")
-	if turret is Dictionary:
-		turret.uid = int(Game.s.next_uid)
-		Game.s.next_uid = int(Game.s.next_uid) + 1
 	for role in mini(3, (old.get("squad", []) as Array).size()):
 		var did := int(old.squad[role])
 		var d := Game.dweller_by_id(did)
 		if not d.is_empty():
 			d.room = -1
 			Game.s.squad[role] = did
+
+
+## Transfer directly: the normal loot-add path may auto-salvage low-rarity or over-cap items.
+func _restore_all_equipment(old: Dictionary) -> void:
+	Game.s.gear = (old.get("gear", []) as Array).duplicate(true)
+	Game.s.van_gear = (old.get("van_gear", {}) as Dictionary).duplicate(true)
+	Game.s.mods = (old.get("mods", {}) as Dictionary).duplicate(true)
+	Game.s.solar = (old.get("solar", Game.s.solar) as Dictionary).duplicate(true)
+	Game.s.next_uid = maxi(int(Game.s.next_uid), int(old.get("next_uid", 1)))
+	# A large engine cannot be installed in a smaller cab, but must never be lost or salvaged.
+	var engine: Variant = Game.s.van_gear.get("engine")
+	if engine is Dictionary and not EngineBay.fits(engine):
+		Game.s.gear.append(engine)
+		Game.s.van_gear["engine"] = null
+	var items: Array = (Game.s.gear as Array).duplicate()
+	items.append_array((Game.s.van_gear as Dictionary).values())
+	for item in items:
+		if item is Dictionary:
+			Game.s.next_uid = maxi(int(Game.s.next_uid), int(item.get("uid", 0)) + 1)

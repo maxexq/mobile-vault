@@ -10013,6 +10013,17 @@ func _nextgen_crew_fixture(count: int) -> void:
 			item.plus = 3
 			item.lock = true
 			d.gear[slot] = item
+	Game.s.gear = []
+	for i in (Loot.STASH_CAP if count == 24 else 3):
+		var item := Loot.roll_item("weapon", 4, 0)
+		item.plus = 2
+		item.lock = false # auto-salvage would consume these: transfer must bypass it
+		Game.s.gear.append(item)
+	for slot in Loot.VAN_SLOTS:
+		Game.s.van_gear[slot] = Loot.roll_item(slot, 12, 2, "diesel_electric" if slot == "engine" else "")
+	Game.s.mods = {"spike_ram": 2, "armor_plates": 1}
+	Game.s.solar = {"panels": 3, "battery": 2, "tracking": true, "dirt": 0.2}
+	Game.s.combat.auto_salvage = 5
 	Game.s.next_id = 1 # even old/stale counters must not collide after transfer
 	Game.s.next_uid = 1
 	if count >= 5:
@@ -10067,8 +10078,22 @@ func _nextgen_crew_test() -> void:
 					var uid := int(d.gear[slot].uid)
 					_check("nextgen crew: %s %s item identity is unique" % [d.name, slot], not uids.has(uid))
 					uids[uid] = true
-			var turret_uid := int(Game.s.van_gear.turret.uid)
-			_check("nextgen crew: new stock turret and next item do not collide", not uids.has(turret_uid) and int(Game.s.next_uid) > turret_uid)
+			var gear_copy := true
+			for i in previous.gear.size():
+				gear_copy = gear_copy and Game.s.gear[i] == previous.gear[i]
+			_check("nextgen crew: all stash equipment and oversized engine retained", gear_copy and Game.s.gear.size() == previous.gear.size() + 1 and Game.s.gear[-1] == previous.van_gear.engine and Loot.van_equipped("engine").is_empty())
+			_check("nextgen crew: vehicle gear identities retained without a free turret", Game.s.van_gear.turret == previous.van_gear.turret and Game.s.van_gear.plating == previous.van_gear.plating and Game.s.van_gear.spikes == previous.van_gear.spikes)
+			_check("nextgen crew: garage mods and solar equipment retained, new hull full", Game.s.mods == previous.mods and Game.s.solar == previous.solar and is_equal_approx(float(Game.s.hull), Game.hull_max()))
+			var moved_items: Array = (Game.s.gear as Array).duplicate()
+			moved_items.append_array((Game.s.van_gear as Dictionary).values())
+			for item in moved_items:
+				if item is Dictionary:
+					var uid := int(item.uid)
+					_check("nextgen crew: stash/vehicle UID %d unique and allocator safe" % uid, not uids.has(uid) and int(Game.s.next_uid) > uid)
+					uids[uid] = true
+			if count == 24:
+				_check("nextgen crew: full stash never auto-salvages during transfer", Game.s.gear.size() == Loot.STASH_CAP + 1)
+
 			_check("nextgen crew: next survivor ID does not collide", int(Game.s.next_id) > int(Game.s.dwellers[count - 1].id))
 			_check("nextgen crew: pending old departure queue cleared", Crew._deserters.is_empty())
 			if count > Data.BASE_POP_CAP:
@@ -10081,13 +10106,20 @@ func _nextgen_crew_test() -> void:
 			Game.s = unpacked.main
 			Account.attach(Game.s)
 			Meta.next_generation([], "van")
-			_check("nextgen crew: save round trip and repeat transfer keep everyone once", Game.s.dwellers.size() == count and int(Game.s.dwellers[0].id) == 101 and int(Game.s.dwellers[0].lvl) == 12 and int(Game.s.dwellers[0].skills.c1) == 2 and Game.s.dwellers[0].gear.size() == Loot.HERO_SLOTS.size())
+			_check("nextgen crew: save round trip and repeat transfer keep everyone once", Game.s.dwellers.size() == count and int(Game.s.dwellers[0].id) == 101 and int(Game.s.dwellers[0].lvl) == 12 and int(Game.s.dwellers[0].skills.c1) == 2 and Game.s.dwellers[0].gear.size() == Loot.HERO_SLOTS.size() and Game.s.gear.size() == previous.gear.size() + 1 and int(Game.s.van_gear.turret.uid) == int(previous.van_gear.turret.uid))
 			_check("nextgen crew: save/repeat cannot refund again", int(Meta.m().legacy) == 76)
 			Game.s.dwellers[0].gear.weapon.plus = 8
 			_check("nextgen crew: gear/skills are deep copies", int(old.dwellers[0].gear.weapon.plus) == 3)
+	_nextgen_crew_fixture(5)
+	Meta.m().perks["tier_train"] = 1
+	var fitted_engine: Dictionary = Game.s.van_gear.engine.duplicate(true)
+	Meta.next_generation([], "train")
+	_check("nextgen crew: fitting engine stays installed on larger vehicle", Game.s.van_gear.engine == fitted_engine and EngineBay.fits(Loot.van_equipped("engine")))
+	Game.s.gear[0].plus = 7
+	_check("nextgen crew: equipment still usable after transfer", Loot.equip_from_stash(int(Game.s.gear[0].uid), Game.s.dwellers[0]))
 	_nextgen_crew_fixture(0)
 	Meta.next_generation([], "van")
-	_check("nextgen crew: empty wreck recovery still receives volunteers", Game.s.dwellers.size() == 3 and Game.room_workers(Data.CAB_SLOT).size() == 1)
+	_check("nextgen crew: empty wreck recovery still receives volunteers", Game.s.dwellers.size() == 3 and Game.room_workers(Data.CAB_SLOT).size() == 1 and Game.s.gear.size() == 4)
 	# Refund only the paid ranks; opening research repeatedly or loading cannot mint points.
 	for ranks in [[0, 0, 0], [1, 0, 6], [1, 1, 12], [2, 1, 24], [2, 2, 36]]:
 		_nextgen_crew_fixture(5)
@@ -10149,7 +10181,7 @@ func _nextgen_crew_test() -> void:
 	_nextgen_crew_fixture(5)
 	_check("nextgen crew: rollback restores old research and no refund", Meta.carry_slots() == 4 and is_equal_approx(Meta.carry_level_keep(), 0.9) and Meta.refund_retired_research() == 0)
 	Meta.next_generation([101.0], "van")
-	_check("nextgen crew: rollback transfers only chosen crew plus volunteers", Game.s.dwellers.size() == 4 and int(Game.s.dwellers[3].lvl) == 11 and Game.s.dwellers[3].gear.size() == 1 and Game.s.dwellers[3].skills.is_empty())
+	_check("nextgen crew: rollback transfers only chosen crew plus volunteers", Game.s.dwellers.size() == 4 and int(Game.s.dwellers[3].lvl) == 11 and Game.s.dwellers[3].gear.size() == 1 and Game.s.dwellers[3].skills.is_empty() and Game.s.gear.is_empty() and Game.s.mods.is_empty())
 	Dev.nextgen_crew_preview(true)
 	_check("nextgen crew: GOD preview enables whole team", Meta.all_crew_on())
 	Dev.nextgen_crew_preview(false)
