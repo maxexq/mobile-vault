@@ -365,6 +365,11 @@ func _offline_progress(sec: float) -> void:
 		if absf(dv) >= 1.0:
 			parts.append("%s %+d" % [Data.item_name(k), int(dv)])
 	parts.append("เดินทาง %.1f กม." % (s.km - km0))
+	# MV-542: the trip ended while away: say so, or the vehicle just sits there waiting for a destination
+	if WorldMap.offline_arrival != "":
+		if Features.on("drive_help"):
+			parts.append("ถึง%sแล้ว รถจอดรอ เลือกปลายทางใหม่บนแผนที่" % WorldMap.offline_arrival)
+		WorldMap.offline_arrival = ""
 	if not _offline_built.is_empty():
 		parts.append("ก่อสร้างเสร็จ: " + ", ".join(_offline_built))
 		_offline_built.clear()
@@ -635,6 +640,11 @@ func at_checkpoint() -> bool:
 
 
 ## MV-130: the world map is driving this run (switch on and a world exists)
+## MV-542: the vehicle is set to drive but waits for a destination on the world map
+func needs_destination() -> bool:
+	return bool(s.get("traveling", false)) and map_mode() and not WorldMap.driving()
+
+
 func map_mode() -> bool:
 	return WorldMap.usable()
 

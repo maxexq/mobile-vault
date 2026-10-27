@@ -2078,5 +2078,7 @@
  "† %s Lv%d — %s (รุ่นที่ %d, กม. %.1f)": "† %s Lv%d — %s (generation %d, km %.1f)",
  "บรรยากาศ": "Ambience",
  "ปุ่มกด": "Buttons",
- "บรรยากาศ = เสียงพื้นที่ เครื่องยนต์ ฝนและพายุ · บนเว็บเสียงเริ่มหลังแตะจอครั้งแรก": "Ambience = area sounds, the engine, rain and storms · on the web, sound starts after your first tap"
+ "บรรยากาศ = เสียงพื้นที่ เครื่องยนต์ ฝนและพายุ · บนเว็บเสียงเริ่มหลังแตะจอครั้งแรก": "Ambience = area sounds, the engine, rain and storms · on the web, sound starts after your first tap",
+ "รถหยุดอยู่: ": "Stopped: ",
+ "ปลายทาง": "the destination"
 }

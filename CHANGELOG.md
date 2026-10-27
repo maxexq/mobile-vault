@@ -33,6 +33,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - MV-538: stuck acid-rain preview fixed, cozy lo-fi biome ambience ([#129](https://github.com/maxexq/mobile-vault/pull/129))
 
 ### Fixed
+- On the world map you can tap stops again after continuing a saved game (the map was drawn but its stops didn't respond until a new world was made) (MV-542)
+- Coming back to the game after the vehicle reached its map destination while you were away no longer leaves it stuck: the away summary says it arrived, the go button turns into a map button that opens the map to pick the next stop, and tapping STOPPED (or go) tells you why the vehicle isn't moving (MV-542)
 - Windows no longer slide around when what's inside them changes: the title and the button you just tapped stay where they are, and the room close-up keeps the room still when you switch tabs, so nothing moves under your finger (MV-537)
 - Acid rain could be heard on the first map without any acid rain, after a weather sound had been previewed in the tester panel (MV-538)
 
