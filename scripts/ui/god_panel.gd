@@ -12,7 +12,7 @@ var _log_cat := ""
 var _save_box: TextEdit
 var _crew_anim := "idle"       # MV-170 roster preview: animation every preview sprite plays
 
-const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["icons", "Icons"], ["log", "LOG/เซฟ"]]
+const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["sound", "เสียง"], ["icons", "Icons"], ["log", "LOG/เซฟ"]]
 const SRC_TH := {"code": "ค่าในโค้ด", "default": "ค่าเริ่มต้น", "build": "บิลด์", "remote": "รีโมต", "mode": "โหมดเกม", "dev": "ผู้ทดสอบ"}
 
 
@@ -24,6 +24,7 @@ func _build() -> void:
 	Cloud.status_changed.connect(func(): if is_open and tab == "sys": refresh())
 	Features.changed.connect(func(): if is_open and tab == "feat": refresh())
 	Modes.changed.connect(func(): if is_open and tab == "sys": refresh())
+	closed.connect(func(): if not Sound.preview.is_empty(): Dev.sound_preview("clear"))      # MV-538
 
 
 func refresh() -> void:
@@ -53,6 +54,7 @@ func refresh() -> void:
 		"world": _tab_world()
 		"feat": _tab_features()
 		"sys": _tab_sys()
+		"sound": _tab_sound()
 		"icons": _tab_icons()
 		"log": _tab_log()
 
@@ -275,14 +277,37 @@ func _tab_vehicle() -> void:
 		var lv: int = n
 		vb.append(_b(str(lv), func(): Dev.set_vault(lv), "yellow" if int(Game.s.vault_level) == lv else "gray"))
 	_row(vb, "Vault Lv")
+	var vv2 := Features.on("vault_upgrade_v2")
+	_note("โครงรถ (MV-545) %s · ห้อง %d/%d (รถ %s %d ชั้น) · ห้องที่รอรถคันใหญ่ %d · ตัวถัง +%d · การผลิต ×%.2f" % ["แบบใหม่" if vv2 else "แบบเดิม",
+		Game.vault_rooms_at(int(Game.s.vault_level)), Game.main_slots() - 1, Game.tier(), Game.floors(), Game.vault_banked_rooms(),
+		roundi(Game.vault_hull_bonus()), Game.vault_prod_mult()])
+	if int(Game.s.vault_level) < Data.MAX_VAULT_LEVEL:
+		_note("การ์ดอัปเกรด: " + BuildPanel.vault_card_text(int(Game.s.vault_level), "", ""))
+	_row([_b("แบบเดิม" if vv2 else "แบบใหม่", func(): Dev.vault_upgrade_v2(not vv2), "yellow" if vv2 else "gray")], "อัปเกรดโครงรถ")
 	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
+	var rv2 := Features.on("hull_repair_v2")
+	var dc: Dictionary = Game.repair_discount()
+	_note("ค่าซ่อม (MV-541) %s · %.3f เศษเหล็ก/HP · ส่วนลด %d%% (ลูกเรือ %d · ช่าง %d · skill %d · อู่ %d, สูงสุด %d) · ซ่อมเอง +%.1f HP/นาที · เต็ม %d · 25%% %d" % [
+		"แบบใหม่" if rv2 else "แบบเดิม", Game.repair_rate(), roundi(float(dc.total) * 100.0), roundi(float(dc.crew) * 100.0),
+		roundi(float(dc.mechanic) * 100.0), roundi(float(dc.skill) * 100.0), roundi(float(dc.bay) * 100.0),
+		roundi(Features.num("repair.discount_cap", 0.4) * 100.0), Game.hull_regen_pm(), Game.repair_cost(), Game.repair_cost(0.25)])
+	_row([_b("ซ่อม 25%", func(): Dev.repair(0.25), "green"), _b("ซ่อมเต็ม", func(): Dev.repair(1.0), "green"),
+		_b("แบบใหม่" if not rv2 else "แบบเดิม", func(): Dev.hull_repair_v2(not rv2), "yellow" if rv2 else "gray")], "ซ่อมตัวถัง")
 	_row([_b("ขั้น 1", func(): Dev.hull_warning_preview(1), "yellow"), _b("ขั้น 2", func(): Dev.hull_warning_preview(2), "red"),
 		_b("ขั้น 3", func(): Dev.hull_warning_preview(3), "red"), _b("เคลียร์", func(): Dev.hull_warning_preview(0), "green")],
 		"เตือนตัวถัง (MV-250) %s · เส้น %d/%d/%d%%" % ["เปิด" if Features.on("hull_warning") else "ปิด",
 		int(HullAlert.line(1) * 100), int(HullAlert.line(2) * 100), int(HullAlert.line(3) * 100)])
 	_row([_b("แหนบช่วงล่าง: " + ("เปิด" if Features.on("vehicle_detail") else "ปิด"), func(): Dev.vehicle_detail_switch(not Features.on("vehicle_detail")),
 		"green" if Features.on("vehicle_detail") else "red")], "รายละเอียดรถ MV-388 (ล้อ/สนิม/แผ่นปะอบในภาพแล้ว)")
+	_row([_b("หลังคาอบอุ่น: " + ("เปิด" if Features.on("cozy_roof") else "ปิด"), func(): Dev.cozy_roof_switch(not Features.on("cozy_roof")),
+		"green" if Features.on("cozy_roof") else "red"), _b("ไม่มี", func(): Dev.roof_deck_preview(0), "gray"),
+		_b("Lv1", func(): Dev.roof_deck_preview(1)), _b("Lv2", func(): Dev.roof_deck_preview(2)), _b("Lv3", func(): Dev.roof_deck_preview(3))],
+		"หลังคา MV-462 · ดาดฟ้าพัก Lv%d" % Mods.level("roof_deck"))
+	_row([_b("คนขับขยับ: " + ("เปิด" if Features.on("driver_cab") else "ปิด"), func(): Dev.driver_cab_switch(not Features.on("driver_cab")),
+		"green" if Features.on("driver_cab") else "red"), _b("กะพริบตา", func(): Dev.driver_cab_preview("blink"), "gray", true),
+		_b("ไฟหน้าปัด", func(): Dev.driver_cab_preview("lamp"), "gray", true), _b("จับพวงมาลัย", func(): Dev.driver_cab_preview("wheel"), "gray", true)],
+		"ห้องคนขับ MV-519 (วิกเตอร์)")
 	_head("ENGINE BAY", "ห้องเครื่อง · %s %d°C สภาพ %d%%" % [EngineBay.t().th, int(EngineBay.heat()), int(EngineBay.cond())])
 	_row([_b("ระบบห้องเครื่อง: " + ("เปิด" if EngineBay.on() else "ปิด (ดีเซลเดิม)"), func(): Dev.engine_bay_switch(not EngineBay.on()),
 		"green" if EngineBay.on() else "red", true)], "สวิตช์")
@@ -325,6 +350,8 @@ func _trait_cards_preview() -> void:
 		var mm: String = m[0]
 		modes.append(_b(m[1], func(): Dev.trait_preview(mm), "yellow" if TraitFx.preview == mm else "gray"))
 	modes.append(_b("เฟรมถัดไป", func(): Dev.trait_step(), "green"))
+	var tiers_on := Features.on("trait_tiers")
+	modes.append(_b("ระดับ: เปิด" if tiers_on else "ระดับ: ปิด", func(): Dev.trait_tiers(not tiers_on), "yellow" if tiers_on else "gray"))
 	_row(modes, "แสง · เฟรม %d/16" % (TraitFx.current_phase() + 1))
 	var g := GridContainer.new()
 	g.name = "TraitCardPreview"
@@ -346,7 +373,15 @@ func _trait_cards_preview() -> void:
 		m.add_theme_constant_override("margin_" + side, 6)
 	m.add_child(g)
 	_list.add_child(m)
-	_note("ซ้าย: ข้อดี (พ่อครัว) ทั่วไป..ปฐมกาล · ขวา: ข้อเสีย (กินจุ) · แถวล่าง: ยังไม่จัดระดับ (ค่าเริ่มต้นตอนนี้) และข้อความยาว")
+	_note("ซ้าย: ข้อดี (พ่อครัว) ทั่วไป..ปฐมกาล · ขวา: ข้อเสีย (กินจุ) · แถวล่าง: ยังไม่จัดระดับ (สวิตช์ trait_tiers ปิด) และข้อความยาว")
+	var by_tier := {}
+	for t in Crew.TRAIT_TIERS:
+		var k := "%s%s" % ["!" if Crew.TRAITS[t].get("bad", false) else "", Loot.RARITY[int(Crew.TRAIT_TIERS[t])].en]
+		by_tier[k] = by_tier.get(k, []) + [str(Crew.TRAITS[t].en)]
+	var lines := []
+	for k in by_tier:
+		lines.append("%s: %s" % [k, ", ".join(by_tier[k])])
+	_note("ระดับนิสัย (MV-497, ! = ข้อเสีย) · " + " · ".join(lines))
 
 
 func _tab_crew() -> void:
@@ -370,6 +405,7 @@ func _tab_crew() -> void:
 		var tid: String = t
 		bb.append(_b("ช่าง+" + str(Crew.TRAITS[t].th), func(): Dev.spawn_builder(tid), "red" if Crew.TRAITS[t].get("bad", false) else "gray"))
 	_row(bb)
+	_trait_odds()
 	_crew_roster()
 	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
 	for g in Inspection.GRADES:
@@ -412,6 +448,25 @@ func _tab_crew() -> void:
 
 
 ## MV-170: every named crew sprite (any animation) + portrait, and a button that boards that one
+## MV-516: the trait roll weights, and the shares from rolling 1000 made-up recruits
+func _trait_odds() -> void:
+	var on := Features.on("trait_roll_weights")
+	_head("TRAIT ODDS", "โอกาสสุ่มนิสัย (MV-516) · %s" % ("ตามระดับ" if on else "เท่ากันทุกนิสัย"))
+	var w := []
+	for i in Crew.TIER_NAMES.size():
+		w.append("%s %s" % [Loot.RARITY[i].en, Features.num("crew.trait_weight." + Crew.TIER_NAMES[i], Crew.TRAIT_WEIGHTS[i])])
+	w.append("ข้อเสีย %s" % Features.num("crew.trait_weight.trade_off", Crew.TRADE_OFF_WEIGHT))
+	_note("น้ำหนัก: " + " · ".join(w))
+	var r: Dictionary = Dev.last_trait_roll
+	if not r.is_empty():
+		var parts := []
+		for i in Crew.TIER_NAMES.size():
+			parts.append("%s %.1f%%" % [Loot.RARITY[i].en, float(r[Crew.TIER_NAMES[i]])])
+		parts.append("ข้อเสีย %.1f%%" % float(r.bad))
+		_note("สุ่ม %d คน มีนิสัยระดับนั้นอย่างน้อย 1: %s" % [int(r.n), " · ".join(parts)])
+	_row([_b("สุ่มทดสอบ 1000 คน", func(): Dev.trait_roll_test(1000), "green")], "ไม่เพิ่มคนจริง")
+
+
 func _crew_roster() -> void:
 	_head("CREW ROSTER", "ลูกเรือมีชื่อ 20 คน · สวิตช์ %s · โอกาส %d%%" % ["เปิด" if Features.on("crew_roster_20") else "ปิด",
 		roundi(Features.num("crew.roster_chance", Crew.ROSTER_CHANCE) * 100.0)])
@@ -464,6 +519,9 @@ func _tab_fight() -> void:
 	_head("SQUAD", "ทีมป้องกัน %s (ปลดล็อก %d ช่อง · DPS %d)" % [" / ".join(names), Combat.slots_unlocked(), int(Combat.squad_dps())])
 	_row([_b("จัดทีมอัตโนมัติ", func(): Dev.squad_auto(), "green"), _b("ใส่อุปกรณ์ดีสุด", func(): Dev.squad_gear()), _b("ถอดทั้งทีม", func(): Dev.squad_clear(), "red")])
 	_head("BOSSES", "เรียกบอส (ปิดแผงเพื่อดูศึก)")
+	_row([_b("บอสเวฟ: สมดุลใหม่", func(): Dev.roaming_boss_preview(true), "green", true), _b("บอสเวฟ: สมดุลเดิม", func(): Dev.roaming_boss_preview(false), "gray", true)])
+	var wave_balance := Features.on("roaming_boss_balance")
+	_note("สมดุลบอสเวฟ (MV-544) %s · HP ×%.1f / ดาเมจ ×%.1f · %s" % ["เปิด" if wave_balance else "ปิด", Features.num("boss.wave_hp", 8.0) if wave_balance else 12.0, Features.num("boss.wave_damage", 1.6) if wave_balance else 2.4, ("ความเสียหายรถต่อครั้ง ≤%d%% หลังคิดเกราะ" % int(round(Features.num("boss.hull_hit_cap", 0.12) * 100.0))) if wave_balance else "ความเสียหายพิเศษแบบเดิม"])
 	var bb := [_b("บอสด่าน: " + str(Combat.BOSSES[Combat.biome_id()].th), func(): Dev.spawn_boss("warlord"), "red", true)]
 	for id in Combat.WAVE_BOSSES:
 		var bid: String = id
@@ -472,6 +530,12 @@ func _tab_fight() -> void:
 	_row([_b("วอร์ลอร์ด", func(): Dev.entrance_preview("warlord"), "red", true), _b("บอส", func(): Dev.entrance_preview("boss"), "yellow", true),
 		_b("อีลิท", func(): Dev.entrance_preview("elite"), "gray", true), _b("เรียกอีลิท ×3", func(): Dev.spawn_elites(3), "gray", true)],
 		"เปิดตัวบอส (MV-387)%s" % ("" if Features.on("boss_intro") else " · ปิดอยู่"))
+	_row([_b("เทียบขนาด", func(): Dev.enemy_size_preview("lineup"), "yellow", true), _b("ธรรมดา", func(): Dev.enemy_size_preview("normal"), "gray", true),
+		_b("อีลิท", func(): Dev.enemy_size_preview("elite"), "gray", true), _b("บอส", func(): Dev.enemy_size_preview("boss"), "gray", true),
+		_b("วอร์ลอร์ด", func(): Dev.enemy_size_preview("warlord"), "red", true)],
+		"ขนาดมอนสเตอร์ (MV-517) x%d / x%d / x%d / x%d%s" % [int(Features.num("enemy_size.normal", CombatView.ENEMY_SCALE.normal)),
+		int(Features.num("enemy_size.elite", CombatView.ENEMY_SCALE.elite)), int(Features.num("enemy_size.boss", CombatView.ENEMY_SCALE.boss)),
+		int(Features.num("enemy_size.warlord", CombatView.ENEMY_SCALE.warlord)), "" if Features.on("enemy_size") else " · ปิดอยู่"])
 	_head("MOBS", "เรียกศัตรูทีละชนิด ×3")
 	var mb := []
 	for id in Combat.MOBS:
@@ -492,9 +556,51 @@ func _tab_fight() -> void:
 
 
 func _tab_world() -> void:
-	_head("INDUSTRIAL SKY", "ฉากนิคมอุตสาหกรรมใหม่ (MV-369) ตามเวลาในเกม")
+	_head("WORLD MAP", "แผนที่โลก (MV-500)")
+	_note("ระยะที่ 1: สร้างและเก็บโลกเท่านั้น ยังไม่มีหน้าจอแผนที่")
+	_note(WorldMap.summary())
+	var wm := WorldMap.world()
+	if not wm.is_empty():
+		var order := []
+		for reg in wm.regions:
+			order.append("%s(Vault %d)" % [str(reg.id), int(reg.req)])
+		_note("ลำดับพื้นที่: " + " → ".join(order))
+		var rt := WorldMap.route("start", "helios", Data.MAX_VAULT_LEVEL)
+		_note("เส้นทางทดสอบ start → helios: %s" % (("%.1f กม. ผ่าน %d จุด" % [float(rt.km), (rt.ids as Array).size()]) if not rt.is_empty() else "ไปไม่ถึง"))
+	# MV-514: a new world replaces this one (its roads and visited stops): the MV-422 confirmation, like any destructive action
+	_row([_b("โลกใหม่", func(): ConfirmPanel.ask(self, "โลกใหม่", "โลกนี้ (ถนน จุดที่ไปแล้ว ทริปที่ขับอยู่) จะถูกแทนด้วยโลกใหม่จาก seed สุ่ม ย้อนคืนไม่ได้ รถจะถูกวางไว้ในพื้นที่ปัจจุบัน",
+		"ยืนยันโลกใหม่", func(): Dev.world_new()), "yellow"), _b("ตรวจ seed", func(): Dev.world_verify(), "green")], "โลก")
+	var lb := []
+	for i in Data.BIOMES.size():
+		var bi: int = i
+		lb.append(_b(str(i + 1), func(): Dev.world_legacy("mid", bi), "yellow" if int(Game.s.biome) == bi else "gray"))
+	_row(lb, "เซฟเก่า")
+	_row([_b("ที่ด่าน", func(): Dev.world_legacy("checkpoint", int(Game.s.biome))), _b("จอดที่จุดสำคัญ", func(): Dev.world_legacy("site", int(Game.s.biome))),
+		_b("สำรวจแล้ว", func(): Dev.world_legacy("done", int(Game.s.biome))), _b("รอบ+1", func(): Dev.world_legacy("lap", int(Game.s.biome)))], "เซฟเก่า")
+	_row([_b("ย้ายซ้ำ (ต้องไม่เปลี่ยน)", func(): Dev.world_reconcile(), "green"),
+		_b("แผนที่: " + ("เปิด" if Features.on("seeded_world_map") else "ปิด"), func(): Dev.feature_set("seeded_world_map", not Features.on("seeded_world_map")),
+		"green" if Features.on("seeded_world_map") else "red")], "MV-514")
+	_row([_b("เปิดแผนที่ (TEST-515)", func(): Dev.world_screen(), "green", true)], "หน้าจอ")
+	_row([_b("ถึงปลายทางตอนออฟไลน์", func(): Dev.world_arrive_offline(), "yellow")],
+		"MV-542 %s · รอเลือกปลายทาง %s" % ["เปิด" if Features.on("drive_help") else "ปิด", "ใช่" if Game.needs_destination() else "ไม่"])
+	if not wm.is_empty():
+		var t := WorldMap.trip()
+		if t.is_empty():
+			_note("ไม่ได้ขับ · อยู่ที่ %s%s" % [WorldMap.here(), " · ด่านตรวจ" if Game.at_checkpoint() else ""])
+		else:
+			var e := WorldMap.edge(str(t.edges[int(t.i)]))
+			_note("ขับไป %s · ถนน %d/%d (%s) %.2f/%.1f กม.%s" % [str(t.dest), int(t.i) + 1, (t.edges as Array).size(), str(e.id), float(t.prog),
+				float(e.km), " · รอที่ด่านตรวจ" if Game.at_checkpoint() else ""])
+		_row([_b("ไปแลนด์มาร์กถัดไป", func(): Dev.world_drive("next"), "green"), _b("ไปทางออก", func(): Dev.world_drive("exit"), "yellow")], "ขับ")
+		_row([_b("จบถนนนี้", func(): Dev.world_finish_road()), _b("ออฟไลน์ 10 นาที", func(): Dev.world_offline(10.0)),
+			_b("ยกเลิก", func(): Dev.world_cancel(), "red")], "ทดสอบ")
+	_note("โลกใหม่ = สุ่ม seed ใหม่แทนโลกนี้ · ตรวจ seed = สร้างซ้ำจาก seed ที่เก็บไว้แล้วเทียบว่าตรงกัน")
+	_head("INDUSTRIAL SKY", "นิคมอุตสาหกรรม 20 พาเนล (MV-548) ตามเวลาในเกม")
 	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
 	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])
+	_head("GLASS DESERT", "ทะเลทรายแก้ว (MV-539) ตามเวลาในเกม")
+	_row([_b("เช้า", func(): Dev.desert_background_preview(0.25)), _b("เที่ยง", func(): Dev.desert_background_preview(0.5)), _b("เย็น", func(): Dev.desert_background_preview(0.75)), _b("คืน", func(): Dev.desert_background_preview(0.0))])
+	_row([_b("ทะเลทรายใหม่", func(): Dev.feature_set("desert_parallax", true), "green"), _b("ทะเลทรายเดิม", func(): Dev.feature_set("desert_parallax", false), "gray")])
 	var bb := []
 	for i in Data.BIOMES.size():
 		var bi: int = i
@@ -540,6 +646,14 @@ func _tab_world() -> void:
 
 
 func _tab_sys() -> void:
+	var smooth := Features.on("smooth_ui_text")
+	_head("UI TEXT", "ตัวอักษร (MV-540)")
+	_row([_b("ขอบเรียบ", func(): Dev.ui_text_preview(true), "yellow" if smooth else "gray"),
+		_b("ขอบพิกเซลเดิม", func(): Dev.ui_text_preview(false), "gray" if smooth else "yellow")])
+	var wm := not Features.on("window_still")
+	_head("WINDOWS", "หน้าต่าง (MV-537) · ตอนนี้%s" % ("เลื่อนนุ่มตามเนื้อหา" if wm else "อยู่นิ่ง ขอบบนไม่ขยับ"))
+	_row([_b("อยู่นิ่ง", func(): Dev.window_motion(false), "gray" if wm else "yellow"),
+		_b("เลื่อนนุ่ม (แบบเดิม)", func(): Dev.window_motion(true), "yellow" if wm else "gray")], "เมื่อเนื้อหาเปลี่ยนความสูง")
 	_head("ACCOUNT", "ไอดีถาวร")
 	_note("รุ่นที่ %d · ความยาก %s · บันทึก %d · อนุสรณ์ %d%s" % [Meta.generation(), str(Modes.DIFFS.get(Account.diff(), {}).get("th", Account.diff())),
 		Account.a.get("lore", []).size(), Account.a.get("memorial", []).size(), " · มาจากเซฟเก่า" if Account.a.has("legacy_mode") else ""])
@@ -658,6 +772,36 @@ func _tab_sys() -> void:
 	_note("ขนาดเซฟ %.1f KB · FPS %s · ภาษา %s" % [Settings.save_size_bytes() / 1024.0, str(Settings.get_value("fps")), str(Settings.get_value("lang"))])
 	_row([_b("คืนค่าเริ่มต้น", Dev.settings_reset)])
 	_row([_b("ทดสอบหน้าต่างยืนยัน", Dev.confirm_preview, "red", true)])
+
+
+## MV-536: listen to every biome bed, weather layer and effect group without changing the run
+func _tab_sound() -> void:
+	_head("SOUND", "เสียง (MV-536)")
+	var amb := "เปิด" if Sound.ambience_on() else "ปิด"
+	var fx := "เปิด" if Sound.sfx_on() else "ปิด"
+	_note("สวิตช์ audio_ambience: %s · audio_sfx: %s · audio_bgm: %s · แตะจอแล้ว: %s · พื้นที่ตอนนี้: %s · อากาศ: %s · เสียงล่าสุด: %s" % [
+		amb, fx, "เปิด" if Sound.bgm_on() else "ปิด", "ใช่" if Sound.unlocked else "ยัง", Sound.want_bed(), Sound.want_weather() if Sound.want_weather() != "" else "-", Sound.last_sfx if Sound.last_sfx != "" else "-"])
+	var beds := []
+	for b in Data.BIOMES:
+		var id: String = b.id
+		beds.append(_b(id, func(): Dev.sound_preview("bed", id), "yellow" if Sound.preview.get("bed", "") == id and not Sound.preview.has("weather") else "gray"))
+	_row(beds, "พื้นที่")
+	var ws := []
+	for w in Sound.WEATHER_SOUNDS:
+		var id: String = w
+		ws.append(_b(id, func(): Dev.sound_preview("weather", id), "yellow" if Sound.preview.get("weather", "") == id else "gray"))
+	_row(ws, "อากาศ")
+	var gs := []
+	for g in Sound.GROUPS:
+		var id: String = g
+		gs.append(_b(id, func(): Dev.sound_preview("group", id)))
+	_row(gs, "เอฟเฟกต์")
+	_row([_b("เพลงหน้าแรก (โลไฟ)", func(): Dev.sound_preview("bgm"), "yellow" if Sound.preview.has("bgm") else "gray"),
+		_b(("ปิด" if Sound.bgm_on() else "เปิด") + "เพลง", func(): Dev.feature_set("audio_bgm", not Sound.bgm_on()))], "เพลง")
+	_row([_b("กลับเสียงตามเกม", func(): Dev.sound_preview("clear"), "green"),
+		_b(("ปิด" if Sound.ambience_on() else "เปิด") + "เสียงบรรยากาศ", func(): Dev.feature_set("audio_ambience", not Sound.ambience_on())),
+		_b(("ปิด" if Sound.sfx_on() else "เปิด") + "เสียงเอฟเฟกต์", func(): Dev.feature_set("audio_sfx", not Sound.sfx_on()))])
+	_note("ปุ่มพื้นที่/อากาศเล่นวนจนกด กลับเสียงตามเกม (ฟังอย่างเดียว เซฟไม่ถูกทำเครื่องหมายโกง) · ปรับดังเบาใน ตั้งค่า > เสียง")
 
 
 func _tab_features() -> void:

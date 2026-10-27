@@ -8,6 +8,63 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
+### Changed
+- Industrial Ruins now uses twenty approved native pixel-art panels: pale broken skyline, rusted factories, roadside wrecks, thin smog and cracked asphalt, with smoke and lamp effects anchored to the new scenery (MV-548)
+
+### Changed
+- Every-10th-wave bosses have one-third less HP and damage; their special hull hits now respect vehicle armor and each hit is limited to 12% of maximum hull, helping prevent boss wins from turning into a scrap-draining repair bill (MV-544)
+- Upgrading the Mobile Vault frame always does something now: +15 max hull and +5 % production per level, and when your vehicle has no space for the room a level unlocks, you get +10 % production instead until a bigger vehicle can use it. The upgrade card shows the real number of rooms and tells you which vehicle to switch to when this one is full (MV-545)
+
+## [4.7.0-alpha.4] - 2026-10-27
+
+### Merged pull requests
+- MV-499: release 4.7.0-alpha.3 (web export with the Cloudflare hosts) ([#109](https://github.com/maxexq/mobile-vault/pull/109))
+- MV-497: trait tiers by value (benefits) and severity (trade-offs) ([#112](https://github.com/maxexq/mobile-vault/pull/112))
+- MV-516: weight trait rolls by tier (rarer high-tier traits) ([#113](https://github.com/maxexq/mobile-vault/pull/113))
+- MV-517: bigger monsters - whole-number size per enemy kind (normal x2 / elite x3 / boss x3) ([#114](https://github.com/maxexq/mobile-vault/pull/114))
+- MV-518: crew stats easy to read (base STR/AGI/INT vs what gear adds) ([#115](https://github.com/maxexq/mobile-vault/pull/115))
+- MV-462: cozy roof art (water tank, dish, planters, rest deck) ([#116](https://github.com/maxexq/mobile-vault/pull/116))
+- MV-129 (MV-500 phase 1): seeded world map generation + save + GOD ([#117](https://github.com/maxexq/mobile-vault/pull/117))
+- MV-130 (MV-500 phase 2): drive the seeded world map ([#118](https://github.com/maxexq/mobile-vault/pull/118))
+- MV-519: Viktor drives every vehicle + cab micro animation (MV-520..523) ([#119](https://github.com/maxexq/mobile-vault/pull/119))
+- MV-514 (MV-500 phase 4): migrate old saves onto the world map ([#120](https://github.com/maxexq/mobile-vault/pull/120))
+- MV-528 (MV-529..535): van-reference hardware fittings on every vehicle ([#122](https://github.com/maxexq/mobile-vault/pull/122))
+- MV-524..526: main-stat icons (STR fist, INT lightbulb, AGI zigzag) ([#123](https://github.com/maxexq/mobile-vault/pull/123))
+- MV-536: sound: biome ambience, weather layers, gameplay effects ([#124](https://github.com/maxexq/mobile-vault/pull/124))
+- MV-536: softer sound, new acid rain / swamp swarm, lo-fi title BGM, web loop fix ([#125](https://github.com/maxexq/mobile-vault/pull/125))
+- MV-515 + MV-501..513 (MV-500 phase 3): world map screen and its art (supersedes #121) ([#126](https://github.com/maxexq/mobile-vault/pull/126))
+- MV-537: windows stay still when their content changes height ([#127](https://github.com/maxexq/mobile-vault/pull/127))
+- MV-538: stuck acid-rain preview fixed, cozy lo-fi biome ambience ([#129](https://github.com/maxexq/mobile-vault/pull/129))
+- MV-541: fairer hull repair (size curve, 25 % repair, crew discount, free regen shown) ([#132](https://github.com/maxexq/mobile-vault/pull/132))
+- MV-540: render Chakra Petch UI text smoothly ([#131](https://github.com/maxexq/mobile-vault/pull/131))
+- MV-543: Forge synthesis spends components ([#133](https://github.com/maxexq/mobile-vault/pull/133))
+- MV-542: vehicle stuck after coming back; map stops tappable after continuing a save ([#135](https://github.com/maxexq/mobile-vault/pull/135))
+- MV-539: Glass Desert wide parallax panorama ([#134](https://github.com/maxexq/mobile-vault/pull/134))
+
+### Fixed
+- Forge synthesis now spends components instead of scrap; affordability and Thai/English cost descriptions match the components icon (MV-543)
+- On the world map you can tap stops again after continuing a saved game (the map was drawn but its stops didn't respond until a new world was made) (MV-542)
+- Coming back to the game after the vehicle reached its map destination while you were away no longer leaves it stuck: the away summary says it arrived, the go button turns into a map button that opens the map to pick the next stop, and tapping STOPPED (or go) tells you why the vehicle isn't moving (MV-542)
+- Windows no longer slide around when what's inside them changes: the title and the button you just tapped stay where they are, and the room close-up keeps the room still when you switch tabs, so nothing moves under your finger (MV-537)
+- Acid rain could be heard on the first map without any acid rain, after a weather sound had been previewed in the tester panel (MV-538)
+
+### Added
+- The game has sound: every area has its own ambience (factory wind and clanks, desert wind with glass chimes, forest crickets and crows, swamp frogs, icy wind, a dead city's radio) over the engine's rumble, and the weather is heard too, from calm rain on the metal roof to thunderstorms, sandstorms, snow, fog, acid rain and ashfall. Fights, bosses, building, loot, road events, expeditions and buttons have sound effects. The title screen plays a cozy lo-fi theme. Settings has volume sliders for music, ambience, effects and buttons; on the web sound starts after your first tap. High, sharp sounds were softened so nothing stings your ears (MV-536)
+
+### Changed
+- The Glass Desert now has a wide pixel-art panorama: pale mesas and satellite dishes, ruined pylons and aircraft, cold blue blast-glass, dusty roadside wrecks and sand-blown asphalt. Five layers scroll independently beneath a sky that follows the game clock (MV-539)
+- Every area's background sound is softer and cozier, with a lo-fi, retro warmth: a quiet chord in the background, dusty vinyl and gentle tape wobble, and no sharp highs, while each area keeps its own character (factory knocks, desert glass chimes, forest crickets and creek, swamp frogs, icy wind, the dead city radio) (MV-538)
+- New icons for the three main stats so they are told apart at a glance: STR is a fist, INT a lightbulb, AGI a zigzag (MV-524..526)
+- Every vehicle got small hardware details in the first van's style: bolted pillar joints, roof seam caps, fuel caps, and a door handle, vent, latch or hinges per vehicle (MV-528)
+- Viktor now drives: every vehicle's cab shows him at the wheel with a dash, seat and little lamp, and now and then he blinks, the dash light flickers or he nudges the wheel (MV-519)
+- Crew stats are easier to read: STR, AGI and INT always in that order and colour, a bar with one segment per point, each person's best stat boxed in gold (with the rooms it suits), and a separate green line for what their equipment adds (MV-518)
+- Monsters look bigger and more threatening: normal monsters ×2, elites ×3, bosses and checkpoint warlords ×3, still in crisp whole pixels (MV-517)
+- A cozier roof: a strapped teal water tank with a level gauge, a clearer satellite dish, herb planter trays, and a timber rest deck with a patched canvas, a bench and blanket, a glass windbreak, a water can and a little lamp (MV-462)
+- Crew trait cards now show how valuable a trait is: Common, Uncommon, Rare, Epic or Legendary, with a light that grows with the tier (Architect and Lucky are Legendary). Downsides glow harder the more they hurt, with Fears the Dark the harshest (MV-497)
+- Valuable traits are rarer now: a new survivor is far more likely to bring a Common or Uncommon trait, and only about 1 in 35 brings a Legendary one (Architect or Lucky). Survivors you already have keep their traits, and downsides are as common as before (MV-516)
+- Hull repairs are fairer on big vehicles: the bigger your hull, the less each point costs (a train pays about a third less than before, the van the same), you can patch up 25 % at a time instead of paying for a full repair, and crew in the engine room or a workshop, Mechanics, the Handyman skill and the Repair Bay knock up to 40 % off. The build menu and the hull bar now show how fast the crew repairs the hull for free (MV-541)
+- In-game Chakra Petch UI text now renders smoothly at the screen resolution for clearer Thai and English menus. Silkscreen tags and world pixel art retain their crisp pixel edges; a player anti-aliasing setting will come later (MV-540)
+
 ## [4.7.0-alpha.3] - 2026-10-26
 
 ### Merged pull requests

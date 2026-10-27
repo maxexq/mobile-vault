@@ -1,0 +1,103 @@
+{
+  "spec": "micro-asset/1",
+  "id": "decal_van_door_hardware",
+  "title": "First-car reference: worn van door hardware",
+  "why": "Use the actual first blue van as the common hardware reference, adding readable detail across the vehicle family.",
+  "parent": "veh_van",
+  "kind": "decal",
+  "size": [
+    14,
+    10
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "blue1",
+    "blue2",
+    "blue3",
+    "blue4",
+    "gray3",
+    "gray5",
+    "orange1"
+  ],
+  "outline": "ol0",
+  "light": "top-left",
+  "layer": "on_parent",
+  "anchor": {
+    "x": 16,
+    "y": 185,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/vehicles.py",
+    "function": "decal_van_door_hardware"
+  },
+  "feature": null,
+  "replace": false,
+  "priority": "medium",
+  "author": "Codex art analyst",
+  "refs": [
+    "tools/art/micro/previews/all-vehicle-details-v1/reference-van-4x.png",
+    "tools/art/micro/previews/all-vehicle-details-v1/van-detail-study.png",
+    "tools/art/micro/previews/all-vehicle-details-v1/all-vehicles-detail-proposal.png",
+    "tools/art/micro/previews/all-vehicle-details-v1/micro-details-closeup.png",
+    "tools/art/micro/previews/all-vehicle-details-v1/decal_van_door_hardware-draft.png",
+    "tools/art/micro/previews/all-vehicle-details-v1/proposal-manifest.json",
+    "tools/art/micro/previews/all-vehicle-details-v1/prompts.json",
+    "tools/art/micro/previews/all-vehicle-details-v1/build_native_proposal.py",
+    "tools/art/vehicles.py",
+    "scripts/world/vehicle.gd"
+  ],
+  "pixel_art": {
+    "legend": {
+      "A": "ol0",
+      "B": "blue1",
+      "C": "blue2",
+      "D": "blue3",
+      "E": "blue4",
+      "F": "gray3",
+      "G": "gray5",
+      "H": "orange1"
+    },
+    "rows": [
+      "CCCCCCCCCCCCCC",
+      "CAAACCCCCCCCCC",
+      "CAGACCCCCCCCCC",
+      "CAFAAAAAAAAACC",
+      "CAFAAGGGGGFACC",
+      "CAFAAFFFFFFACC",
+      "CAFAAAAAAAAACC",
+      "CAGACCCCCCCCCC",
+      "CAAHCCCCCCCCCC",
+      "CCCCCCCCCCCCCC"
+    ],
+    "alpha": 255,
+    "rgba_sha256": "d5a0e668bc8e99df7dfea67874059d8519b1ea32801d911abbc76a4f9c847a7d"
+  },
+  "placements": [
+    {
+      "parent": "veh_van",
+      "x": 16,
+      "y": 185,
+      "pivot": "top-left"
+    }
+  ],
+  "acceptance": [
+    "User requested tickets and a visual result for details on all cars, using the first car as reference. First car means the blue van, the first TIERS entry in vehicles.py. Use its actual existing sprite and the proposal folder as visual inputs; these are review proposals, not claims that production art is already changed.",
+    "A14x10 blue cab-door patch carrying one small steel pull handle and a narrow left hinge/fastener cluster. This is the first-car material/reference fitting. Preserve source blue2 field, gray highlights and one dull-rust mark.",
+    "Emit exactly one standalone atlas sprite decal_van_door_hardware at14x10 native pixels,fully opaque with only the listed palette colors. The embedded pixel_art legend/rows specify the exact native draft, making the ticket reproducible without access to local preview files. Target RGBA SHA256 d5a0e668bc8e99df7dfea67874059d8519b1ea32801d911abbc76a4f9c847a7d.",
+    "Bake this sprite at EVERY placements entry in parent-local pixels, also into the matching ext_ sprite at the same coordinates. All sprites are unrotated at1x. Placement map: [{\"parent\":\"veh_van\",\"x\":16,\"y\":185,\"pivot\":\"top-left\"}].",
+    "Follow the existing static shell_details convention: draw after weathering and before exterior() copies the shell,so cut-away and closed views carry the same fitting. Keep the standalone sprite and generator deterministic. feature=null,static art-only,no new runtime nodes,animation,simulation,feature toggle or paid generation.",
+    "Preserve all existing MV-388 wheels/springs/weld patches/tank straps/lamp cages and vehicle ambience. The new fitting may cover old pixels only inside its declared footprint; do not add duplicate decals or change the older assets or motions.",
+    "Respect MV-519..523 driver-cab work. No fitting overlaps the driver window, lower engine-room cutout,crew aisle,room interior or room mask. Van hardware is at(16,185); bus vent at(20,182); rig latch at(26,214),ending at y219 before the engine trim at y220; train hinges at(10,118),ending before the war stripe at y132. These coordinates take precedence over drift in the generated full-vehicle studies.",
+    "Keep main shells280x300 and trailer/wagon248x300, existing silhouettes and alpha, floors, three rooms per floor,window/room/engine masks,roof props,deck/ladder geometry,wheel counts/centers and original vehicle colors. Per-sprite decoded RGBA outside the declared fitting rectangles must match pre-change artwork; atlas coordinates may repack.",
+    "All new detail uses native square clusters,one-pixel soot edges,restrained gray steel and dull rust from the first-car reference. No antialiasing,blur,glow,gradient pixels,fine scratches,new heavy exterior frame or saturated paint/light. Inspect at1x plus nearest4x/8x.",
+    "Preserve selected native draft PNGs,source studies,prompts,pixel legends/rows,hashes and manifests in a tracked reference/source folder with .gdignore as appropriate; tools/art/micro is ignored. The production generator must reproduce the chosen fitting after full regeneration.",
+    "Run micro_asset.py verify for this ticket after regeneration. Check exact size,palette,opaque alpha,target hash,all placements and outside-footprint stability. Show all4 main vehicles and both towed units in cut-away/exterior,including day/night and existing detail/ambience switches. Follow CLAUDE.md required autotest,web export,README/changelog and staging PR workflow; no version bump in feature PR."
+  ],
+  "notes": "One small static fitting sprite; shared placements intentionally reuse it. Native proposal proof confirms silhouette/alpha and all outside-fitting pixels unchanged across6 models. New proposal is additional to MV-388 and separate from the approved driver-cab direction in MV-519. Do not move or take over In Progress tickets. No game/atlas implementation is included in this analyst task.",
+  "plane": "MV-532"
+}

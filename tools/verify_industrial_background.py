@@ -1,57 +1,79 @@
 #!/usr/bin/env python3
-"""Verify MV-369 layer sizes, exact palette, binary alpha, wrap joins and deterministic generation."""
-from pathlib import Path
+"""Verify MV-548 native source reconstruction, keying, palette, wraps and reproducibility."""
 import argparse
 import hashlib
-import sys
+import json
+import tempfile
+from pathlib import Path
 from PIL import Image
 from art.common import PALETTE
-from art.industrial_bg import generate
+from art.industrial_bg import SOURCE, OUT, KEY, generate
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / 'assets/bg/industrial_live'
-SIZES = {'far': (1920, 300), 'mid': (1920, 230), 'near': (2112, 124), 'road': (2304, 64), 'clouds': (1984, 220),
-         'sky_dawn': (64, 900), 'sky_day': (64, 900), 'sky_dusk': (64, 900), 'sky_night': (64, 900),
+SIZES = {'clouds': (1984, 220), 'far': (1920, 300), 'mid': (1920, 230),
+         'near': (2112, 124), 'road': (2304, 64),
+         **{'sky_' + name: (64, 900) for name in ['dawn', 'day', 'dusk', 'night']},
          'sun': (32, 32), 'moon': (32, 32), 'smoke': (64, 20), 'lamp': (24, 16)}
 
 
 def verify(regenerate=False):
-    failures = []
+    manifest = json.loads((SOURCE / 'manifest.json').read_text())
     allowed = set(PALETTE)
+    for layer in manifest['layers']:
+        name = layer['name']
+        width, height = layer['panel_size']
+        master = Image.new('RGB', tuple(layer['strip_size']))
+        for i, panel in enumerate(layer['panels']):
+            path = SOURCE / panel['file']
+            assert hashlib.sha256(path.read_bytes()).hexdigest() == panel['sha256'], path
+            with Image.open(path) as image:
+                assert image.mode == 'RGB' and image.size == (width, height), path
+                master.paste(image, (i * width, 0))
+        # A continuous master naturally changes across internal seams. Compare every pixel,
+        # including all three seam pairs, instead of incorrectly requiring identical columns.
+        assert hashlib.sha256(master.tobytes()).hexdigest() == layer['approved_rgb_sha256'], name
+        with Image.open(Path(OUT) / (name + '.png')) as image:
+            assert image.mode == 'RGBA' and image.size == SIZES[name], name
+            expected = [(0, 0, 0, 0) if p == KEY else (*p, 255) for p in master.get_flattened_data()]
+            assert list(image.get_flattened_data()) == expected, (name, 'approved pixels or seams changed')
+            assert image.crop((0, 0, 1, height)).tobytes() == image.crop((image.width-1, 0, image.width, height)).tobytes(), (name, 'wrap')
+            if name == 'clouds':
+                assert image.getchannel('A').crop((0, height-40, image.width, height)).getextrema() == (0, 0), 'Cloud clearance'
+            else:
+                assert image.getchannel('A').crop((0, height-1, image.width, height)).getextrema() == (255, 255), (name, 'ground line')
+            if name == 'road':
+                assert image.getchannel('A').getextrema() == (255, 255), 'Road alpha'
+        print('PASS', name, 'exact native panels/master pixels, keying, internal joins and wrap')
     for name, size in SIZES.items():
-        with Image.open(OUT / (name + '.png')) as source:
-            img = source.convert('RGBA')
-            if img.size != size:
-                failures.append(name + ': wrong size')
-            pixels = set(img.get_flattened_data())
-            if {p[:3] for p in pixels if p[3]} - allowed:
-                failures.append(name + ': colours outside master palette')
-            if {p[3] for p in pixels} - {0, 255}:
-                failures.append(name + ': alpha must be binary')
-            if name in ['far', 'mid', 'near', 'road', 'clouds']:
-                if img.crop((0, 0, 1, img.height)).tobytes() != img.crop((img.width - 1, 0, img.width, img.height)).tobytes():
-                    failures.append(name + ': edge columns disagree')
-            if name.startswith('sky') and any(p[3] != 255 for p in pixels):
-                failures.append(name + ': sky must fill the canvas')
-            if name == 'mid' and img.crop((0, 0, img.width, 64)).getbbox() is not None:
-                failures.append(name + ': old sky/boundary is baked into the factory layer')
+        with Image.open(Path(OUT) / (name + '.png')) as image:
+            assert image.size == size and image.mode == 'RGBA', name
+            pixels = set(image.get_flattened_data())
+            assert not {p[:3] for p in pixels if p[3]} - allowed, (name, 'palette')
+            assert not {p[3] for p in pixels} - {0,255}, (name, 'alpha')
+            assert all(p == (0,0,0,0) for p in pixels if not p[3]), (name, 'transparent RGB')
+            if name.startswith('sky_'):
+                assert image.getchannel('A').getextrema() == (255,255), name
+    anchors = manifest['effect_anchors']
+    for effect in anchors.values():
+        with Image.open(Path(OUT) / (effect['layer'] + '.png')) as image:
+            for x,y in effect['points']:
+                assert image.crop((x-2,y-2,x+3,y+3)).getbbox(), ('Effect anchor misses artwork', x,y)
+    runtime = (SOURCE.parents[3] / 'scripts/world/industrial_backdrop.gd').read_text()
+    for effect in anchors.values():
+        for x,y in effect['points']:
+            assert 'Vector2(%d, %d)' % (x,y) in runtime, ('Stale runtime anchor',x,y)
+    print('PASS 13 assets: master palette, binary alpha, effect anchor provenance')
     if regenerate:
-        def hashes():
-            return {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in OUT.glob('*') if p.suffix in ['.png', '.json']}
-        before = hashes()
-        generate()
-        first = hashes()
-        generate()
-        if before != first or first != hashes():
-            failures.append('generated outputs are stale or nondeterministic')
-    for failure in failures:
-        print('FAIL', failure)
-    print(f'Industrial background: {len(SIZES)} assets, {len(failures)} failures; regeneration check={regenerate}')
-    return not failures
+        before = {p.name:p.read_bytes() for p in Path(OUT).iterdir() if p.suffix in ['.png','.json']}
+        for _ in range(2):
+            with tempfile.TemporaryDirectory() as directory:
+                generate(directory)
+                after = {p.name:p.read_bytes() for p in Path(directory).iterdir()}
+                assert before == after, 'Nondeterministic or stale production output'
+        print('PASS two clean regenerations match every production PNG and manifest byte for byte')
+    return True
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--regenerate-check', action='store_true')
-    args = parser.parse_args()
-    sys.exit(0 if verify(args.regenerate_check) else 1)
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--regenerate-check',action='store_true')
+    verify(parser.parse_args().regenerate_check)

@@ -30,8 +30,10 @@ func _build() -> void:
 	make_list(4).add_child(message)
 	cancel_button = UIKit.button(Loc.t("ยกเลิก"), "gray")
 	cancel_button.name = "CancelAction"
+	cancel_button.set_meta("sfx", "cancel")      # MV-536: Sound plays this instead of the plain tap
 	confirm_button = UIKit.button("", "red")
 	confirm_button.name = "ConfirmAction"
+	confirm_button.set_meta("sfx", "confirm")
 	for b in [cancel_button, confirm_button]:
 		b.custom_minimum_size.y = 32
 		b.focus_mode = Control.FOCUS_ALL

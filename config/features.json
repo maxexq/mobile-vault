@@ -1,6 +1,7 @@
 {
   "tz_hours": 7,
   "features": {
+    "smooth_ui_text": true,
     "confirm_actions": true,
     "industrial_parallax": true,
     "road_events": true,
@@ -22,14 +23,21 @@
     "barks": true,
     "tutorial_tips": true,
     "hull_warning": true,
+    "drive_help": true,
+    "hull_repair_v2": true,
+    "vault_upgrade_v2": true,
     "morale_v2": true,
     "fixed_sim": true,
     "responsive_scale": true,
     "window_fit": true,
+    "window_still": true,
     "gear_slot_style": true,
     "gear_slot_vfx": true,
     "trait_card_style": true,
     "trait_card_vfx": true,
+    "trait_tiers": true,
+    "trait_roll_weights": true,
+    "seeded_world_map": false,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,
@@ -45,10 +53,31 @@
     "announce": true,
     "raw_food": true,
     "loot_pity": true,
+    "roaming_boss_balance": true,
     "boss_intro": true,
     "vehicle_detail": true,
-    "vehicle_ambience": true
+    "vehicle_ambience": true,
+    "enemy_size": true,
+    "cozy_roof": true,
+    "driver_cab": true,
+    "audio_ambience": true,
+    "audio_sfx": true,
+    "audio_bgm": true,
+    "desert_parallax": true
   },
   "events": {},
-  "tune": {}
+  "tune": {
+    "desert_background.clouds_speed": 0.03,
+    "desert_background.far_speed": 0.08,
+    "desert_background.mid_speed": 0.25,
+    "desert_background.near_speed": 0.6,
+    "desert_background.road_speed": 1.0,
+    "desert_background.cloud_wind": 4.0,
+    "industrial_background.clouds_speed": 0.03,
+    "industrial_background.far_speed": 0.08,
+    "industrial_background.mid_speed": 0.25,
+    "industrial_background.near_speed": 0.6,
+    "industrial_background.road_speed": 1.0,
+    "industrial_background.cloud_wind": 4.0
+  }
 }

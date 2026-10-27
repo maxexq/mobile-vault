@@ -545,6 +545,8 @@ def gen_backgrounds():
         road(name, cfg)
     from .industrial_bg import generate
     generate()
+    from .desert_bg import generate as generate_desert
+    generate_desert()
 
 # ------------------------------------------------------------------ MV-388 phase 4: environment micro ambience
 # Small roadside atlas sprites for the living-background owner (MV-370 / MV-371) to place on the road repeat.

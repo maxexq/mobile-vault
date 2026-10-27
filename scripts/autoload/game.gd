@@ -365,6 +365,11 @@ func _offline_progress(sec: float) -> void:
 		if absf(dv) >= 1.0:
 			parts.append("%s %+d" % [Data.item_name(k), int(dv)])
 	parts.append("เดินทาง %.1f กม." % (s.km - km0))
+	# MV-542: the trip ended while away: say so, or the vehicle just sits there waiting for a destination
+	if WorldMap.offline_arrival != "":
+		if Features.on("drive_help"):
+			parts.append("ถึง%sแล้ว รถจอดรอ เลือกปลายทางใหม่บนแผนที่" % WorldMap.offline_arrival)
+		WorldMap.offline_arrival = ""
 	if not _offline_built.is_empty():
 		parts.append("ก่อสร้างเสร็จ: " + ", ".join(_offline_built))
 		_offline_built.clear()
@@ -495,6 +500,44 @@ func slot_cell(slot: int) -> Vector2i:
 	return Vector2i(local % Data.ROOMS_PER_FLOOR, local / Data.ROOMS_PER_FLOOR)
 
 
+## MV-545 (switch vault_upgrade_v2): what a Vault level really gives on this vehicle. Rooms stop at the body's size
+## (floors x 3 minus the engine room), so on a small vehicle later levels used to promise a room and add none.
+## rooms usable at Vault level lv on this vehicle
+func vault_rooms_at(lv: int) -> int:
+	return mini(int(Data.SLOTS_PER_LEVEL[clampi(lv, 0, Data.MAX_VAULT_LEVEL)]), main_slots() - 1)
+
+
+## levels reached that would add a room but this vehicle has no space for (they open on a bigger one)
+func vault_banked_rooms() -> int:
+	var n := 0
+	for k in range(2, int(s.vault_level) + 1):
+		if int(Data.SLOTS_PER_LEVEL[k]) > int(Data.SLOTS_PER_LEVEL[k - 1]) and vault_rooms_at(k) == vault_rooms_at(k - 1):
+			n += 1
+	return n
+
+
+## production multiplier from the Vault: per level above 1, plus per banked room (until a bigger vehicle uses it)
+func vault_prod_mult() -> float:
+	if s.is_empty() or not Features.on("vault_upgrade_v2"):
+		return 1.0
+	return 1.0 + Features.num("vault.prod_per_level", 0.05) * float(int(s.vault_level) - 1) 		+ Features.num("vault.prod_per_banked_room", 0.10) * float(vault_banked_rooms())
+
+
+func vault_hull_bonus() -> float:
+	if s.is_empty() or not Features.on("vault_upgrade_v2"):
+		return 0.0
+	return Features.num("vault.hull_per_level", 15.0) * float(maxi(0, int(s.vault_level) - 1))
+
+
+## the next vehicle with more floors than this one ("" = none bigger)
+func bigger_vehicle() -> String:
+	var f := floors()
+	for t in Data.TIER_ORDER:
+		if int(Data.VEHICLES[t].floors) > f:
+			return t
+	return ""
+
+
 func unlocked_slots() -> Array:
 	var n: int = Data.SLOTS_PER_LEVEL[clampi(s.vault_level, 0, Data.MAX_VAULT_LEVEL)]
 	n = mini(n, main_slots() - 1)
@@ -571,7 +614,7 @@ func power_flow_pm() -> float:
 func hull_max() -> float:
 	if s.is_empty() or not s.has("van_gear"):
 		return 100.0
-	return 100.0 + float(vehicle_def().hull) + float(Combat.van_stats().hull) + Mods.val("armor_plates")
+	return 100.0 + float(vehicle_def().hull) + float(Combat.van_stats().hull) + Mods.val("armor_plates") + vault_hull_bonus()
 
 
 func speed_factor() -> float:
@@ -604,6 +647,8 @@ func blocked_reason() -> String:
 		return "ตัวถังพัง! ซ่อมก่อนเดินทาง"
 	if s.stall > 0.0:
 		return "จอดรอ %ds" % int(ceil(s.stall))
+	if map_mode() and not WorldMap.driving():
+		return "เลือกปลายทางบนแผนที่"
 	if Inspection.halting():
 		return "จอดรับคนแปลกหน้า"
 	var eng := EngineBay.blocked_reason()
@@ -627,13 +672,71 @@ func biome_end_km() -> float:
 ## at the end of a biome the van stops until the checkpoint warlord is beaten
 ## (and, except on the last biome, the vault frame is high enough for the next one)
 func at_checkpoint() -> bool:
-	if s.km < biome_end_km() - 0.001:
+	if not at_checkpoint_spot():
 		return false
-	if not Combat.boss_beaten(int(s.biome)):
+	return not Combat.boss_beaten(int(s.biome)) or not checkpoint_vault_ok()
+
+
+## MV-130: the world map is driving this run (switch on and a world exists)
+## MV-542: the vehicle is set to drive but waits for a destination on the world map
+func needs_destination() -> bool:
+	return bool(s.get("traveling", false)) and map_mode() and not WorldMap.driving()
+
+
+func map_mode() -> bool:
+	return WorldMap.usable()
+
+
+## the vehicle stands at the checkpoint: the end of the biome on the old road, before a border road on the map
+func at_checkpoint_spot() -> bool:
+	if map_mode():
+		var t := WorldMap.trip()
+		return not t.is_empty() and float(t.prog) <= 0.0 and WorldMap.gate_ahead() > 0
+	return s.km >= biome_end_km() - 0.001
+
+
+## the Vault level the way on past this checkpoint needs (99 = none: end of the road)
+func checkpoint_req() -> int:
+	if map_mode():
+		return WorldMap.gate_ahead()
+	return 99 if s.biome >= Data.BIOMES.size() - 1 else int(Data.biome(s.biome + 1).req)
+
+
+func checkpoint_vault_ok() -> bool:
+	if not map_mode() and s.biome >= Data.BIOMES.size() - 1:
 		return true
-	if s.biome >= Data.BIOMES.size() - 1:
-		return false
-	return s.vault_level < int(Data.biome(s.biome + 1).req)
+	return int(s.vault_level) >= checkpoint_req()
+
+
+## MV-130: one travel step on the world map: same speed, power, fuel, scrap and road events as the old road
+func _drive_map(m: float, dt: float, offline: bool) -> void:
+	var km := WorldMap.step(Data.BASE_TRAVEL_KMPM * speed_factor() * m, offline)
+	# MV-514: s.km stays inside the current biome (short of its old checkpoint), so with the switch off the old road
+	# carries on from a sensible spot; the real distance is stats.km_total
+	var cap := maxf(Data.biome_start_km(int(s.biome)), biome_end_km() - 0.1)
+	s.km = maxf(float(s.km), minf(float(s.km) + km, cap))
+	s.stats.km_total = float(s.stats.km_total) + km
+	_add_res("power", -Data.TRAVEL_POWER_PM * m)
+	var burn := EngineBay.burn_pm()
+	for k in burn:
+		_add_res(k, -float(burn[k]) * m)
+	_add_res("scrap", float(Data.biome(s.biome).scrap_pm) * m)
+	if not offline:
+		_accumulate_float(-1, "scrap", float(Data.biome(s.biome).scrap_pm) * m)
+	if at_checkpoint() and not offline:
+		if Modes.peaceful() and not Combat.boss_beaten(int(s.biome)):
+			toast.emit("ถึงด่านตรวจ! ค่าผ่านทาง %d เศษเหล็ก (จ่ายเองเมื่อมีพอ)" % Modes.toll(), "warn")
+		elif not Combat.boss_beaten(int(s.biome)):
+			toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.BOSSES[Data.biome(s.biome).id].th, "warn")
+		else:
+			toast.emit("ถึงด่านตรวจ! อัปเกรด Mobile Vault เป็น Lv.%d เพื่อไปต่อ" % checkpoint_req(), "warn")
+		travel_changed.emit()
+	if not offline:
+		s.event_t = float(s.event_t) - dt
+		if s.event_t <= 0.0:
+			var gap_min := Features.num("events.gap_min", EVENT_GAP.x)
+			s.event_t = rng.randf_range(gap_min, maxf(gap_min, Features.num("events.gap_max", EVENT_GAP.y)))
+			_trigger_random_event()
 
 
 func danger_level() -> int:
@@ -697,8 +800,10 @@ func _tick_outages(dt: float, offline: bool) -> void:
 		o[k] = float(o[k]) - dt * fix
 		if float(o[k]) <= 0.0:
 			o.erase(k)
-			if not offline:
-				toast.emit("ไฟห้อง%sกลับมาแล้ว" % Data.room_def(s.rooms[int(k)].type).th, "good")
+			# the room may be gone (a smaller vehicle, a demolished room): its outage just ends quietly
+			var slot := int(k)
+			if not offline and slot < s.rooms.size() and Data.room_def(s.rooms[slot].type).has("th"):
+				toast.emit("ไฟห้อง%sกลับมาแล้ว" % Data.room_def(s.rooms[slot].type).th, "good")
 				rooms_changed.emit()
 	s["outage"] = o
 	if offline or rng.randf() > dt / 420.0:
@@ -848,7 +953,7 @@ func room_rate_pm(slot: int) -> Dictionary:
 	var lvl_mult := 1.0 + 0.6 * float(r.level - 1)
 	var stat_mult := 0.5 * float(work_span(slot)) + stat_sum(slot) / 10.0          # 1 avg worker per cell = 1.0 per cell
 	var happy_mult := 0.6 + avg_happiness() / 250.0
-	var mult := lvl_mult * stat_mult * span_efficiency(slot) * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
+	var mult := lvl_mult * stat_mult * span_efficiency(slot) * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot) * vault_prod_mult()
 	if def.get("weather_crop", false):
 		mult *= float(weather_def().crop)
 	if def.power > 0.0 and s.res.power <= 0.5:
@@ -914,7 +1019,7 @@ func craft_speed(slot: int) -> float:
 	for d in workers:
 		sk += Skills.val(d, "craft") / workers.size()
 	var n := float(work_span(slot))
-	return (0.6 + stat_sum(slot) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot)
+	return (0.6 + stat_sum(slot) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot) * vault_prod_mult()
 
 
 func medical_power() -> float:
@@ -1208,7 +1313,9 @@ func _sim_crew_body(dt: float, offline: bool) -> void:
 	Crew.morale_v2_global_tick(dt)
 
 	# --- travel
-	if is_moving():
+	if is_moving() and map_mode():
+		_drive_map(m, dt, offline)       # MV-130: along the world map's roads
+	elif is_moving():
 		var km: float = Data.BASE_TRAVEL_KMPM * speed_factor() * m
 		var end_km := biome_end_km()
 		var last: bool = s.biome >= Data.BIOMES.size() - 1
@@ -1385,6 +1492,8 @@ func _finish_lap() -> void:
 	s.lap = int(s.lap) + 1
 	s.km = 0.0
 	s.biome = 0
+	if map_mode():
+		WorldMap.create(WorldMap.random_seed())    # MV-130: every lap is a new world
 	toast.emit("ครบเส้นทาง! เริ่มรอบที่ %d (อันตรายขึ้น ผลตอบแทนมากขึ้น)" % (s.lap + 1), "biome")
 	biome_changed.emit(0, false)
 
@@ -1825,6 +1934,7 @@ func demolish_room(slot: int) -> void:
 	var cells := room_cells(slot)
 	_add_res("scrap", float(Data.room_def(r.type).cost) * 0.5 * cells.size())
 	Trace.rec("build", "demolish %s @%d x%d" % [r.type, slot, cells.size()])
+	Sound.sfx("demolish")
 	for c in cells:
 		s.rooms[c] = {"type": "empty", "level": 1, "job": {}, "build": {}}
 		(s.get("outage", {}) as Dictionary).erase(str(c))
@@ -2028,21 +2138,71 @@ func upgrade_vault() -> bool:
 		return false
 	s.vault_level = int(s.vault_level) + 1
 	s.hull = hull_max()
-	toast.emit("MOBILE VAULT อัปเกรดเป็น Lv.%d! ปลดล็อกห้องใหม่" % s.vault_level, "biome")
+	if Features.on("vault_upgrade_v2"):
+		# MV-545: say what it really gave on this vehicle
+		var gain := vault_rooms_at(int(s.vault_level)) - vault_rooms_at(int(s.vault_level) - 1)
+		toast.emit(("MOBILE VAULT Lv.%d! ห้อง +%d" % [s.vault_level, gain]) if gain > 0
+			else ("MOBILE VAULT Lv.%d! ห้องเต็มรถแล้ว การผลิตรวม +%d%%" % [s.vault_level, roundi((vault_prod_mult() - 1.0) * 100.0)]), "biome")
+	else:
+		toast.emit("MOBILE VAULT อัปเกรดเป็น Lv.%d! ปลดล็อกห้องใหม่" % s.vault_level, "biome")
 	vault_level_changed.emit(s.vault_level)
 	rooms_changed.emit()
 	travel_changed.emit()
 	return true
 
 
-func repair_hull() -> bool:
-	var missing := hull_max() - float(s.hull)
-	if missing < 1.0:
+## MV-541 (switch hull_repair_v2): scrap per HP. Off = the old flat 0.6. On, a bigger hull pays less per HP:
+## base x sqrt(ref_hull / hull_max), never above base (a van with its first gear pays what it always did)
+func repair_rate() -> float:
+	var base := Features.num("repair.base", 0.6)
+	if not Features.on("hull_repair_v2"):
+		return 0.6
+	return minf(base, base * sqrt(Features.num("repair.ref_hull", 140.0) / maxf(1.0, hull_max())))
+
+
+## MV-541: the crew's discount on a paid repair, capped (repair.discount_cap): per crew member working the engine room
+## or a workshop (up to repair.max_crew of them), extra per Mechanic and per Handyman level among them, per Repair Bay
+## level. {crew, mechanic, skill, bay, total}; all 0 with the switch off
+func repair_discount() -> Dictionary:
+	var out := {"crew": 0.0, "mechanic": 0.0, "skill": 0.0, "bay": 0.0, "total": 0.0}
+	if s.is_empty() or not Features.on("hull_repair_v2"):
+		return out
+	var n := 0
+	for slot in [Data.CAB_SLOT] + _rooms_of("workshop"):
+		for d in room_workers(slot):
+			n += 1
+			if Crew.has(d, "mechanic"):
+				out.mechanic += Features.num("repair.mechanic", 0.05)
+			out.skill += Features.num("repair.skill", 0.05) * Skills.val(d, "repair")
+	out.crew = Features.num("repair.per_crew", 0.05) * mini(n, int(Features.num("repair.max_crew", 4.0)))
+	out.bay = Features.num("repair.bay", 0.10) * Mods.level("repair_bay")
+	out.total = minf(Features.num("repair.discount_cap", 0.4), out.crew + out.mechanic + out.skill + out.bay)
+	return out
+
+
+## HP a repair restores: everything missing (part 1.0), or a chunk of the max hull (part 0.25, MV-541), never more
+## than is missing; the switch off always repairs in full
+func repair_amount(part: float = 1.0) -> float:
+	var missing := maxf(0.0, hull_max() - float(s.hull))
+	if part >= 1.0 or not Features.on("hull_repair_v2"):
+		return missing
+	return minf(missing, hull_max() * part)
+
+
+func repair_cost(part: float = 1.0) -> int:
+	var hp := repair_amount(part)
+	if hp < 1.0:
+		return 0
+	return maxi(1, int(ceil(hp * repair_rate() * (1.0 - float(repair_discount().total)))))
+
+
+func repair_hull(part: float = 1.0) -> bool:
+	var hp := repair_amount(part)
+	if hp < 1.0:
 		return false
-	var c := int(ceil(missing * 0.6))
-	if not pay({"scrap": c}):
+	if not pay({"scrap": repair_cost(part)}):
 		return false
-	s.hull = hull_max()
+	s.hull = minf(hull_max(), float(s.hull) + hp)
 	travel_changed.emit()
 	return true
 

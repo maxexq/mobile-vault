@@ -191,7 +191,7 @@ const ITEMS := {
 	"ammo": {"th": "กระสุน", "en": "Ammo", "icon": "ammo", "kind": "mat", "desc": "+พลังต่อสู้เมื่อมีติดตัว"},
 	"dried_meat": {"th": "เนื้อแห้ง", "en": "Dried Meat", "icon": "meat", "kind": "use", "desc": "+40 อาหาร เมื่อใช้"},
 	"antibiotics": {"th": "ยาปฏิชีวนะ", "en": "Antibiotics", "icon": "pill", "kind": "use", "desc": "รักษาการติดเชื้อ"},
-	"components": {"th": "ชิ้นส่วน", "en": "Components", "icon": "cog", "kind": "mat", "desc": "ได้จากการแยกอุปกรณ์ ใช้ตีบวก"},
+	"components": {"th": "ชิ้นส่วน", "en": "Components", "icon": "cog", "kind": "mat", "desc": "ได้จากการแยกอุปกรณ์ ใช้ตีบวกและหลอม"},
 	"pipe_pistol": {"th": "ปืนท่อเหล็ก", "en": "Pipe Pistol", "icon": "pistol", "kind": "weapon", "dmg": 3},
 	"hunting_rifle": {"th": "ไรเฟิลล่าสัตว์", "en": "Hunting Rifle", "icon": "rifle", "kind": "weapon", "dmg": 6},
 	"assault_rifle": {"th": "ปืนจู่โจม", "en": "Assault Rifle", "icon": "rifle", "kind": "weapon", "dmg": 9},

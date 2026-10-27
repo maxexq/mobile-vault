@@ -31,6 +31,7 @@ Env="*res://scripts/autoload/env.gd"
 Expedition="*res://scripts/autoload/expedition.gd"
 Inspection="*res://scripts/autoload/inspection.gd"
 RoomX="*res://scripts/autoload/room_x.gd"
+WorldMap="*res://scripts/autoload/world_map.gd"
 Encounter="*res://scripts/autoload/encounter.gd"
 Meta="*res://scripts/autoload/meta.gd"
 Modes="*res://scripts/autoload/modes.gd"
@@ -41,6 +42,7 @@ Trace="*res://scripts/autoload/trace.gd"
 Dev="*res://scripts/autoload/dev.gd"
 Tutorial="*res://scripts/autoload/tutorial.gd"
 Settings="*res://scripts/autoload/settings.gd"
+Sound="*res://scripts/autoload/sound.gd"
 Loc="*res://scripts/autoload/loc.gd"
 Outbox="*res://scripts/autoload/outbox.gd"
 Cloud="*res://scripts/autoload/cloud.gd"
@@ -61,7 +63,7 @@ window/handheld/orientation=4
 
 [gui]
 
-fonts/dynamic_fonts/use_oversampling=false
+fonts/dynamic_fonts/use_oversampling=true
 common/snap_controls_to_pixels=true
 common/default_scroll_deadzone=8
 

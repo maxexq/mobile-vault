@@ -47,6 +47,12 @@ const MECHANIC_BUILD := 0.15
 ## named crew have fixed traits (fits their bios)
 const FIXED := {"mark": ["brawler", "tough"], "leo": ["sharpshooter", "scavenger"], "ton": ["mechanic", "night_owl"],
 	"bob": ["cook", "glutton"], "clara": ["healer", "cheerful"], "bruno": ["brawler", "light_eater"]}
+## MV-516: with trait_roll_weights on, a recruit's traits are drawn by MV-497 tier (common .. legendary) instead of
+## evenly; every trade-off has one flat weight, which keeps the share of recruits with a downside as before (~23 %).
+## Tune crew.trait_weight.<tier> / crew.trait_weight.trade_off
+const TIER_NAMES := ["common", "uncommon", "rare", "epic", "legendary"]
+const TRAIT_WEIGHTS := [10.0, 7.0, 4.0, 2.0, 1.0]
+const TRADE_OFF_WEIGHT := 5.0
 ## two workers in the same room whose traits both fit it -> teamwork bonus
 const DUO_BONUS := 0.15
 
@@ -66,7 +72,7 @@ func roll_traits(d: Dictionary) -> void:
 	var out := []
 	var n := 2 if rng.randf() < 0.65 else 1
 	while out.size() < n:
-		var t: String = keys[rng.randi() % keys.size()]
+		var t := _pick_trait(keys)
 		if out.has(t):
 			continue
 		if TRAITS[t].get("bad", false) and out.size() == 0 and rng.randf() < 0.5:
@@ -76,13 +82,57 @@ func roll_traits(d: Dictionary) -> void:
 
 
 ## MV-483 / MV-497: the visual tier of each trait card (0 common .. 5 mythic). Explicit and approved only: nothing is
-## inferred from item rarity, the bad flag, the size of a bonus or a roll. Empty until MV-497 is approved; an
-## unlisted trait shows the quiet untiered card. Visual only: no stat, spawn or save uses it.
-const TRAIT_TIERS := {}
+## inferred from item rarity, the bad flag, the size of a bonus or a roll. MV-497: a benefit's tier = how much it is
+## worth to a run (narrow / situational = common .. whole-vehicle or loot-economy effects = legendary; mythic is kept
+## for future unique traits); a trade-off's tier = how hard its cost bites (a crimson edge that grows with the risk).
+## Switch trait_tiers off (or a trait not listed) = the quiet untiered card. Visual only: no stat, spawn or save uses it.
+const TRAIT_TIERS := {
+	# common: only in one biome / at night / a small build bonus
+	"cold_blooded": 0, "night_owl": 0, "rad_proof": 0, "quick_hands": 0,
+	# uncommon: one room +40-45 %, or halved upkeep for one survivor
+	"cook": 1, "hydrologist": 1, "green_thumb": 1, "gunsmith": 1, "light_eater": 1,
+	# rare: several rooms or a second effect, a sturdier body, better expedition loot, the rear-gunner bonus
+	"mechanic": 2, "healer": 2, "tough": 2, "scavenger": 2, "brawler": 2,
+	# epic: always-on combat power, three rooms + XP, faster construction, morale for the whole room (MV-127)
+	"sharpshooter": 3, "genius": 3, "engineer": 3, "cheerful": 3,
+	# legendary: cheaper rooms for the whole vehicle, better odds on every expedition and drop
+	"architect": 4, "lucky": 4,
+	# trade-offs: mild and avoidable (common), costly (uncommon), unavoidable every night, can break morale (rare)
+	"grumpy": 0, "coward": 0, "glutton": 1, "clumsy": 1, "afraid_dark": 2,
+}
 
 
 func trait_tier(t: String) -> int:
+	if not Features.on("trait_tiers"):
+		return -1
 	return int(TRAIT_TIERS.get(t, -1))
+
+
+## MV-516: how likely trait t is to be drawn (relative). Uses TRAIT_TIERS directly, not trait_tier(): hiding the tier
+## labels (trait_tiers off) doesn't change the odds. A trait without a tier draws like a common one
+func trait_weight(t: String) -> float:
+	if not Features.on("trait_roll_weights"):
+		return 1.0
+	if TRAITS[t].get("bad", false):
+		return maxf(0.0, Features.num("crew.trait_weight.trade_off", TRADE_OFF_WEIGHT))
+	var tier := clampi(int(TRAIT_TIERS.get(t, 0)), 0, TIER_NAMES.size() - 1)
+	return maxf(0.0, Features.num("crew.trait_weight." + TIER_NAMES[tier], TRAIT_WEIGHTS[tier]))
+
+
+func _pick_trait(keys: Array) -> String:
+	if not Features.on("trait_roll_weights"):
+		return keys[rng.randi() % keys.size()]
+	var total := 0.0
+	for t in keys:
+		total += trait_weight(t)
+	if total <= 0.0:
+		return keys[rng.randi() % keys.size()]
+	var r := rng.randf() * total
+	for t in keys:
+		r -= trait_weight(t)
+		if r < 0.0:
+			return t
+	return keys[-1]
 
 
 func traits(d: Dictionary) -> Array:

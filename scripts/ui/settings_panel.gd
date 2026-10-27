@@ -219,8 +219,10 @@ func _tab_game() -> void:
 	_head("AUDIO", Loc.t("เสียง"))
 	_volume(Loc.t("เสียงรวม"), "master")
 	_volume(Loc.t("ดนตรี"), "music")
+	_volume(Loc.t("บรรยากาศ"), "ambience")
 	_volume(Loc.t("เอฟเฟกต์"), "sfx")
-	_toggle(Loc.t("ปิดเสียงทั้งหมด"), "mute", Loc.t("เกมยังไม่มีเสียงในเวอร์ชันนี้ ค่าที่ตั้งไว้จะใช้ทันทีเมื่อเพิ่มเสียงเข้ามา"))
+	_volume(Loc.t("ปุ่มกด"), "ui")
+	_toggle(Loc.t("ปิดเสียงทั้งหมด"), "mute", Loc.t("บรรยากาศ = เสียงพื้นที่ เครื่องยนต์ ฝนและพายุ · บนเว็บเสียงเริ่มหลังแตะจอครั้งแรก"))
 
 	_head("LANGUAGE", Loc.t("ภาษา"))
 	var langs := []

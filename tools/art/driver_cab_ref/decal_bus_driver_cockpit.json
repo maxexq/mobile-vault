@@ -1,0 +1,77 @@
+{
+  "spec": "micro-asset/1",
+  "id": "decal_bus_driver_cockpit",
+  "title": "Bus driving cab using Viktor crew reference",
+  "why": "Give the bus a seated driver from our actual crew family, matching approved rig v3 while keeping its own cab shape.",
+  "parent": "veh_bus",
+  "kind": "decal",
+  "size": [
+    13,
+    18
+  ],
+  "frames": {
+    "count": 1
+  },
+  "palette": [
+    "ol0",
+    "skin1",
+    "skin3",
+    "gray1",
+    "gray3",
+    "gray5",
+    "snow0",
+    "snow2",
+    "cream2",
+    "blue1",
+    "wood1",
+    "lamp1"
+  ],
+  "outline": "ol0",
+  "light": "lamp",
+  "layer": "on_parent",
+  "anchor": {
+    "x": 18,
+    "y": 195,
+    "pivot": "top-left"
+  },
+  "generator": {
+    "method": "drawn",
+    "module": "tools/art/vehicles.py",
+    "function": "decal_bus_driver_cockpit"
+  },
+  "feature": null,
+  "replace": false,
+  "priority": "medium",
+  "author": "Codex art analyst",
+  "refs": [
+    "tools/art/micro/previews/driver-detail-v1/bus-driver-viktor-study.png",
+    "tools/art/micro/previews/driver-detail-v1/other-cabs-manifest.json",
+    "tools/art/micro/previews/driver-detail-v1/reference-bus-driver-native.png",
+    "tools/art/micro/previews/driver-detail-v1/other-cab-prompts.json",
+    "tools/art/micro/previews/driver-detail-v1/rig-driver-viktor-study.png",
+    "tools/art/micro/previews/driver-detail-v1/crew-preview-manifest.json",
+    "tools/art/micro/previews/driver-detail-v1/reference-rig-driver-native.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-viktor-sit-native.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-viktor-sit-left-40x.png",
+    "tools/art/micro/previews/driver-detail-v1/reference-actual-crew.png",
+    "tools/art/crew_roster_20/specs/dw_crew_viktor.json",
+    "tools/art/chars.py",
+    "tools/art/vehicles.py",
+    "scripts/autoload/atlas.gd"
+  ],
+  "acceptance": [
+    "Parames requested drivers for all four vehicles and previews of the other cars. Approved family direction: rig v3, Viktor crew identity. The bus-driver-viktor-study.png is a new review preview, not a separately approved production texture. Rebuild it on the native grid and show before/after for review; source geometry below takes precedence over generated-image drift.",
+    "Emit one atlas sprite decal_bus_driver_cockpit, 13x18 native pixels, using only the listed master colors and binary alpha. Keep veh_bus and ext_bus at 280x300.",
+    "Footprint x=18..30,y=195..212 inclusive,13x18,fully opaque, exactly the right lower driving-window pane. Keep the central divider at x=17, right border x=31 and top/bottom frame y=194/213 unchanged. Preserve the entire left pane and its reflection, mustard shell, stripes and trim.",
+    "Fit the same left-facing Viktor head and upper body in the narrow right pane. Keep the original crew head scale. Wheel/dash occupy the left edge of this pane, a thin seat back its right edge, and a tiny overhead lamp its top. Simplify fixtures rather than shrinking crew or moving the divider.",
+    "Use actual dw_crew_viktor 14x20 sit cell6, mirrored left, as strict reference: gray fur cap, pale weathered skin, small dark vertical eye, one nose projecting left, gray beard/bone collar, snow-blue jacket, narrow crew torso and soot outline. Adapt only driving arm/upper-body pose. No new generic character, head shrinking, detailed fingers, new resolution or change to the crew atlas.",
+    "Fully replace the old generic olive bust. Use dark gray1 interior, gray3/gray5 wheel/dash, cream2 or gray5 dial, wood1/gray3 seat and lamp1 only on tiny physical light/indicator. Keep head, nose and hand readable at1x. No broad amber backdrop or glow.",
+    "Emit the standalone micro sprite and bake it at its anchor into both veh_bus and ext_bus after weathering and before final atlas quantization. For the van use its specified polygon alpha mask. Static art-only, feature=null: no runtime overlay, animation or crew-assignment mechanic. Do not globally alter shared driver() behavior.",
+    "Regenerated decoded veh_bus/ext_bus pixels outside the specified footprint must match their pre-change sprites exactly; for the van, also preserve all pixels outside its window polygon. Preserve other vehicles, all crew strips, all cab_bus engine-room state art, rooms, engine bay trim, hit regions and runtime behavior. Compare cropped sprite contents; atlas coordinates may repack.",
+    "Use one-pixel soot outlines, flat clusters, binary alpha, nearest filtering and integer placement; no antialiasing, gradients, fine scratches, fractional scaling, rotation or thick new frame. Show source and result at1x and nearest4x/8x beside approved rig v3.",
+    "Move approved target, new vehicle preview, actual crew/cab crops, prompts, manifests and native production source to a tracked reference/source folder with .gdignore where appropriate; micro/ is git-ignored. Keep hashes/provenance. Full regeneration must reproduce accepted production art.",
+    "Run micro_asset.py verify for this ticket, checking native size/palette/alpha and outside-footprint stability. Review all four vehicles together plus cut-away/exterior and day/night in game. Follow CLAUDE.md required autotest, web export, README/changelog and staging PR workflow; no feature-PR version bump."
+  ],
+  "notes": "Child of the four-vehicle driver-cab art epic. All cabin coordinates come from tools/art/vehicles.py; the driver window is separate from the lower engine room. Rig v3 is the approved visual-family reference. This vehicle preview awaits appearance review. No paid generation or installation. Claude builds and opens PRs; preserve In Progress ticket ownership. If native readability cannot meet the spec, comment and request a decision.",
+  "plane": "MV-521"
+}

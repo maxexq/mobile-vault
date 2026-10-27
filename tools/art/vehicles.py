@@ -479,6 +479,103 @@ BOGIE_DETAIL = decal_train_bogie_detail()
 # where the cage sits on the nose lamp: (cut-away after cut_cab, closed shell); the train is excluded
 LAMP_CAGE_AT = {"van": ((0, 210), (0, 210)), "bus": ((0, 222), (0, 224)), "rig": ((0, 228), (0, 230))}
 
+# ------------------------------------------------------------------ MV-528 van-reference fittings (MV-529..535)
+# Exact native rows from the approved micro-asset specs (sources: tools/art/vehicle_details_ref/). Baked into the
+# shells like the MV-388 details: after weathering, before the exterior copy. Each is also its own atlas sprite.
+def _rows(legend, rows):
+    img = new(len(rows[0]), len(rows))
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            px(img, x, y, c(legend[ch]))
+    return img
+
+
+FITTING_ROWS = {
+    "decal_vehicle_pillar_joint": ({'A': 'ol0', 'B': 'gray1', 'C': 'gray2', 'D': 'gray3', 'E': 'gray4', 'F': 'gray5', 'G': 'orange1', 'H': 'orange2'}, [   # MV-529
+        "AAAAAA",
+        "AFEEEA",
+        "ABDDDA",
+        "ADDDFA",
+        "ADGDBA",
+        "AAAAAA",
+    ]),
+    "decal_vehicle_roof_seam": ({'A': 'ol0', 'B': 'gray1', 'C': 'gray2', 'D': 'gray3', 'E': 'gray4', 'F': 'gray5', 'G': 'orange1', 'H': 'orange2'}, [   # MV-530
+        "AAAAAAAAAAAA",
+        "AEEEEEEEEEEA",
+        "ADFDDDDDDFDA",
+        "ADBDDDDDDBDA",
+        "ADDDGGDDDDDA",
+        "AAAAAAAAAAAA",
+    ]),
+    "decal_vehicle_fuel_cap": ({'A': 'ol0', 'B': 'gray1', 'C': 'gray2', 'D': 'gray3', 'E': 'gray4', 'F': 'gray5', 'G': 'orange1', 'H': 'orange2'}, [   # MV-531
+        "EEECACEE",
+        "EEDEEECE",
+        "EDCEDEEC",
+        "EAEDEDDC",
+        "EBDDDCDC",
+        "EECDDDCD",
+        "EEFCBCEE",
+        "FEFEEEEF",
+    ]),
+    "decal_van_door_hardware": ({'A': 'ol0', 'B': 'blue1', 'C': 'blue2', 'D': 'blue3', 'E': 'blue4', 'F': 'gray3', 'G': 'gray5', 'H': 'orange1'}, [   # MV-532
+        "CCCCCCCCCCCCCC",
+        "CAAACCCCCCCCCC",
+        "CAGACCCCCCCCCC",
+        "CAFAAAAAAAAACC",
+        "CAFAAGGGGGFACC",
+        "CAFAAFFFFFFACC",
+        "CAFAAAAAAAAACC",
+        "CAGACCCCCCCCCC",
+        "CAAHCCCCCCCCCC",
+        "CCCCCCCCCCCCCC",
+    ]),
+    "decal_bus_service_vent": ({'A': 'ol0', 'B': 'yellow1', 'C': 'yellow2', 'D': 'gray1', 'E': 'gray3', 'F': 'gray5', 'G': 'orange1'}, [   # MV-533
+        "CAAAAAAAAAAC",
+        "CFFEEEEEEEAC",
+        "CAFDDDDDDEAC",
+        "CAFEEEEEEEAC",
+        "CAFDDDDDDEAC",
+        "CAFEEEEEEEAC",
+        "CAFDDDDDDEGC",
+        "CAAAAAAAAAAC",
+    ]),
+    "decal_rig_door_latch": ({'A': 'ol0', 'B': 'red1', 'C': 'red2', 'D': 'gray1', 'E': 'gray3', 'F': 'gray5', 'G': 'orange1'}, [   # MV-534
+        "CCCCCCCC",
+        "CAAAAAAC",
+        "CAFFFEAC",
+        "CAEEEEAC",
+        "CAAAAAGC",
+        "CCCCCCCC",
+    ]),
+    "decal_train_access_hinges": ({'A': 'ol0', 'B': 'gray2', 'C': 'gray3', 'D': 'gray4', 'E': 'gray5', 'F': 'orange1'}, [   # MV-535
+        "AAACCCCCCC",
+        "ADEDDDDDAC",
+        "ADAAAAAAAC",
+        "ADACCCCCCC",
+        "ADACCCCCCC",
+        "ADEDDDDDAC",
+        "ADAAAAAFAC",
+        "AAACCCCCCC",
+    ]),
+}
+FITTINGS = {k: _rows(*v) for k, v in FITTING_ROWS.items()}
+# per-tier fitting (shell px), clear of the driver window, engine-room cut-out, rooms and the war stripe
+TIER_FITTING = {"van": ("decal_van_door_hardware", (16, 185)), "bus": ("decal_bus_service_vent", (20, 182)),
+                "rig": ("decal_rig_door_latch", (26, 214)), "train": ("decal_train_access_hinges", (10, 118))}
+
+
+def fittings(img, floors, trailer, tier=""):
+    """MV-528: pillar joints on every floor, a roof seam cap, the fuel cap (van / bus / rig) and the tier fitting"""
+    for fb in range(floors):
+        for x in ((16, 218) if trailer else (38, 248)):
+            paste(img, FITTINGS["decal_vehicle_pillar_joint"], x, 204 - 56 * fb)
+    paste(img, FITTINGS["decal_vehicle_roof_seam"], 206 if trailer else 216, roof_y(floors))
+    if tier in ("van", "bus", "rig"):
+        paste(img, FITTINGS["decal_vehicle_fuel_cap"], 74, 274)
+    if tier in TIER_FITTING:
+        name, at = TIER_FITTING[tier]
+        paste(img, FITTINGS[name], *at)
+
 
 def prop_car_chain_idle():
     """MV-399: 4 frames 6x14 at 2 fps: a safety chain hanging from the rear deck; the top two pixels are fixed,
@@ -521,6 +618,118 @@ def prop_car_mudflap_idle():
     return out
 
 
+# ------------------------------------------------------------------ MV-519 driving cabs (Viktor, approved rig v3)
+# Each cab is a micro-asset decal baked into veh_<tier> / ext_<tier> at its anchor (frame 0). The driver is the
+# actual dw_crew_viktor sit frame (chars.crew_frame) mirrored to face left; only the arm is redrawn to reach the
+# wheel. decal_<tier>_driver_cockpit_idle_0..3 = the same decal with one tiny change each, played over the
+# window by Vehicle (switch driver_cab): 0 = the baked look, 1 = Viktor blinks, 2 = the indicator goes dark,
+# 3 = his hand nudges the wheel.
+DRIVER_CAB = {
+    # anchor (shell px), size, Viktor's top-left, wheel rim x, dash top y (None = no dash), seat x,
+    # overhead lamp (x, y) / None, ceiling rail y / None, dial, indicator
+    "van":   {"at": (11, 153), "size": (23, 29), "vk": (10, 11), "wheel": 9, "dash": 25, "seat": 21,
+              "lamp": (16, 6), "ceil": 6, "dial": (12, 26), "ind": (14, 26)},
+    "bus":   {"at": (18, 195), "size": (13, 18), "vk": (0, 2), "wheel": 0, "dash": 16, "seat": 12,
+              "lamp": (2, 0), "ceil": 0, "dial": (1, 17), "ind": (3, 17)},
+    "rig":   {"at": (17, 193), "size": (17, 17), "vk": (3, 2), "wheel": 1, "dash": 15, "seat": 15,
+              "lamp": (2, 0), "ceil": 0, "dial": (1, 16), "ind": (3, 16)},
+    "train": {"at": (18, 66), "size": (18, 14), "vk": (5, 0), "wheel": 3, "dash": None, "seat": 15,
+              "lamp": None, "ceil": None, "dial": (2, 4), "ind": (2, 6)},
+}
+VAN_GLASS = [(12, 0), (22, 0), (22, 28), (0, 28)]      # the van's original inner windshield, decal-local
+VAN_GLINT = (5, 25, 13, 3)                              # and its reflection
+
+
+def _viktor(blink):
+    """dw_crew_viktor sit (strip cell 6), mirrored left, exactly as the crew strip draws it"""
+    from . import chars
+    return flip(chars.crew_frame("viktor", "sit", 0, blink=blink))
+
+
+def _driver_cab(tier, frame=0):
+    d = DRIVER_CAB[tier]
+    w, h = d["size"]
+    img = new(w, h)
+    rect(img, 0, 0, w, h, c("gray1"))                       # dark cabin
+    ox, oy = d["vk"]
+    sx = d["seat"]
+    vline(img, sx, oy + 9, h - oy - 9, OL)                  # worn seat back behind his right
+    if sx + 1 < w:
+        vline(img, sx + 1, oy + 10, h - oy - 10, c("wood1"))
+        px(img, sx + 1, oy + 10, c("gray3"))
+    if d["ceil"] is not None:                               # ceiling rail
+        hline(img, 0, d["ceil"], w, c("wood1"))
+    if d["dash"] is not None:                               # dash under the windscreen: one dial, one indicator
+        dy = d["dash"]
+        rect(img, 0, dy, w, h - dy, c("gray3"))
+        hline(img, 0, dy, w, OL)
+    paste(img, _viktor(frame == 1).crop((0, 0, 14, 16)), ox, oy)   # head, collar, jacket; the sill hides the rest
+    if d["dash"] is not None:
+        hline(img, 0, d["dash"], ox + 3, OL)
+        rect(img, 0, d["dash"] + 1, ox + 3, h - d["dash"] - 1, c("gray3"))
+    # driving arm: from his shoulder forward (left) to the wheel, sleeve snow2 over snow0, soot above
+    wx = d["wheel"]
+    nudge = 1 if frame == 3 else 0
+    ay = oy + 12
+    for x in range(wx + 1, ox + 6):
+        px(img, x, ay - 1, OL)
+        px(img, x, ay, c("snow2"))
+        px(img, x, ay + 1, c("snow0"))
+    # steering wheel seen edge-on: a tilted rim, soot-lined, hand gripping its lower side
+    for k in range(4):
+        x = wx + (1 if k < 2 else 0)
+        px(img, x, ay - 3 + k, c("gray5"))
+        px(img, x - 1, ay - 3 + k, OL)
+    px(img, wx + 1, ay - nudge, c("skin3"))                 # hand on the rim
+    px(img, wx + 2, ay - nudge, c("skin1"))
+    if nudge:
+        px(img, wx + 1, ay, c("snow2"))
+        px(img, wx + 2, ay, c("snow2"))
+    px(img, *d["dial"], c("cream2"))
+    px(img, *d["ind"], c("lamp1") if frame != 2 else c("gray3"))
+    if d["lamp"] is not None:                               # overhead practical lamp in a soot housing
+        lx, ly = d["lamp"]
+        hline(img, lx, ly, 3, OL)
+        px(img, lx + 1, ly + 1, c("lamp1"))
+        px(img, lx, ly + 1, OL)
+        px(img, lx + 2, ly + 1, OL)
+    return img
+
+
+def _cab_frame(tier, img):
+    """vehicle-specific framing of a cab decal (what the shell's window shape asks for)"""
+    w, h = img.size
+    if tier == "van":
+        mask = new(w, h)
+        poly(mask, VAN_GLASS, OL)
+        glass = new(w, h)
+        rect(glass, 0, 0, w, h, c("blue2"))
+        line(glass, *VAN_GLINT, c("blue4"))
+        gx0, gy0, gx1, gy1 = VAN_GLINT
+        out = new(w, h)
+        for y in range(h):
+            # cold glass and its glint on the upper/left slope, the cabin behind it lower/right
+            edge = gx0 + (gy0 - min(y, gy0)) * (gx1 - gx0) // (gy0 - gy1) + 2
+            for x in range(w):
+                if mask.getpixel((x, y))[3]:
+                    inside = y >= 6 and x >= edge
+                    out.putpixel((x, y), img.getpixel((x, y)) if inside else glass.getpixel((x, y)))
+        return out
+    if tier == "train":
+        hline(img, 0, 0, w, OL)                             # armoured visor over the slit
+        hline(img, 0, 1, w, c("gray4"))
+        px(img, 0, 1, OL)
+        px(img, w - 1, 1, OL)
+        vline(img, 0, 2, h - 2, OL)
+        vline(img, w - 1, 2, h - 2, OL)
+        hline(img, 0, h - 1, w, OL)                         # sill hides the lower body
+    return img
+
+
+def driver_cab_frames(tier):
+    return [_cab_frame(tier, _driver_cab(tier, f)) for f in range(4)]
+
+
 def shell_details(img, floors, trailer, tier=""):
     """bake the static MV-388 details once into a weathered shell (before exterior() copies it)"""
     xs = (16, 218) if trailer else (38, 248)
@@ -533,6 +742,7 @@ def shell_details(img, floors, trailer, tier=""):
     if tier == "train":
         for bx in (7, 141):
             paste(img, BOGIE_DETAIL, bx, 276)
+    fittings(img, floors, trailer, tier)             # MV-528
 
 
 # ------------------------------------------------------------------ assemble
@@ -548,6 +758,29 @@ def roof_props(img, floors, tier):
         rect(img, 40, r - 4, 40, 2, OL)
         for x in (42, 56, 70):
             vline(img, x, r - 4, 4, OL)
+
+
+ROOF_LEGACY_X, ROOF_LEGACY_W = 38, 146     # roof-local box that holds the old planters / tank / dish
+
+
+def split_roof_parts(raw, shells, floors):
+    """MV-462: lift the old planters, water tank and dish out of the finished (weathered) shells. A pixel goes
+    when the roof props draw it only with those parts and nothing drawn later covered it (raw = the shell
+    before weathering). It is replaced by what the props draw without them. Returns the lifted pixels as
+    roof_legacy_<tier> (ROOF_LEGACY_W x 38, at roof-local x=ROOF_LEGACY_X), the switch-off look."""
+    full = T.gen_roof_props(floors, flag=False)
+    bare = T.gen_roof_props(floors, flag=False, parts=False)
+    off = roof_y(floors) - 36
+    legacy = new(ROOF_LEGACY_W, 38)
+    for y in range(38):
+        for x in range(ROOF_LEGACY_X, ROOF_LEGACY_X + ROOF_LEGACY_W):
+            p = full.getpixel((x, y))
+            if p == bare.getpixel((x, y)) or raw.getpixel((x, y + off)) != p:
+                continue
+            legacy.putpixel((x - ROOF_LEGACY_X, y), shells[0].getpixel((x, y + off)))
+            for sh in shells:
+                sh.putpixel((x, y + off), bare.getpixel((x, y)))
+    return legacy
 
 
 def gen_tier(tier):
@@ -657,15 +890,22 @@ def rails_strip():
 
 def gen_vehicles():
     for tier, cfg in TIERS.items():
-        shell = T.weather(gen_tier(tier), len(tier) * 11)
+        raw = gen_tier(tier)
+        shell = T.weather(raw.copy(), len(tier) * 11)
         shell_details(shell, cfg["floors"], False, tier)
+        cab = driver_cab_frames(tier)
+        paste(shell, cab[0], *DRIVER_CAB[tier]["at"])      # MV-519: before exterior() copies the shell
         ext = exterior(shell, cfg["floors"], COLS, cfg["paint"], tier)
         EB.cut_cab(shell, tier)          # v4.6: the cab's bottom floor is the walk-in engine room
         if tier in LAMP_CAGE_AT:
             paste(shell, LAMP_CAGE, *LAMP_CAGE_AT[tier][0])
             paste(ext, LAMP_CAGE, *LAMP_CAGE_AT[tier][1])
+        add(f"roof_legacy_{tier}", split_roof_parts(raw, [shell, ext], cfg["floors"]))
         add(f"ext_{tier}", ext)
         add(f"veh_{tier}", shell)
+        add(f"decal_{tier}_driver_cockpit", cab[0])
+        for i in range(1, len(cab)):
+            add(f"decal_{tier}_driver_cockpit_idle_{i}", cab[i])
     for kind in ("trailer", "wagon"):
         sh = T.weather(gen_trailer(kind), len(kind) * 5)
         shell_details(sh, 2, True)
@@ -678,6 +918,8 @@ def gen_vehicles():
     add("prop_car_leaf_spring", prop_car_leaf_spring())
     add("decal_car_lamp_cage", LAMP_CAGE)
     add("decal_train_bogie_detail", BOGIE_DETAIL)
+    for name, img in FITTINGS.items():               # MV-528: the van-reference fittings as their own sprites
+        add(name, img)
     for i, f in enumerate(prop_car_chain_idle()):
         add(f"prop_car_chain_idle_{i}", f)
     for i, f in enumerate(prop_car_mudflap_idle()):

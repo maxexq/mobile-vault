@@ -9,7 +9,10 @@ var _grid: GridContainer
 var _scrap_lbl: Label
 var _frame_btn: Button
 var _frame_info: Label
+var _frame_title: Label
 var _repair_btn: Button
+var _repair_part_btn: Button   # MV-541: repair a chunk (repair.part of the max hull)
+var _repair_info: Label        # MV-541: free regen per minute and the crew discount
 
 
 func _build() -> void:
@@ -24,8 +27,17 @@ func _build() -> void:
 	_repair_btn.pressed.connect(func():
 		Game.repair_hull()
 		refresh())
+	_repair_part_btn = UIKit.button("", "blue", "wrench")
+	_repair_part_btn.name = "RepairPart"
+	_repair_part_btn.pressed.connect(func():
+		Game.repair_hull(Features.num("repair.part", 0.25))
+		refresh())
+	top.add_child(_repair_part_btn)
 	top.add_child(_repair_btn)
 	body.add_child(top)
+	_repair_info = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_DIM)
+	_repair_info.name = "RepairInfo"
+	body.add_child(_repair_info)
 	var v := make_list(4)
 	_grid = GridContainer.new()
 	_grid.columns = 1
@@ -40,7 +52,8 @@ func _build() -> void:
 	var fv := UIKit.vbox(1)
 	fv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fv.add_child(UIKit.label("UPGRADE MOBILE VAULT", UIKit.FP, UIKit.C_GOLD, true))
-	fv.add_child(UIKit.label(Loc.t("อัปเกรดโครงรถ / เปิดชั้นใหม่"), UIKit.FS_SMALL, UIKit.C_GOLD))
+	_frame_title = UIKit.label(Loc.t("อัปเกรดโครงรถ / เปิดชั้นใหม่"), UIKit.FS_SMALL, UIKit.C_GOLD)
+	fv.add_child(_frame_title)
 	_frame_info = UIKit.wrap_label("", UIKit.FS_SMALL)
 	fv.add_child(_frame_info)
 	fh.add_child(fv)
@@ -73,12 +86,50 @@ func refresh() -> void:
 		for t in Data.buildable():
 			if int(Data.room_def(t).unlock) == lv + 1:
 				new_rooms.append(Data.room_def(t).th)
-		_frame_info.text = Loc.t("Lv.%d → Lv.%d: ห้อง +1, คลังใหญ่ขึ้น, ซ่อมตัวถังเต็ม%s%s") % [lv, lv + 1, next_b, (Loc.t(" · ห้องใหม่: ") + ", ".join(new_rooms)) if not new_rooms.is_empty() else ""]
+		var nr := (Loc.t(" · ห้องใหม่: ") + ", ".join(new_rooms)) if not new_rooms.is_empty() else ""
+		if Features.on("vault_upgrade_v2"):
+			_frame_info.text = vault_card_text(lv, next_b, nr)
+		else:
+			_frame_info.text = Loc.t("Lv.%d → Lv.%d: ห้อง +1, คลังใหญ่ขึ้น, ซ่อมตัวถังเต็ม%s%s") % [lv, lv + 1, next_b, nr]
 		_frame_btn.text = "%d" % Game.vault_upgrade_cost()
 	else:
-		_frame_info.text = Loc.t("โครงรถบ้านเลเวลสูงสุดแล้ว!")
+		_frame_info.text = Loc.t("โครงรถบ้านเลเวลสูงสุดแล้ว!") + (vault_bonus_line() if Features.on("vault_upgrade_v2") else "")
 		_frame_btn.text = "MAX"
+	_frame_title.text = Loc.t("อัปเกรดโครงรถ") if Features.on("vault_upgrade_v2") else Loc.t("อัปเกรดโครงรถ / เปิดชั้นใหม่")
 	_update_affordable()
+
+
+## MV-545: what the next Vault level really gives on this vehicle (never promises a room it has no space for)
+static func vault_card_text(lv: int, next_b: String, new_rooms: String) -> String:
+	var gain := Game.vault_rooms_at(lv + 1) - Game.vault_rooms_at(lv)
+	var rooms := ""
+	if gain > 0:
+		rooms = Loc.t("ห้อง +%d") % gain
+	elif int(Data.SLOTS_PER_LEVEL[lv + 1]) > int(Data.SLOTS_PER_LEVEL[lv]):
+		var big := Game.bigger_vehicle()
+		rooms = Loc.t("ห้องเต็มรถแล้ว (การผลิต +%d%% แทน)") % roundi(Features.num("vault.prod_per_banked_room", 0.10) * 100.0)
+		if big != "":
+			rooms += Loc.t(" · เปลี่ยนเป็น%s (%d ชั้น) เพื่อใช้ห้องที่ปลดล็อกไว้") % [Loc.t(str(Data.VEHICLES[big].th)), int(Data.VEHICLES[big].floors)]
+	var parts := []
+	if rooms != "":
+		parts.append(rooms)
+	parts.append(Loc.t("ตัวถังสูงสุด +%d") % roundi(Features.num("vault.hull_per_level", 15.0)))
+	parts.append(Loc.t("การผลิต +%d%%") % roundi(Features.num("vault.prod_per_level", 0.05) * 100.0))
+	parts.append(Loc.t("คลังใหญ่ขึ้น, ซ่อมตัวถังเต็ม"))
+	return ("Lv.%d → Lv.%d: " % [lv, lv + 1]) + ", ".join(parts) + next_b + new_rooms + vault_bonus_line()
+
+
+## what the Vault gives now ("" at Lv.1)
+static func vault_bonus_line() -> String:
+	var h := roundi(Game.vault_hull_bonus())
+	var p := roundi((Game.vault_prod_mult() - 1.0) * 100.0)
+	if h <= 0 and p <= 0:
+		return ""
+	var t := Loc.t("
+ตอนนี้: ตัวถัง +%d · การผลิต +%d%%") % [h, p]
+	if Game.vault_banked_rooms() > 0:
+		t += Loc.t(" (รวมห้องที่รอรถคันใหญ่ %d ห้อง)") % Game.vault_banked_rooms()
+	return t
 
 
 func _card(t: String) -> Control:
@@ -124,5 +175,23 @@ func _update_affordable() -> void:
 			b.disabled = b.get_meta("locked") or not Game.can_afford(b.get_meta("cost"))
 	_frame_btn.disabled = int(Game.s.vault_level) >= Data.MAX_VAULT_LEVEL or float(Game.s.res.scrap) < Game.vault_upgrade_cost()
 	var missing := Game.hull_max() - float(Game.s.hull)
-	_repair_btn.text = Loc.t("ซ่อม %d%% (%d)") % [int(float(Game.s.hull) / Game.hull_max() * 100.0), int(ceil(missing * 0.6))]
-	_repair_btn.disabled = missing < 1.0 or float(Game.s.res.scrap) < ceil(missing * 0.6)
+	var full := Game.repair_cost()
+	var t := Loc.t("ซ่อม %d%% (%d)") % [int(float(Game.s.hull) / Game.hull_max() * 100.0), full]
+	if _repair_btn.text != t:
+		_repair_btn.text = t
+	_repair_btn.disabled = missing < 1.0 or float(Game.s.res.scrap) < full
+	var v2 := Features.on("hull_repair_v2")
+	var part := Features.num("repair.part", 0.25)
+	# the chunk button only when it repairs less than the full one
+	_repair_part_btn.visible = v2 and Game.repair_amount(part) + 0.5 < missing
+	if _repair_part_btn.visible:
+		var pc := Game.repair_cost(part)
+		var pt := Loc.t("+%d%% (%d)") % [roundi(part * 100.0), pc]
+		if _repair_part_btn.text != pt:
+			_repair_part_btn.text = pt
+		_repair_part_btn.disabled = float(Game.s.res.scrap) < pc
+	_repair_info.visible = v2
+	if v2:
+		var it := Loc.t("ซ่อมเองฟรี +%.1f HP/นาที (ลูกเรือห้องเครื่อง/โรงช่าง) · ส่วนลดค่าซ่อม %d%%") % [Game.hull_regen_pm(), roundi(float(Game.repair_discount().total) * 100.0)]
+		if _repair_info.text != it:
+			_repair_info.text = it

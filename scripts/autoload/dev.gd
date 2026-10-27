@@ -222,13 +222,18 @@ func set_tod(v: float) -> void:
 	act("time of day %.2f" % v)
 
 
-## MV-369: one-click real map preview at an exact simulation time.
-func background_preview(tod: float) -> void:
-	goto_biome(0)
+## MV-548: one-click approved Industrial Ruins map preview at an exact simulation time.
+func background_preview(tod: float, biome: int = 0) -> void:
+	goto_biome(biome)
 	weather("clear")
 	set_tod(tod)
-	act("industrial background preview", {"tod": tod})
+	act("background preview", {"tod": tod, "biome": biome})
 	changed.emit()
+
+
+## MV-539: clear-weather previews of the real desert biome.
+func desert_background_preview(tod: float) -> void:
+	background_preview(tod, 1)
 
 
 func weather(w: String) -> void:
@@ -353,6 +358,25 @@ func set_vault(n: int) -> void:
 	Game.travel_changed.emit()
 
 
+## MV-541: pay for a repair like the player does (part 1.0 = full, 0.25 = the chunk button)
+func repair(part: float) -> void:
+	var c := Game.repair_cost(part)
+	var ok := Game.repair_hull(part)
+	act("repair %d%% for %d scrap: %s" % [roundi(part * 100.0), c, "ok" if ok else "no"])
+
+
+## MV-541: session override of the hull_repair_v2 switch
+func hull_repair_v2(on: bool) -> void:
+	Features.set_override("features", "hull_repair_v2", on)
+	act("hull repair v2 %s" % ("on" if on else "off"))
+
+
+## MV-545: session override of the vault_upgrade_v2 switch
+func vault_upgrade_v2(on: bool) -> void:
+	Features.set_override("features", "vault_upgrade_v2", on)
+	act("vault upgrade v2 %s" % ("on" if on else "off"))
+
+
 func set_hull(frac: float) -> void:
 	Game.s.hull = Game.hull_max() * frac
 	act("hull %d%%" % int(frac * 100))
@@ -374,6 +398,33 @@ func engine_bay_switch(v: bool) -> void:
 ## MV-388: the vehicle_detail switch for this tester (leaf springs over the road wheels)
 func vehicle_detail_switch(v: bool) -> void:
 	feature_set("vehicle_detail", v)
+
+
+## MV-462: the cozy_roof switch (new water tank, dish, planter trays and rest-deck art; off = the old roof)
+func cozy_roof_switch(v: bool) -> void:
+	feature_set("cozy_roof", v)
+
+
+## MV-462: show the roof rest deck at level 0..3 (0 = removed) to preview its art; a tester tool, no cost
+func roof_deck_preview(lv: int) -> void:
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	Game.s.mods["roof_deck"] = clampi(lv, 0, int(Mods.MODS.roof_deck.max))
+	act("roof deck preview Lv%d" % lv)
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+
+
+## MV-519: the driver_cab switch (Viktor's small moves in the driving cab; the seated driver art stays)
+func driver_cab_switch(v: bool) -> void:
+	feature_set("driver_cab", v)
+
+
+## MV-519: one driver move now: "blink", "lamp" (dash indicator flicker) or "wheel" (hand nudges the wheel)
+func driver_cab_preview(kind: String) -> bool:
+	var v = get_tree().get_first_node_in_group("vehicle_fx")
+	act("driver cab " + kind)
+	return v != null and v.driver_act(kind)
 
 
 ## MV-388: the vehicle_ambience switch (engine-room fan / hose / hot vent) and one hot-vent wisp now
@@ -565,10 +616,155 @@ func trait_preview(mode: String) -> void:
 	Trace.rec("god", "trait preview %s" % mode)
 
 
+## MV-497: show the trait tiers or the untiered fallback (session override of the trait_tiers switch, read-only)
+func trait_tiers(on: bool) -> void:
+	Features.set_override("features", "trait_tiers", on)
+	Trace.rec("god", "trait tiers %s" % ("on" if on else "off"))
+
+
 ## hold every trait card light and move it one phase (read-only)
 func trait_step() -> void:
 	TraitFx.frame_step()
 	Trace.rec("god", "trait step %d" % TraitFx.current_phase())
+
+
+# ------------------------------------------------------------------ MV-500 / MV-129 seeded world map
+## a brand-new world for this run from a random seed (GOD only: in play a world is made once per run / lap)
+func world_new(seed_text: String = "") -> void:
+	var w := WorldMap.create(seed_text if seed_text != "" else WorldMap.random_seed())
+	act("world new", {"seed": w.seed})
+
+
+## MV-514: turn this run into an old (pre-map) save and migrate it: no world, the vehicle in biome b on the old road.
+## kind: "mid" (half-way through the biome), "checkpoint" (at its end), "site" (parked at its first landmark),
+## "done" (its first landmark already explored), "lap" (the same, one lap further). Returns what reconcile() did.
+func world_legacy(kind: String, b: int) -> String:
+	b = clampi(b, 0, Data.BIOMES.size() - 1)
+	Game.s.erase("world")
+	Game.s.biome = b
+	Game.s["at_site"] = ""
+	var start := Data.biome_start_km(b)
+	var length := float(Data.biome(b).length)
+	Game.s.km = start + length * 0.5
+	var first: String = Expedition.biome_sites(b)[0] if not Expedition.biome_sites(b).is_empty() else ""
+	match kind:
+		"checkpoint":
+			Game.s.km = start + length
+		"site":
+			if first != "":
+				Game.s.km = Expedition.site_km(first)
+				Game.s["at_site"] = first
+		"done":
+			if first != "":
+				Expedition.mark_done(first)
+		"lap":
+			Game.s.lap = int(Game.s.lap) + 1
+	var did := WorldMap.reconcile() if WorldMap.on() else "switch off"
+	act("world legacy %s biome %d" % [kind, b], {"did": did, "at": WorldMap.world().get("at", "")})
+	Game.travel_changed.emit()
+	return did
+
+
+## MV-514: run the migration again ("" = nothing to change: running it twice is a no-op)
+func world_reconcile() -> String:
+	var did := WorldMap.reconcile()
+	act("world reconcile", {"did": did})
+	Game.toast.emit("ย้ายเซฟ: %s" % (did if did != "" else "ตรงกันแล้ว ไม่มีอะไรเปลี่ยน"), "info")
+	return did
+
+
+## MV-130: drive the world map. dest = a stop id, "next" = the nearest landmark not done yet, "exit" = the world exit
+func world_drive(dest: String) -> bool:
+	if dest == "next":
+		dest = ""
+		var best := INF
+		for n in WorldMap.world().get("nodes", []):
+			if n.has("site") and not Expedition.is_done(str(n.site)):
+				var rt := WorldMap.route(WorldMap.here(), str(n.id), int(Game.s.vault_level))
+				if not rt.is_empty() and float(rt.km) < best and str(n.id) != WorldMap.here():
+					best = float(rt.km)
+					dest = str(n.id)
+	elif dest == "exit":
+		dest = "world_exit"
+	var ok := dest != "" and WorldMap.drive_to(dest)
+	Trace.rec("god", "world drive %s" % dest, {"ok": ok})
+	if not ok:
+		Game.toast.emit("ไปไม่ได้: %s" % (WorldMap.drive_block(dest) if dest != "" else "ไม่มีแลนด์มาร์กที่ยังไม่ไป"), "warn")
+	return ok
+
+
+## jump to just before the end of the current road (the next step arrives)
+func world_finish_road() -> void:
+	var t := WorldMap.trip()
+	if t.is_empty():
+		return
+	t.prog = maxf(0.0, float(WorldMap.edge(str(t.edges[int(t.i)])).km) - 0.01)
+	act("world finish road")
+
+
+## MV-542: the reported case: drive to the nearest reachable stop, then the real "while you were away" catch-up
+## (Game._offline_progress) long enough to arrive; the vehicle should say it arrived and Go should open the map
+func world_arrive_offline() -> String:
+	if not WorldMap.usable():
+		return "map off"
+	var here := WorldMap.here()
+	var best := ""
+	var best_km := INF
+	for n in WorldMap.world().nodes:
+		var id := str(n.id)
+		if id == here or str(n.type) == "exit":
+			continue
+		var rt := WorldMap.route(here, id, int(Game.s.vault_level))
+		if not rt.is_empty() and float(rt.km) < best_km:
+			best_km = float(rt.km)
+			best = id
+	if best == "" or not WorldMap.drive_to(best):
+		return "no destination"
+	Game.s.traveling = true
+	Game._offline_progress(1800.0)
+	act("world arrive offline at %s (%.1f km)" % [best, best_km])
+	Game.travel_changed.emit()
+	return best
+
+
+## drive offline for this many minutes (the real offline catch-up step), to watch arrivals and blockers
+func world_offline(minutes: float) -> void:
+	var left := minutes * 60.0
+	while left > 0.0:
+		Game._simulate(minf(60.0, left), true)
+		left -= 60.0
+	act("world offline %d min" % int(minutes))
+	Game.travel_changed.emit()
+
+
+## MV-515: open the world map screen on a known test world (turns the switch on for this tester; GOD only)
+func world_screen(seed_text: String = "TEST-515") -> void:
+	Features.set_override("features", "seeded_world_map", true)
+	if WorldMap.world().is_empty() or str(WorldMap.world().seed) != seed_text:
+		WorldMap.create(seed_text)
+	act("world screen %s" % seed_text)
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud:
+		hud.open_panel("map")
+
+
+func world_cancel() -> void:
+	WorldMap.cancel_trip()
+	Trace.rec("god", "world cancel trip")
+
+
+## regenerate from the saved seed and compare with the saved graph (nothing is replaced); read-only, not cheated
+func world_verify() -> bool:
+	var w := WorldMap.world()
+	if w.is_empty():
+		return false
+	var again := WorldMap.generate(str(w.seed), int(w.lap))
+	# both through JSON first: a loaded save holds floats (84.0) where a fresh world holds ints (84)
+	var norm := func(x): return JSON.stringify(JSON.parse_string(JSON.stringify(x)))
+	var same: bool = norm.call(again.nodes) == norm.call(w.nodes) and norm.call(again.edges) == norm.call(w.edges)
+	Trace.rec("god", "world verify", {"seed": w.seed, "same": same})
+	Game.toast.emit("seed %s สร้างซ้ำได้โลกเดิม" % w.seed if same else "seed %s สร้างซ้ำแล้วไม่ตรง!" % w.seed, "info" if same else "warn")
+	return same
 
 
 func finish_construction() -> void:
@@ -803,6 +999,12 @@ func spawn_boss(id: String) -> void:
 	act("spawn boss " + id)
 
 
+## MV-544: compare the same roaming boss under the current / legacy balance rules.
+func roaming_boss_preview(enabled: bool) -> void:
+	feature_set("roaming_boss_balance", enabled)
+	spawn_boss("bloat_king")
+
+
 func spawn_mob(id: String, n: int) -> void:
 	var q := []
 	for i in n:
@@ -821,6 +1023,29 @@ func spawn_elites(n: int) -> void:
 	act("spawn elites x%d" % n)
 
 
+## MV-517: real enemies at their new size: "normal" / "elite" = one of this biome's mobs, "boss" = this biome's
+## boss as a wave boss, "warlord" = the checkpoint warlord, "lineup" = a normal, an elite and the boss side by side
+func enemy_size_preview(kind: String) -> void:
+	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	var mob: String = mobs[0]
+	for m in mobs:
+		if not str(Combat.MOBS[m].sprite).begins_with("dw_"):
+			mob = m        # a monster, not a raider from the crew sheet
+			break
+	var lvl := Combat.enemy_level()
+	var q := []
+	if kind in ["normal", "lineup"]:
+		q.append({"t": 0.2, "mob": mob, "lvl": lvl, "no_mutate": true})
+	if kind in ["elite", "lineup"]:
+		q.append({"t": 0.9, "mob": mob, "lvl": lvl, "elite": true, "no_mutate": true})
+	if kind in ["boss", "lineup"]:
+		q.append({"t": 1.6, "boss": "boss", "lvl": lvl})
+	if kind == "warlord":
+		q.append({"t": 0.3, "boss": "warlord", "lvl": Combat.warlord_level()})
+	Combat.debug_spawn(q, kind in ["boss", "warlord", "lineup"])
+	act("enemy size preview " + kind)
+
+
 ## MV-387: play the warlord / boss / elite entrance without spawning anything (a stand-in enemy, id -1)
 func entrance_preview(kind: String) -> void:
 	var bd: Dictionary = Combat.boss_def(Combat.biome_id())
@@ -829,6 +1054,24 @@ func entrance_preview(kind: String) -> void:
 		"name": ("บอสด่านตรวจ: " if kind == "warlord" else "") + str(bd.get("th", "?"))}
 	Combat.entrance.emit(e)
 	act("entrance preview " + kind)
+
+
+## MV-536 sound previews: listening changes nothing in the run, so they are traced but don't mark the save cheated.
+## kind: bed (a biome id) | weather (a Data.WEATHER id with a sound) | group (Sound.GROUPS) | bgm (the title music)
+## | clear (back to the game)
+func sound_preview(kind: String, id: String = "") -> void:
+	Trace.rec("god", "sound preview %s %s" % [kind, id])
+	match kind:
+		"bed":
+			Sound.preview_bed(id)
+		"weather":
+			Sound.preview_weather(id)
+		"group":
+			Sound.play_group(id)
+		"bgm":
+			Sound.preview_bgm()
+		_:
+			Sound.preview_clear()
 
 
 func kill_enemies() -> void:
@@ -1070,6 +1313,41 @@ func toggle_builder(d: Dictionary) -> void:
 	_make_builder(d, not Crew.is_builder(d))
 	act("builder %s = %s" % [d.name, Crew.is_builder(d)])
 	Game.dwellers_changed.emit()
+
+
+## MV-516: roll n made-up recruits with the current trait odds (nobody is added) and keep the shares for GOD:
+## % of recruits with at least one trait of each tier, and with a downside
+var last_trait_roll := {}
+
+
+func trait_roll_test(n: int = 1000) -> Dictionary:
+	var has_tier := [0, 0, 0, 0, 0]
+	var bad := 0
+	for i in n:
+		var d := {}
+		Crew.roll_traits(d)
+		var seen := {}
+		for t in d.traits:
+			if Crew.TRAITS[t].get("bad", false):
+				seen["bad"] = true
+			else:
+				seen[clampi(int(Crew.TRAIT_TIERS.get(t, 0)), 0, 4)] = true
+		for k in seen:
+			if str(k) == "bad":
+				bad += 1
+			else:
+				has_tier[int(k)] += 1
+	last_trait_roll = {"n": n, "bad": 100.0 * bad / n}
+	for i in 5:
+		last_trait_roll[Crew.TIER_NAMES[i]] = 100.0 * has_tier[i] / n
+	Trace.rec("god", "trait roll test %s" % [last_trait_roll])
+	return last_trait_roll
+
+
+## MV-537: windows slide with their content (on = window_still off, the MV-482 look) or stay still (the default); session override
+func window_motion(on: bool) -> void:
+	Features.set_override("features", "window_still", not on)
+	Trace.rec("god", "window motion %s" % ("on" if on else "off"))
 
 
 func reroll_traits(d: Dictionary) -> void:
@@ -1386,6 +1664,11 @@ func env_preview(e: String) -> void:
 	Trace.rec("god", "env preview %s" % (e if e != "" else "off"))
 	BuildInfo.env_preview = e if BuildInfo.ENVS.has(e) else ""
 	Features.changed.emit()
+
+
+## MV-540: compare normal UI text rendering with the original pixel-edge text.
+func ui_text_preview(smooth: bool) -> void:
+	feature_set("smooth_ui_text", smooth)
 
 
 # ---- feature switches (Features layer "dev": kept in user://dev.cfg until reset or GOD is hidden)

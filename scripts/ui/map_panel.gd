@@ -1,10 +1,19 @@
 class_name MapPanel
 extends ModalPanel
 ## Route map: biome stages, checkpoints (vault level gates), lap, weather, travel toggle.
+## MV-515: with the seeded world map (switch seeded_world_map + a world), the stage list is replaced by WorldMapView and
+## one destination strip (stop, region, distance / time, danger, what is known, Drive). Park / resume, weather,
+## blockers, hazards, the lap note and the next generation stay. Selecting a stop never drives; only Drive does.
 
 var _list: VBoxContainer
 var _summary: Label
 var _go: Button
+var map_view: WorldMapView
+var _strip: VBoxContainer
+var _dest_title: Label
+var _dest_info: Label
+var _dest_note: Label
+var drive_btn: Button
 
 
 func _build() -> void:
@@ -19,6 +28,29 @@ func _build() -> void:
 		refresh())
 	top.add_child(_go)
 	body.add_child(top)
+	# MV-515: the world map and its destination strip (shown only in map mode)
+	map_view = WorldMapView.new()
+	map_view.name = "WorldMap"
+	map_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_view.stop_selected.connect(func(_id): _refresh_strip())
+	body.add_child(map_view)
+	_strip = UIKit.vbox(1)
+	_strip.name = "DestinationStrip"
+	_dest_title = UIKit.label("", UIKit.FS, UIKit.C_GOLD)
+	_strip.add_child(_dest_title)
+	_dest_info = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_TEXT)
+	_strip.add_child(_dest_info)
+	var dh := UIKit.hbox(4)
+	_dest_note = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_DIM)
+	_dest_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dh.add_child(_dest_note)
+	drive_btn = UIKit.button(Loc.t("ขับไป"), "green", "play")
+	drive_btn.name = "DriveRoute"
+	drive_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	drive_btn.pressed.connect(_drive)
+	dh.add_child(drive_btn)
+	_strip.add_child(dh)
+	body.add_child(_strip)
 	_list = make_list(3)
 
 
@@ -26,6 +58,11 @@ func refresh() -> void:
 	for c in _list.get_children():
 		_list.remove_child(c)
 		c.queue_free()
+	var map_on := Game.map_mode()
+	map_view.visible = map_on
+	_strip.visible = map_on
+	if map_on:
+		_refresh_strip()
 	var w := Game.weather_def()
 	_summary.text = Loc.t("รอบที่ %d · ระยะรวม %.1f กม. · ความเร็ว %d km/h · อากาศ: %s (อีก ~%ds)\n%s") % [
 		int(Game.s.lap) + 1, float(Game.s.stats.km_total), int(Game.speed_kmh()), w.th, int(Game.s.weather_t),
@@ -49,8 +86,12 @@ func refresh() -> void:
 		_list.add_child(hp)
 	if Env.level("cold") > 0:
 		_list.add_child(UIKit.label(Loc.t("ใช้เชื้อเพลิงทำความร้อน %.1f/นาที") % Env.heating_fuel_pm(), UIKit.FS_SMALL, UIKit.C_ORANGE))
-	_list.add_child(UIKit.header("ROUTE", Loc.t("เส้นทาง · จุดสำรวจ")))
-	for i in Data.BIOMES.size():
+	if map_on:
+		_list.add_child(UIKit.wrap_label(Loc.t("รอบที่ %d · โลก seed %s · แตะจุดบนแผนที่เพื่อดูเส้นทาง แล้วกดขับไป · ผ่านทางออกในมหานครแห่งสัญญาณ = รอบใหม่ในโลกใหม่ ศัตรูอันตรายขึ้นแต่รางวัลมากขึ้น") % [
+			int(Game.s.lap) + 1, str(WorldMap.world().seed)]))
+	for i in (0 if map_on else Data.BIOMES.size()):
+		if i == 0:
+			_list.add_child(UIKit.header("ROUTE", Loc.t("เส้นทาง · จุดสำรวจ")))
 		var b: Dictionary = Data.BIOMES[i]
 		var cur := i == int(Game.s.biome)
 		var done := i < int(Game.s.biome)
@@ -92,7 +133,8 @@ func refresh() -> void:
 			sites.append(Expedition.SITES[sid].th + (Loc.t(" (สำรวจแล้ว)") if Expedition.is_done(sid) else ""))
 		v.add_child(UIKit.wrap_label((Loc.t("ภัย: %s · ") % ", ".join(hz_names) if not hz_names.is_empty() else "") + Loc.t("จุดสำรวจ: ") + ", ".join(sites), UIKit.FS_SMALL, UIKit.C_GOLD))
 		_list.add_child(p)
-	_list.add_child(UIKit.wrap_label(Loc.t("เมื่อผ่านมหานครแห่งสัญญาณ รถบ้านจะวนกลับซากนิคมอุตสาหกรรมในรอบใหม่ — ศัตรูอันตรายขึ้นแต่รางวัลมากขึ้น")))
+	if not map_on:
+		_list.add_child(UIKit.wrap_label(Loc.t("เมื่อผ่านมหานครแห่งสัญญาณ รถบ้านจะวนกลับซากนิคมอุตสาหกรรมในรอบใหม่ — ศัตรูอันตรายขึ้นแต่รางวัลมากขึ้น")))
 	_list.add_child(UIKit.header("NEXT GENERATION", Loc.t("รุ่นที่ %d · %s · แต้มวิจัย %d") % [Meta.generation(), Meta.vehicle_name(), int(Meta.m().get("legacy", 0))]))
 	var rb := UIKit.button(Loc.t("ปลดระวางรถ → สร้างรุ่นถัดไป"), "red", "hammer")
 	rb.disabled = not Meta.can_retire()
@@ -102,3 +144,50 @@ func refresh() -> void:
 	_list.add_child(rb)
 	if not Meta.can_retire():
 		_list.add_child(UIKit.wrap_label(Loc.t("ปลดล็อกหลังปราบบอสด่านตรวจแรก · ถ้ารถพังถาวร (ตัวถัง 0% เกิน 2 นาที) จะเข้าสู่รุ่นถัดไปอัตโนมัติ")))
+
+
+# =================================================================== MV-515: the destination strip
+## what the selected stop is, how far, roughly how long, how dangerous, what is known, and whether Drive can go
+func _refresh_strip() -> void:
+	var id := map_view.selected
+	if id == "":
+		_dest_title.text = Loc.t("แตะจุดบนแผนที่เพื่อเลือกปลายทาง")
+		_dest_info.text = Loc.t("อยู่ที่: %s") % map_view.label_of(WorldMap.here())
+		_dest_note.text = ""
+		drive_btn.disabled = true
+		return
+	var n := WorldMap.node(id)
+	var b := Data.biome(int(n.biome))
+	_dest_title.text = map_view.label_of(id)
+	var rt := map_view.route()
+	var rate := Data.BASE_TRAVEL_KMPM * (Game.speed_factor() if Game.speed_factor() > 0.0 else 1.0)
+	var info := "%s · %s" % [str(b.th), Loc.t("อันตราย %d") % (int(b.danger) + int(Game.s.lap))]
+	if not rt.is_empty():
+		info = Loc.t("%.1f กม. · ~%d นาที · ") % [float(rt.km), int(ceil(float(rt.km) / maxf(0.01, rate)))] + info
+	_dest_info.text = info
+	var note := ""
+	match str(n.type):
+		"landmark":
+			note = str(Expedition.SITES[n.site].goal) + (Loc.t(" (สำรวจแล้วรอบนี้)") if Expedition.is_done(str(n.site)) else "")
+		"rumor":
+			note = Loc.t("รายงานทางวิทยุ: มีสัญญาณแปลก ๆ แต่ยังไม่รู้ว่าคืออะไร") if not bool(WorldMap.world().visited.get(id, false)) else Loc.t("เคยมาแล้ว ไม่มีอะไรเหลือ")
+		"exit":
+			note = Loc.t("ผ่านทางออก = เริ่มรอบใหม่ในโลกใหม่ ต้องปราบบอสด่านตรวจของพื้นที่นี้ก่อน")
+		_:
+			note = Loc.t("ทางแยกบนถนน")
+	var why := WorldMap.drive_block(id)
+	if map_view.locked(id):
+		why = Loc.t("ต้องการ Mobile Vault Lv.%d") % int(b.req)
+	if why != "":
+		note = why + " · " + note
+	_dest_note.text = note
+	drive_btn.disabled = why != ""
+
+
+func _drive() -> void:
+	var id := map_view.selected
+	if id == "" or not WorldMap.drive_to(id):
+		return
+	if not Game.s.traveling:
+		Game.set_traveling(true)
+	refresh()

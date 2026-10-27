@@ -547,6 +547,8 @@ func mutation_chance() -> float:
 
 
 func _next_req() -> int:
+	if Game.map_mode():
+		return WorldMap.gate_ahead()      # MV-130: the border road ahead on the world map
 	if int(Game.s.biome) >= Data.BIOMES.size() - 1:
 		return 0
 	return int(Data.biome(int(Game.s.biome) + 1).req)
@@ -565,6 +567,9 @@ func _spawn(q: Dictionary) -> void:
 		e.warlord = q.boss == "warlord"
 		mult_hp = 26.0 if e.warlord else 12.0
 		mult_dmg = 3.2 if e.warlord else 2.4
+		if roaming_boss_balanced(e):
+			mult_hp = Features.num("boss.wave_hp", 8.0)
+			mult_dmg = Features.num("boss.wave_damage", 1.6)
 		e.tint = ""
 		e.name = ("บอสด่านตรวจ: " if e.warlord else "") + bd.th
 		e.mob = bd.base
@@ -678,10 +683,7 @@ func tick(dt: float) -> void:
 		if target >= 0:
 			_damage_hero(target, float(e.dmg))
 		else:
-			var red := float(vs.def) / (float(vs.def) + def_k(float(e.lvl)))
-			var dmg := float(e.dmg) * 0.35 * (1.0 - red)
-			Game.s.hull = maxf(0.0, float(Game.s.hull) - dmg)
-			hit.emit("van", -1, dmg, false)
+			_damage_van(e, float(e.dmg) * 0.35, false, float(vs.def))
 		# thorns: melee contact with the van's spikes / bruiser parry
 	if float(vs.thorns) > 0.0:
 		for e in enemies:
@@ -792,9 +794,7 @@ func _tick_mechanics(dt: float) -> void:
 				boss_event.emit("erupt", e)
 				if _alive(1):
 					_damage_hero(1, float(e.dmg) * 1.6)
-				var hd := float(e.dmg) * 0.6
-				Game.s.hull = maxf(0.0, float(Game.s.hull) - hd)
-				hit.emit("van", -1, hd, true)
+				_damage_van(e, float(e.dmg) * 0.6, true)
 			continue
 		if e.mech_t > 0.0:
 			continue
@@ -819,9 +819,7 @@ func _explode(e: Dictionary) -> void:
 	if float(e.x) <= MELEE_STOP + 40.0:
 		if _alive(1):
 			_damage_hero(1, power)
-		var hd := power * 0.3
-		Game.s.hull = maxf(0.0, float(Game.s.hull) - hd)
-		hit.emit("van", -1, hd, true)
+		_damage_van(e, power * 0.3, true)
 	for o in enemies:
 		if absf(float(o.x) - float(e.x)) < 40.0:
 			_damage_enemy(o, power * 0.5, false, -1, true)
@@ -853,6 +851,32 @@ func _alive_count() -> int:
 		if not h.is_empty() and h.alive:
 			n += 1
 	return n
+
+
+## MV-544: checkpoint warlords and normal mutants keep their original rules.
+func roaming_boss_balanced(e: Dictionary) -> bool:
+	return Features.on("roaming_boss_balance") and bool(e.get("boss", false)) and not bool(e.get("warlord", false))
+
+
+## Ordinary attacks already used vehicle defense. Roaming boss bursts now use it too,
+## and no single hit can erase more than the configured share of the vehicle's max hull.
+## Basic attacks pass their cached defense so acid keeps its original corrosion timing.
+func van_hit_damage(e: Dictionary, raw: float, special: bool = false, defense: float = -1.0) -> float:
+	var balanced := roaming_boss_balanced(e)
+	if special and not balanced:
+		return raw
+	defense = float(van_stats().def) if defense < 0.0 else defense
+	var red := defense / (defense + def_k(float(e.lvl)))
+	var damage := raw * (1.0 - red)
+	if balanced:
+		damage = minf(damage, Game.hull_max() * Features.num("boss.hull_hit_cap", 0.12))
+	return damage
+
+
+func _damage_van(e: Dictionary, raw: float, special: bool = false, defense: float = -1.0) -> void:
+	var damage := van_hit_damage(e, raw, special, defense)
+	Game.s.hull = maxf(0.0, float(Game.s.hull) - damage)
+	hit.emit("van", -1, damage, special)
 
 
 func _enemy_target(e: Dictionary, bruiser_alive: bool) -> int:

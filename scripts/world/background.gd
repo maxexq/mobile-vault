@@ -31,12 +31,12 @@ func _ready() -> void:
 	for b in Data.BIOMES:
 		_build_group(b.id)
 	Game.biome_changed.connect(_on_biome_changed)
-	Features.changed.connect(_refresh_industrial)
+	Features.changed.connect(_refresh_backdrops)
 	rails = _px_layer(load("res://assets/bg/rails.png"), 1.0, 1.0, ROAD_Y + 8.0, BW)
 	rails.z_index = 1
 	rails.visible = false
 	add_child(rails)
-	_refresh_industrial()
+	_refresh_backdrops()
 
 
 func _px_layer(tex: Texture2D, scroll_x: float, speed: float, y: float, repeat_w: float) -> Parallax2D:
@@ -91,22 +91,23 @@ func _build_group(id: String) -> void:
 	ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(ground)
 	groups[id] = {"root": root, "layers": layers}
-	if id == "industrial":
+	if id in ["industrial", "desert"]:
 		groups[id]["legacy"] = root.get_children()
-		var live := IndustrialBackdrop.new()
-		live.name = "IndustrialLive"
+		var live: Node2D = IndustrialBackdrop.new() if id == "industrial" else DesertBackdrop.new()
+		live.name = id.capitalize() + "Live"
 		root.add_child(live)
 		groups[id]["modern"] = live
 
 
-func _refresh_industrial() -> void:
-	if not groups.has("industrial"):
-		return
-	var g: Dictionary = groups.industrial
-	var enabled := Features.on("industrial_parallax")
-	for node in g.legacy:
-		(node as CanvasItem).visible = not enabled
-	(g.modern as IndustrialBackdrop).visible = enabled
+func _refresh_backdrops() -> void:
+	for id in ["industrial", "desert"]:
+		if not groups.has(id):
+			continue
+		var g: Dictionary = groups[id]
+		var enabled := Features.on(id + "_parallax")
+		for node in g.legacy:
+			(node as CanvasItem).visible = not enabled
+		(g.modern as Node2D).visible = enabled
 
 
 func _on_biome_changed(index: int, instant: bool) -> void:
@@ -141,7 +142,7 @@ func _process(delta: float) -> void:
 		if not g.root.visible:
 			continue
 		if g.has("modern") and g.modern.visible:
-			(g.modern as IndustrialBackdrop).road_speed = _speed
+			g.modern.road_speed = _speed
 			continue
 		for px in g.layers:
 			var sp: float = px.get_meta("speed")

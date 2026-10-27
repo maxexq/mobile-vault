@@ -8,6 +8,8 @@ var main: Node
 var out_dir := "user://autotest"
 var n := 0
 var _fails := 0
+var _font_checks_completed := false
+var _roaming_boss_checks_completed := false
 
 
 func _check(label: String, ok: bool) -> void:
@@ -49,6 +51,7 @@ func _run() -> void:
 	Settings.set_value("event_timer", "off")
 	await wait(1.2)
 	await shot("title")
+	_check("audio: the lo-fi title music plays on the title screen", Sound.is_playing("title_lofi") or not Sound.bgm_on())
 	_title_backdrop_test()
 	main.hud.title_screen._settings_btn.pressed.emit()
 	await wait(0.6)
@@ -59,6 +62,18 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=roaming_boss" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _roaming_boss_test()
+		_check("roaming boss: all combat and economy checks completed", _roaming_boss_checks_completed)
+		_finish()
+		return
+	if "--only=fonts" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _smooth_ui_text_test()
+		_check("fonts: rendering and layout checks completed", _font_checks_completed)
+		_finish()
+		return
 	if "--only=confirm" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		if "--confirm-ui-sequence" in OS.get_cmdline_user_args():
@@ -77,6 +92,7 @@ func _run() -> void:
 	if "--only=background" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _industrial_background_test()
+		await _desert_background_test()
 		_finish()
 		return
 	if "--only=icons" in OS.get_cmdline_user_args():
@@ -166,6 +182,26 @@ func _run() -> void:
 		await _morale_test()
 		_finish()
 		return
+	if "--only=audio" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _audio_test()
+		_finish()
+		return
+	if "--only=drive_help" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _drive_help_test()
+		_finish()
+		return
+	if "--only=hull_repair" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _hull_repair_test()
+		_finish()
+		return
+	if "--only=vault_upgrade" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _vault_upgrade_test()
+		_finish()
+		return
 	if "--only=hull_warning" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _hull_warning_test()
@@ -196,6 +232,31 @@ func _run() -> void:
 		await _saloon_test()
 		_finish()
 		return
+	if "--only=stat_view" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _stat_view_test()
+		_finish()
+		return
+	if "--only=world_map" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_map_test()
+		_finish()
+		return
+	if "--only=world_migrate" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_migrate_test()
+		_finish()
+		return
+	if "--only=world_travel" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_travel_test()
+		_finish()
+		return
+	if "--only=world_screen" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_screen_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -203,6 +264,11 @@ func _run() -> void:
 		return
 	if "--only=env_micro" in OS.get_cmdline_user_args():
 		_env_micro_test()
+		_finish()
+		return
+	if "--only=driver_cab" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _driver_cab_test()
 		_finish()
 		return
 	if "--only=idle_motion" in OS.get_cmdline_user_args():
@@ -215,6 +281,11 @@ func _run() -> void:
 		await _engine_detail_test()
 		_finish()
 		return
+	if "--only=cozy_roof" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _cozy_roof_test()
+		_finish()
+		return
 	if "--only=vehicle_detail" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _vehicle_detail_test()
@@ -223,6 +294,11 @@ func _run() -> void:
 	if "--only=boss_intro" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _boss_intro_test()
+		_finish()
+		return
+	if "--only=enemy_size" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _enemy_size_test()
 		_finish()
 		return
 	if "--only=pity" in OS.get_cmdline_user_args():
@@ -606,6 +682,10 @@ func _run() -> void:
 	await shot("closeup_blackout_torches")
 	main.hud.room_closeup.close()
 	await wait(0.8)
+	# an outage that outlived its room (smaller vehicle / room gone) ends quietly instead of crashing the tick
+	Game.s.outage = {str(Game.s.rooms.size() + 3): 0.01}
+	Game._tick_outages(0.02, false)      # tiny dt: no new random outage gets rolled
+	_check("short circuit: an outage on a room that no longer exists just ends", (Game.s.outage as Dictionary).is_empty())
 	Game.s.outage = {}
 	main.hud.open_panel("garage")
 	await wait(0.6)
@@ -900,21 +980,34 @@ func _run() -> void:
 	await _announce_test()
 	await _scene_art_test()
 	await _industrial_background_test()
+	await _desert_background_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
+	await _enemy_size_test()
 	await _vehicle_detail_test()
+	await _cozy_roof_test()
 	await _engine_detail_test()
 	await _idle_motion_test()
+	await _driver_cab_test()
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
+	await _world_screen_test()
+	await _world_travel_test()
+	await _world_migrate_test()
+	await _world_map_test()
+	await _stat_view_test()
 	await _rooms_x_test()
 	await _saloon_test()
 	await _flagged_test()
 	await _flee_guard_test()
 	await _barks_test()
 	await _hull_warning_test()
+	await _vault_upgrade_test()
+	await _drive_help_test()
+	await _hull_repair_test()
+	await _audio_test()
 	await _morale_test()
 	await _responsive_test()
 	await _perf_test()
@@ -924,6 +1017,10 @@ func _run() -> void:
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
+	await _roaming_boss_test()
+	_check("roaming boss: all combat and economy checks completed", _roaming_boss_checks_completed)
+	await _smooth_ui_text_test()
+	_check("fonts: rendering and layout checks completed", _font_checks_completed)
 	_finish()
 
 
@@ -1425,6 +1522,194 @@ func _tutorial_test() -> void:
 	await wait(1.5)
 
 
+## MV-544: real boss deaths / eruptions, scope and rollback, and reproducible repair-economy fights.
+func _roaming_boss_test() -> void:
+	var saved_state := Game.s
+	var saved_account := Account.a
+	var saved_started := Game.started
+	var saved_processing := Game.is_processing()
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_flags := Dev.flags.duplicate(true)
+	var saved_rng := []
+	for generator in [Game.rng, Loot.rng, Combat.rng, Threat.rng]:
+		saved_rng.append([generator, generator.seed, generator.state])
+	var saved_runtime := []
+	for entry in [[Combat, ["enemies", "heroes", "turret", "wave_active", "wave_is_boss", "wave_is_warlord", "spawn_queue", "gap_t", "wave_t", "warlord_cd", "_acc", "_next_id", "_kill_window", "_clock", "dps_meter", "_dmg_window", "sub", "sub_out", "tag_t"]],
+		[Threat, ["phase", "phase_t", "raid_left", "_gap", "_roll_t", "_scav_t", "_blood", "_raid_kills", "_raid_time", "_raid_scrap", "_last_sign", "stats"]]]:
+		var values := {}
+		for key in entry[1]:
+			var value: Variant = entry[0].get(key)
+			values[key] = value.duplicate(true) if value is Array or value is Dictionary else value
+		saved_runtime.append([entry[0], values])
+	var disconnected := []
+	for sig in Combat.get_signal_list():
+		for connection in Combat.get_signal_connection_list(sig.name):
+			if connection.callable.get_object() == main.combat_view:
+				disconnected.append([sig.name, connection.callable])
+				Combat.disconnect(sig.name, connection.callable)
+	Game.set_process(false)
+	Dev.flags = {}
+	Features.layers.dev = {"features": {"road_events": false, "boss_intro": false, "hull_repair_v2": true}, "tune": {}}
+	Features.layers.mode = {}
+	Features.layers.remote = {}
+	Settings.v["pacing"] = "classic"
+	# Keep the old runtime's collections untouched while the fixture clears its own enemies.
+	Combat.enemies = []
+	Combat.heroes = []
+	Combat.spawn_queue = []
+	Combat.sub = {}
+	Combat.sub_out = {}
+	var bench = load("res://tools/roaming_boss_bench.gd").new()
+	bench.prepare()
+	for id in Combat.WAVE_BOSSES:
+		Features.layers.dev.features["roaming_boss_balance"] = false
+		var old: Dictionary = bench.spawn(id)
+		Features.layers.dev.features.roaming_boss_balance = true
+		var balanced: Dictionary = bench.spawn(id)
+		_check("roaming boss: %s has less HP and damage at the same level" % id, float(balanced.max) > 0.0 and float(balanced.max) < float(old.max) and float(balanced.dmg) > 0.0 and float(balanced.dmg) < float(old.dmg))
+	for id in Combat.BOSSES:
+		Features.layers.dev.features.roaming_boss_balance = false
+		var old: Dictionary = bench.spawn(id, 25, true)
+		Features.layers.dev.features.roaming_boss_balance = true
+		var unchanged: Dictionary = bench.spawn(id, 25, true)
+		_check("roaming boss: checkpoint %s keeps its original stats and burst rules" % id, old.max == unchanged.max and old.dmg == unchanged.dmg and is_equal_approx(Combat.van_hit_damage(unchanged, 100.0, true), 100.0))
+	for elite in [false, true]:
+		Features.layers.dev.features.roaming_boss_balance = false
+		Combat._clear_enemies()
+		Combat._spawn({"mob": "scorpion", "lvl": 25, "elite": elite, "no_mutate": true})
+		var old: Dictionary = Combat.enemies[0]
+		Features.layers.dev.features.roaming_boss_balance = true
+		Combat._clear_enemies()
+		Combat._spawn({"mob": "scorpion", "lvl": 25, "elite": elite, "no_mutate": true})
+		var unchanged: Dictionary = Combat.enemies[0]
+		var defense := float(Combat.van_stats().def)
+		var expected := 1000.0 * (1.0 - defense / (defense + Combat.def_k(25.0)))
+		_check("roaming boss: normal/elite %s keeps its stats and uncapped armor calculation" % elite, old.max == unchanged.max and old.dmg == unchanged.dmg and is_equal_approx(Combat.van_hit_damage(unchanged, 1000.0), expected) and Combat.van_hit_damage(unchanged, 1000.0, true) == 1000.0)
+	# The actual on-kill path used to destroy a full vehicle even after winning the fight.
+	for enabled in [false, true]:
+		bench.prepare()
+		Features.layers.dev.features.roaming_boss_balance = enabled
+		Game.s.van_gear.plating = null
+		Game.s.hull = Game.hull_max()
+		var before := float(Game.s.hull)
+		var boss: Dictionary = bench.spawn("bloat_king")
+		boss.x = Combat.MELEE_STOP
+		boss.hp = 0.0
+		Combat._on_kill(boss)
+		var loss := before - float(Game.s.hull)
+		_check("roaming boss: real explosion rollback %s" % enabled, loss > 0.0 and (loss <= before * 0.12 + 0.001 and Game.s.hull > 0.0 if enabled else Game.s.hull == 0.0))
+		_check("roaming boss: kill still pays scrap and two Rare+ gear drops (%s)" % enabled, is_equal_approx(float(Game.s.res.scrap), 39.6) and Loot.stash().size() == 2 and Loot.stash().all(func(it): return int(it.rar) >= 2))
+	bench.prepare()
+	Features.layers.dev.features.roaming_boss_balance = true
+	var boss: Dictionary = bench.spawn("bloat_king")
+	boss.x = Combat.MELEE_STOP
+	boss.dmg = 4.0                 # below the cap: measure defense, not the cap
+	Combat.enemies = []
+	Combat.heroes = []
+	var plating: Dictionary = Game.s.van_gear.plating
+	Game.s.van_gear.plating = null
+	Game.s.hull = Game.hull_max()
+	var before := float(Game.s.hull)
+	Combat._explode(boss)
+	var bare_loss := before - float(Game.s.hull)
+	Game.s.van_gear.plating = plating
+	Game.s.hull = Game.hull_max()
+	before = float(Game.s.hull)
+	Combat._explode(boss)
+	_check("roaming boss: vehicle armor reduces a real special hit below the cap", before - float(Game.s.hull) > 0.0 and before - float(Game.s.hull) < bare_loss)
+	Features.layers.dev.tune["boss.hull_hit_cap"] = 0.05
+	Game.s.hull = Game.hull_max()
+	before = float(Game.s.hull)
+	boss.dmg = 10000.0
+	Combat._explode(boss)
+	_check("roaming boss: special-hit cap follows remote tuning", is_equal_approx(before - float(Game.s.hull), before * 0.05))
+	Features.layers.dev.tune.erase("boss.hull_hit_cap")
+	var worm: Dictionary = bench.spawn("drill_worm")
+	worm.burrowed = true
+	worm.burrow_t = 0.0
+	Game.s.hull = Game.hull_max()
+	before = float(Game.s.hull)
+	Combat._tick_mechanics(0.1)
+	_check("roaming boss: an actual worm eruption is armor-aware and bounded", before - float(Game.s.hull) > 0.0 and before - float(Game.s.hull) <= before * 0.12 + 0.001)
+	# Same fixed level-20 Rare +0 squad versus Desert wave10 level25: no travel/event income.
+	var legacy_repairs := 0.0
+	var balanced_repairs := 0.0
+	for id in bench.DESERT_BOSSES:
+		for seed_value in [544, 545, 546]:
+			var old: Dictionary = bench.fight(id, seed_value, false)
+			var balanced: Dictionary = bench.fight(id, seed_value, true)
+			print("[roaming-boss] ", JSON.stringify({"legacy": old, "balanced": balanced}))
+			legacy_repairs += float(old.repair)
+			balanced_repairs += float(balanced.repair)
+			_check("roaming boss: %s seed%d clears before timeout with an intact vehicle" % [id, seed_value], balanced.killed and float(balanced.seconds) < Combat.WAVE_TIMEOUT and float(balanced.hull_min) > 0.0)
+			_check("roaming boss: %s seed%d reward covers its paid hull repair" % [id, seed_value], float(balanced.scrap) >= float(balanced.repair))
+			_check("roaming boss: %s seed%d shortens the fight" % [id, seed_value], float(balanced.seconds) <= float(old.seconds))
+			await wait(0.02)
+	_check("roaming boss: sampled repair bills fall by more than half", legacy_repairs > 0.0 and balanced_repairs < legacy_repairs * 0.5)
+	Combat._clear_enemies()
+	Game.s = saved_state
+	Account.a = saved_account
+	Game.started = saved_started
+	Settings.v = saved_settings
+	Dev.flags = saved_flags
+	Features.layers = saved_layers
+	for entry in saved_runtime:
+		for key in entry[1]:
+			entry[0].set(key, entry[1][key])
+	for entry in saved_rng:
+		entry[0].seed = entry[1]
+		entry[0].state = entry[2]
+	for connection in disconnected:
+		Combat.connect(connection[0], connection[1])
+	Features.changed.emit()
+	Combat.heroes_changed.emit()
+	Combat.wave_changed.emit()
+	Threat.phase_changed.emit(Threat.phase)
+	Game.set_process(saved_processing)
+	_roaming_boss_checks_completed = true
+
+
+## MV-543: recipes spend components at every tier, even with no scrap; resource ticks update affordability.
+func _forge_cost_test(loot_ui: LootPanel) -> void:
+	var saved_free: bool = Dev.flags.get("free", false)
+	Dev.flags["free"] = false
+	loot_ui.tab = "forge"
+	for r in range(Loot.RARITY.size() - 1):
+		var cost := 15 * (r + 1)
+		Game.s.gear = [Loot.roll_item("weapon", 1, r), Loot.roll_item("armor", 1, r), Loot.roll_item("boots", 1, r)]
+		Game.s.items["components"] = cost - 1
+		Game.s.res.scrap = 999.0
+		loot_ui.refresh()
+		var before := JSON.stringify(Loot.stash())
+		var button := loot_ui.find_child("Synthesize%d" % r, true, false) as Button
+		_check("forge: tier %d requires components despite abundant scrap" % r, button.disabled)
+		var denied := Loot.synthesize(r)
+		_check("forge: tier %d insufficient components preserve items and currencies" % r, denied.is_empty() and JSON.stringify(Loot.stash()) == before and int(Game.s.items.components) == cost - 1 and float(Game.s.res.scrap) == 999.0)
+		Game.s.items["components"] = cost
+		Game.s.res.scrap = 0.0
+		Game.resources_changed.emit()
+		button = loot_ui.find_child("Synthesize%d" % r, true, false) as Button
+		_check("forge: tier %d enables on a components tick with zero scrap" % r, not button.disabled)
+		Game.s.res.scrap = 999.0
+		Game.resources_changed.emit()
+		_check("forge: tier %d scrap-only ticks keep the same button" % r, is_instance_valid(button) and button == loot_ui.find_child("Synthesize%d" % r, true, false) and not button.disabled)
+		Game.s.res.scrap = 0.0
+		Game.resources_changed.emit()
+		var out := Loot.synthesize(r)
+		_check("forge: tier %d spends exactly %d components and no scrap" % [r, cost], not out.is_empty() and int(out.rar) == r + 1 and Loot.stash().size() == 1 and int(Game.s.items.get("components", 0)) == 0 and float(Game.s.res.scrap) == 0.0)
+	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
+	Game.s.items.erase("components")
+	Game.s.res.scrap = 999.0
+	Game.resources_changed.emit()
+	var before := JSON.stringify(Loot.stash())
+	var denied := Loot.synthesize(0)
+	_check("forge: missing components cannot fall back to scrap", denied.is_empty() and JSON.stringify(Loot.stash()) == before and not Game.s.items.has("components") and float(Game.s.res.scrap) == 999.0 and (loot_ui.find_child("Synthesize0", true, false) as Button).disabled)
+	Dev.flags["free"] = saved_free
+	loot_ui.tab = "gear"
+	loot_ui.refresh()
+
+
 ## settings window: every option applies + persists, version info, save export / validate / reset
 ## MV-422: real UI entry points must leave state untouched until a named confirmation.
 func _confirm_actions_test() -> void:
@@ -1564,17 +1849,33 @@ func _confirm_actions_test() -> void:
 	Game.s.gear.append(later)
 	dialog.confirm_button.pressed.emit()
 	_check("confirm: bulk salvage preserves locked gear and drops arriving after the prompt", Loot.stash().size() == 2 and Loot.stash().has(locked) and Loot.stash().has(later))
+	_forge_cost_test(loot_ui)
 	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
 	Game.s.res.scrap = 200.0
+	Game.s.items["components"] = 45
+	var saved_lang = Settings.get_value("lang")
+	for lang in ["th", "en"]:
+		Settings.set_value("lang", lang)
+		loot_ui._request_synthesize(0)
+		_check("confirm: %s synthesis preview names components" % lang, dialog.is_open and dialog.message.text.begins_with("ใช้ 15 ชิ้นส่วน" if lang == "th" else "Spend 15 components"))
+		dialog.cancel_button.pressed.emit()
+		_check("confirm: cancelling synthesis preserves all items and currencies", Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
+	Settings.set_value("lang", saved_lang)
 	loot_ui._request_synthesize(0)
-	_check("confirm: synthesis waits without consuming items or scrap", dialog.is_open and Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	_check("confirm: synthesis waits without consuming items or currencies", dialog.is_open and Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
 	Game.s.gear[0].lock = true
 	dialog.confirm_button.pressed.emit()
-	_check("confirm: locking an ingredient invalidates synthesis", Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	_check("confirm: locking an ingredient invalidates synthesis", Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
 	Game.s.gear[0].lock = false
 	loot_ui._request_synthesize(0)
 	dialog.confirm_button.pressed.emit()
-	_check("confirm: synthesis consumes exactly three ingredients after acceptance", Loot.stash().size() == 1 and int(Loot.stash()[0].rar) == 1 and float(Game.s.res.scrap) == 185.0)
+	_check("confirm: synthesis consumes three ingredients and components, preserving scrap", Loot.stash().size() == 1 and int(Loot.stash()[0].rar) == 1 and int(Game.s.items.components) == 30 and float(Game.s.res.scrap) == 200.0)
+	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
+	loot_ui._request_synthesize(0)
+	Game.s.items["components"] = 14
+	Game.resources_changed.emit()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: losing components before acceptance preserves items and scrap", Loot.stash().size() == 3 and int(Game.s.items.components) == 14 and float(Game.s.res.scrap) == 200.0)
 	Game.s.combat.auto_salvage = -1
 	loot_ui._request_auto_salvage(1)
 	dialog.close()
@@ -3180,6 +3481,85 @@ func _logs_test() -> void:
 	Cloud.status_changed.emit()
 
 
+## MV-540: check real raster output and live updates, not only the configured enum values.
+func _font_edge_counts(img: Image) -> Vector2i:
+	var counts := Vector2i.ZERO
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var alpha := img.get_pixel(x, y).a
+			if alpha > 0.01:
+				counts.x += 1
+				if alpha < 0.99:
+					counts.y += 1
+	return counts
+
+
+func _smooth_ui_text_test() -> void:
+	var old_override: Variant = Features.layers.dev.get("features", {}).get("smooth_ui_text")
+	var chakra := UIKit.font_main as FontFile
+	var bold := UIKit.font_bold as FontFile
+	var silk := (UIKit.font_pixel as FontVariation).base_font as FontFile
+	_check("fonts: main-window display-resolution oversampling enabled", bool(ProjectSettings.get_setting("gui/fonts/dynamic_fonts/use_oversampling")))
+	var probe := SubViewport.new()
+	probe.size = Vector2i(480, 110)
+	probe.transparent_bg = true
+	probe.oversampling = false
+	probe.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(probe)
+	var label := Label.new()
+	label.text = "ลูกเรือ กำลังเดินทาง\nChakra Petch UI 123"
+	label.position = Vector2(8, 8)
+	label.add_theme_font_override("font", chakra)
+	label.add_theme_font_size_override("font_size", 22)
+	label.add_theme_color_override("font_color", Color.WHITE)
+	probe.add_child(label)
+	Dev.ui_text_preview(false)
+	await wait(0.1)
+	await RenderingServer.frame_post_draw
+	var crisp_image := probe.get_texture().get_image()
+	var crisp_edges := _font_edge_counts(crisp_image)
+	crisp_image.save_png(out_dir + "/font_crisp.png")
+	_check("fonts: rollback renders populated, binary-edged Chakra text", crisp_edges.x > 100 and crisp_edges.y == 0)
+	Dev.ui_text_preview(true)
+	await wait(0.1)
+	await RenderingServer.frame_post_draw
+	var smooth_image := probe.get_texture().get_image()
+	var smooth_edges := _font_edge_counts(smooth_image)
+	smooth_image.save_png(out_dir + "/font_smooth.png")
+	_check("fonts: existing Label gains genuinely antialiased glyph edges live", smooth_edges.x > 100 and smooth_edges.y > 20)
+	_check("fonts: both Chakra weights follow the feature and viewport scale", chakra.antialiasing == TextServer.FONT_ANTIALIASING_GRAY and bold.antialiasing == TextServer.FONT_ANTIALIASING_GRAY and chakra.oversampling == 0.0 and bold.oversampling == 0.0)
+	_check("fonts: Thai fallback still shares the configured Bold face", (UIKit.font_pixel as FontVariation).fallbacks[0] == bold)
+	_check("fonts: Silkscreen keeps native sampling and binary edges", silk.antialiasing == TextServer.FONT_ANTIALIASING_NONE and silk.subpixel_positioning == TextServer.SUBPIXEL_POSITIONING_DISABLED and silk.oversampling == 1.0)
+	label.text = "PIXEL 123 + HP"
+	label.add_theme_font_override("font", UIKit.font_pixel)
+	label.add_theme_font_size_override("font_size", UIKit.FP)
+	await wait(0.1)
+	await RenderingServer.frame_post_draw
+	var pixel_edges := _font_edge_counts(probe.get_texture().get_image())
+	_check("fonts: pixel tags remain binary even with smooth UI enabled", pixel_edges.x > 20 and pixel_edges.y == 0)
+	probe.queue_free()
+	var old_size := get_window().size
+	var old_lang: String = Settings.get_value("lang")
+	var old_english: Variant = Features.layers.dev.get("features", {}).get("english")
+	for screen_size: Vector2i in [Vector2i(720, 1280), Vector2i(1280, 720)]:
+		get_window().size = screen_size
+		await wait(0.4)
+		for lang: String in ["th", "en"]:
+			Dev.lang_set(lang)
+			main.hud.settings_panel.open()
+			await wait(0.2)
+			await shot("smooth_fonts_%dx%d_%s" % [screen_size.x, screen_size.y, lang])
+			_check("fonts: settings fit %s %s" % [screen_size, lang], main.hud.settings_panel.box.position.x >= 0.0 and main.hud.settings_panel.box.position.y >= 0.0 and main.hud.settings_panel.box.get_rect().end.x <= main.hud.size.x and main.hud.settings_panel.box.get_rect().end.y <= main.hud.size.y)
+			main.hud.settings_panel.close()
+	Settings.set_value("lang", old_lang)
+	Features.set_override("features", "english", old_english)
+	Loc.apply()
+	get_window().size = old_size
+	Features.set_override("features", "smooth_ui_text", old_override)
+	await wait(0.2)
+	_font_checks_completed = true
+
+
 func _features_test() -> void:
 	if not Game.started or main.hud.title_screen.visible:
 		# the cloud checks leave the title screen up: start a fresh run so the gates act on a live game
@@ -3188,8 +3568,9 @@ func _features_test() -> void:
 		Tutorial.skip()
 	Features.clear_overrides()
 	Features.layers.remote = {}
-	# switches that ship off on purpose: english until all three MV-151 PRs are in
-	var ships_off := ["english"]
+	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
+	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it)
+	var ships_off := ["english", "seeded_world_map"]
 	var all_on := true
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
@@ -4609,7 +4990,7 @@ func _industrial_background_test() -> void:
 	main.background._on_biome_changed(0, true)
 	await wait(0.8)
 	var live: IndustrialBackdrop = main.background.groups.industrial.modern
-	_check("background: new art only on the industrial biome", live.is_visible_in_tree() and not main.background.groups.desert.has("modern"))
+	_check("background: new art only on the industrial biome", live.is_visible_in_tree() and not main.background.groups.desert.modern.is_visible_in_tree())
 	var long_layers := true
 	var periods := {}
 	for key in live.layers:
@@ -4617,13 +4998,51 @@ func _industrial_background_test() -> void:
 		long_layers = long_layers and px.repeat_size.x >= 1920 and px.repeat_size.x == (px.get_child(0) as Sprite2D).texture.get_width()
 		periods[int(px.repeat_size.x)] = true
 	_check("background: actual texture widths drive long independent repeats", long_layers and periods.size() >= 4)
+	# MV-548: accepted native layer contract and road-relative motion, including parking.
+	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
+	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
+	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
+	for key in dimensions:
+		var sprite := live.layers[key].node.get_child(0) as Sprite2D
+		native = native and sprite.texture.get_size() == Vector2(dimensions[key]) and sprite.scale == Vector2.ONE
+		if key != "clouds" and key != "road":
+			native = native and sprite.position.y + sprite.texture.get_height() == Background.ROAD_Y
+	_check("industrial ruins: exact five native sizes, nearest pixels and ground alignment", native)
+	var nodes := live.get_child_count()
+	live.set_process(false)
+	Features.set_override("tune", "industrial_background.cloud_wind", 0.0)
+	live.preview_offset(0.0)
+	live.road_speed = 100.0
+	live._process(1.0)
+	var rates := true
+	for key in speeds:
+		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
+	_check("industrial ruins: road speed drives .03/.08/.25/.60/1.0 scroll", rates)
+	Features.set_override("tune", "industrial_background.mid_speed", 0.4)
+	live.preview_offset(0.0)
+	live._process(1.0)
+	_check("industrial ruins: live motion tuning keeps the node count stable", is_equal_approx(float(live.layers.mid.offset), 40.0) and live.get_child_count() == nodes)
+	Features.set_override("tune", "industrial_background.mid_speed", 0.25)
+	Features.set_override("tune", "industrial_background.cloud_wind", 4.0)
+	live.preview_offset(0.0)
+	live.road_speed = 0.0
+	live._process(1.0)
+	var parked := true
+	for key in ["far", "mid", "near", "road"]:
+		parked = parked and is_zero_approx(float(live.layers[key].offset))
+	_check("industrial ruins: parked land stays still while smog drifts", parked and is_equal_approx(float(live.layers.clouds.offset), 4.0))
+	live.preview_offset(0.0)
+	live.road_speed = 100.0
+	live._process(23.04)
+	_check("industrial ruins: full road loop returns to its starting pixel", is_zero_approx(float(live.layers.road.offset)))
+	live.set_process(true)
 	var child_count := live.get_child_count()
 	for entry in [[0.25, "sunrise", true, 1], [0.5, "daylight", true, 2], [0.75, "sunset", false, 3], [0.0, "moonlight", false, 0]]:
 		Game.s.tod = float(entry[0])
 		live.update_clock()
 		_check("background: simulation clock selects %s sky and celestial body" % entry[1], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]))
 		_check("background: %s celestial position stays on the pixel grid" % entry[1], live.celestial_position == live.celestial_position.round())
-		await wait(0.5)
+		await wait(3.0)
 		await shot("industrial_" + str(entry[1]))
 	Game.s.tod = 0.35
 	live.update_clock()
@@ -4640,8 +5059,11 @@ func _industrial_background_test() -> void:
 		var px: Parallax2D = live.layers[key].node
 		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
 	_check("background: large travel offsets wrap on whole pixels", snapped)
+	await shot("industrial_full_wrap")
 	Features.set_override("features", "industrial_parallax", false)
 	_check("background: feature off restores the old industrial background", not live.visible and main.background.groups.industrial.legacy[0].visible)
+	await wait(0.3)
+	await shot("industrial_legacy_fallback")
 	Features.set_override("features", "industrial_parallax", true)
 	main.background._on_biome_changed(1, true)
 	phase0 = live.phase
@@ -4652,6 +5074,10 @@ func _industrial_background_test() -> void:
 	get_window().size = Vector2i(405, 720)
 	await wait(0.8)
 	await shot("industrial_portrait_moonlight")
+	Game.s.tod = 0.5
+	live.update_clock()
+	await wait(3.0)
+	await shot("industrial_portrait_daylight")
 	main.hud.open_panel("god")
 	var god = main.hud.panels.god
 	god.tab = "world"
@@ -4670,6 +5096,115 @@ func _industrial_background_test() -> void:
 	Game.s.biome = old_biome
 	Game.force_weather(old_weather)
 	main.background._on_biome_changed(old_biome, true)
+	get_window().size = old_window
+	await wait(0.3)
+
+
+func _desert_background_test() -> void:
+	var old_window := get_window().size
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "desert_parallax", true)
+	Features.set_override("features", "industrial_parallax", true)
+	Dev.desert_background_preview(0.5)
+	main.background._on_biome_changed(1, true)
+	# goto_biome normally cross-fades: allow its existing transition to finish before sampling.
+	await wait(4.2)
+	var live: DesertBackdrop = main.background.groups.desert.modern
+	_check("desert: GOD action selects biome 1 in clear daylight", int(Game.s.biome) == 1 and Game.s.weather == "clear" and live.is_visible_in_tree())
+	_check("desert: industrial renderer is hidden and remaining biomes keep legacy art", not main.background.groups.industrial.modern.is_visible_in_tree() and not main.background.groups.forest.has("modern") and not main.background.groups.swamp.has("modern") and not main.background.groups.tundra.has("modern") and not main.background.groups.metro.has("modern"))
+	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
+	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
+	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
+	for key in dimensions:
+		var px: Parallax2D = live.layers[key].node
+		var sprite := px.get_child(0) as Sprite2D
+		var size: Vector2i = dimensions[key]
+		native = native and sprite.texture.get_size() == Vector2(size) and px.repeat_size.x == size.x and sprite.scale == Vector2.ONE
+		if key != "clouds" and key != "road":
+			native = native and sprite.position.y + size.y == Background.ROAD_Y
+	_check("desert: all five exact native dimensions, independent repeat widths and ground anchors", native)
+	var count := live.get_child_count()
+	live.set_process(false)
+	Features.set_override("tune", "desert_background.cloud_wind", 0.0)
+	live.preview_offset(0.0)
+	live.road_speed = 100.0
+	live._process(1.0)
+	var rates := true
+	for key in speeds:
+		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
+	_check("desert: real road speed drives .03/.08/.25/.60/1.0 relative scroll", rates)
+	Features.set_override("tune", "desert_background.mid_speed", 0.4)
+	_check("desert: live tuning changes the middle layer without rebuilding nodes", is_equal_approx(float(live.layers.mid.speed), 0.4) and live.get_child_count() == count)
+	Features.set_override("tune", "desert_background.mid_speed", 0.25)
+	Features.set_override("tune", "desert_background.cloud_wind", 4.0)
+	live.preview_offset(0.0)
+	live.road_speed = 0.0
+	live._process(1.0)
+	var stopped := true
+	for key in ["far", "mid", "near", "road"]:
+		stopped = stopped and is_zero_approx(float(live.layers[key].offset))
+	_check("desert: parked road/land stop while high dust drifts independently", stopped and is_equal_approx(float(live.layers.clouds.offset), 4.0))
+	live.preview_offset(99999999.0)
+	var snapped := true
+	for key in live.layers:
+		var px: Parallax2D = live.layers[key].node
+		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
+	_check("desert: long travel wraps every layer on whole pixels", snapped)
+	live.set_process(true)
+	for window in [Vector2i(1280, 640), Vector2i(405, 720)]:
+		get_window().size = window
+		await wait(0.5)
+		for entry in [[0.25, "dawn", true, 1], [0.5, "day", true, 2], [0.75, "dusk", false, 3], [0.0, "night", false, 0]]:
+			Game.s.tod = float(entry[0])
+			live.update_clock()
+			_check("desert: %s %s clock sky and pixel-snapped celestial" % [window, entry[1]], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]) and live.celestial_position == live.celestial_position.round())
+			# Let the existing WeatherFX grade settle after each abrupt clock jump.
+			await wait(3.0)
+			await shot("desert_%s_%s" % ["portrait" if window.y > window.x else "landscape", entry[1]])
+	Game.s.tod = 0.35
+	live.update_clock()
+	var morning := live.celestial_position
+	Game.s.tod = 0.60
+	live.update_clock()
+	_check("desert: sun catches up after an in-game clock jump", morning.distance_to(live.celestial_position) > 20)
+	Game.force_weather("sandstorm")
+	var before := live.phase
+	await wait(0.4)
+	_check("desert: weather uses existing ambience with a fixed scene-node count", live.phase > before and live.get_child_count() == count and Game.s.weather == "sandstorm")
+	await shot("desert_sandstorm")
+	Features.set_override("features", "desert_parallax", false)
+	before = live.phase
+	await wait(0.3)
+	_check("desert: kill switch restores legacy layers and stops hidden updates", not live.visible and main.background.groups.desert.legacy[0].visible and live.phase == before)
+	Features.set_override("features", "desert_parallax", true)
+	main.background._on_biome_changed(0, false)
+	await wait(3.2)
+	before = live.phase
+	await wait(0.3)
+	_check("desert: cross-fade completes and hidden desert stops updating", not live.is_visible_in_tree() and main.background.groups.industrial.modern.is_visible_in_tree() and live.phase == before)
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "world"
+	god.refresh()
+	await wait(0.2)
+	var buttons := {}
+	for row in god._list.get_children():
+		for control in row.get_children():
+			if control is Button:
+				buttons[control.text] = control
+	_check("desert: GOD world tab has four clock previews and both switch buttons", buttons.has("เช้า") and buttons.has("เที่ยง") and buttons.has("เย็น") and buttons.has("คืน") and buttons.has("ทะเลทรายใหม่") and buttons.has("ทะเลทรายเดิม"))
+	await shot("desert_god_world")
+	if buttons.has("เที่ยง"):
+		buttons["เที่ยง"].pressed.emit()
+		_check("desert: GOD button invokes the desert preview action", int(Game.s.biome) == 1 and is_equal_approx(float(Game.s.tod), 0.5) and Game.s.weather == "clear")
+	god.close()
+	await wait(3.2)
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.force_weather(str(old_state.weather))
+	main.background._on_biome_changed(int(old_state.biome), true)
 	get_window().size = old_window
 	await wait(0.3)
 
@@ -4863,6 +5398,109 @@ func _wait_for(cond: Callable, max_s: float) -> void:
 		t += 0.02
 
 
+## MV-517: monsters drawn bigger: whole-number scale per kind for every mob / boss sprite, boss > elite > normal,
+## raiders from the crew sheet one step smaller, everything fits the fight zone, the GOD lineup on screen at its stop
+## spots (hp bar + crown included), tune steps down when too big, switch off = the old size
+func _enemy_size_test() -> void:
+	var cv: CombatView = main.combat_view
+	_no_events()
+	Dev.kill_enemies()
+	await wait(0.4)
+	var dims := func(sprite: String) -> Vector2:
+		if sprite.begins_with("dw_"):
+			return Vector2(Atlas.DW_W, Atlas.DW_H)
+		var r: Array = Atlas.regions[sprite + "_0"]
+		return Vector2(float(r[2]), float(r[3]))
+	var whole := true
+	var grows := true
+	var fits := true
+	var people := true
+	var max_elite := Vector2.ZERO
+	var max_normal := Vector2.ZERO
+	for id in Combat.MOBS:
+		var sp: String = Combat.MOBS[id].sprite
+		var d: Vector2 = dims.call(sp)
+		var sn := CombatView.enemy_scale({"sprite": sp}, d.x, d.y)
+		var se := CombatView.enemy_scale({"sprite": sp, "elite": true}, d.x, d.y)
+		whole = whole and sn >= 1 and se >= 1
+		grows = grows and se > sn
+		fits = fits and d.x * se <= CombatView.FIGHT_W and d.y * se <= CombatView.FIGHT_H
+		if sp.begins_with("dw_"):
+			people = people and sn == 1 and se == 2
+		else:
+			people = people and sn == 2 and se == 3
+		max_elite = max_elite.max(d * se)
+		max_normal = max_normal.max(d * sn)
+	var min_boss := Vector2(INF, INF)
+	var boss_kinds := true
+	for bd in Combat.BOSSES.values() + Combat.WAVE_BOSSES.values():
+		var d: Vector2 = dims.call(str(bd.sprite))
+		var sb := CombatView.enemy_scale({"sprite": bd.sprite, "boss": true}, d.x, d.y)
+		var sw := CombatView.enemy_scale({"sprite": bd.sprite, "boss": true, "warlord": true}, d.x, d.y)
+		whole = whole and sb >= 1 and sw >= sb
+		fits = fits and d.x * sw <= CombatView.FIGHT_W and d.y * sw <= CombatView.FIGHT_H
+		boss_kinds = boss_kinds and sb == 3 and sw == 3
+		min_boss = min_boss.min(d * sb)
+	_check("enemy size: whole-number scales, normal x2 / elite x3 / boss + warlord x3, raiders one step smaller", whole and people and boss_kinds)
+	_check("enemy size: every elite bigger than the same mob as a normal", grows)
+	_check("enemy size: smallest boss %s taller and wider than the biggest elite %s" % [min_boss, max_elite],
+		min_boss.x > max_elite.x and min_boss.y > max_elite.y and max_elite.y > Atlas.DW_H)
+	_check("enemy size: every kind fits the fight zone (%dx%d)" % [CombatView.FIGHT_W, CombatView.FIGHT_H], fits)
+	# the GOD lineup: a normal, an elite and the boss, real enemies
+	main.set_zoom_mode("auto")
+	Dev.enemy_size_preview("lineup")
+	await _wait_for(func(): return cv.enemy_nodes.size() >= 3, 4.0)
+	await wait(0.6)
+	var by_kind := {}
+	for e in Combat.enemies:
+		var node = cv.enemy_nodes.get(int(e.id))
+		if node:
+			by_kind[CombatView.size_kind(e)] = [e, node]
+	_check("enemy size: GOD lineup spawns normal + elite + boss", by_kind.has("normal") and by_kind.has("elite") and by_kind.has("boss"))
+	var sizes_ok := by_kind.size() == 3
+	var on_screen := true
+	var vp: Vector2 = main.vp_size()
+	var view := Rect2(main.camera.get_screen_center_position() - vp * 0.5, vp)
+	for k in by_kind:
+		var e: Dictionary = by_kind[k][0]
+		var node = by_kind[k][1]
+		sizes_ok = sizes_ok and node.z_index == (4 if node.is_boss else 5) and node.spr.scale == Vector2(node.size, node.size) and node.size == {"normal": 2, "elite": 3, "boss": 3}[k]
+		# where it ends up: its stop spot behind the truck, hp bar (+ crown for a boss) above the head
+		var stop: Vector2 = node.place(CombatView.sim_to_view(Vector2(float(e.stop_x), float(e.y))))
+		var r: Rect2 = node.sprite_rect()
+		r.position += stop - node.position
+		r = r.expand(r.position + Vector2(0, -(25.0 if node.is_boss else 6.0)))
+		var g := Rect2(cv.to_global(r.position), r.size)
+		var ok := view.encloses(g) and r.end.x <= CombatView.fight_right() + 0.5
+		if not ok:
+			print("[autotest] enemy size: %s at %s off the view %s" % [k, g, view])
+		on_screen = on_screen and ok
+	_check("enemy size: lineup drawn at x2 / x3 / x3", sizes_ok)
+	_check("enemy size: lineup at its stop spots stays on screen (view %s)" % view, on_screen)
+	await shot("enemy_size_lineup")
+	# too big for the fight zone: a x4 boss steps down instead of hanging off the screen
+	Features.set_override("tune", "enemy_size.boss", 4.0)
+	var wide_boss := CombatView.enemy_scale({"sprite": "boss_scorpion", "boss": true}, 48.0, 28.0)
+	Features.set_override("tune", "enemy_size.boss", null)
+	Features.set_override("tune", "enemy_size.normal", 3.0)
+	var tuned := CombatView.enemy_scale({"sprite": "en_rat"}, 16.0, 10.0)
+	Features.set_override("tune", "enemy_size.normal", null)
+	_check("enemy size: tune enemy_size.* (x4 boss steps down to %d, normal x%d)" % [wide_boss, tuned], wide_boss == 3 and tuned == 3)
+	# switch off = the old size, road zombies included
+	Dev.kill_enemies()
+	await wait(0.4)
+	Features.set_override("features", "enemy_size", false)
+	Dev.enemy_size_preview("normal")
+	await _wait_for(func(): return cv.enemy_nodes.size() >= 1, 3.0)
+	var off_ok := cv.enemy_nodes.size() >= 1
+	for node in cv.enemy_nodes.values():
+		off_ok = off_ok and node.size == 1 and node.spr.scale == Vector2.ONE
+	_check("enemy size: switch off = original size", off_ok and CombatView.enemy_scale({"boss": true}, 48.0, 48.0) == 1)
+	Features.set_override("features", "enemy_size", null)
+	Dev.kill_enemies()
+	await wait(0.4)
+
+
 ## MV-387: boss / warlord / elite entrances: the HUD band with the name, drop-in + landing in the world, elites
 ## without a band, never takes taps, switch off, tune, GOD previews
 func _boss_intro_test() -> void:
@@ -4930,6 +5568,68 @@ func _boss_intro_test() -> void:
 
 ## MV-388 phase 1: wheel redraws keep their sizes / phases, the static shell details are in the atlas, leaf springs
 ## sit over every road wheel (main + trailers), give way to the coil-overs and the tracks, none on rails, switch off
+## MV-462 cozy roof: the nine parts at their spec sizes, the roof parts / old roof follow the switch on every
+## chassis, the deck art follows it at every level, and the roof deck keeps its stats
+func _cozy_roof_test() -> void:
+	var v: Vehicle = main.vehicle
+	var sizes := {"prop_roof_water_tank": [32, 20], "prop_roof_satellite_dish": [16, 17], "prop_roof_planter_tray": [14, 17],
+		"prop_roof_deck_frame": [76, 60], "prop_roof_patched_awning": [38, 22], "prop_roof_bench_blanket": [24, 7],
+		"prop_roof_glass_windbreak": [22, 16], "prop_roof_caged_lamp": [6, 12], "prop_roof_water_can": [9, 14],
+		"mod_roof_deck_cozy_1": [76, 60], "mod_roof_deck_cozy_2": [76, 60], "mod_roof_deck_cozy_3": [76, 60],
+		"roof_legacy_van": [146, 38], "roof_legacy_bus": [146, 38], "roof_legacy_rig": [146, 38], "roof_legacy_train": [146, 38]}
+	var ok := true
+	for k in sizes:
+		var r = Atlas.regions.get(k)
+		if r == null or int(r[2]) != int(sizes[k][0]) or int(r[3]) != int(sizes[k][1]):
+			ok = false
+			print("[autotest] cozy roof sprite wrong: %s %s" % [k, str(r)])
+	_check("cozy roof: 9 parts, 3 deck levels and 4 old-roof sprites at their sizes", ok)
+	var was_mods: Dictionary = Game.s.mods.duplicate(true)
+	var was_tier := Game.tier()
+	var was_tr := Game.trailers()
+	var cozy := ["prop_roof_planter_tray", "prop_roof_planter_tray", "prop_roof_water_tank", "prop_roof_satellite_dish"]
+	Dev.set_trailers(0)
+	for t in ["van", "bus", "rig", "train"]:
+		Dev.set_tier(t)
+		await wait(0.1)
+		Dev.cozy_roof_switch(true)
+		await wait(0.05)
+		var on_parts := v.sprite_regions(true)
+		on_parts.sort()
+		var want := cozy.duplicate()
+		want.sort()
+		Dev.cozy_roof_switch(false)
+		await wait(0.05)
+		_check("cozy roof %s: switch on = tank, dish, 2 trays; off = the old roof (%s / %s)" % [t, str(on_parts), str(v.sprite_regions(true))],
+			on_parts == want and v.sprite_regions(true) == ["roof_legacy_" + t])
+	Dev.cozy_roof_switch(true)
+	Dev.set_tier("rig")
+	await wait(0.1)
+	for lv in [1, 2, 3]:
+		Dev.roof_deck_preview(lv)
+		await wait(0.05)
+		_check("cozy roof: deck Lv%d uses the cozy art" % lv, v.sprite_regions(false).has("mod_roof_deck_cozy_%d" % lv))
+		if lv == 3:
+			await shot("cozy_roof_rig_deck3")
+		Dev.cozy_roof_switch(false)
+		await wait(0.05)
+		_check("cozy roof: switch off = the old deck Lv%d" % lv, v.sprite_regions(false).has("mod_roof_deck_%d" % lv)
+			and not v.sprite_regions(false).has("mod_roof_deck_cozy_%d" % lv))
+		Dev.cozy_roof_switch(true)
+		await wait(0.05)
+	_check("cozy roof: the deck keeps its height (lift %d)" % int(Vehicle.deck_lift()), Vehicle.deck_lift() == float(Vehicle.ROOF_DECK_H))
+	Dev.roof_deck_preview(0)
+	await wait(0.05)
+	_check("cozy roof: no deck sprite at Lv0", not v.sprite_regions(false).any(func(r): return str(r).begins_with("mod_roof_deck")))
+	await shot("cozy_roof_rig")
+	Features.set_override("features", "cozy_roof", null)
+	Game.s.mods = was_mods
+	Mods.mods_changed.emit()
+	Dev.set_tier(was_tier)
+	Dev.set_trailers(was_tr)
+	await wait(0.1)
+
+
 func _vehicle_detail_test() -> void:
 	var v: Vehicle = main.vehicle
 	var sizes := {"wheel_0": [32, 32], "wheel_3": [32, 32], "bwheel_0": [32, 32], "bwheel_3": [32, 32], "rwheel_0": [20, 20],
@@ -4943,6 +5643,32 @@ func _vehicle_detail_test() -> void:
 			print("[autotest] detail sprite wrong: %s %s" % [k, str(r)])
 	_check("vehicle detail: wheels + 6 detail sprites at their spec sizes", ok and Atlas.wheel_frames(false).get_frame_count("default") == 4
 		and Atlas.rail_wheel_frames().get_frame_count("default") == 4)
+	# MV-528: the van-reference fittings are their own sprites and are baked into the cut-away and closed shells
+	var fit := {"decal_vehicle_pillar_joint": [[38, 204, "van bus rig"], [218, 148, "trailer wagon"]],
+		"decal_vehicle_roof_seam": [[216, 148, "van"], [216, 92, "bus"], [216, 36, "rig train"], [206, 148, "trailer wagon"]],
+		"decal_vehicle_fuel_cap": [[74, 274, "van bus rig"]], "decal_van_door_hardware": [[16, 185, "van"]],
+		"decal_bus_service_vent": [[20, 182, "bus"]], "decal_rig_door_latch": [[26, 214, "rig"]],
+		"decal_train_access_hinges": [[10, 118, "train"]]}
+	var sheet: Image = Atlas.sheet.get_image()
+	var baked := 0
+	var fit_ok := true
+	for k in fit:
+		var fr = Atlas.regions.get(k)
+		if fr == null:
+			fit_ok = false
+			continue
+		var part := sheet.get_region(Rect2i(int(fr[0]), int(fr[1]), int(fr[2]), int(fr[3])))
+		for at in fit[k]:
+			for t in str(at[2]).split(" "):
+				for pre in ["veh_", "ext_"]:
+					var sr = Atlas.regions[pre + t]
+					var got := sheet.get_region(Rect2i(int(sr[0]) + int(at[0]), int(sr[1]) + int(at[1]), int(fr[2]), int(fr[3])))
+					if got.get_data() == part.get_data():
+						baked += 1
+					else:
+						fit_ok = false
+						print("[autotest] MV-528 fitting not baked: %s on %s%s" % [k, pre, t])
+	_check("vehicle detail: 7 van-reference fittings baked into every shell (%d placements)" % baked, fit_ok and baked == 36)
 	var was_mods: Dictionary = Game.s.mods.duplicate(true)
 	var was_tier := Game.tier()
 	var was_tr := Game.trailers()
@@ -5052,6 +5778,65 @@ func _engine_detail_test() -> void:
 ## MV-388 phase 3: roof flag animates (frame 0 when off), rear chain follows the last deck, mudflap behind the
 ## rearmost road tyre (not under tracks, not on rails), exhaust puffs replace the smoke emitter (max 2, none when
 ## broken), roof drips only in rain / storm, switch off restores the old smoke
+## MV-519: Viktor in every driving cab (baked) + the driver_cab micro-animation over the window
+func _driver_cab_test() -> void:
+	var v: Vehicle = main.vehicle
+	var sizes := {"van": [23, 29], "bus": [13, 18], "rig": [17, 17], "train": [18, 14]}
+	var ok := true
+	for t in sizes:
+		for k in ["decal_%s_driver_cockpit" % t, "decal_%s_driver_cockpit_idle_1" % t,
+				"decal_%s_driver_cockpit_idle_2" % t, "decal_%s_driver_cockpit_idle_3" % t]:
+			var r = Atlas.regions.get(k)
+			if r == null or int(r[2]) != int(sizes[t][0]) or int(r[3]) != int(sizes[t][1]):
+				ok = false
+				print("[autotest] driver cab sprite wrong: %s %s" % [k, str(r)])
+	_check("driver cab: 4 cab decals + 3 idle frames each at their spec sizes", ok)
+	var was_tier := Game.tier()
+	var was_tr := Game.trailers()
+	var was_tod: float = float(Game.s.tod)
+	Dev.set_trailers(0)
+	Dev.driver_cab_switch(true)
+	for t in ["van", "bus", "rig", "train"]:
+		Dev.set_tier(t)
+		await wait(0.1)
+		_check("driver cab %s: overlay sits on the baked window (%s)" % [t, str(v.driver_cab.position)],
+			v.driver_cab.position == Vehicle.DRIVER_CAB[t] and not v.driver_cab.visible)
+		var moves := {}
+		for kind in ["blink", "lamp", "wheel"]:
+			var started := Dev.driver_cab_preview(kind)
+			moves[kind] = started and v.driver_cab.visible and int(v.driver_cab.get_meta("frame", 0)) == {"blink": 1, "lamp": 2, "wheel": 3}[kind] 				and v.driver_cab.texture == Atlas.tex("decal_%s_driver_cockpit_idle_%d" % [t, {"blink": 1, "lamp": 2, "wheel": 3}[kind]])
+			if kind == "wheel":
+				await shot("driver_cab_%s_wheel" % t)
+			await wait(0.8)
+			moves[kind] = moves[kind] and not v.driver_cab.visible
+		_check("driver cab %s: blink / lamp / wheel each show their frame, then the baked look (%s)" % [t, str(moves)],
+			not moves.values().has(false))
+		for xr in [true, false]:
+			v.set_xray(xr)
+			for tod in [0.5, 0.0]:
+				Game.s.tod = tod
+				await wait(0.3)
+				await shot("driver_cab_%s_%s_%s" % [t, "cutaway" if xr else "exterior", "day" if tod > 0.0 else "night"])
+		v.set_xray(true)
+	Game.s.tod = was_tod
+	Features.set_override("tune", "vehicle.driver_gap", 1.5)
+	var seen := false
+	for i in 40:
+		await wait(0.1)
+		seen = seen or v.driver_cab.visible
+	_check("driver cab: moves on its own every few seconds", seen)
+	Features.set_override("tune", "vehicle.driver_gap", null)
+	Dev.driver_cab_preview("wheel")
+	Dev.driver_cab_switch(false)
+	await wait(0.1)
+	_check("driver cab: switch off = no overlay and no moves (the seated Viktor stays baked)", not v.driver_cab.visible
+		and not Dev.driver_cab_preview("blink") and not v.driver_cab.visible)
+	Features.set_override("features", "driver_cab", null)
+	Dev.set_tier(was_tier)
+	Dev.set_trailers(was_tr)
+	await wait(0.1)
+
+
 func _idle_motion_test() -> void:
 	var v: Vehicle = main.vehicle
 	var was_tier := Game.tier()
@@ -6097,6 +6882,382 @@ func _saloon_restore(res: Dictionary, rooms: Array, dw: Array, squad: Array, rx)
 
 ## MV-250: hull warning stages (50 / 25 / 10 %), hysteresis, one alert per worse stage, red frame + strip, the
 ## strip's repair button, shake only with the setting on, switch off = nothing
+## MV-536: buses + settings, every stream loads (beds loop), biome / weather crossfade, thunder, effects from game
+## signals and button taps, the switches off = silence, GOD previews
+func _audio_test() -> void:
+	_no_events()
+	var keep_biome := int(Game.s.biome)
+	var keep_weather := str(Game.s.weather)
+	Features.set_override("tune", "audio.fade_sec", 0.3)
+	for b in ["Music", "Ambience", "SFX", "UI"]:
+		_check("audio: bus %s exists and sends to Master" % b, AudioServer.get_bus_index(b) > 0 and AudioServer.get_bus_send(AudioServer.get_bus_index(b)) == &"Master")
+	var keep_amb = Settings.get_value("ambience")
+	var keep_ui = Settings.get_value("ui")
+	Settings.set_value("ambience", 0.4)
+	Settings.set_value("ui", 0.3)
+	_check("audio: ambience / ui volume settings drive their buses", absf(AudioServer.get_bus_volume_linear(AudioServer.get_bus_index("Ambience")) - 0.4) < 0.01
+		and absf(AudioServer.get_bus_volume_linear(AudioServer.get_bus_index("UI")) - 0.3) < 0.01)
+	Settings.set_value("ambience", keep_amb)
+	Settings.set_value("ui", keep_ui)
+	var missing := []
+	var not_looping := []
+	for id in Sound.all_ids():
+		var st := Sound.stream(id)
+		if st == null:
+			missing.append(id)
+		elif Sound._is_loop(id) and (not st is AudioStreamWAV or (st as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_DISABLED):
+			not_looping.append(id)
+	_check("audio: all %d sounds load %s" % [Sound.all_ids().size(), missing], missing.is_empty())
+	_check("audio: every bed / weather layer loops %s" % [not_looping], not_looping.is_empty())
+	_check("audio: unlocked on desktop (web waits for the first tap)", Sound.unlocked)
+	# biome bed + engine
+	Dev.goto_biome(0)
+	await wait(0.8)
+	_check("audio: industrial bed plays in biome 1", Sound.is_playing("industrial") and float(Sound.layer("industrial").cur) > 0.5)
+	_check("audio: engine layer runs while the game runs", Sound.is_playing("engine") or Sound._engine_now() == "off")
+	var sample_beds := []
+	for id in Sound.layers:
+		if (Sound.layers[id].p as AudioStreamPlayer).playback_type != AudioServer.PLAYBACK_TYPE_STREAM:
+			sample_beds.append(id)
+	_check("audio: beds use stream playback, web samples drop the loop %s" % [sample_beds], sample_beds.is_empty())
+	Dev.goto_biome(1)
+	await wait(0.05)
+	_check("audio: biome change crossfades (desert up, industrial down)", float(Sound.layer("desert").target) > 0.0 and float(Sound.layer("industrial").target) == 0.0)
+	await wait(0.8)
+	_check("audio: after the fade only the desert bed plays", Sound.is_playing("desert") and not Sound.is_playing("industrial"))
+	# weather
+	Game.force_weather("rain")
+	await wait(0.8)
+	_check("audio: rain layer plays", Sound.is_playing("rain") and float(Sound.layer("rain").cur) > 0.5)
+	Game.force_weather("snow")
+	await wait(0.05)
+	_check("audio: weather change crossfades (snow up, rain down)", float(Sound.layer("snow").target) > 0.0 and float(Sound.layer("rain").target) == 0.0)
+	await wait(0.8)
+	_check("audio: after the fade rain is silent", not Sound.is_playing("rain") and Sound.is_playing("snow"))
+	Game.force_weather("clear")
+	await wait(0.8)
+	var any_weather := false
+	for w in Sound.WEATHER_SOUNDS:
+		any_weather = any_weather or Sound.is_playing(w)
+	_check("audio: clear sky = no weather layer", not any_weather)
+	Game.force_weather("storm")
+	Sound._thunder_in = 0.0
+	var thunder := int(Sound.played.get("thunder_1", 0)) + int(Sound.played.get("thunder_2", 0))
+	await wait(0.3)
+	_check("audio: a storm rolls thunder", int(Sound.played.get("thunder_1", 0)) + int(Sound.played.get("thunder_2", 0)) > thunder)
+	# effects from game signals and buttons
+	var before := Sound.played.duplicate()
+	Combat.hit.emit("van", 0, 5.0, false)
+	Game.construction_finished.emit(0, "build")
+	Game.toast.emit("test", "good")
+	var b := UIKit.button("tap", "gray")
+	add_child(b)
+	await wait(0.05)
+	b.pressed.emit()
+	b.queue_free()
+	var grew := func(id): return int(Sound.played.get(id, 0)) > int(before.get(id, 0))
+	_check("audio: van hit / room done / good toast / button tap make their sounds", grew.call("hit_metal") and grew.call("build_done") and grew.call("toast_good") and grew.call("tap"))
+	await wait(0.1)
+	_check("audio: the same effect is rate limited", Sound.sfx("loot", 0.0) and not Sound.sfx("loot", 0.0))
+	# switches off = silence
+	Features.set_override("features", "audio_ambience", false)
+	Features.set_override("features", "audio_sfx", false)
+	await wait(0.9)
+	var any := false
+	for id in Sound.layers:
+		any = any or Sound.is_playing(id)
+	_check("audio: audio_ambience off = every bed and weather layer silent", not any)
+	await wait(0.1)
+	_check("audio: audio_sfx off = no effect plays", not Sound.sfx("demolish") and not Sound.ui("tap"))
+	Features.set_override("features", "audio_ambience", null)
+	Features.set_override("features", "audio_sfx", null)
+	# GOD previews
+	Dev.sound_preview("weather", "acid_rain")
+	await wait(0.8)
+	_check("audio: GOD weather preview plays acid rain over the bed", Sound.is_playing("acid_rain") and Sound.is_playing(Sound.want_bed()))
+	Dev.sound_preview("bed", "metro")
+	await wait(0.8)
+	_check("audio: GOD bed preview plays the metro bed alone", Sound.is_playing("metro") and not Sound.is_playing("acid_rain") and not Sound.is_playing("desert") and Sound.want_weather() == "")
+	_check("audio: no title music during a run", float(Sound.layer("title_lofi").target) == 0.0)
+	Dev.sound_preview("bgm")
+	await wait(0.8)
+	var bgm_bus := (Sound.layers["title_lofi"].p as AudioStreamPlayer).bus if Sound.layers.has("title_lofi") else &""
+	_check("audio: GOD music preview plays the title BGM on the Music bus", Sound.is_playing("title_lofi") and bgm_bus == &"Music")
+	Features.set_override("features", "audio_bgm", false)
+	await wait(0.8)
+	_check("audio: audio_bgm off = no music", not Sound.is_playing("title_lofi"))
+	Features.set_override("features", "audio_bgm", null)
+	var n_ui := int(Sound.played.get("confirm", 0))
+	Dev.sound_preview("group", "ui")
+	await wait(1.0)
+	_check("audio: GOD effect group plays its sounds in turn", int(Sound.played.get("confirm", 0)) > n_ui)
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "sound"
+	main.hud.panels.god.refresh()
+	await wait(0.4)
+	await shot("god_sound")
+	main.hud.panels.god.close()
+	Dev.sound_preview("clear")
+	# MV-538: on the industrial map in rain only rain is heard; a GOD weather preview (acid rain) ends with the panel
+	# and a forgotten one times out
+	Dev.goto_biome(0)
+	Game.force_weather("rain")
+	await wait(0.9)
+	var stray := []
+	for w in Sound.WEATHER_SOUNDS:
+		if w != "rain" and (Sound.is_playing(w) or float(Sound.layer(w).cur) > 0.0):
+			stray.append(w)
+	_check("audio: a weather layer is silent unless its weather is active %s" % [stray], stray.is_empty() and Sound.is_playing("rain"))
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "sound"
+	main.hud.panels.god.refresh()
+	await wait(0.3)
+	Dev.sound_preview("weather", "acid_rain")
+	await wait(0.8)
+	_check("audio: GOD acid-rain preview plays while the panel is open", Sound.is_playing("acid_rain"))
+	main.hud.panels.god.close()
+	await wait(1.4)
+	_check("audio: closing GOD ends the preview, acid rain is silent on the industrial map", Sound.preview.is_empty()
+		and not Sound.is_playing("acid_rain") and Sound.is_playing("rain") and Sound.is_playing("industrial"))
+	Dev.sound_preview("weather", "acid_rain")
+	Sound.preview_left = 0.05
+	await wait(1.2)
+	_check("audio: a forgotten GOD preview times out", Sound.preview.is_empty() and not Sound.is_playing("acid_rain"))
+	Features.set_override("tune", "audio.fade_sec", null)
+	Dev.goto_biome(keep_biome)
+	Game.force_weather(keep_weather)
+	await wait(0.4)
+	_check("audio: back to the game's own bed after the preview", Sound.preview.is_empty() and Sound.want_bed() == str(Data.biome(keep_biome).id))
+
+
+## MV-542 (Parames's report): driving on the world map, the player leaves, the trip ends during the offline catch-up;
+## back in the game the vehicle must say it arrived, Go must open the map (not just toggle park), a tap on STOPPED
+## and Go into another blocker must say why, and the switch off keeps the old toggle
+func _drive_help_test() -> void:
+	_no_events()
+	var hud: HUD = main.hud
+	var keep_power := float(Game.s.res.power)
+	var keep_travel := bool(Game.s.traveling)
+	var toasts := []
+	var grab := func(msg: String, _kind: String = ""): toasts.append(msg)
+	Game.toast.connect(grab)
+	Features.set_override("features", "seeded_world_map", true)
+	WorldMap.ensure()
+	WorldMap.reconcile()
+	var dest := Dev.world_arrive_offline()
+	await wait(0.3)
+	var told := toasts.any(func(t): return str(t).contains("เลือกปลายทางใหม่บนแผนที่"))
+	_check("drive help: the trip ended while away (%s), the away summary says so %s" % [dest, toasts.slice(-1)],
+		dest.length() > 0 and not dest.begins_with("no") and dest != "map off" and not WorldMap.driving() and Game.needs_destination() and told)
+	await wait(0.2)
+	_check("drive help: the Go button shows the map while a destination is needed", hud.go_btn.icon != null and hud.go_btn.icon.region == Atlas.icon("map").region)
+	hud.go_btn.pressed.emit()
+	await wait(0.5)
+	var mp: ModalPanel = hud.panels.map
+	_check("drive help: Go opens the map instead of parking (open %s, still set to drive %s)" % [mp.is_open, Game.s.traveling], mp.is_open and Game.s.traveling)
+	await shot("drive_help_map")
+	mp.close()
+	await wait(0.3)
+	# another blocker (no power) with the map off: Go sets off and says why it can't
+	Features.set_override("features", "seeded_world_map", false)
+	Game.s.traveling = false
+	Game.s.res.power = 0.0
+	toasts.clear()
+	hud.go_btn.pressed.emit()
+	await wait(0.2)
+	_check("drive help: Go into another blocker says why %s" % [toasts], Game.s.traveling and toasts.any(func(t): return str(t).begins_with(Loc.t("รถหยุดอยู่: "))))
+	# switch off: the old toggle, nothing opens
+	Features.set_override("features", "drive_help", false)
+	Features.set_override("features", "seeded_world_map", true)
+	var was := bool(Game.s.traveling)
+	hud.go_btn.pressed.emit()
+	await wait(0.3)
+	_check("drive help: switch off = Go only toggles drive / park", bool(Game.s.traveling) != was and not hud.panels.map.is_open)
+	Features.set_override("features", "drive_help", null)
+	Features.set_override("features", "seeded_world_map", null)
+	Game.toast.disconnect(grab)
+	Game.s.res.power = keep_power
+	Game.s.traveling = keep_travel
+	Game.travel_changed.emit()
+
+
+## MV-541: hull repair cost: the size curve, the crew discount and its cap, the partial repair, the switch off = the
+## old flat 0.6 full repair, the build menu chunk button and the free regen next to the hull bar
+func _hull_repair_test() -> void:
+	var keep_hull := float(Game.s.hull)
+	var keep_scrap := float(Game.s.res.scrap)
+	var keep_rooms := {}
+	for d in Game.s.dwellers:
+		keep_rooms[int(d.id)] = d.room
+	var hmax := Game.hull_max()
+	# nobody in the engine room / workshops: no discount
+	for d in Game.s.dwellers:
+		if int(d.room) == Data.CAB_SLOT or str(Game.room(int(d.room)).get("type", "")) == "workshop":
+			d.room = -1
+	_check("hull repair: no crew = no discount", is_equal_approx(float(Game.repair_discount().total), 0.0))
+	# the size curve: at the reference hull the full 0.6, a hull 300/140 times bigger pays 0.41
+	Features.set_override("tune", "repair.ref_hull", hmax)
+	var r_ref := Game.repair_rate()
+	Features.set_override("tune", "repair.ref_hull", 50.0)    # the tune's lowest value: this hull is "bigger" than the reference
+	var r_big := Game.repair_rate()
+	var r_big_want := 0.6 * sqrt(50.0 / hmax)
+	Features.set_override("tune", "repair.ref_hull", hmax * 2.0)
+	var r_small := Game.repair_rate()
+	Features.set_override("tune", "repair.ref_hull", null)
+	_check("hull repair: bigger hull pays less per HP (ref %.3f, bigger %.3f = 0.6 x sqrt(ref / max) %.3f, smaller never above base %.3f)" % [r_ref, r_big, r_big_want, r_small],
+		is_equal_approx(r_ref, 0.6) and absf(r_big - r_big_want) < 0.001 and r_big < 0.6 and is_equal_approx(r_small, 0.6))
+	# crew discount: 2 in the engine room, one a Mechanic = 5+5+5 %; six Mechanics hit the 40 % cap
+	var crew: Array = Game.s.dwellers.slice(0, 2)
+	for d in crew:
+		d.room = Data.CAB_SLOT
+		d.erase("strike")
+	var had_mech: bool = Crew.has(crew[0], "mechanic") or Crew.has(crew[1], "mechanic")
+	var keep_tr: Array = Crew.traits(crew[0]).duplicate()
+	if not had_mech:
+		crew[0].traits = keep_tr + ["mechanic"]
+	var dc: Dictionary = Game.repair_discount()
+	_check("hull repair: 2 engine crew + a Mechanic = 15 %% or more (%s)" % [dc], float(dc.crew) == 0.10 and float(dc.mechanic) >= 0.05 and float(dc.total) >= 0.15)
+	Features.set_override("tune", "repair.mechanic", 0.25)
+	Features.set_override("tune", "repair.per_crew", 0.25)
+	_check("hull repair: the discount stops at the cap (%.2f)" % float(Game.repair_discount().total), is_equal_approx(float(Game.repair_discount().total), 0.4))
+	Features.set_override("tune", "repair.mechanic", null)
+	Features.set_override("tune", "repair.per_crew", null)
+	# partial repair: 25 % of the max hull, at the discounted rate
+	Game.s.hull = hmax * 0.1
+	Game.s.res.scrap = 5000.0
+	var disc := float(Game.repair_discount().total)
+	var want := int(ceil(hmax * 0.25 * Game.repair_rate() * (1.0 - disc)))
+	var c25 := Game.repair_cost(0.25)
+	var before := float(Game.s.res.scrap)
+	var ok := Game.repair_hull(0.25)
+	_check("hull repair: 25 %% chunk restores %.0f HP for %d scrap (expected %d)" % [hmax * 0.25, c25, want],
+		ok and c25 == want and absf(float(Game.s.hull) - hmax * 0.35) < 0.5 and absf(before - float(Game.s.res.scrap) - c25) < 0.5)
+	# the build menu: the chunk button and the regen / discount line; the HUD: +X/m next to the hull bar
+	var hud: HUD = main.hud
+	hud.open_panel("build")
+	await wait(0.5)
+	var bp = hud.panels.build
+	var part_btn: Button = bp.find_child("RepairPart", true, false)
+	var info: Label = bp.find_child("RepairInfo", true, false)
+	_check("hull repair: build menu shows the 25 %% button and the free regen line (%s)" % [info.text if info else "none"],
+		part_btn != null and part_btn.visible and info != null and info.visible and info.text.contains("HP"))
+	await shot("hull_repair_build")
+	bp.close()
+	await wait(0.3)
+	_check("hull repair: the hull bar shows the free repair rate (%s)" % hud.hull_regen_lbl.text,
+		Game.hull_regen_pm() < 0.05 or (hud.hull_regen_lbl.visible and hud.hull_regen_lbl.text.begins_with("+")))
+	# switch off: the old flat 0.6, always the full repair, no discount
+	Features.set_override("features", "hull_repair_v2", false)
+	Game.s.hull = hmax * 0.5
+	var off_ok := is_equal_approx(Game.repair_rate(), 0.6) and is_equal_approx(float(Game.repair_discount().total), 0.0) 		and Game.repair_cost(0.25) == int(ceil(hmax * 0.5 * 0.6))
+	hud.open_panel("build")
+	await wait(0.4)
+	off_ok = off_ok and not bp.find_child("RepairPart", true, false).visible
+	bp.close()
+	await wait(0.3)
+	Features.set_override("features", "hull_repair_v2", null)
+	_check("hull repair: switch off = 0.6 per HP, full repair only, no chunk button", off_ok)
+	# put everything back
+	crew[0].traits = keep_tr
+	for d in Game.s.dwellers:
+		if keep_rooms.has(int(d.id)):
+			d.room = keep_rooms[int(d.id)]
+	Game.s.hull = keep_hull
+	Game.s.res.scrap = keep_scrap
+	Game.dwellers_changed.emit()
+
+
+## MV-545: the Vault upgrade never promises a room the vehicle has no space for, names the bigger vehicle, and every
+## level gives max hull and production (a full vehicle's levels give more production instead); switch off = as before
+func _vault_upgrade_test() -> void:
+	var keep_tier := str(Game.s.get("tier", "van"))
+	var keep_lv := int(Game.s.vault_level)
+	var keep_scrap := float(Game.s.res.scrap)
+	var keep_hull := float(Game.s.hull)
+	var want := {"van": [3, 5, 5, 5, 5, 5], "bus": [3, 5, 6, 8, 8, 8], "rig": [3, 5, 6, 8, 10, 11]}
+	var bad := []
+	for t in want:
+		Game.s.tier = t
+		for lv in range(1, 7):
+			if Game.vault_rooms_at(lv) != int(want[t][lv - 1]):
+				bad.append("%s Lv%d rooms %d" % [t, lv, Game.vault_rooms_at(lv)])
+			if lv < 6:
+				var txt := BuildPanel.vault_card_text(lv, "", "")
+				var gain := int(want[t][lv]) - int(want[t][lv - 1])
+				var promises := txt.contains(Loc.t("ห้อง +%d") % 1) or txt.contains(Loc.t("ห้อง +%d") % 2)
+				if (gain > 0) != promises or (gain > 0 and not txt.contains(Loc.t("ห้อง +%d") % gain)):
+					bad.append("%s Lv%d card '%s'" % [t, lv, txt.left(60)])
+	_check("vault upgrade: rooms per vehicle and level, and the card never promises a room it can't give %s" % [bad.slice(0, 3)], bad.is_empty())
+	Game.s.tier = "van"
+	var full_txt := BuildPanel.vault_card_text(3, "", "")
+	_check("vault upgrade: a full van says so and names the bus (%s)" % full_txt.left(90),
+		full_txt.contains(Loc.t("ห้องเต็มรถแล้ว (การผลิต +%d%% แทน)") % 10) and full_txt.contains(str(Data.VEHICLES.bus.th)))
+	# bonuses: van at Lv6 = +75 hull, x1.65 production (5 levels x 5 % + 4 banked rooms x 10 %); a rig at Lv6 banks none
+	Game.s.vault_level = 6
+	var h_on := Game.hull_max()
+	var p_on := Game.vault_prod_mult()
+	var banked := Game.vault_banked_rooms()
+	Features.set_override("features", "vault_upgrade_v2", false)
+	var h_off := Game.hull_max()
+	var p_off := Game.vault_prod_mult()
+	Features.set_override("features", "vault_upgrade_v2", null)
+	_check("vault upgrade: van Lv6 = +75 max hull, production x1.65 with 4 banked rooms (%.0f vs %.0f, x%.2f, %d banked)" % [h_on, h_off, p_on, banked],
+		absf(h_on - h_off - 75.0) < 0.01 and absf(p_on - 1.65) < 0.001 and banked == 4 and is_equal_approx(p_off, 1.0))
+	Game.s.tier = "rig"
+	_check("vault upgrade: a rig at Lv6 banks no room, production x1.25 (%d, x%.2f)" % [Game.vault_banked_rooms(), Game.vault_prod_mult()],
+		Game.vault_banked_rooms() == 0 and absf(Game.vault_prod_mult() - 1.25) < 0.001)
+	# the bonus reaches real production
+	Game.s.tier = keep_tier
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if Game.is_slot_unlocked(i) and Data.room_def(Game.s.rooms[i].type).has("produce") and not Game.room_workers(i).is_empty() 				and Dictionary(Game.room_rate_pm(i)).values().reduce(func(a, b): return a + float(b), 0.0) > 0.0:
+			slot = i
+			break
+	var r_on := 0.0
+	var r_off := 0.0
+	if slot >= 0:
+		r_on = Dictionary(Game.room_rate_pm(slot)).values().reduce(func(a, b): return a + float(b), 0.0)
+		Features.set_override("features", "vault_upgrade_v2", false)
+		r_off = Dictionary(Game.room_rate_pm(slot)).values().reduce(func(a, b): return a + float(b), 0.0)
+		Features.set_override("features", "vault_upgrade_v2", null)
+	_check("vault upgrade: room output follows the Vault bonus (slot %d: %.2f vs %.2f, x%.2f)" % [slot, r_on, r_off, Game.vault_prod_mult()],
+		slot >= 0 and r_off > 0.0 and absf(r_on / r_off - Game.vault_prod_mult()) < 0.01)
+	# the upgrade toast tells the truth on a full van
+	Game.s.tier = "van"
+	Game.s.vault_level = 2
+	Game.s.res.scrap = 99999.0
+	var toasts := []
+	var grab := func(msg: String, _kind: String = ""): toasts.append(msg)
+	Game.toast.connect(grab)
+	Game.upgrade_vault()
+	Game.toast.disconnect(grab)
+	_check("vault upgrade: upgrading a full van says it gave production, not a room %s" % [toasts], toasts.any(func(t): return str(t).contains("ห้องเต็มรถแล้ว")))
+	# the real build menu: new card on, the old "+1 room / new floor" card with the switch off
+	Game.s.vault_level = 3
+	main.hud.open_panel("build")
+	await wait(0.5)
+	var bp = main.hud.panels.build
+	var on_card: String = bp._frame_info.text
+	var on_title: String = bp._frame_title.text
+	await shot("vault_upgrade_card")
+	Features.set_override("features", "vault_upgrade_v2", false)
+	bp.refresh()
+	await wait(0.2)
+	var off_card: String = bp._frame_info.text
+	var off_title: String = bp._frame_title.text
+	Features.set_override("features", "vault_upgrade_v2", null)
+	bp.close()
+	await wait(0.3)
+	_check("vault upgrade: the build menu shows the honest card, switch off = the old one (%s | %s)" % [on_card.left(50), off_card.left(40)],
+		on_card.contains("ห้องเต็มรถแล้ว") and not on_title.contains("เปิดชั้นใหม่") and off_card.contains(Loc.t("ห้อง +1").left(4)) and off_title.contains("เปิดชั้นใหม่"))
+	Game.s.tier = keep_tier
+	Game.s.vault_level = keep_lv
+	Game.s.res.scrap = keep_scrap
+	Game.s.hull = minf(keep_hull, Game.hull_max())
+	Game.rooms_changed.emit()
+	Game.travel_changed.emit()
+
+
 func _hull_warning_test() -> void:
 	_no_events()
 	if Game.active_event != "":
@@ -6604,7 +7765,8 @@ func _window_fit_test() -> void:
 	await wait(0.25)
 	Features.set_override("features", "window_fit", null)
 	_check("window fit: switch off = the full height as before (%.0f of %.0f)" % [full_h, full_max], absf(full_h - full_max) <= 1.0)
-	# --- the crew list grows: the window slides taller, then back
+	# --- the crew list grows: with window_still off (the MV-482 look) the window slides taller, then back
+	Features.set_override("features", "window_still", false)
 	var keep_dw: Array = Game.s.dwellers.duplicate(true)
 	while Game.s.dwellers.size() > 2:
 		Game.s.dwellers.pop_back()
@@ -6631,8 +7793,50 @@ func _window_fit_test() -> void:
 	await wait(0.6)
 	_check("window fit: fewer crew = it shrinks back (%.0f)" % dp.box.size.y, absf(dp.box.size.y - h0) <= 2.0)
 	dp.close()
+	await wait(0.3)
+	# --- MV-537 window_still on (the default): the same change snaps, and the window's top edge stays put
+	Features.set_override("features", "window_still", null)
+	hud.open_panel("dwellers")
+	await wait(0.6)
+	var top0 := dp.box.position.y
+	var h1 := dp.box.size.y
+	for i in 3:
+		Game.recruit_random()
+	Game.dwellers_changed.emit()
+	var slid := false
+	var top_moved := 0.0
+	for i in 12:
+		await get_tree().process_frame
+		if dp.box.size.y > h1 + 1.0 and dp.box.size.y < dp.fit_target() - 1.0:
+			slid = true
+		if dp.box.position.y + dp.box.size.y <= vp.y - 0.5:
+			top_moved = maxf(top_moved, absf(dp.box.position.y - top0))
+	await wait(0.3)
+	_check("window still: more crew = taller at once, no slide, top edge stays (%.0f -> %.0f, top moved %.0f, slid %s)" % [h1, dp.box.size.y, top_moved, slid],
+		dp.box.size.y > h1 + 20.0 and absf(dp.box.size.y - dp.fit_target()) <= 2.0 and not slid and top_moved <= 0.5
+		and dp.box.position.y >= -0.5 and dp.box.position.y + dp.box.size.y <= vp.y + 0.5)
+	dp.close()
 	Game.s.dwellers = keep_dw
 	Game.dwellers_changed.emit()
+	await wait(0.3)
+	# MV-537: a panel that rebuilds itself on a tab switch (the Loot panel calls _layout) keeps its tabs under the finger
+	hud.open_panel("inventory")
+	await wait(0.6)
+	var lp: LootPanel = hud.panels.inventory
+	var tab_y := []
+	var moved_ok := true
+	for t in ["gear", "items", "forge", "gear"]:
+		lp.tab = t
+		lp.refresh()
+		await wait(0.4)
+		var y := lp._tabs.get_global_rect().position.y
+		# it may only move up when the taller tab would otherwise run off the bottom (then it sits on the edge)
+		if not tab_y.is_empty() and absf(y - float(tab_y[-1])) > 0.5 and lp.box.position.y + lp.box.size.y < vp.y - 0.5:
+			moved_ok = false
+		tab_y.append(y)
+	_check("window still: switching Loot tabs leaves the tab row where it was, unless it must stay on screen %s" % [tab_y],
+		moved_ok and absf(float(tab_y[-1]) - float(tab_y[0])) <= 2.0)
+	lp.close()
 	await wait(0.3)
 	# --- the room close-up: the whole room, nothing over it, centred on portrait
 	var slot := -1
@@ -6655,8 +7859,11 @@ func _window_fit_test() -> void:
 	if cu._portrait():
 		var f := cu.focus_rect()
 		_check("window fit: portrait = the room centred above the panel (room %s, area %s)" % [room, f],
-			absf(room.get_center().x - vp.x * 0.5) <= 2.0 and absf(room.get_center().y - f.get_center().y) <= 2.0)
+			absf(room.get_center().x - vp.x * 0.5) <= 2.0 and absf(room.get_center().y - f.get_center().y) <= 4.0)   # the vehicle bobs up to 3 px
 	await shot("window_fit_closeup")
+	# MV-537 (window_still on): switching to the shorter tab keeps the panel's height and the room where it was
+	var cam0: Vector2 = main.camera.position
+	var ph0 := cu.box.size.y
 	cu.mode = "assign"
 	cu.refresh()
 	await wait(0.8)
@@ -6664,9 +7871,24 @@ func _window_fit_test() -> void:
 	b = main.world_to_screen(r.end)
 	room = Rect2(a, b - a)
 	panel = Rect2(cu.box.position, cu.box.size)
-	_check("window fit: a shorter panel and the room follows to the middle of the new space (room %s, panel %s)" % [room, panel],
-		not room.grow(-1.0).intersects(panel) and (not cu._portrait() or absf(room.get_center().y - cu.focus_rect().get_center().y) <= 2.0))
+	_check("window still: a shorter close-up tab keeps the panel height and the room doesn't move (panel %.0f -> %.0f, camera moved %.1f)" % [ph0, cu.box.size.y, main.camera.position.distance_to(cam0)],
+		absf(cu.box.size.y - ph0) <= 1.0 and main.camera.position.distance_to(cam0) <= 0.5 and not room.grow(-1.0).intersects(panel))
 	await shot("window_fit_closeup_assign")
+	# window_still off: the MV-482 look, the panel shrinks and the room glides to the middle of the new space
+	cu.mode = "main"
+	cu.refresh()
+	await wait(0.5)
+	Features.set_override("features", "window_still", false)
+	cu.mode = "assign"
+	cu.refresh()
+	await wait(0.8)
+	a = main.world_to_screen(r.position)
+	b = main.world_to_screen(r.end)
+	room = Rect2(a, b - a)
+	panel = Rect2(cu.box.position, cu.box.size)
+	_check("window fit: still off = a shorter panel and the room follows to the middle of the new space (room %s, panel %s)" % [room, panel],
+		not room.grow(-1.0).intersects(panel) and (not cu._portrait() or absf(room.get_center().y - cu.focus_rect().get_center().y) <= 4.0))
+	Features.set_override("features", "window_still", null)
 	cu.close()
 	await wait(0.6)
 	Settings.set_value("tips", keep_tips)
@@ -6904,11 +8126,11 @@ func _trait_cards_test() -> void:
 	var cook := TraitCard.new()
 	cook.size = Vector2(170, 60)
 	add_child(cook)
-	cook.setup("cook")
+	cook.setup("cook", -1)
 	var glut := TraitCard.new()
 	glut.size = Vector2(170, 60)
 	add_child(glut)
-	glut.setup("glutton")
+	glut.setup("glutton", -1)
 	await wait(0.2)
 	var g_lbls: Array = glut.find_children("*", "Label", true, false).map(func(l): return l.text)
 	_check("trait cards: untiered = no tier label; a benefit gets the accent only, a trade-off the still crimson edge",
@@ -6917,6 +8139,48 @@ func _trait_cards_test() -> void:
 		and g_lbls.has(Loc.t(TraitCard.COST.glutton)) and g_lbls.has(Loc.t(TraitCard.UPSIDE.glutton)))
 	cook.queue_free()
 	glut.queue_free()
+	# --- MV-497 tiers: every trait classified, mythic kept free, trade-offs at most rare, the switch falls back
+	var unlisted := Crew.TRAITS.keys().filter(func(t): return Crew.trait_tier(t) < 0 or Crew.trait_tier(t) > 4)
+	var harsh := Crew.TRAITS.keys().filter(func(t): return Crew.TRAITS[t].get("bad", false) and Crew.trait_tier(t) > 2)
+	_check("trait tiers: all %d traits classified common..legendary %s, trade-offs at most rare %s" % [Crew.TRAITS.size(), unlisted, harsh],
+		unlisted.is_empty() and harsh.is_empty() and Crew.TRAIT_TIERS.size() == Crew.TRAITS.size())
+	_check("trait tiers: architect and lucky legendary, cook uncommon, afraid of the dark the harshest trade-off",
+		Crew.trait_tier("architect") == 4 and Crew.trait_tier("lucky") == 4 and Crew.trait_tier("cook") == 1
+		and Crew.trait_tier("afraid_dark") == 2 and Crew.trait_tier("grumpy") == 0)
+	var tiered := TraitCard.new()
+	tiered.size = Vector2(170, 60)
+	add_child(tiered)
+	tiered.setup("cook")
+	Dev.trait_tiers(false)
+	var off_ok := Crew.trait_tier("cook") == -1 and Crew.trait_tier("architect") == -1
+	Dev.trait_tiers(true)
+	await wait(0.2)
+	_check("trait tiers: a classified card shows its tier label and the tier light; switch off = untiered",
+		tiered.find_child("Tier", true, false) != null and TraitFx.mode_for(false, tiered.tier) in ["anim", "still"] and off_ok)
+	tiered.queue_free()
+	Features.set_override("features", "trait_tiers", null)
+	# --- MV-516 roll odds: seeded 4000 recruits land on the approved shares; off = every trait even; named crew fixed
+	Crew.rng.seed = 51600
+	var on_r := Dev.trait_roll_test(4000)
+	var want := {"common": 47.7, "uncommon": 42.8, "rare": 25.9, "epic": 10.7, "legendary": 2.9, "bad": 22.6}
+	var off_by := []
+	for k in want:
+		if absf(float(on_r[k]) - want[k]) > (1.5 if k == "legendary" else 3.0):
+			off_by.append("%s %.1f" % [k, on_r[k]])
+	_check("trait odds: weighted roll matches the approved shares %s" % [off_by], off_by.is_empty())
+	_check("trait odds: legendary weight 1 vs common 10, a trade-off 5",
+		Crew.trait_weight("architect") == 1.0 and Crew.trait_weight("quick_hands") == 10.0 and Crew.trait_weight("afraid_dark") == 5.0)
+	Features.set_override("features", "trait_roll_weights", false)
+	Crew.rng.seed = 51601
+	var off_r := Dev.trait_roll_test(4000)
+	var even := Crew.trait_weight("architect") == 1.0 and Crew.trait_weight("quick_hands") == 1.0
+	Features.set_override("features", "trait_roll_weights", null)
+	_check("trait odds: switch off = every trait equally likely (legendary %.1f%%, was 13.8%%)" % float(off_r.legendary),
+		even and absf(float(off_r.legendary) - 13.8) < 3.0)
+	var mark := {"lore": "mark"}
+	Crew.roll_traits(mark)
+	_check("trait odds: named crew keep their fixed traits (%s)" % [mark.traits], mark.traits == Crew.FIXED.mark)
+	Crew.rng.randomize()
 	var arch := TraitCard.new()
 	arch.custom_minimum_size.x = 160
 	add_child(arch)
@@ -6988,3 +8252,584 @@ func _trait_cards_test() -> void:
 	god.close()
 	await wait(0.3)
 	Settings.set_value("tips", keep_tips)
+
+## MV-518: crew stats easy to read: same order and colour everywhere, one bar segment per point, the best stat boxed in
+## gold with "ถนัด" (none when all three tie), compact chips in list rows, what the best stat is good for, and what
+## the equipment adds shown apart (gear never changes STR / AGI / INT)
+func _stat_view_test() -> void:
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	var d: Dictionary = Game.s.dwellers[0]
+	var keep := {"str": d.str, "agi": d.agi, "int": d.int}
+	d.str = 7
+	d.agi = 4
+	d["int"] = 5
+	_check("stat view: best stat found (STR)", UIKit.best_stats(d) == ["str"] and UIKit.best_stats({"str": 5, "agi": 5, "int": 5}).is_empty()
+		and UIKit.best_stats({"str": 6, "agi": 6, "int": 2}) == ["str", "agi"])
+	var bars := UIKit.stat_bars(d)
+	add_child(bars)
+	var segs: Array = bars.find_children("Segments", "", true, false)
+	var lit := 0
+	for r in segs[0].get_children():
+		lit += 1 if (r as ColorRect).color == UIKit.STAT_COLOR.str else 0
+	_check("stat view: order STR AGI INT, one segment per point (STR 7 = %d lit)" % lit, segs.size() == 3 and segs[0].get_child_count() == 10 and lit == 7
+		and bars.get_child(0).name == "BestStat_str" and bars.get_child(1).name == "Stat_agi" and bars.get_child(2).name == "Stat_int")
+	_check("stat view: only the best stat is boxed in gold", bars.find_children("BestStat_*", "", true, false).size() == 1)
+	bars.queue_free()
+	var chips := UIKit.stat_chips(d)
+	add_child(chips)
+	_check("stat view: compact chips box the best one", chips.find_children("BestChip_*", "", true, false).size() == 1
+		and chips.find_children("BestChip_str", "", true, false).size() == 1)
+	chips.queue_free()
+	_check("stat view: the best stat says which rooms it suits", UIKit.stat_rooms("str").size() > 0)
+	# the crew window: list row and detail
+	main.hud.open_panel("dwellers")
+	await wait(0.3)
+	var panel = main.hud.panels.dwellers
+	_check("stat view: crew list rows show the chips", panel.find_children("StatChips", "", true, false).size() >= 1)
+	await shot("stat_view_list")
+	panel.manage(int(d.id))
+	await wait(0.3)
+	var gear: Array = panel.find_children("GearLine", "", true, false)
+	var labels: Array = panel.find_children("*", "Label", true, false).map(func(l): return str(l.text))
+	_check("stat view: detail has the bars, the best boxed, what it suits and the gear line", panel.find_children("BestStat_str", "", true, false).size() == 1
+		and gear.size() == 1 and str(gear[0].text).begins_with("จากอุปกรณ์") and labels.any(func(t): return t.begins_with("ถนัด STR")))
+	await shot("stat_view_detail")
+	panel.close()
+	d.str = keep.str
+	d.agi = keep.agi
+	d["int"] = keep.int
+	await wait(0.2)
+
+
+## MV-129 (MV-500 phase 1): the seeded world map is generated the same way from the same seed, holds all six regions
+## (each bordering the next) and all 13 landmarks once, every stop is reachable at Vault 6 and only the first region at
+## Vault 1, border roads carry the gate + warlord, routes are shortest and respect gates, a save round trip keeps it,
+## opening never regenerates it, and the switch off makes no world
+func _world_map_test() -> void:
+	var keep = Game.s.get("world")
+	var keep_pos := [int(Game.s.biome), str(Game.s.get("at_site", ""))]
+	Game.s.erase("world")
+	Game.s.biome = 0          # MV-514: a world made mid-run is placed in the run's biome; these checks start at the start
+	Game.s["at_site"] = ""
+	_check("world map: switch off (shipped default) = no world", not Features.on("seeded_world_map") and WorldMap.ensure().is_empty() and not Game.s.has("world"))
+	Features.set_override("features", "seeded_world_map", true)
+	var a := WorldMap.generate("ASH-271")
+	var b := WorldMap.generate("ASH-271")
+	var c := WorldMap.generate("RUN-042")
+	_check("world map: same seed = same world, another seed = another", JSON.stringify(a) == JSON.stringify(b) and JSON.stringify(a.nodes) != JSON.stringify(c.nodes)
+		and int(a.gen) == WorldMap.GEN_VERSION)
+	var tight := []
+	for sd in ["ASH-271", "RUN-042", "TRAVEL-1", "SCREEN-1", "TEST-515", "ZED-777", "OAK-123", "Q-9"]:
+		var g := WorldMap.generate(sd)
+		for i in (g.nodes as Array).size():
+			for j in range(i + 1, (g.nodes as Array).size()):
+				var s1: Dictionary = g.nodes[i]
+				var s2: Dictionary = g.nodes[j]
+				if absi(int(s1.x) - int(s2.x)) < 27 and absi(int(s1.y) - int(s2.y)) < 27:
+					tight.append("%s %s/%s" % [sd, s1.id, s2.id])
+	_check("world map: no two stops overlap on the map (%s)" % ", ".join(tight.slice(0, 4)), tight.is_empty())
+	var w := WorldMap.create("ASH-271")
+	_check("world map: six regions, each bordering the next on the 2 x 3 grid", (w.regions as Array).size() == 6 and range(1, 6).all(func(i):
+		var p: Dictionary = w.regions[i - 1]
+		var q: Dictionary = w.regions[i]
+		return absi(int(p.x) - int(q.x)) + absi(int(p.y) - int(q.y)) < 200))
+	var sites := (w.nodes as Array).filter(func(n): return n.has("site")).map(func(n): return str(n.site))
+	var all_sites := Expedition.SITES.keys()
+	_check("world map: all %d landmarks, each once, in its own biome (%d)" % [all_sites.size(), sites.size()], sites.size() == all_sites.size()
+		and all_sites.all(func(id): return sites.count(id) == 1)
+		and (w.nodes as Array).filter(func(n): return n.has("site")).all(func(n): return str(Data.biome(int(n.biome)).id) == str(Expedition.SITES[n.site].biome)))
+	_check("world map: a start in the first region and an exit in the last", WorldMap.node("start").get("biome", -1) == 0
+		and int(WorldMap.node("world_exit").get("biome", -1)) == 5 and str(w.at) == "start")
+	var ids := (w.nodes as Array).map(func(n): return str(n.id))
+	var uniq := {}
+	for id in ids:
+		uniq[id] = true
+	_check("world map: stop and road ids are unique", uniq.size() == ids.size())
+	var r6 := WorldMap.reachable("start", 6)
+	var r1 := WorldMap.reachable("start", 1)
+	_check("world map: every stop reachable at Vault 6 (%d/%d)" % [r6.size(), ids.size()], r6.size() == ids.size())
+	_check("world map: Vault 1 reaches only the first region", r1.keys().all(func(id): return int(WorldMap.node(id).biome) == 0) and r1.size() >= 4)
+	var borders := (w.edges as Array).filter(func(e): return int(WorldMap.node(e.a).biome) != int(WorldMap.node(e.c).biome))
+	_check("world map: 5 border roads, each with the next region's Vault level and the warlord of the one it leaves", borders.size() == 5
+		and borders.all(func(e):
+			var hi := maxi(int(WorldMap.node(e.a).biome), int(WorldMap.node(e.c).biome))
+			return int(e.gate) == int(Data.biome(hi).req) and int(e.boss) == hi - 1))
+	var rt := WorldMap.route("start", "helios", 6)
+	_check("world map: a route reaches the last region (%.1f km, %d stops)" % [float(rt.get("km", 0)), (rt.get("ids", []) as Array).size()], not rt.is_empty()
+		and rt.ids[0] == "start" and rt.ids[-1] == "helios" and (rt.edges as Array).size() == (rt.ids as Array).size() - 1)
+	_check("world map: gates hold (no route to the last region at Vault 3)", WorldMap.route("start", "helios", 3).is_empty())
+	var direct := (w.edges as Array).filter(func(e): return str(e.a) == "market" or str(e.c) == "market")
+	var one: Dictionary = direct[0]
+	var other: String = str(one.c) if str(one.a) == "market" else str(one.a)
+	_check("world map: neighbours route along their road", is_equal_approx(float(WorldMap.route("market", other, 6).km), float(one.km)))
+	var km_total := 0.0
+	for e in w.edges:
+		km_total += float(e.km)
+	_check("world map: roads have sensible lengths (%.1f km in all)" % km_total, (w.edges as Array).all(func(e): return float(e.km) >= 0.1 and float(e.km) < 30.0))
+	# save round trip (JSON turns numbers into floats) and no regeneration on open
+	Game.s.world = JSON.parse_string(JSON.stringify(Game.s.world))
+	var rt2 := WorldMap.route("start", "helios", 6)
+	_check("world map: still routes after a save round trip", not rt2.is_empty() and is_equal_approx(float(rt2.km), float(rt.km)))
+	var snap := JSON.stringify(Game.s.world)
+	WorldMap.ensure()
+	Game.game_started.emit()
+	_check("world map: opening / starting again never regenerates it", JSON.stringify(Game.s.world) == snap)
+	_check("world map: GOD verify regenerates the same world from the saved seed", Dev.world_verify())
+	Dev.world_new("XYZ-001")
+	_check("world map: GOD new world changes the seed", str(WorldMap.world().seed) == "XYZ-001")
+	Features.set_override("features", "seeded_world_map", null)
+	Game.s.biome = keep_pos[0]
+	Game.s["at_site"] = keep_pos[1]
+	if keep == null:
+		Game.s.erase("world")
+	else:
+		Game.s.world = keep
+
+
+## MV-514 (MV-500 phase 4): old biome / km / lap saves move onto the world map by the fixed rule (entry stop /
+## landmark / checkpoint) in every biome, keep everything they had (resources, crew, bosses, Vault, sites, expedition,
+## km, lap), and running the migration again (or after a save round trip) changes nothing. A new lap = a new world;
+## the switch flipped off / on keeps a mid-road trip; old-road progress into another biome re-places the vehicle; a
+## world from a newer build is kept as it is (old road drives); map driving keeps s.km inside the biome.
+func _world_migrate_test() -> void:
+	_no_events()
+	var snap: Dictionary = Game.s.duplicate(true)
+	Features.set_override("features", "seeded_world_map", true)
+	Features.set_override("features", "road_events", false)
+	get_tree().paused = true
+	Game.s.combat.boss_beaten = {"0": true}
+	Game.s.vault_level = 2
+	Game.s.lap = 0
+	Game.s.sites_done = {}
+	Game.s.stall = 0.0
+	Game.s.traveling = true
+	Game.s.hull = maxf(80.0, float(Game.s.hull))
+	Game.s["exp"] = {}
+	var keep := func() -> String:
+		return JSON.stringify([Game.s.res, Game.s.items, Game.s.dwellers.map(func(d): return int(d.id)), Game.s.combat.boss_beaten,
+			Game.s.vault_level, Game.s.sites_done, Game.s.exp, Game.s.get("at_site", ""), Game.s.km, Game.s.biome, Game.s.lap,
+			Game.s.mods, Game.s.stats.km_total, Game.s.gear.size()])
+	# old save in each of the six biomes: placed at the region's entry stop, nothing else touched
+	var each := {}
+	for b in Data.BIOMES.size():
+		Dev.world_legacy("mid", b)
+		var before: String = keep.call()
+		var w := WorldMap.world()
+		var n := WorldMap.node(WorldMap.here())
+		var entry := WorldMap._entry_stop(w, b)
+		var earlier := (w.nodes as Array).filter(func(x): return int(x.biome) < b and str(x.type) != "exit").all(func(x): return w.visited.has(str(x.id)))
+		var once := JSON.stringify(Game.s.world)
+		var again := WorldMap.reconcile()
+		Game.s = JSON.parse_string(JSON.stringify(Game.s))     # save / load round trip (ints come back as floats)
+		var after_load := WorldMap.reconcile()
+		each[b] = int(n.biome) == b and str(w.at) == entry and (b == 0 or str(w.placed.rule) == "entry") and earlier \
+			and again == "" and after_load == "" and JSON.stringify(Game.s.world) == JSON.stringify(JSON.parse_string(once)) and JSON.stringify(JSON.parse_string(keep.call())) == JSON.stringify(JSON.parse_string(before))
+	_check("world migrate: an old save in each of the six biomes lands at that region's entry, twice = unchanged, round trip = unchanged (%s)" % str(each),
+		not each.values().has(false))
+	var mid_b := 2
+	# parked at a landmark (with an expedition out): that landmark's stop, the expedition untouched
+	var first: String = Expedition.biome_sites(mid_b)[0]
+	Game.s["exp"] = {"site": first, "team": [], "sup": {}, "start": Time.get_unix_time_from_system(), "dur": 900.0, "log": [], "seed": 7}
+	var exp_before := JSON.stringify(Game.s.exp)
+	Dev.world_legacy("site", mid_b)
+	_check("world migrate: parked at a landmark with a team out = at that landmark, expedition and stop untouched (%s)" % WorldMap.here(),
+		str(WorldMap.node(WorldMap.here()).get("site", "")) == first and Expedition.at_site() == first and JSON.stringify(Game.s.exp) == exp_before
+		and Expedition.active() and WorldMap.reconcile() == "")
+	Game.s["exp"] = {}
+	Game.s["at_site"] = ""
+	# a landmark already explored this lap: visited on the map, nothing granted
+	var res_before := JSON.stringify(Game.s.res)
+	Dev.world_legacy("done", mid_b)
+	var done_node := WorldMap._site_node(first)
+	_check("world migrate: an explored landmark is visited on the map, no reward (%s)" % done_node, bool(WorldMap.world().visited.get(done_node, false))
+		and Expedition.is_done(first) and JSON.stringify(Game.s.res) == res_before)
+	# standing at the old checkpoint with the warlord alive: the border stop, and the border road still waits for him
+	Game.s.combat.boss_beaten.erase(str(mid_b))
+	Game.s.vault_level = int(Data.biome(mid_b + 1).req)
+	Dev.world_legacy("checkpoint", mid_b)
+	var w2 := WorldMap.world()
+	var exit_stop := WorldMap._exit_stop(w2, mid_b)
+	var over := WorldMap._entry_stop(w2, mid_b + 1)
+	var drove := WorldMap.drive_to(over)
+	_check("world migrate: at the old checkpoint = the border stop; the gate still waits for the warlord (%s -> %s)" % [exit_stop, over],
+		str(w2.placed.rule) == "checkpoint" and str(w2.at) == exit_stop and drove and WorldMap.at_gate() and Game.at_checkpoint()
+		and Game.blocked_reason().begins_with("ด่านตรวจ"))
+	Game.s.combat.boss_beaten[str(mid_b)] = true
+	WorldMap.cancel_trip()
+	# a nonzero lap: a world for that lap
+	Dev.world_legacy("lap", 1)
+	_check("world migrate: a later lap gets a world of that lap (%d)" % int(WorldMap.world().lap), int(WorldMap.world().lap) == int(Game.s.lap)
+		and int(WorldMap.node(WorldMap.here()).biome) == 1 and WorldMap.reconcile() == "")
+	# a new save mid-road, the switch off and on again: the old road keeps s.km in the biome, the trip carries on
+	Game.s.erase("world")
+	Game.s.biome = 0
+	Game.s.km = 0.0
+	Game.s.lap = 0
+	Game.s.vault_level = 1
+	WorldMap.reconcile()
+	var dest := ""
+	for e in WorldMap.edges_of("start"):
+		if int(e.boss) < 0:
+			dest = str(e.c) if str(e.a) == "start" else str(e.a)
+	var started := WorldMap.drive_to(dest)
+	Game.s.res.power = 1000.0
+	Game._simulate(5.0, false)
+	var prog := float(WorldMap.trip().get("prog", 0.0))
+	Game.s = JSON.parse_string(JSON.stringify(Game.s))
+	Features.set_override("features", "seeded_world_map", false)
+	var off_ok := not Game.map_mode() and not Game.at_checkpoint_spot() and float(Game.s.km) < Game.biome_end_km()
+	Game.s.res.power = 1000.0
+	Game._simulate(5.0, false)
+	Features.set_override("features", "seeded_world_map", true)
+	_check("world migrate: switch off mid-road = the old road drives in the same biome; on again = the same trip (%.2f km, %s)" % [prog, str(started)],
+		prog > 0.0 and off_ok and int(Game.s.biome) == 0 and WorldMap.driving() and is_equal_approx(float(WorldMap.trip().prog), prog))
+	# progress on the old road into the next biome while the switch was off: re-placed there, the stale trip dropped
+	Features.set_override("features", "seeded_world_map", false)
+	Game.s.biome = 1
+	Game.s.km = Data.biome_start_km(1) + 1.0
+	Features.set_override("features", "seeded_world_map", true)
+	_check("world migrate: old-road progress into another biome re-places the vehicle (%s)" % WorldMap.here(),
+		int(WorldMap.node(WorldMap.here()).biome) == 1 and not WorldMap.driving() and str(WorldMap.world().placed.rule) == "entry")
+	# map driving keeps s.km inside the biome (so the old road never finds itself past the checkpoint)
+	Game.s.km = Game.biome_end_km() - 0.05
+	var cap_before := float(Game.s.km)
+	var dest2 := ""
+	for e in WorldMap.edges_of(WorldMap.here()):
+		if int(e.boss) < 0:
+			dest2 = str(e.c) if str(e.a) == WorldMap.here() else str(e.a)
+	WorldMap.drive_to(dest2)
+	Game.s.res.power = 1000.0
+	Game._simulate(60.0, false)
+	_check("world migrate: map driving never pushes s.km past the old checkpoint (%.2f)" % float(Game.s.km),
+		WorldMap.driving() or str(WorldMap.world().at) == dest2)
+	_check("world migrate: ... and s.km stays put at the cap (%.2f / %.2f)" % [float(Game.s.km), cap_before],
+		is_equal_approx(float(Game.s.km), cap_before) and float(Game.s.km) < Game.biome_end_km())
+	# a world from a newer build: kept byte for byte, the old road drives
+	Game.s.world.v = 99
+	var newer := JSON.stringify(Game.s.world)
+	_check("world migrate: a newer world version is never overwritten; the old road drives", WorldMap.reconcile() == "unsupported"
+		and JSON.stringify(Game.s.world) == newer and not Game.map_mode())
+	# GOD new world mid-run lands in the current biome
+	Game.s.world.v = 1
+	Dev.world_new("MIG-002")
+	_check("world migrate: a new world mid-run is placed in the current biome", str(WorldMap.world().seed) == "MIG-002"
+		and int(WorldMap.node(WorldMap.here()).biome) == int(Game.s.biome))
+	get_tree().paused = false
+	Features.set_override("features", "seeded_world_map", null)
+	Features.set_override("features", "road_events", null)
+	Game.s = snap
+	Game.travel_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+	Game.biome_changed.emit(int(Game.s.biome), true)
+	await wait(0.3)
+
+
+## MV-130 (MV-500 phase 2): driving the world map. Driven straight through Game._simulate (the real travel step), with
+## the clock of the real game frozen in between so only the test's steps move the vehicle.
+func _world_travel_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	# the test drives hundreds of real simulation steps (crew, morale, offline catch-up, a lap): the whole save is
+	# put back afterwards so later groups see exactly what they saw before
+	var snap: Dictionary = Game.s.duplicate(true)
+	var keep := {"world": Game.s.get("world"), "biome": int(Game.s.biome), "km": float(Game.s.km), "lap": int(Game.s.lap),
+		"vault": int(Game.s.vault_level), "trav": bool(Game.s.traveling), "beaten": (Game.s.combat.get("boss_beaten", {}) as Dictionary).duplicate(),
+		"done": (Game.s.get("sites_done", {}) as Dictionary).duplicate(), "site": str(Game.s.get("at_site", "")), "stall": float(Game.s.stall)}
+	Features.set_override("features", "seeded_world_map", true)
+	Features.set_override("features", "road_events", false)
+	Game.s.erase("world")
+	Game.s.biome = 0
+	Game.s.lap = 0
+	Game.s.km = 0.0
+	Game.s.stall = 0.0
+	Game.s.traveling = true
+	Game.s.vault_level = 1
+	Game.s["at_site"] = ""
+	Game.s.combat.boss_beaten = {}
+	Game.s.sites_done = {}
+	Game.s.hull = maxf(80.0, float(Game.s.hull))
+	Game.s.res.power = 1000.0
+	WorldMap.create("TRAVEL-1")
+	get_tree().paused = true          # the real clock stops; the test drives Game._simulate itself
+	var drive := func(sec: float, offline: bool = false):
+		var n := int(ceil(sec / 60.0))
+		for i in n:
+			Game.s.res.power = 1000.0
+			Game._simulate(60.0, offline)
+	_check("world travel: no destination = the vehicle waits", Game.blocked_reason() == "เลือกปลายทางบนแผนที่" and not Game.is_moving())
+	# a destination two stops away inside the first region, with a landmark on the way
+	var rt := WorldMap.route("start", "depot", 1)
+	_check("world travel: a route inside the first region", not rt.is_empty() and (rt.ids as Array).size() >= 2)
+	var km0 := float(Game.s.stats.km_total)
+	_check("world travel: choosing a stop alone doesn't move it", not WorldMap.driving() and is_equal_approx(float(Game.s.stats.km_total), km0))
+	_check("world travel: drive commits the route", WorldMap.drive_to("depot") and WorldMap.driving() and Game.is_moving())
+	var parks := 0
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			parks += 1
+			Expedition.skip_site()
+		if not WorldMap.driving():
+			break
+	_check("world travel: arrives at the destination and parks there", str(WorldMap.world().at) == "depot" and not WorldMap.driving()
+		and Game.blocked_reason() == "เลือกปลายทางบนแผนที่")
+	_check("world travel: each landmark on the way parks the vehicle once (%d)" % parks, parks == (rt.ids as Array).filter(func(id): return WorldMap.node(id).has("site")).size())
+	_check("world travel: distance = the route, nothing doubled (%.2f vs %.2f km)" % [float(Game.s.stats.km_total) - km0, float(rt.km)],
+		absf(float(Game.s.stats.km_total) - km0 - float(rt.km)) < 0.05)
+	# reload mid-road: no free distance
+	var back := WorldMap.route("depot", "start", 1)
+	WorldMap.drive_to("start")
+	Game._simulate(5.0, false)
+	var mid := float(WorldMap.trip().get("prog", 0.0))
+	Game.s.world = JSON.parse_string(JSON.stringify(Game.s.world))
+	km0 = float(Game.s.stats.km_total) - mid
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			Expedition.skip_site()
+		if not WorldMap.driving():
+			break
+	_check("world travel: a reload mid-road carries on from the same spot (%.2f km)" % (float(Game.s.stats.km_total) - km0), mid > 0.0
+		and str(WorldMap.world().at) == "start" and absf(float(Game.s.stats.km_total) - km0 - float(back.km)) < 0.05)
+	# the checkpoint: Vault level, then the warlord, then into the next region
+	var j1 := str(Data.biome(1).id) + "_junction"
+	_check("world travel: the next region is out of reach below its Vault level", not WorldMap.drive_to(j1) and WorldMap.drive_block(j1) != "")
+	Game.s.vault_level = 2
+	var far: Dictionary = (WorldMap.world().nodes as Array).filter(func(n): return int(n.biome) == 1)[0]
+	_check("world travel: Vault 2 can route into the next region", WorldMap.drive_to(str(far.id)))
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			Expedition.skip_site()
+		if Game.at_checkpoint() or not WorldMap.driving():
+			break
+	_check("world travel: the vehicle waits at the border road for the warlord", Game.at_checkpoint() and Game.at_checkpoint_spot() and int(Game.s.biome) == 0
+		and Combat._next_req() == 2 and not Game.is_moving())
+	_check("world travel: the warlord is due at the checkpoint", Combat.warlord_due() or Combat.warlord_cd > 0.0)
+	var entered := [-1]
+	var cb := func(i, _inst): entered[0] = i
+	Game.biome_changed.connect(cb)
+	Game.s.combat.boss_beaten["0"] = true
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			Expedition.skip_site()
+		if not WorldMap.driving():
+			break
+	Game.biome_changed.disconnect(cb)
+	_check("world travel: warlord beaten = across the border, into the next biome", not Game.at_checkpoint() and int(Game.s.biome) == 1 and entered[0] == 1
+		and str(WorldMap.world().at) == str(far.id))
+	# offline follows the same road to the same place
+	Game.s.vault_level = 6
+	for b in 6:
+		Game.s.combat.boss_beaten[str(b)] = true
+	var dest := "helios"
+	var rt2 := WorldMap.route(WorldMap.here(), dest, 6)
+	WorldMap.drive_to(dest)
+	km0 = float(Game.s.stats.km_total)
+	for guard in 150:
+		drive.call(600.0, true)
+		if not WorldMap.driving():
+			break
+	_check("world travel: offline reaches the same stop by the same road (%.2f vs %.2f km)" % [float(Game.s.stats.km_total) - km0, float(rt2.km)],
+		str(WorldMap.world().at) == dest and absf(float(Game.s.stats.km_total) - km0 - float(rt2.km)) < 0.05 and Expedition.at_site() == "")
+	_check("world travel: offline drives past landmarks and marks them, as on the old road", rt2.ids.filter(func(id): return WorldMap.node(id).has("site") and id != dest)
+		.all(func(id): return Expedition.is_done(str(WorldMap.node(id).site))))
+	# a new destination mid-road finishes the road first
+	var nb: Dictionary = WorldMap.edges_of(dest)[0]
+	var other: String = str(nb.c) if str(nb.a) == dest else str(nb.a)
+	WorldMap.drive_to(other)
+	Game._simulate(5.0, false)
+	var on_road := str(WorldMap.trip().edges[0])
+	WorldMap.drive_to(dest)
+	_check("world travel: changing the destination mid-road keeps the road under the wheels", str(WorldMap.trip().edges[0]) == on_road
+		and float(WorldMap.trip().prog) > 0.0)
+	for guard in 150:
+		drive.call(600.0)
+		if not WorldMap.driving():
+			break
+	# the exit: lap + 1 in a new world
+	var seed0 := str(WorldMap.world().seed)
+	WorldMap.drive_to("world_exit")
+	for guard in 150:
+		drive.call(600.0)
+		if Expedition.at_site() != "":
+			Expedition.skip_site()
+		if int(Game.s.lap) == 1:
+			break
+	_check("world travel: the world exit = lap + 1 in a new world, back at the start", int(Game.s.lap) == 1 and str(WorldMap.world().seed) != seed0
+		and int(WorldMap.world().lap) == 1 and str(WorldMap.world().at) == "start" and int(Game.s.biome) == 0)
+	get_tree().paused = false
+	Features.set_override("features", "seeded_world_map", null)
+	Features.set_override("features", "road_events", null)
+	Game.s = snap
+	Game.travel_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+	Game.biome_changed.emit(int(Game.s.biome), true)
+	await wait(0.3)
+
+## MV-515 (MV-500 phase 3): the world map screen inside the map window: off = the old list; on = the map with one
+## touch target per stop, the vehicle marker on top and pointer-transparent, a destination strip with distance / time
+## and Drive (disabled with the reason for a locked stop), selecting never drives, dragging pans without selecting,
+## and the window stays inside a phone screen
+func _world_screen_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	var snap: Dictionary = Game.s.duplicate(true)
+	var win := get_window().size
+	main.hud.open_panel("map")
+	await wait(0.3)
+	var mp = main.hud.panels.map
+	_check("world screen: switch off = the old route list, no map", not Features.on("seeded_world_map") and not mp.map_view.visible)
+	mp.close()
+	Game.s.vault_level = 1
+	# reopening during the 0.1 s close fade used to hide the new window (fixed in ModalPanel.close)
+	Game.s.traveling = false
+	Dev.world_screen("SCREEN-1")
+	await wait(0.4)
+	var view: WorldMapView = mp.map_view
+	var w := WorldMap.world()
+	_check("world screen: the map shows, one touch target per stop", mp.is_open and mp.visible and view.is_visible_in_tree() and view.find_children("Stop_*", "Button", false, false).size() == (w.nodes as Array).size())
+	var mk: Control = view.get_node("VehicleMarker")
+	_check("world screen: the vehicle marker sits on top and never takes a tap", mk.get_index() == view.get_child_count() - 1 and mk.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	var target := ""
+	for n in w.nodes:
+		if n.has("site") and int(n.biome) == 0 and str(n.id) != WorldMap.here():
+			target = str(n.id)
+			break
+	# a REAL tap on the stop (press, a few frames, release through the viewport), as a finger / mouse does
+	var sb: Button = view.get_node("Stop_" + target)
+	var tp := sb.get_global_rect().get_center()
+	var hov_ok := false
+	for pressed in [true, false]:
+		var mb := InputEventMouseButton.new()
+		mb.button_index = MOUSE_BUTTON_LEFT
+		mb.pressed = pressed
+		mb.position = tp
+		mb.global_position = tp
+		if pressed:
+			var mm := InputEventMouseMotion.new()
+			mm.position = tp
+			mm.global_position = tp
+			get_viewport().push_input(mm, true)
+			await wait(0.05)
+			var hov := get_viewport().gui_get_hovered_control()
+			hov_ok = hov == sb
+		get_viewport().push_input(mb, true)
+		await wait(0.12)
+	_check("world screen: a real tap on a stop selects it (selected '%s', wanted '%s', stop under the finger %s)" % [view.selected, target, hov_ok],
+		view.selected == target and hov_ok)
+	# the same with a finger (screen touch through Input, which turns it into the emulated mouse like a phone does)
+	var target2 := ""
+	for n in w.nodes:
+		if int(n.biome) == 0 and str(n.id) != WorldMap.here() and str(n.id) != target:
+			target2 = str(n.id)
+			break
+	view.select("")
+	var sb2: Button = view.get_node("Stop_" + target2)
+	var tp2 := sb2.get_global_rect().get_center()
+	await _finger(0, tp2, true)
+	await wait(0.1)
+	await _finger(0, tp2, false)
+	await wait(0.1)
+	_check("world screen: a finger tap on a stop selects it (selected '%s', wanted '%s')" % [view.selected, target2], view.selected == target2)
+	# MV-542 (Parames, Safari, a continued game): the map window was built before the save loaded, so it had no stop
+	# buttons for the save's world (which arrives without world_changed): the map drew but no stop could be tapped
+	var keep_world: Dictionary = Game.s.world
+	mp.close()
+	await wait(0.3)
+	Game.s.erase("world")
+	view.rebuild()
+	var none_before := view.find_children("Stop_*", "Button", false, false).is_empty()
+	Game.s["world"] = keep_world          # the save brings its world, no signal
+	main.hud.open_panel("map")
+	await wait(0.4)
+	var n_btn := view.find_children("Stop_*", "Button", false, false).size()
+	view.select("")
+	var sb4: Button = view.get_node_or_null("Stop_" + target2)
+	if sb4:
+		var p4 := sb4.get_global_rect().get_center()
+		await _finger(0, p4, true)
+		await wait(0.1)
+		await _finger(0, p4, false)
+		await wait(0.2)
+	_check("world screen: a continued save's world gets its stop buttons when the map opens, and a tap selects (%d buttons, before none %s, selected '%s')" % [n_btn, none_before, view.selected],
+		none_before and n_btn == (keep_world.nodes as Array).size() and view.selected == target2)
+	view.select(target)
+	await wait(0.2)
+	var rt := view.route()
+	_check("world screen: selecting a stop shows it in the strip with distance and time (%s)" % mp._dest_info.text, not rt.is_empty()
+		and mp._dest_title.text == view.label_of(target) and mp._dest_info.text.contains("กม.") and not mp.drive_btn.disabled)
+	_check("world screen: selecting alone never drives", not WorldMap.driving() and not bool(Game.s.traveling))
+	await shot("world_screen_selected")
+	mp.drive_btn.pressed.emit()
+	await wait(0.2)
+	_check("world screen: Drive commits the trip and sets off", WorldMap.driving() and str(WorldMap.trip().dest) == target and bool(Game.s.traveling))
+	var far := ""
+	for n in w.nodes:
+		if int(n.biome) == 5:
+			far = str(n.id)
+	view.select(far)
+	await wait(0.2)
+	_check("world screen: a locked stop can't be driven to and says why (%s)" % mp._dest_note.text, mp.drive_btn.disabled and mp._dest_note.text.contains("Lv."))
+	await shot("world_screen_locked")
+	# a narrow phone: the map pans by drag, a drag never selects, the window stays on screen
+	get_window().size = Vector2i(320, 568)
+	await wait(0.5)
+	var sel0 := view.selected
+	var pan0 := view.pan
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = Vector2(view.size.x * 0.5, 20)
+	view._gui_input(down)
+	var mv := InputEventMouseMotion.new()
+	mv.position = down.position + Vector2(-40, 0)
+	view._gui_input(mv)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = mv.position
+	view._gui_input(up)
+	_check("world screen: on a narrow phone a drag pans the map and selects nothing (pan %s -> %s)" % [pan0, view.pan],
+		view.size.x < WorldMapView.MAP.x and view.pan != pan0 and view.selected == sel0)
+	var vr := get_viewport().get_visible_rect()
+	_check("world screen: the map window stays inside a 320x568 screen", mp.visible and vr.encloses(mp.box.get_global_rect().grow(-1)))
+	await shot("world_screen_narrow")
+	# a finger on a phone-sized screen: tap a visible stop of the first region
+	var tgt3 := ""
+	for n in w.nodes:
+		if int(n.biome) == 0 and str(n.id) != WorldMap.here():
+			var r3: Rect2 = (view.get_node("Stop_" + str(n.id)) as Control).get_global_rect()
+			if view.get_global_rect().grow(-2).encloses(r3):
+				tgt3 = str(n.id)
+				break
+	view.select("")
+	var p3: Vector2 = (view.get_node("Stop_" + tgt3) as Control).get_global_rect().get_center() if tgt3 != "" else Vector2.ZERO
+	await _finger(0, p3, true)
+	await wait(0.1)
+	await _finger(0, p3, false)
+	await wait(0.2)
+	_check("world screen: a finger tap selects a stop on a narrow phone too (%s -> %s)" % [tgt3, view.selected], tgt3 != "" and view.selected == tgt3)
+	get_window().size = win
+	await wait(0.4)
+	mp.close()
+	Features.set_override("features", "seeded_world_map", null)
+	Game.s = snap
+	Game.travel_changed.emit()
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+	await wait(0.3)
+

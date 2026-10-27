@@ -40,6 +40,17 @@ const FLAG_POS := Vector2(115, 4)         # relative to a 4-floor roof (in _roof
 const CHAIN_POS := Vector2(266, 263)      # + rear_shift()
 const PUFF_GAP := 1.0                     # x the spec ranges: driving 0.8-1.4 s, parked idle 2.5-4 s (tune vehicle.puff_gap)
 const DRIP_GAP := 4.5                     # s between roof drips in rain on average (3-6 s, tune vehicle.drip_gap)
+## MV-462 cozy roof (switch cozy_roof): roof parts in _roof_root (4-floor roof-local, = truck.ROOF_PARTS); off =
+## roof_legacy_<tier>, the old planters / tank / dish lifted out of the shell, at ROOF_LEGACY_X
+const ROOF_PARTS := {"prop_roof_planter_tray": [Vector2(40, 21), Vector2(54, 21)],
+	"prop_roof_water_tank": [Vector2(150, 16)], "prop_roof_satellite_dish": [Vector2(156, 0)]}
+const ROOF_LEGACY_X := 38
+## MV-519 driving cabs: Viktor is baked into every veh_/ext_ shell (decal_<tier>_driver_cockpit at these anchors);
+## switch driver_cab now and then shows one of its idle frames over the window: 1 = he blinks, 2 = the dash
+## indicator goes dark, 3 = his hand nudges the wheel. Frame 0 is the baked look, so between moves nothing is drawn.
+const DRIVER_CAB := {"van": Vector2(11, 153), "bus": Vector2(18, 195), "rig": Vector2(17, 193), "train": Vector2(18, 66)}
+const DRIVER_GAP := 4.0                   # s between moves on average (tune vehicle.driver_gap)
+const DRIVER_ACTS := {"blink": [[1, 0.14]], "lamp": [[2, 0.2], [0, 0.16], [2, 0.2]], "wheel": [[3, 0.45]]}
 
 var body: Node2D
 var room_views: Array[RoomView] = []
@@ -68,12 +79,17 @@ var _flap_root: Node2D          # behind the wheels
 var _puff_t := 0.0
 var _drip_t := 0.0
 var _flap_t := 0.0
+var driver_cab: Sprite2D          # MV-519 cab micro-animation, above the closed hull (both views carry the cab)
+var _driver_t := 2.0
+var _driver_left := 0.0
+var _driver_seq: Array = []       # [[frame, s], ...] still to show
 var _shells: Node2D
 var _seams_root: Node2D          # large-room interior strips drawn over the hull partitions (v4.4)
 var _exteriors: Node2D
 var _rooms_root: Node2D
 var _mods_root: Node2D
 var _roof_root: Node2D
+var _roof_parts: Node2D          # MV-462: under the solar panels, rebuilt by _sync_roof
 var pets_root: Node2D
 var _bump_t := 0.0
 var _bump := 0.0
@@ -140,6 +156,8 @@ func _ready() -> void:
 	body.add_child(_seams_root)
 	_roof_root = Node2D.new()
 	body.add_child(_roof_root)
+	_roof_parts = Node2D.new()
+	_roof_root.add_child(_roof_parts)
 	for x in SOLAR_X:
 		var s := Sprite2D.new()
 		s.texture = Atlas.tex("solar_2")
@@ -159,6 +177,10 @@ func _ready() -> void:
 	_exteriors = Node2D.new()
 	_exteriors.modulate.a = 0.0
 	body.add_child(_exteriors)
+	driver_cab = Sprite2D.new()
+	driver_cab.centered = false
+	driver_cab.visible = false
+	body.add_child(driver_cab)
 	body.add_child(tracks)
 
 	headlight = Polygon2D.new()
@@ -199,7 +221,10 @@ func _ready() -> void:
 		else:
 			_refresh_mods())
 	Meta.generation_started.connect(func(_g): rebuild())
-	Features.changed.connect(_sync_detail)
+	Features.changed.connect(func():
+		_sync_detail()
+		_sync_roof()
+		_refresh_mods())
 	add_to_group("vehicle_fx")
 	rebuild()
 
@@ -217,6 +242,8 @@ func rebuild() -> void:
 			ch.queue_free()
 	wheels.clear()
 	_add_sprite(_shells, "veh_" + tier, Vector2.ZERO)
+	_driver_seq.clear()
+	driver_cab.visible = false
 	_add_sprite(_exteriors, "ext_" + tier, Vector2.ZERO)
 	var kind: String = vd.get("trailer", "trailer")
 	for t in n_trailers:
@@ -232,6 +259,7 @@ func rebuild() -> void:
 		for w in vd.wheels:
 			_add_wheel(Vector2(w[0], w[1]), false)
 	_roof_root.position = Vector2(0, dy)
+	_sync_roof()
 	smoke.position = Vector2(vd.chimney[0], vd.chimney[1])
 	headlight.position = Vector2(vd.headlight[0], vd.headlight[1])
 	tracks.position = Vector2(TRACKS_X.get(tier, 202), 284)
@@ -263,6 +291,7 @@ func _add_sprite(parent: Node, region: String, pos: Vector2) -> Sprite2D:
 	s.texture = Atlas.tex(region)
 	s.centered = false
 	s.position = pos
+	s.set_meta("region", region)     # MV-462: lets autotest / GOD read what is drawn
 	parent.add_child(s)
 	return s
 
@@ -490,7 +519,8 @@ func _refresh_mods() -> void:
 		_mod_sprite("mod_roof_turret_%d" % mini(tur, 3), Vector2(200, ROOF_Y + dy - 18))
 	var deck := Mods.level("roof_deck")
 	if deck > 0:
-		_mod_sprite("mod_roof_deck_%d" % mini(deck, 3), Vector2(ROOF_DECK_X, ROOF_Y + dy - 60))
+		var deck_art := "mod_roof_deck_cozy_%d" if Features.on("cozy_roof") else "mod_roof_deck_%d"
+		_mod_sprite(deck_art % mini(deck, 3), Vector2(ROOF_DECK_X, ROOF_Y + dy - 60))
 	for k in mini(Mods.level("fuel_tanks"), 3):
 		var fy := 140 - 24 * k
 		if fy > roof_y() + 6:
@@ -530,6 +560,28 @@ func _refresh_mods() -> void:
 			w.visible = not rear_wheels.has(w.position)
 			w.sprite_frames = Atlas.wheel_frames(off)
 	_sync_detail()
+
+
+## MV-462: the cozy roof parts (water tank, dish, two planter trays) or, with cozy_roof off, the old ones
+func _sync_roof() -> void:
+	for ch in _roof_parts.get_children():
+		_roof_parts.remove_child(ch)
+		ch.queue_free()
+	if not Features.on("cozy_roof"):
+		_add_sprite(_roof_parts, "roof_legacy_" + tier, Vector2(ROOF_LEGACY_X, 0))
+		return
+	for region in ROOF_PARTS:
+		for pos in ROOF_PARTS[region]:
+			_add_sprite(_roof_parts, region, pos)
+
+
+## the atlas regions drawn now on the roof parts (roof=true) or as exterior mods (autotest)
+func sprite_regions(roof: bool) -> Array:
+	var out := []
+	for ch in (_roof_parts if roof else _mods_root).get_children():
+		if not ch.is_queued_for_deletion() and ch.has_meta("region"):
+			out.append(str(ch.get_meta("region")))
+	return out
 
 
 ## MV-388: a stock leaf spring above every road wheel (main vehicle + trailers). Not on rails; the main vehicle's
@@ -621,6 +673,7 @@ func _process(delta: float) -> void:
 	if smoke is GPUParticles2D:
 		(smoke as GPUParticles2D).speed_scale = 1.0 + _speed * 0.8
 	_tick_idle_motion(delta, moving)
+	_tick_driver(delta)
 	antenna_light.visible = fmod(_t, 1.6) < 0.25
 	var k := shake_scale()
 	_bump_t -= delta
@@ -785,6 +838,49 @@ func flap_now() -> void:
 	if mudflap.visible:
 		mudflap.frame = 0
 		mudflap.play("default")
+
+
+func driver_cab_on() -> bool:
+	return Features.on("driver_cab") and not Game.s.is_empty()
+
+
+## one driver move now ("blink" / "lamp" / "wheel"); also GOD MODE's preview
+func driver_act(kind: String) -> bool:
+	if not driver_cab_on() or not DRIVER_ACTS.has(kind):
+		return false
+	_driver_seq = (DRIVER_ACTS[kind] as Array).duplicate(true)
+	_driver_step()
+	_driver_t = randf_range(0.6, 1.4) * Features.num("vehicle.driver_gap", DRIVER_GAP)
+	return true
+
+
+func _driver_step() -> void:
+	if _driver_seq.is_empty():
+		driver_cab.visible = false
+		return
+	var st: Array = _driver_seq.pop_front()
+	var f := int(st[0])
+	if f > 0:
+		driver_cab.texture = Atlas.tex("decal_%s_driver_cockpit_idle_%d" % [tier, f])
+	driver_cab.set_meta("frame", f)
+	driver_cab.visible = f > 0
+	_driver_left = float(st[1])
+
+
+func _tick_driver(delta: float) -> void:
+	driver_cab.position = DRIVER_CAB.get(tier, DRIVER_CAB.rig)
+	if not driver_cab_on():
+		_driver_seq.clear()
+		driver_cab.visible = false
+		return
+	if driver_cab.visible or not _driver_seq.is_empty():
+		_driver_left -= delta
+		if _driver_left <= 0.0:
+			_driver_step()
+		return
+	_driver_t -= delta
+	if _driver_t <= 0.0:
+		driver_act(["blink", "blink", "lamp", "wheel"].pick_random())
 
 
 func puffs_active() -> int:
