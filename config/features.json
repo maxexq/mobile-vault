@@ -60,8 +60,16 @@
     "driver_cab": true,
     "audio_ambience": true,
     "audio_sfx": true,
-    "audio_bgm": true
+    "audio_bgm": true,
+    "desert_parallax": true
   },
   "events": {},
-  "tune": {}
+  "tune": {
+    "desert_background.clouds_speed": 0.03,
+    "desert_background.far_speed": 0.08,
+    "desert_background.mid_speed": 0.25,
+    "desert_background.near_speed": 0.6,
+    "desert_background.road_speed": 1.0,
+    "desert_background.cloud_wind": 4.0
+  }
 }

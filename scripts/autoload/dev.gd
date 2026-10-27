@@ -223,12 +223,17 @@ func set_tod(v: float) -> void:
 
 
 ## MV-369: one-click real map preview at an exact simulation time.
-func background_preview(tod: float) -> void:
-	goto_biome(0)
+func background_preview(tod: float, biome: int = 0) -> void:
+	goto_biome(biome)
 	weather("clear")
 	set_tod(tod)
-	act("industrial background preview", {"tod": tod})
+	act("background preview", {"tod": tod, "biome": biome})
 	changed.emit()
+
+
+## MV-539: clear-weather previews of the real desert biome.
+func desert_background_preview(tod: float) -> void:
+	background_preview(tod, 1)
 
 
 func weather(w: String) -> void:
