@@ -222,7 +222,7 @@ func set_tod(v: float) -> void:
 	act("time of day %.2f" % v)
 
 
-## MV-369: one-click real map preview at an exact simulation time.
+## MV-548: one-click approved Industrial Ruins map preview at an exact simulation time.
 func background_preview(tod: float, biome: int = 0) -> void:
 	goto_biome(biome)
 	weather("clear")
@@ -369,6 +369,12 @@ func repair(part: float) -> void:
 func hull_repair_v2(on: bool) -> void:
 	Features.set_override("features", "hull_repair_v2", on)
 	act("hull repair v2 %s" % ("on" if on else "off"))
+
+
+## MV-545: session override of the vault_upgrade_v2 switch
+func vault_upgrade_v2(on: bool) -> void:
+	Features.set_override("features", "vault_upgrade_v2", on)
+	act("vault upgrade v2 %s" % ("on" if on else "off"))
 
 
 func set_hull(frac: float) -> void:

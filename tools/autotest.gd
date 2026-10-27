@@ -204,6 +204,11 @@ func _run() -> void:
 		await _hull_repair_test()
 		_finish()
 		return
+	if "--only=vault_upgrade" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _vault_upgrade_test()
+		_finish()
+		return
 	if "--only=hull_warning" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _hull_warning_test()
@@ -1006,6 +1011,7 @@ func _run() -> void:
 	await _flee_guard_test()
 	await _barks_test()
 	await _hull_warning_test()
+	await _vault_upgrade_test()
 	await _drive_help_test()
 	await _hull_repair_test()
 	await _audio_test()
@@ -5001,13 +5007,51 @@ func _industrial_background_test() -> void:
 		long_layers = long_layers and px.repeat_size.x >= 1920 and px.repeat_size.x == (px.get_child(0) as Sprite2D).texture.get_width()
 		periods[int(px.repeat_size.x)] = true
 	_check("background: actual texture widths drive long independent repeats", long_layers and periods.size() >= 4)
+	# MV-548: accepted native layer contract and road-relative motion, including parking.
+	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
+	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
+	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
+	for key in dimensions:
+		var sprite := live.layers[key].node.get_child(0) as Sprite2D
+		native = native and sprite.texture.get_size() == Vector2(dimensions[key]) and sprite.scale == Vector2.ONE
+		if key != "clouds" and key != "road":
+			native = native and sprite.position.y + sprite.texture.get_height() == Background.ROAD_Y
+	_check("industrial ruins: exact five native sizes, nearest pixels and ground alignment", native)
+	var nodes := live.get_child_count()
+	live.set_process(false)
+	Features.set_override("tune", "industrial_background.cloud_wind", 0.0)
+	live.preview_offset(0.0)
+	live.road_speed = 100.0
+	live._process(1.0)
+	var rates := true
+	for key in speeds:
+		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
+	_check("industrial ruins: road speed drives .03/.08/.25/.60/1.0 scroll", rates)
+	Features.set_override("tune", "industrial_background.mid_speed", 0.4)
+	live.preview_offset(0.0)
+	live._process(1.0)
+	_check("industrial ruins: live motion tuning keeps the node count stable", is_equal_approx(float(live.layers.mid.offset), 40.0) and live.get_child_count() == nodes)
+	Features.set_override("tune", "industrial_background.mid_speed", 0.25)
+	Features.set_override("tune", "industrial_background.cloud_wind", 4.0)
+	live.preview_offset(0.0)
+	live.road_speed = 0.0
+	live._process(1.0)
+	var parked := true
+	for key in ["far", "mid", "near", "road"]:
+		parked = parked and is_zero_approx(float(live.layers[key].offset))
+	_check("industrial ruins: parked land stays still while smog drifts", parked and is_equal_approx(float(live.layers.clouds.offset), 4.0))
+	live.preview_offset(0.0)
+	live.road_speed = 100.0
+	live._process(23.04)
+	_check("industrial ruins: full road loop returns to its starting pixel", is_zero_approx(float(live.layers.road.offset)))
+	live.set_process(true)
 	var child_count := live.get_child_count()
 	for entry in [[0.25, "sunrise", true, 1], [0.5, "daylight", true, 2], [0.75, "sunset", false, 3], [0.0, "moonlight", false, 0]]:
 		Game.s.tod = float(entry[0])
 		live.update_clock()
 		_check("background: simulation clock selects %s sky and celestial body" % entry[1], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]))
 		_check("background: %s celestial position stays on the pixel grid" % entry[1], live.celestial_position == live.celestial_position.round())
-		await wait(0.5)
+		await wait(3.0)
 		await shot("industrial_" + str(entry[1]))
 	Game.s.tod = 0.35
 	live.update_clock()
@@ -5024,8 +5068,11 @@ func _industrial_background_test() -> void:
 		var px: Parallax2D = live.layers[key].node
 		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
 	_check("background: large travel offsets wrap on whole pixels", snapped)
+	await shot("industrial_full_wrap")
 	Features.set_override("features", "industrial_parallax", false)
 	_check("background: feature off restores the old industrial background", not live.visible and main.background.groups.industrial.legacy[0].visible)
+	await wait(0.3)
+	await shot("industrial_legacy_fallback")
 	Features.set_override("features", "industrial_parallax", true)
 	main.background._on_biome_changed(1, true)
 	phase0 = live.phase
@@ -5036,6 +5083,10 @@ func _industrial_background_test() -> void:
 	get_window().size = Vector2i(405, 720)
 	await wait(0.8)
 	await shot("industrial_portrait_moonlight")
+	Game.s.tod = 0.5
+	live.update_clock()
+	await wait(3.0)
+	await shot("industrial_portrait_daylight")
 	main.hud.open_panel("god")
 	var god = main.hud.panels.god
 	god.tab = "world"
@@ -7123,6 +7174,97 @@ func _hull_repair_test() -> void:
 	Game.s.hull = keep_hull
 	Game.s.res.scrap = keep_scrap
 	Game.dwellers_changed.emit()
+
+
+## MV-545: the Vault upgrade never promises a room the vehicle has no space for, names the bigger vehicle, and every
+## level gives max hull and production (a full vehicle's levels give more production instead); switch off = as before
+func _vault_upgrade_test() -> void:
+	var keep_tier := str(Game.s.get("tier", "van"))
+	var keep_lv := int(Game.s.vault_level)
+	var keep_scrap := float(Game.s.res.scrap)
+	var keep_hull := float(Game.s.hull)
+	var want := {"van": [3, 5, 5, 5, 5, 5], "bus": [3, 5, 6, 8, 8, 8], "rig": [3, 5, 6, 8, 10, 11]}
+	var bad := []
+	for t in want:
+		Game.s.tier = t
+		for lv in range(1, 7):
+			if Game.vault_rooms_at(lv) != int(want[t][lv - 1]):
+				bad.append("%s Lv%d rooms %d" % [t, lv, Game.vault_rooms_at(lv)])
+			if lv < 6:
+				var txt := BuildPanel.vault_card_text(lv, "", "")
+				var gain := int(want[t][lv]) - int(want[t][lv - 1])
+				var promises := txt.contains(Loc.t("ห้อง +%d") % 1) or txt.contains(Loc.t("ห้อง +%d") % 2)
+				if (gain > 0) != promises or (gain > 0 and not txt.contains(Loc.t("ห้อง +%d") % gain)):
+					bad.append("%s Lv%d card '%s'" % [t, lv, txt.left(60)])
+	_check("vault upgrade: rooms per vehicle and level, and the card never promises a room it can't give %s" % [bad.slice(0, 3)], bad.is_empty())
+	Game.s.tier = "van"
+	var full_txt := BuildPanel.vault_card_text(3, "", "")
+	_check("vault upgrade: a full van says so and names the bus (%s)" % full_txt.left(90),
+		full_txt.contains(Loc.t("ห้องเต็มรถแล้ว (การผลิต +%d%% แทน)") % 10) and full_txt.contains(str(Data.VEHICLES.bus.th)))
+	# bonuses: van at Lv6 = +75 hull, x1.65 production (5 levels x 5 % + 4 banked rooms x 10 %); a rig at Lv6 banks none
+	Game.s.vault_level = 6
+	var h_on := Game.hull_max()
+	var p_on := Game.vault_prod_mult()
+	var banked := Game.vault_banked_rooms()
+	Features.set_override("features", "vault_upgrade_v2", false)
+	var h_off := Game.hull_max()
+	var p_off := Game.vault_prod_mult()
+	Features.set_override("features", "vault_upgrade_v2", null)
+	_check("vault upgrade: van Lv6 = +75 max hull, production x1.65 with 4 banked rooms (%.0f vs %.0f, x%.2f, %d banked)" % [h_on, h_off, p_on, banked],
+		absf(h_on - h_off - 75.0) < 0.01 and absf(p_on - 1.65) < 0.001 and banked == 4 and is_equal_approx(p_off, 1.0))
+	Game.s.tier = "rig"
+	_check("vault upgrade: a rig at Lv6 banks no room, production x1.25 (%d, x%.2f)" % [Game.vault_banked_rooms(), Game.vault_prod_mult()],
+		Game.vault_banked_rooms() == 0 and absf(Game.vault_prod_mult() - 1.25) < 0.001)
+	# the bonus reaches real production
+	Game.s.tier = keep_tier
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if Game.is_slot_unlocked(i) and Data.room_def(Game.s.rooms[i].type).has("produce") and not Game.room_workers(i).is_empty() 				and Dictionary(Game.room_rate_pm(i)).values().reduce(func(a, b): return a + float(b), 0.0) > 0.0:
+			slot = i
+			break
+	var r_on := 0.0
+	var r_off := 0.0
+	if slot >= 0:
+		r_on = Dictionary(Game.room_rate_pm(slot)).values().reduce(func(a, b): return a + float(b), 0.0)
+		Features.set_override("features", "vault_upgrade_v2", false)
+		r_off = Dictionary(Game.room_rate_pm(slot)).values().reduce(func(a, b): return a + float(b), 0.0)
+		Features.set_override("features", "vault_upgrade_v2", null)
+	_check("vault upgrade: room output follows the Vault bonus (slot %d: %.2f vs %.2f, x%.2f)" % [slot, r_on, r_off, Game.vault_prod_mult()],
+		slot >= 0 and r_off > 0.0 and absf(r_on / r_off - Game.vault_prod_mult()) < 0.01)
+	# the upgrade toast tells the truth on a full van
+	Game.s.tier = "van"
+	Game.s.vault_level = 2
+	Game.s.res.scrap = 99999.0
+	var toasts := []
+	var grab := func(msg: String, _kind: String = ""): toasts.append(msg)
+	Game.toast.connect(grab)
+	Game.upgrade_vault()
+	Game.toast.disconnect(grab)
+	_check("vault upgrade: upgrading a full van says it gave production, not a room %s" % [toasts], toasts.any(func(t): return str(t).contains("ห้องเต็มรถแล้ว")))
+	# the real build menu: new card on, the old "+1 room / new floor" card with the switch off
+	Game.s.vault_level = 3
+	main.hud.open_panel("build")
+	await wait(0.5)
+	var bp = main.hud.panels.build
+	var on_card: String = bp._frame_info.text
+	var on_title: String = bp._frame_title.text
+	await shot("vault_upgrade_card")
+	Features.set_override("features", "vault_upgrade_v2", false)
+	bp.refresh()
+	await wait(0.2)
+	var off_card: String = bp._frame_info.text
+	var off_title: String = bp._frame_title.text
+	Features.set_override("features", "vault_upgrade_v2", null)
+	bp.close()
+	await wait(0.3)
+	_check("vault upgrade: the build menu shows the honest card, switch off = the old one (%s | %s)" % [on_card.left(50), off_card.left(40)],
+		on_card.contains("ห้องเต็มรถแล้ว") and not on_title.contains("เปิดชั้นใหม่") and off_card.contains(Loc.t("ห้อง +1").left(4)) and off_title.contains("เปิดชั้นใหม่"))
+	Game.s.tier = keep_tier
+	Game.s.vault_level = keep_lv
+	Game.s.res.scrap = keep_scrap
+	Game.s.hull = minf(keep_hull, Game.hull_max())
+	Game.rooms_changed.emit()
+	Game.travel_changed.emit()
 
 
 func _hull_warning_test() -> void:

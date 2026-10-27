@@ -1,0 +1,483 @@
+{
+  "title": "Industrial Ruins \u2014 twenty native parallax panels",
+  "tool": "built-in image_gen",
+  "key": "#FF00FF",
+  "filter": "nearest-neighbour",
+  "dimension_decision": "Use panel-1 sizes for every panel in each layer; generic 480x230 continuation boilerplate is superseded.",
+  "panel_order": [
+    1,
+    2,
+    3,
+    4,
+    1
+  ],
+  "layers": [
+    {
+      "name": "clouds",
+      "w": 1984,
+      "h": 220,
+      "pw": 496,
+      "scale": 3,
+      "speed": 0.03,
+      "palette": [
+        "sky0",
+        "sky1",
+        "sky2",
+        "sky3",
+        "gray3",
+        "gray4",
+        "blue3"
+      ],
+      "panel_size": [
+        496,
+        220
+      ],
+      "strip_size": [
+        1984,
+        220
+      ],
+      "panels": [
+        {
+          "file": "native/clouds-panel-01.png",
+          "sha256": "b6f9efe947191923ee39841638e9efd6d1bf51bef9bb3f4ce2992781d197c1bf"
+        },
+        {
+          "file": "native/clouds-panel-02.png",
+          "sha256": "cd70232f86705d46395b56a4c8952ee661841ed38ebd024abde76aac53141e2a"
+        },
+        {
+          "file": "native/clouds-panel-03.png",
+          "sha256": "fa5fb782f01419a9c174e992d96750c5ba5e89ca57b9dac9919c9142ca8336a9"
+        },
+        {
+          "file": "native/clouds-panel-04.png",
+          "sha256": "a3f15cc27e5154df77739ed4f9969dfb7744b321333da02cececcf8304bc4a29"
+        }
+      ],
+      "sources": [
+        {
+          "file": "generated/clouds-accepted-01.png",
+          "sha256": "7cdf4c54cb4601844aecf711e53d9d18fba12a783b8997b524f0004f947f0070"
+        }
+      ],
+      "normalization": [
+        {
+          "source_size": [
+            2170,
+            725
+          ],
+          "sampling": "full canvas nearest; low horizontal smog banks"
+        }
+      ],
+      "approved_rgb_sha256": "b16bdee0818e7fc930d35c4cf4958deeeff480f07b80bb16e66475a68e3ab99a"
+    },
+    {
+      "name": "far",
+      "w": 1920,
+      "h": 300,
+      "pw": 480,
+      "scale": 3,
+      "speed": 0.08,
+      "palette": [
+        "blue3",
+        "blue4",
+        "sky3"
+      ],
+      "panel_size": [
+        480,
+        300
+      ],
+      "strip_size": [
+        1920,
+        300
+      ],
+      "panels": [
+        {
+          "file": "native/far-panel-01.png",
+          "sha256": "5ba99cbb203a1994c43a44c6d07469bc4dd76dc752c856f7d443e3c57bd4450c"
+        },
+        {
+          "file": "native/far-panel-02.png",
+          "sha256": "76840b770f02c9af91e55fe213b551b01994e593c19d079267c9aaab65c8fc3a"
+        },
+        {
+          "file": "native/far-panel-03.png",
+          "sha256": "12b96689ff8eb145c98675588ccafc759d61858a23c5356e460e56e3a1e43d5e"
+        },
+        {
+          "file": "native/far-panel-04.png",
+          "sha256": "9308649de9e7b8346c23e62591f20fe284e405f3f328d180dde5d13125c51a44"
+        }
+      ],
+      "sources": [
+        {
+          "file": "generated/far-accepted-01.png",
+          "sha256": "ad3a0917711014cf445ddf19d99bcd0c504351e5ee21b4cf9c63378c949a566f"
+        }
+      ],
+      "normalization": [
+        {
+          "source_size": [
+            2172,
+            724
+          ],
+          "crop": [
+            0,
+            316,
+            2172,
+            497
+          ],
+          "content_height": 125
+        }
+      ],
+      "approved_rgb_sha256": "575e8e66491db9197f391d3286960d880d9a40530015f967d8c2ca18be4a65ba"
+    },
+    {
+      "name": "mid",
+      "w": 1920,
+      "h": 230,
+      "pw": 480,
+      "scale": 3,
+      "speed": 0.25,
+      "palette": [
+        "ol0",
+        "ol1",
+        "orange0",
+        "orange1",
+        "orange2",
+        "orange3",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "blue4",
+        "sky0",
+        "sky1",
+        "sky2",
+        "sky3",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "gray6",
+        "cream0",
+        "cream1",
+        "cream2",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "sand0",
+        "sand1",
+        "sand2",
+        "sand3",
+        "teal0",
+        "teal1"
+      ],
+      "panel_size": [
+        480,
+        230
+      ],
+      "strip_size": [
+        1920,
+        230
+      ],
+      "panels": [
+        {
+          "file": "native/mid-panel-01.png",
+          "sha256": "a9122bdcd3e4570d124bc9abb1891b71b9d96204942cf57c39a419c139f5efe3"
+        },
+        {
+          "file": "native/mid-panel-02.png",
+          "sha256": "43788f82e2b70c3f32158dcd23a8ae3844364d78f55201a554c00ff43f961a67"
+        },
+        {
+          "file": "native/mid-panel-03.png",
+          "sha256": "a745da502f8e2d442ab798ed2e08a118c8d81e2e2e1a9d17e2a10d66a0ec361d"
+        },
+        {
+          "file": "native/mid-panel-04.png",
+          "sha256": "d1b1f855bab38cd4629b8ee715239c0579d75e326d89d49f87dacfec6ff81f22"
+        }
+      ],
+      "sources": [
+        {
+          "file": "generated/mid-accepted-01.png",
+          "sha256": "8c81774df4364998927996016c7f939ebdbe8c09f867000086692c6e5f19be16"
+        }
+      ],
+      "normalization": [
+        {
+          "source_size": [
+            1983,
+            793
+          ],
+          "crop": [
+            0,
+            326,
+            1983,
+            500
+          ],
+          "content_height": 145
+        }
+      ],
+      "approved_rgb_sha256": "36f22942117601eb355103e86fa5195ccb63695876ca7a3865b4cfa368ec6955"
+    },
+    {
+      "name": "near",
+      "w": 2112,
+      "h": 124,
+      "pw": 528,
+      "scale": 3,
+      "speed": 0.6,
+      "palette": [
+        "ol0",
+        "ol1",
+        "orange0",
+        "orange1",
+        "orange2",
+        "orange3",
+        "gray0",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "blue0",
+        "blue1",
+        "blue2",
+        "blue3",
+        "wood0",
+        "wood1",
+        "wood2",
+        "green0",
+        "green1",
+        "green2",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "cream0",
+        "cream1",
+        "cream2"
+      ],
+      "panel_size": [
+        528,
+        124
+      ],
+      "strip_size": [
+        2112,
+        124
+      ],
+      "panels": [
+        {
+          "file": "native/near-panel-01.png",
+          "sha256": "9d2600124a666b8aab67dc5f10633e68ec8340afd7dbe96b8378f39e173bc2c9"
+        },
+        {
+          "file": "native/near-panel-02.png",
+          "sha256": "f502045fc8f24b0b8bf19b3c311fb78d7a6946ea8cf7534a400c8d2791124291"
+        },
+        {
+          "file": "native/near-panel-03.png",
+          "sha256": "53354e1198164efefca1922f172279d8d974246e04c965cb31577082a647230d"
+        },
+        {
+          "file": "native/near-panel-04.png",
+          "sha256": "f418e0a473807e504c51a538f7a4e2ae3ee43a6cf5e6fe44280ad17b4a972a6b"
+        }
+      ],
+      "sources": [
+        {
+          "file": "generated/near-accepted-01.png",
+          "sha256": "bc52f5b22edc9f8ff7ed08fb67e56c36b8dfc94494c52f84904b7e6e4984339b"
+        },
+        {
+          "file": "generated/near-accepted-02.png",
+          "sha256": "9c193443dc6f50b960c115950614683ced590d2a662f1d1b5e659df82fe7551c"
+        },
+        {
+          "file": "generated/near-accepted-03.png",
+          "sha256": "c79741d3a4faaf960fdb21e3740be578ad7a8b8c725c58699545ce1796d360e0"
+        },
+        {
+          "file": "generated/near-accepted-04.png",
+          "sha256": "91fcbe1c42f462d443dcfe00b4117e8412bbc4c1811ee83b76b4357681f8ff2e"
+        }
+      ],
+      "normalization": [
+        {
+          "source_size": [
+            2172,
+            724
+          ],
+          "crop": [
+            0,
+            284,
+            2172,
+            476
+          ],
+          "content_height": 47
+        },
+        {
+          "source_size": [
+            2170,
+            725
+          ],
+          "crop": [
+            0,
+            481,
+            2170,
+            582
+          ],
+          "content_height": 25
+        },
+        {
+          "source_size": [
+            2170,
+            725
+          ],
+          "crop": [
+            0,
+            453,
+            2170,
+            588
+          ],
+          "content_height": 28
+        },
+        {
+          "source_size": [
+            2170,
+            725
+          ],
+          "crop": [
+            0,
+            422,
+            2170,
+            596
+          ],
+          "content_height": 42
+        }
+      ],
+      "approved_rgb_sha256": "3e9c3090cad64b0d65cbee3b064d14b37db4f87f7f74ea8df6f4a77655387aff"
+    },
+    {
+      "name": "road",
+      "w": 2304,
+      "h": 64,
+      "pw": 576,
+      "scale": 2,
+      "speed": 1,
+      "palette": [
+        "ol0",
+        "ol1",
+        "blue0",
+        "blue1",
+        "gray0",
+        "gray1",
+        "gray2",
+        "gray3",
+        "gray4",
+        "gray5",
+        "sand0",
+        "sand1",
+        "sand2",
+        "orange0",
+        "orange1",
+        "orange2",
+        "yellow0",
+        "yellow1",
+        "yellow2",
+        "yellow3",
+        "cream1"
+      ],
+      "panel_size": [
+        576,
+        64
+      ],
+      "strip_size": [
+        2304,
+        64
+      ],
+      "panels": [
+        {
+          "file": "native/road-panel-01.png",
+          "sha256": "41b125b84b4305d6c073f524df1dd8e75b282ccaca30299d5b809d96130a20f0"
+        },
+        {
+          "file": "native/road-panel-02.png",
+          "sha256": "f7da97b05aef7dee7f67fe893931e966c3e7f2cc08722a5c1792a2a6e2ee2777"
+        },
+        {
+          "file": "native/road-panel-03.png",
+          "sha256": "0eced4ab2e90f74c707f8de4b9fe08fb4b784b32a2e5ef100a68e2d87df68840"
+        },
+        {
+          "file": "native/road-panel-04.png",
+          "sha256": "ccefced7fe3cf11048871c5bde64927886c20d577e6d222c0a4dd43f116e10f8"
+        }
+      ],
+      "sources": [
+        {
+          "file": "generated/road-accepted-01.png",
+          "sha256": "fc518871b318640f81f8d19ba134706b74b93468f3231c13f8e618ed5ff12a2c"
+        }
+      ],
+      "normalization": [
+        {
+          "source_size": [
+            2172,
+            724
+          ],
+          "crop": [
+            0,
+            313,
+            2172,
+            411
+          ]
+        }
+      ],
+      "approved_rgb_sha256": "823d84f9f7857b2343ee77af09a8008eafb0c2c41ddbbee67958747694f72643"
+    }
+  ],
+  "notes": [
+    "Clouds contain only floating smog sprites; lower forty rows empty.",
+    "Far silhouettes flattened to three close steel-blue/smog shades.",
+    "Near sections normalized separately to preserve person/door/truck-relative prop scale.",
+    "All four panels in each layer reconstruct its single native master strip.",
+    "Road is RGB and fully opaque; other source canvases use exact magenta key."
+  ],
+  "ticket": "MV-548",
+  "archive_sha256": "cdda33003f2d4a6eaef5621075339623ff4ffba59ffa16b92ef44eb3f4db8999",
+  "effect_anchors": {
+    "smokestacks": {
+      "layer": "mid",
+      "points": [
+        [
+          425,
+          85
+        ],
+        [
+          1630,
+          132
+        ],
+        [
+          1646,
+          123
+        ]
+      ]
+    },
+    "lamps": {
+      "layer": "near",
+      "points": [
+        [
+          221,
+          78
+        ],
+        [
+          1794,
+          89
+        ]
+      ]
+    }
+  }
+}
