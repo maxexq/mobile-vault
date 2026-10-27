@@ -45,6 +45,7 @@
     "trait_roll_weights": true,
     "seeded_world_map": false,
     "map_blueprint_caches": false,
+    "world_map_detail": true,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,
@@ -87,6 +88,7 @@
     "industrial_background.mid_speed": 0.25,
     "industrial_background.near_speed": 0.6,
     "industrial_background.road_speed": 1.0,
-    "industrial_background.cloud_wind": 4.0
+    "industrial_background.cloud_wind": 4.0,
+    "world_map.props": 0.7
   }
 }

@@ -812,6 +812,15 @@ func world_screen(seed_text: String = "TEST-515") -> void:
 		hud.open_panel("map")
 
 
+## MV-556: the detailed world map look on / off and its prop density (< 0 = keep), then show the map
+func world_map_look(detail: bool, props: float = -1.0) -> void:
+	Features.set_override("features", "world_map_detail", detail)
+	if props >= 0.0:
+		Features.set_override("tune", "world_map.props", props)
+	act("world map look", {"detail": detail, "props": Features.num("world_map.props", 0.7)})
+	world_screen(str(WorldMap.world().get("seed", "TEST-515")) if not WorldMap.world().is_empty() else "TEST-515")
+
+
 func world_cancel() -> void:
 	WorldMap.cancel_trip()
 	Trace.rec("god", "world cancel trip")

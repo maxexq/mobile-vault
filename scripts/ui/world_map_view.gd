@@ -8,6 +8,9 @@ extends Control
 ## ping (MV-511), locked stops a padlock; the selection rim (MV-509) marks the chosen stop; the vehicle marker (MV-510)
 ## sits above everything, follows the trip's progress and never takes a tap. MV-546: a blueprint cache shows the
 ## existing 16x16 blueprint icon as a badge above its stop, bobbing 1 px (never takes a tap).
+## MV-556 (switch world_map_detail): calm `ui_map_terrain_<biome>` tiles, a 1 px soot line where two regions meet, small
+## `ui_map_prop_*` landmarks scattered per region from the world seed (never on a road, a stop or a region name; density
+## tune world_map.props) and a dark plate under each region name. Off = the original MV-501 tiles and bare names.
 ##  * a tap that didn't drag selects a stop (signal stop_selected); dragging only pans. Selecting never drives.
 ##  * stops are 44x44 focusable buttons (keyboard / gamepad focus moves between them).
 ##  * redrawn only when the world, the trip or the selection change; the marker moves and the small loops (vehicle
@@ -28,6 +31,20 @@ const C_ROAD := Color("54544e")
 const C_ROAD_DIRT := Color("6e5a3e")
 const C_ROUTE := Color("d8ae44")
 const C_EDGE := Color("0c0a0a")
+## MV-556: the props a region may scatter (atlas ui_map_prop_<key>); a key listed twice comes up twice as often
+const PROPS := {
+	"industrial": ["industrial_factory", "industrial_factory", "industrial_tank", "industrial_heap", "industrial_heap", "industrial_pylon"],
+	"desert": ["desert_dune", "desert_dune", "desert_glass", "desert_glass", "desert_bones", "desert_stump", "desert_rock"],
+	"forest": ["forest_clump", "forest_clump", "forest_pines", "forest_pines", "forest_bush", "forest_bush", "forest_log"],
+	"swamp": ["swamp_pool", "swamp_pool", "swamp_tree", "swamp_tree", "swamp_reeds", "swamp_reeds", "swamp_shack"],
+	"tundra": ["tundra_pine", "tundra_pine", "tundra_pine", "tundra_rock", "tundra_drift", "tundra_drift", "tundra_wreck"],
+	"metro": ["metro_tower", "metro_tower", "metro_block", "metro_block", "metro_mast", "metro_wreck", "metro_wreck"],
+}
+const PROP_STEP := 14          # candidate grid (px); each candidate jitters -3..+4 px
+const ROAD_CLEAR := 4.0        # px between a prop and any road
+const STOP_CLEAR := 16.0       # px between a prop and a stop centre (beyond the prop's own half size)
+const C_LABEL := Color("b2a88a")
+const C_PLATE := Color(0.047, 0.039, 0.039, 0.78)
 
 var selected := ""
 var pan := Vector2.ZERO
@@ -40,6 +57,10 @@ var _t := 0.0
 var _press := Vector2(-1, -1)
 var _dragging := false
 var _drag_from := Vector2.ZERO
+var _cells := PackedInt32Array()    # MV-556: region index of every 16 px cell (row-major)
+var _props: Array = []              # MV-556: [atlas name, top-left on the map]
+var _plates: Array = []             # MV-556: region-name plates (Rect2 on the map)
+var _layout_key := ""
 
 
 func _ready() -> void:
@@ -56,6 +77,8 @@ func _ready() -> void:
 			rebuild())
 	Game.travel_changed.connect(_refresh_route)
 	Features.changed.connect(func():
+		_layout_key = ""             # MV-556: the switch or the prop density may have changed
+		queue_redraw()
 		if (_cache_icon != null) != (WorldMap.cache_at() != ""):
 			rebuild())
 	resized.connect(_clamp_pan)
@@ -192,9 +215,136 @@ func _origin() -> Vector2:
 	return (pan + ((size - MAP) * 0.5).max(Vector2.ZERO)).round()
 
 
+## a stop on the map canvas (no pan); the same 17 px inset as _p
+func _mp(n: Dictionary) -> Vector2:
+	return Vector2(clampi(int(n.x), 17, int(MAP.x) - 17), clampi(int(n.y), 17, int(MAP.y) - 17))
+
+
 ## a stop on screen; kept 17 px inside the map edge so its frame and the 33 px selection rim are never cut off
 func _p(n: Dictionary) -> Vector2:
-	return _origin() + Vector2(clampi(int(n.x), 17, int(MAP.x) - 17), clampi(int(n.y), 17, int(MAP.y) - 17))
+	return _origin() + _mp(n)
+
+
+# =================================================================== MV-556 layout: cells, props, name plates
+func _cols() -> int:
+	return int(MAP.x / TILE) + 1
+
+
+func _rows() -> int:
+	return int(MAP.y / TILE)
+
+
+## the region index of the 16 px cell under a map point (what the terrain shows there); -1 = off the map
+func region_at(p: Vector2) -> int:
+	_layout()
+	return -1 if _cells.is_empty() else _cell_of(p)
+
+
+## the scattered props ([atlas name, top-left on the map]) and the region-name plates, for tests
+func props() -> Array:
+	_layout()
+	return _props
+
+
+func plates() -> Array:
+	_layout()
+	return _plates
+
+
+func _plate(r: Dictionary) -> Rect2:
+	var nm := str(Data.biome(int(r.i)).en)
+	var fs := UIKit.FP
+	var tw := UIKit.font_pixel.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var asc := UIKit.font_pixel.get_ascent(fs)
+	var tp := (Vector2(int(r.x), int(r.y)) + Vector2(-tw * 0.5, 4)).round()
+	return Rect2(tp + Vector2(-3, -asc - 1), Vector2(round(tw) + 7, round(asc + UIKit.font_pixel.get_descent(fs)) + 3))
+
+
+## recomputed only when the world, the lap, the switch or the density change; a pure function of the world seed
+func _layout() -> void:
+	var w := WorldMap.world()
+	var dens := Features.num("world_map.props", 0.7) if Features.on("world_map_detail") else 0.0
+	var key := "%s/%d/%d/%.3f" % [str(w.get("seed", "")), int(w.get("lap", 0)), (w.get("nodes", []) as Array).size(), dens]
+	if key == _layout_key:
+		return
+	_layout_key = key
+	_cells = PackedInt32Array()
+	_props = []
+	_plates = []
+	if w.is_empty():
+		return
+	var regs: Array = w.regions
+	for cy in _rows():
+		for cx in _cols():
+			var c := Vector2(cx * TILE + 8, cy * TILE + 8)
+			var best := 0
+			var bd := INF
+			for i in regs.size():
+				var d := c.distance_squared_to(Vector2(int(regs[i].x), int(regs[i].y)))
+				if d < bd:
+					bd = d
+					best = i
+			_cells.append(best)
+	for r in regs:
+		_plates.append(_plate(r))
+	if dens <= 0.0:
+		return
+	var segs := []
+	for e in w.edges:
+		segs.append([_mp(WorldMap.node(str(e.a))), _mp(WorldMap.node(str(e.c)))])
+	var stops := []
+	for n in w.nodes:
+		stops.append(_mp(n))
+	var taken: Array = []
+	for gy in int(MAP.y / PROP_STEP):
+		for gx in int(MAP.x / PROP_STEP):
+			var h := WorldMap.fnv1a("%s/%d/prop/%d/%d" % [str(w.seed), int(w.get("lap", 0)), gx, gy])
+			if float((h >> 8) & 0xFFFF) / 65535.0 >= dens:
+				continue
+			var at := Vector2(gx * PROP_STEP + (h & 7) - 3, gy * PROP_STEP + ((h >> 3) & 7) - 3)
+			var ri := _cell_of(at + Vector2(PROP_STEP, PROP_STEP) * 0.5)
+			if ri < 0:
+				continue
+			var pool: Array = PROPS.get(str(regs[ri].id), [])
+			if pool.is_empty():
+				continue
+			var nm := "ui_map_prop_" + str(pool[(h >> 24) % pool.size()])
+			var rc := Rect2(at, Atlas.tex(nm).get_size())
+			if _prop_fits(rc, ri, segs, stops, taken):
+				taken.append(rc)
+				_props.append([nm, rc.position])
+
+
+func _cell_of(q: Vector2) -> int:
+	var cx := int(floor(q.x / TILE))
+	var cy := int(floor(q.y / TILE))
+	if cx < 0 or cy < 0 or cx >= _cols() or cy >= _rows():
+		return -1
+	return _cells[cy * _cols() + cx]
+
+
+func _prop_fits(rc: Rect2, ri: int, segs: Array, stops: Array, taken: Array) -> bool:
+	if rc.position.x < 1 or rc.position.y < 1 or rc.end.x > MAP.x - 1 or rc.end.y > MAP.y - 1:
+		return false
+	# the whole prop stands on its own region's terrain (none straddles a border)
+	for q in [rc.position, Vector2(rc.end.x - 1, rc.position.y), Vector2(rc.position.x, rc.end.y - 1), rc.end - Vector2.ONE]:
+		if _cell_of(q) != ri:
+			return false
+	var c := rc.get_center()
+	var rad := maxf(rc.size.x, rc.size.y) * 0.5
+	for s in segs:
+		if Geometry2D.get_closest_point_to_segment(c, s[0], s[1]).distance_to(c) < rad + ROAD_CLEAR:
+			return false
+	for p in stops:
+		if p.distance_to(c) < rad + STOP_CLEAR:
+			return false
+	for pl in _plates:
+		if pl.grow(2).intersects(rc):
+			return false
+	for t in taken:
+		if t.grow(1).intersects(rc):
+			return false
+	return true
 
 
 func _draw() -> void:
@@ -203,6 +353,10 @@ func _draw() -> void:
 	if w.is_empty():
 		return
 	var o := _origin()
+	if Features.on("world_map_detail"):
+		_draw_detail_ground(w, o)
+		_draw_roads_and_stops(w, o, true)
+		return
 	# terrain: each 16px cell takes the tile of the nearest region; locked regions get the fog dither
 	var regs: Array = w.regions
 	var fog := Atlas.tex("ui_map_fog_dither")
@@ -220,6 +374,40 @@ func _draw() -> void:
 			draw_texture(Atlas.tex("ui_map_ground_" + str(best.id)), at)
 			if int(best.req) > int(Game.s.vault_level):
 				draw_texture(fog, at, Color(1, 1, 1, 0.45))     # dims; the biome stays recognisable
+	_draw_roads_and_stops(w, o, false)
+
+
+## MV-556: calm terrain, region borders, props, then the fog over locked regions (props dim with their region)
+func _draw_detail_ground(w: Dictionary, o: Vector2) -> void:
+	_layout()
+	var regs: Array = w.regions
+	var cols := _cols()
+	for cy in _rows():
+		for cx in cols:
+			draw_texture(Atlas.tex("ui_map_terrain_" + str(regs[_cells[cy * cols + cx]].id)), o + Vector2(cx * TILE, cy * TILE))
+	var edge := Color(C_EDGE, 0.7)
+	for cy in _rows():
+		for cx in cols:
+			var me := _cells[cy * cols + cx]
+			var at := o + Vector2(cx * TILE, cy * TILE)
+			if cx + 1 < cols and _cells[cy * cols + cx + 1] != me:
+				draw_rect(Rect2(at + Vector2(TILE - 1, 0), Vector2(1, TILE)), edge)
+			if cy + 1 < _rows() and _cells[(cy + 1) * cols + cx] != me:
+				draw_rect(Rect2(at + Vector2(0, TILE - 1), Vector2(TILE, 1)), edge)
+	for pr in _props:
+		draw_texture(Atlas.tex(pr[0]), o + pr[1])
+	# locked: a flat shade plus a faint dither, so the region reads as closed without a loud checkerboard
+	var fog := Atlas.tex("ui_map_fog_dither")
+	var shade := Color(C_EDGE, 0.32)
+	for cy in _rows():
+		for cx in cols:
+			if int(regs[_cells[cy * cols + cx]].req) > int(Game.s.vault_level):
+				draw_rect(Rect2(o + Vector2(cx * TILE, cy * TILE), Vector2(TILE, TILE)), shade)
+				draw_texture(fog, o + Vector2(cx * TILE, cy * TILE), Color(1, 1, 1, 0.18))
+
+
+func _draw_roads_and_stops(w: Dictionary, o: Vector2, detail: bool) -> void:
+	var regs: Array = w.regions
 	# roads: soot edge, then the road; the route on top in amber
 	var on_route := {}
 	for eid in _route.get("edges", []):
@@ -246,8 +434,12 @@ func _draw() -> void:
 		var fs := UIKit.FP
 		var tw := UIKit.font_pixel.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var tp := (o + Vector2(int(r.x), int(r.y)) + Vector2(-tw * 0.5, 4)).round()
+		if detail:
+			var pl := _plate(r)
+			draw_rect(Rect2(o + pl.position, pl.size), C_PLATE)
 		draw_string(UIKit.font_pixel, tp + Vector2(1, 1), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, C_EDGE)
-		draw_string(UIKit.font_pixel, tp, nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UIKit.C_DIM)
+		draw_string(UIKit.font_pixel, tp, nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
+			C_LABEL if detail and int(r.req) <= int(Game.s.vault_level) else UIKit.C_DIM)
 	# stops
 	var frame := Atlas.tex("ui_map_landmark_frame")
 	var dot := Atlas.tex("ui_map_road_stop")
