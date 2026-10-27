@@ -1455,6 +1455,12 @@ func squad_gear() -> int:
 	return n
 
 
+func auto_equip_dweller(did: int) -> int:
+	var n := Loot.auto_equip_dweller(did)
+	act("auto equip survivor %d: %d items" % [did, n])
+	return n
+
+
 # ---- items & forge
 func items_all(n: int) -> void:
 	for k in Data.ITEMS:

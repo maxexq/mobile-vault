@@ -130,6 +130,8 @@ func _role_card(i: int) -> Control:
 				_hud().open_loot_equipped(it, did2))
 		gh.add_child(tile)
 	v.add_child(UIKit.gear_pad(gh))
+	if Features.on("individual_auto_equip"):
+		v.add_child(_hud().auto_equip_button(did))
 	return p
 
 
@@ -177,6 +179,8 @@ func _deck_card() -> Control:
 	rm.pressed.connect(func(): Game.set_deck(-1))
 	dh.add_child(rm)
 	v.add_child(dh)
+	if Features.on("individual_auto_equip"):
+		v.add_child(_hud().auto_equip_button(int(d.id)))
 	v.add_child(UIKit.wrap_label(tag, UIKit.FS_SMALL))
 	return p
 

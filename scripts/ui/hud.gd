@@ -882,6 +882,25 @@ func set_closeup_mode(on: bool) -> void:
 	_place_toasts()
 
 
+## MV-547: shared person action and feedback for Crew / Squad / roof reserve.
+func auto_equip_button(did: int) -> Button:
+	var button := UIKit.button(Loc.t("สวมอุปกรณ์อัตโนมัติ"), "green", "up")
+	button.name = "AutoEquipDweller%d" % did
+	button.tooltip_text = Loc.t("เลือกอุปกรณ์ที่ดีกว่าจากคลังให้เฉพาะคนนี้")
+	button.pressed.connect(func(): auto_equip_dweller(did))
+	return button
+
+
+func auto_equip_dweller(did: int) -> void:
+	if not Features.on("individual_auto_equip"):
+		return
+	var d := Game.dweller_by_id(did)
+	if d.is_empty():
+		return
+	var n := Loot.auto_equip_dweller(did)
+	Game.toast.emit(Loc.t("%s: เปลี่ยนอุปกรณ์ %d ชิ้น") % [d.name, n] if n > 0 else Loc.t("%s: ไม่มีอุปกรณ์ที่ดีกว่าในคลัง") % d.name, "good" if n > 0 else "info")
+
+
 func open_loot_pick(slot: String, did: int) -> void:
 	(panels.inventory as LootPanel).open_pick(slot, did)
 

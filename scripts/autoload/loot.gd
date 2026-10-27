@@ -553,6 +553,22 @@ func best_for(slot: String, current: Dictionary, role: int = -1) -> Dictionary:
 	return best
 
 
+## MV-547: one survivor, stash only; never borrow another survivor's or the vehicle's gear.
+func auto_equip_dweller(did: int) -> int:
+	if not Features.on("individual_auto_equip"):
+		return 0
+	var d := Game.dweller_by_id(did)
+	if d.is_empty():
+		return 0
+	var role := Game.squad_role(d)
+	var n := 0
+	for slot in HERO_SLOTS:
+		var best := best_for(slot, equipped_on(d, slot), role)
+		if not best.is_empty() and equip_from_stash(int(best.uid), d):
+			n += 1
+	return n
+
+
 func auto_equip_squad() -> int:
 	var n := 0
 	for role in Game.s.squad.size():

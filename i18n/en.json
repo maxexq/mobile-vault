@@ -2090,5 +2090,9 @@
  "การผลิต +%d%%": "Production +%d%%",
  "คลังใหญ่ขึ้น, ซ่อมตัวถังเต็ม": "bigger storage, full hull repair",
  "\nตอนนี้: ตัวถัง +%d · การผลิต +%d%%": "\nNow: hull +%d · production +%d%%",
- " (รวมห้องที่รอรถคันใหญ่ %d ห้อง)": " (incl. %d rooms waiting for a bigger vehicle)"
+ " (รวมห้องที่รอรถคันใหญ่ %d ห้อง)": " (incl. %d rooms waiting for a bigger vehicle)",
+ "สวมอุปกรณ์อัตโนมัติ": "Auto Equip",
+ "เลือกอุปกรณ์ที่ดีกว่าจากคลังให้เฉพาะคนนี้": "Equip better gear from the stash for this survivor only",
+ "%s: เปลี่ยนอุปกรณ์ %d ชิ้น": "%s: equipped %d items",
+ "%s: ไม่มีอุปกรณ์ที่ดีกว่าในคลัง": "%s: no better gear in the stash"
 }
