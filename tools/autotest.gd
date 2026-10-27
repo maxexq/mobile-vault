@@ -233,6 +233,11 @@ func _run() -> void:
 		await _hull_repair_test()
 		_finish()
 		return
+	if "--only=build_effects" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _build_effects_test()
+		_finish()
+		return
 	if "--only=vault_upgrade" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _vault_upgrade_test()
@@ -1053,6 +1058,7 @@ func _run() -> void:
 	await _barks_test()
 	await _hull_warning_test()
 	await _vault_upgrade_test()
+	await _build_effects_test()
 	await _drive_help_test()
 	await _hull_repair_test()
 	await _audio_test()
@@ -7229,6 +7235,112 @@ func _hull_repair_test() -> void:
 
 ## MV-545: the Vault upgrade never promises a room the vehicle has no space for, names the bigger vehicle, and every
 ## level gives max hull and production (a full vehicle's levels give more production instead); switch off = as before
+## MV-557: both build lists (the Build window and an empty slot's list) say what each room does, wrap inside the
+## window on phone portrait / landscape, still build on a tap, and the switch off brings back the old rows.
+func _build_effects_test() -> void:
+	_no_events()
+	var hud: HUD = main.hud
+	var saved_size := get_window().size
+	var keep_scrap := float(Game.s.res.scrap)
+	Game.s.res.scrap = Game.cap("scrap")
+	var want := {}
+	for t in Data.buildable():
+		want[Data.room_effect(t)] = true
+	_check("build effects: every buildable room has an effect line", not want.has("") and want.size() > 0)
+	var made := -1
+	if not Dev.build_list_preview("slot"):
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}})
+		made = Game.s.rooms.size() - 1
+	hud.room_closeup.close()
+	await wait(0.3)
+	for size in [Vector2i(720, 1280), Vector2i(360, 640), Vector2i(1280, 640)]:
+		get_window().size = size
+		await wait(0.5)
+		var screen: Rect2 = hud.get_global_rect()
+		# the Build window
+		Dev.build_list_preview("menu")
+		await wait(0.6)
+		var bp: BuildPanel = hud.panels.build
+		var fx := bp._grid.find_children("Effect", "Label", true, false)
+		var texts := fx.map(func(l): return l.text)
+		var box: Rect2 = bp.box.get_global_rect()
+		# rows below the fold scroll, so only the width has to fit
+		var spill := fx.filter(func(l): return l.get_global_rect().position.x < box.position.x - 1.0 or l.get_global_rect().end.x > box.end.x + 1.0 or l.get_global_rect().size.x < 40.0)
+		_check("build effects: %s Build window shows each room's effect (%d of %d), wrapped inside the window %s" % [size, fx.size(), Data.buildable().size(), spill.map(func(l): return l.text)],
+			fx.size() == Data.buildable().size() and texts.all(func(x): return want.has(x)) and spill.is_empty() and screen.grow(1.0).encloses(box))
+		await shot("build_effects_menu_%dx%d" % [size.x, size.y])
+		bp.close()
+		await wait(0.3)
+		# the empty slot's list
+		Dev.build_list_preview("slot")
+		await wait(0.9)
+		var cu: RoomCloseup = hud.room_closeup
+		var cbs := cu._content.get_children().filter(func(n): return n is ChoiceButton and n.has_meta("room_type"))
+		var bad := []
+		var cbox: Rect2 = cu.box.get_global_rect()
+		for cb in cbs:
+			var l: Label = cb.find_child("Effect", true, false)
+			if l == null or l.text != Data.room_effect(str(cb.get_meta("room_type"))):
+				bad.append("%s no effect" % cb.get_meta("room_type"))
+			elif _thumb_off(cb) != "":
+				bad.append("%s preview %s" % [cb.get_meta("room_type"), _thumb_off(cb)])
+			elif not cb.get_global_rect().grow(1.0).encloses(l.get_global_rect()) or cb.get_global_rect().position.x < cbox.position.x - 1.0 or cb.get_global_rect().end.x > cbox.end.x + 1.0:
+				bad.append("%s spills" % cb.get_meta("room_type"))
+		_check("build effects: %s empty-slot list shows each room's effect (%d of %d) inside its button %s" % [size, cbs.size(), Data.buildable().size(), bad],
+			cbs.size() == Data.buildable().size() and bad.is_empty() and screen.grow(1.0).encloses(cbox))
+		await shot("build_effects_slot_%dx%d" % [size.x, size.y])
+		if size == Vector2i(720, 1280):
+			# a tap on an affordable room still builds it in that slot
+			var slot := cu.slot
+			var ok_cb = cbs.filter(func(cb): return not cb.disabled)
+			if ok_cb.is_empty():
+				_check("build effects: an affordable room in the empty-slot list", false)
+			else:
+				var pick := str(ok_cb[0].get_meta("room_type"))   # the list rebuilds after the tap
+				ok_cb[0].button.pressed.emit()
+				await wait(0.3)
+				_check("build effects: tapping a room in the empty-slot list builds it there (slot %d: %s, wanted %s)" % [slot, Game.s.rooms[slot].type if slot >= 0 else "-", pick],
+					slot >= 0 and str(Game.s.rooms[slot].type) == pick)
+				Game.demolish_room(slot)
+				Game.s.res.scrap = Game.cap("scrap")
+		cu.close()
+		await wait(0.3)
+	# switch off: the old rows, no effect lines
+	Dev.build_room_effects(false)
+	Dev.build_list_preview("menu")
+	await wait(0.5)
+	var off_menu: int = hud.panels.build._grid.find_children("Effect", "Label", true, false).size()
+	hud.panels.build.close()
+	await wait(0.3)
+	Dev.build_list_preview("slot")
+	await wait(0.6)
+	var off_slot: int = hud.room_closeup._content.get_children().filter(func(n): return n is ChoiceButton).size()
+	var old_rows: int = hud.room_closeup._content.get_children().filter(func(n): return n is Button).size()
+	_check("build effects: switch off = no effect lines, the old plain rows (menu %d, slot %d, rows %d)" % [off_menu, off_slot, old_rows],
+		off_menu == 0 and off_slot == 0 and old_rows == Data.buildable().size())
+	hud.room_closeup.close()
+	await wait(0.3)
+	Features.set_override("features", "build_room_effects", null)
+	if made >= 0 and made == Game.s.rooms.size() - 1 and str(Game.s.rooms[made].type) == "empty":
+		Game.s.rooms.remove_at(made)
+	Game.s.res.scrap = keep_scrap
+	get_window().size = saved_size
+	await wait(0.3)
+
+
+## MV-557: "" when a ChoiceButton's framed room preview is flush left and as tall as the row (inside the frame inset)
+func _thumb_off(cb: ChoiceButton) -> String:
+	var th: Control = cb.find_child("ThumbFrame", true, false)
+	if th == null or th.find_child("Thumb", true, false) == null:
+		return "missing"
+	var ins: float = ChoiceButton.THUMB_INSET * cb.get_global_transform().get_scale().y
+	var row := cb.get_global_rect()
+	var r := th.get_global_rect()
+	if absf(r.position.x - row.position.x - ins) > 1.0 or absf(r.size.y - (row.size.y - ins * 2.0)) > 1.0:
+		return "%s in %s" % [r, row]
+	return ""
+
+
 func _vault_upgrade_test() -> void:
 	var keep_tier := str(Game.s.get("tier", "van"))
 	var keep_lv := int(Game.s.vault_level)

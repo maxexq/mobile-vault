@@ -675,6 +675,21 @@ func _build_empty() -> void:
 		var def := Data.room_def(t)
 		var ul := Game.room_unlock_level(t)
 		var locked := ul > int(Game.s.vault_level)
+		var cost_line := ((Loc.t("ต้องการ Vault Lv.%d") % ul) if ul < 99 else Loc.t("ต้องมีพิมพ์เขียว")) if locked else (Loc.t("%d เศษเหล็ก · %s") % [Game.build_cost(t), Game.fmt_time(Game.build_time(t))])
+		var tt: String = t
+		if Features.on("build_room_effects"):
+			# MV-557: a ChoiceButton grows with the wrapped effect line (a plain Button can't)
+			var cb := ChoiceButton.new(def.th, "", "", "gray" if locked else "green")
+			cb.add_line(Data.room_effect(t), UIKit.C_GOLD).name = "Effect"
+			cb.add_line(cost_line, Color(UIKit.C_WHITE, 0.7))
+			cb.add_thumb(Atlas.sub("room_" + t, Rect2(0, 0, 64, 52)), Vector2(64, 52))
+			cb.disabled = locked or float(Game.s.res.scrap) < float(Game.build_cost(t))
+			cb.set_meta("room_type", t)
+			cb.pressed.connect(func():
+				if Game.build_room(slot, tt):
+					refresh())
+			_content.add_child(cb)
+			continue
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(0, 34)
 		b.focus_mode = Control.FOCUS_NONE
@@ -688,11 +703,10 @@ func _build_empty() -> void:
 		h.add_child(UIKit.tex_rect(Atlas.sub("room_" + t, Rect2(20, 20, 40, 26)), Vector2(40, 26)))
 		var v := UIKit.vbox(0)
 		v.add_child(UIKit.label(def.th, UIKit.FS_SMALL))
-		v.add_child(UIKit.label(((Loc.t("ต้องการ Vault Lv.%d") % ul) if ul < 99 else Loc.t("ต้องมีพิมพ์เขียว")) if locked else (Loc.t("%d เศษเหล็ก · %s") % [Game.build_cost(t), Game.fmt_time(Game.build_time(t))]), UIKit.FS_SMALL, UIKit.C_DIM))
+		v.add_child(UIKit.label(cost_line, UIKit.FS_SMALL, UIKit.C_DIM))
 		h.add_child(v)
 		b.add_child(h)
 		b.disabled = locked or float(Game.s.res.scrap) < float(Game.build_cost(t))
-		var tt: String = t
 		b.pressed.connect(func():
 			if Game.build_room(slot, tt):
 				refresh())
