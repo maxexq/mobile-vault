@@ -56,9 +56,11 @@
 3. Authentication → Sign In / Providers → เปิด **Allow anonymous sign-ins**
 4. Google: เปิด provider Google ใส่ Client ID/Secret เดียวกับ prod และเปิด **Allow manual linking**
    แล้วไปที่ Google Cloud Console → OAuth client เดิม → **Authorized redirect URIs** → เพิ่ม `https://<test-ref>.supabase.co/auth/v1/callback`
-5. Authentication → **URL Configuration**:
-   - Site URL: URL staging
-   - Redirect URLs: URL staging, URL uat และ `https://apocarlypse-mobile-vault-*-<ทีม>.vercel.app/**` (ครอบ PR preview)
+5. Authentication → **URL Configuration** (MV-551: ถ้าข้ามขั้นนี้ Site URL จะค้างที่ `http://localhost:3000` แล้ว Gmail login บน staging / uat พาไป localhost):
+   - Site URL: `https://staging.apocarlypse-mobile-vault.pages.dev/`
+   - Redirect URLs: `https://staging.apocarlypse-mobile-vault.pages.dev/**`, `https://uat.apocarlypse-mobile-vault.pages.dev/**`, `https://*.apocarlypse-mobile-vault.pages.dev/**` และ `https://*-maxexqs-projects.vercel.app/**` (Vercel staging / uat / PR preview; ชื่อโปรเจกต์ Vercel คือ `mobile-vault`)
+   - โปรเจกต์ **prod** ต้องมี `https://apocarlypse-mobile-vault.pages.dev/**` และ `https://main.apocarlypse-mobile-vault.pages.dev/**` ด้วย
+   - ตรวจ: `python tools/oauth_check.py` ต้อง OK ทุกโดเมน (รายละเอียด: [google-login-setup.md](../supabase/google-login-setup.md))
 6. Project Settings → API → คัดลอก **Project URL** และ **anon / publishable key** (ห้ามใช้ service_role)
 
 ### 4. `cloud_config.json` บนเครื่องที่ export (git-ignore ไม่ขึ้น git)

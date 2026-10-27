@@ -22,15 +22,40 @@
    ถ้าไม่เจอในหน้านี้ ให้ดูที่ **Authentication → Settings / Policies**
 4. ตรวจว่า **Allow anonymous sign-ins** ยังเปิดอยู่
 
-## 3) Supabase: URL Configuration
-**Authentication → URL Configuration**
+## 3) Supabase: URL Configuration (ทำทั้งสองโปรเจกต์)
+**Authentication → URL Configuration** หลัง Google แล้ว Supabase จะส่งผู้เล่นกลับหน้าเดิมก็ต่อเมื่อโดเมนนั้นอยู่ใน
+**Redirect URLs** ถ้าไม่อยู่ จะส่งไป **Site URL** แทน (ล็อกอินหาย เพราะ token ไปตกที่เว็บอื่น)
+
+**โปรเจกต์ prod** (`phcylgdikidhunjclppr`, production)
 - **Site URL:** `https://apocarlypse-mobile-vault.vercel.app`
-- **Redirect URLs:** เพิ่มสองบรรทัดนี้
+- **Redirect URLs:**
   - `https://apocarlypse-mobile-vault.vercel.app/**`
-  - `https://*-maxexqs-projects.vercel.app/**` (สำหรับลิงก์ preview ของแต่ละ PR)
+  - `https://*-maxexqs-projects.vercel.app/**` (Vercel branch `main` และ preview)
+  - `https://apocarlypse-mobile-vault.pages.dev/**` (Cloudflare Pages production, MV-499)
+  - `https://main.apocarlypse-mobile-vault.pages.dev/**`
+  - ห้ามใส่ `https://*.apocarlypse-mobile-vault.pages.dev/**` ในโปรเจกต์ prod เพราะ `staging.` / `uat.` เป็นของโปรเจกต์ test
+
+**โปรเจกต์ test** (`bedslajlrtwmfyxrppcq`, staging / uat / preview)
+- **Site URL:** `https://staging.apocarlypse-mobile-vault.pages.dev/` (ค่าเริ่มต้นของ Supabase คือ `http://localhost:3000` ซึ่งทำให้ล็อกอินพัง, MV-551)
+- **Redirect URLs:**
+  - `https://staging.apocarlypse-mobile-vault.pages.dev/**`
+  - `https://uat.apocarlypse-mobile-vault.pages.dev/**`
+  - `https://*.apocarlypse-mobile-vault.pages.dev/**` (preview ของ Cloudflare Pages)
+  - `https://*-maxexqs-projects.vercel.app/**` (Vercel staging / uat / preview)
+
+Google Cloud ไม่ต้องแก้ redirect เพิ่ม (redirect URI ของทั้งสองโปรเจกต์อยู่ใน OAuth client แล้ว) แต่ถ้า
+**Google Auth Platform → Audience → Publishing status** ยังเป็น **Testing** จะล็อกอินได้เฉพาะอีเมลใน **Test users**
+ถ้าจะให้ผู้เล่นทดสอบ (uat) ล็อกอินได้ ให้กด **Publish app** หรือเพิ่มอีเมลผู้เล่นทดสอบทุกคน
+
+## 4) ตรวจ (ไม่ต้องใช้บัญชี Google)
+```
+python tools/oauth_check.py
+```
+ต้องขึ้น `OK` ทุกบรรทัด บรรทัด `FAIL` จะบอกว่าโดเมนนั้นถูกส่งไปที่ไหนแทน (เช่น `http://localhost:3000` = ยังไม่ได้ตั้ง Site URL / Redirect URLs ของโปรเจกต์ test)
+ตอนเพิ่มโดเมนใหม่ใน `config/environments.json` ให้เพิ่มใน Redirect URLs ของโปรเจกต์ที่ตรงกันด้วย
 
 ## ส่งกลับมาให้ผม
-- บอกว่าทำครบทั้ง 3 ข้อแล้ว
+- บอกว่าทำครบแล้ว และ `python tools/oauth_check.py` ขึ้น OK ทุกบรรทัด
 - **ไม่ต้องส่ง Client secret**
 
 หมายเหตุ: Google ไม่อนุญาตให้ล็อกอินภายใน iframe ดังนั้นปุ่ม Google จะใช้ได้บนเว็บ Vercel ส่วนใน artifact จะเปิดหน้าเกมในแท็บใหม่ให้แทน
