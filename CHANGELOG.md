@@ -8,8 +8,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
-### Changed
-- In-game Chakra Petch UI text now renders smoothly at the screen resolution for clearer Thai and English menus. Silkscreen tags and world pixel art retain their crisp pixel edges; a player anti-aliasing setting will come later (MV-540)
+### Fixed
+- Forge synthesis now spends components instead of scrap; affordability and Thai/English cost descriptions match the components icon (MV-543)
 
 ## [4.7.0-alpha.4] - 2026-10-27
 
@@ -31,6 +31,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - MV-515 + MV-501..513 (MV-500 phase 3): world map screen and its art (supersedes #121) ([#126](https://github.com/maxexq/mobile-vault/pull/126))
 - MV-537: windows stay still when their content changes height ([#127](https://github.com/maxexq/mobile-vault/pull/127))
 - MV-538: stuck acid-rain preview fixed, cozy lo-fi biome ambience ([#129](https://github.com/maxexq/mobile-vault/pull/129))
+- MV-541: fairer hull repair (size curve, 25 % repair, crew discount, free regen shown) ([#132](https://github.com/maxexq/mobile-vault/pull/132))
+- MV-540: render Chakra Petch UI text smoothly ([#131](https://github.com/maxexq/mobile-vault/pull/131))
 
 ### Fixed
 - On the world map you can tap stops again after continuing a saved game (the map was drawn but its stops didn't respond until a new world was made) (MV-542)
@@ -51,6 +53,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - A cozier roof: a strapped teal water tank with a level gauge, a clearer satellite dish, herb planter trays, and a timber rest deck with a patched canvas, a bench and blanket, a glass windbreak, a water can and a little lamp (MV-462)
 - Crew trait cards now show how valuable a trait is: Common, Uncommon, Rare, Epic or Legendary, with a light that grows with the tier (Architect and Lucky are Legendary). Downsides glow harder the more they hurt, with Fears the Dark the harshest (MV-497)
 - Valuable traits are rarer now: a new survivor is far more likely to bring a Common or Uncommon trait, and only about 1 in 35 brings a Legendary one (Architect or Lucky). Survivors you already have keep their traits, and downsides are as common as before (MV-516)
+- Hull repairs are fairer on big vehicles: the bigger your hull, the less each point costs (a train pays about a third less than before, the van the same), you can patch up 25 % at a time instead of paying for a full repair, and crew in the engine room or a workshop, Mechanics, the Handyman skill and the Repair Bay knock up to 40 % off. The build menu and the hull bar now show how fast the crew repairs the hull for free (MV-541)
+- In-game Chakra Petch UI text now renders smoothly at the screen resolution for clearer Thai and English menus. Silkscreen tags and world pixel art retain their crisp pixel edges; a player anti-aliasing setting will come later (MV-540)
 
 ## [4.7.0-alpha.3] - 2026-10-26
 

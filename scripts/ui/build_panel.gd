@@ -10,6 +10,8 @@ var _scrap_lbl: Label
 var _frame_btn: Button
 var _frame_info: Label
 var _repair_btn: Button
+var _repair_part_btn: Button   # MV-541: repair a chunk (repair.part of the max hull)
+var _repair_info: Label        # MV-541: free regen per minute and the crew discount
 
 
 func _build() -> void:
@@ -24,8 +26,17 @@ func _build() -> void:
 	_repair_btn.pressed.connect(func():
 		Game.repair_hull()
 		refresh())
+	_repair_part_btn = UIKit.button("", "blue", "wrench")
+	_repair_part_btn.name = "RepairPart"
+	_repair_part_btn.pressed.connect(func():
+		Game.repair_hull(Features.num("repair.part", 0.25))
+		refresh())
+	top.add_child(_repair_part_btn)
 	top.add_child(_repair_btn)
 	body.add_child(top)
+	_repair_info = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_DIM)
+	_repair_info.name = "RepairInfo"
+	body.add_child(_repair_info)
 	var v := make_list(4)
 	_grid = GridContainer.new()
 	_grid.columns = 1
@@ -124,5 +135,23 @@ func _update_affordable() -> void:
 			b.disabled = b.get_meta("locked") or not Game.can_afford(b.get_meta("cost"))
 	_frame_btn.disabled = int(Game.s.vault_level) >= Data.MAX_VAULT_LEVEL or float(Game.s.res.scrap) < Game.vault_upgrade_cost()
 	var missing := Game.hull_max() - float(Game.s.hull)
-	_repair_btn.text = Loc.t("ซ่อม %d%% (%d)") % [int(float(Game.s.hull) / Game.hull_max() * 100.0), int(ceil(missing * 0.6))]
-	_repair_btn.disabled = missing < 1.0 or float(Game.s.res.scrap) < ceil(missing * 0.6)
+	var full := Game.repair_cost()
+	var t := Loc.t("ซ่อม %d%% (%d)") % [int(float(Game.s.hull) / Game.hull_max() * 100.0), full]
+	if _repair_btn.text != t:
+		_repair_btn.text = t
+	_repair_btn.disabled = missing < 1.0 or float(Game.s.res.scrap) < full
+	var v2 := Features.on("hull_repair_v2")
+	var part := Features.num("repair.part", 0.25)
+	# the chunk button only when it repairs less than the full one
+	_repair_part_btn.visible = v2 and Game.repair_amount(part) + 0.5 < missing
+	if _repair_part_btn.visible:
+		var pc := Game.repair_cost(part)
+		var pt := Loc.t("+%d%% (%d)") % [roundi(part * 100.0), pc]
+		if _repair_part_btn.text != pt:
+			_repair_part_btn.text = pt
+		_repair_part_btn.disabled = float(Game.s.res.scrap) < pc
+	_repair_info.visible = v2
+	if v2:
+		var it := Loc.t("ซ่อมเองฟรี +%.1f HP/นาที (ลูกเรือห้องเครื่อง/โรงช่าง) · ส่วนลดค่าซ่อม %d%%") % [Game.hull_regen_pm(), roundi(float(Game.repair_discount().total) * 100.0)]
+		if _repair_info.text != it:
+			_repair_info.text = it

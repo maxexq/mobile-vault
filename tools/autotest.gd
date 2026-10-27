@@ -184,6 +184,11 @@ func _run() -> void:
 		await _drive_help_test()
 		_finish()
 		return
+	if "--only=hull_repair" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _hull_repair_test()
+		_finish()
+		return
 	if "--only=hull_warning" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _hull_warning_test()
@@ -986,6 +991,7 @@ func _run() -> void:
 	await _barks_test()
 	await _hull_warning_test()
 	await _drive_help_test()
+	await _hull_repair_test()
 	await _audio_test()
 	await _morale_test()
 	await _responsive_test()
@@ -1499,6 +1505,46 @@ func _tutorial_test() -> void:
 	await wait(1.5)
 
 
+## MV-543: recipes spend components at every tier, even with no scrap; resource ticks update affordability.
+func _forge_cost_test(loot_ui: LootPanel) -> void:
+	var saved_free: bool = Dev.flags.get("free", false)
+	Dev.flags["free"] = false
+	loot_ui.tab = "forge"
+	for r in range(Loot.RARITY.size() - 1):
+		var cost := 15 * (r + 1)
+		Game.s.gear = [Loot.roll_item("weapon", 1, r), Loot.roll_item("armor", 1, r), Loot.roll_item("boots", 1, r)]
+		Game.s.items["components"] = cost - 1
+		Game.s.res.scrap = 999.0
+		loot_ui.refresh()
+		var before := JSON.stringify(Loot.stash())
+		var button := loot_ui.find_child("Synthesize%d" % r, true, false) as Button
+		_check("forge: tier %d requires components despite abundant scrap" % r, button.disabled)
+		var denied := Loot.synthesize(r)
+		_check("forge: tier %d insufficient components preserve items and currencies" % r, denied.is_empty() and JSON.stringify(Loot.stash()) == before and int(Game.s.items.components) == cost - 1 and float(Game.s.res.scrap) == 999.0)
+		Game.s.items["components"] = cost
+		Game.s.res.scrap = 0.0
+		Game.resources_changed.emit()
+		button = loot_ui.find_child("Synthesize%d" % r, true, false) as Button
+		_check("forge: tier %d enables on a components tick with zero scrap" % r, not button.disabled)
+		Game.s.res.scrap = 999.0
+		Game.resources_changed.emit()
+		_check("forge: tier %d scrap-only ticks keep the same button" % r, is_instance_valid(button) and button == loot_ui.find_child("Synthesize%d" % r, true, false) and not button.disabled)
+		Game.s.res.scrap = 0.0
+		Game.resources_changed.emit()
+		var out := Loot.synthesize(r)
+		_check("forge: tier %d spends exactly %d components and no scrap" % [r, cost], not out.is_empty() and int(out.rar) == r + 1 and Loot.stash().size() == 1 and int(Game.s.items.get("components", 0)) == 0 and float(Game.s.res.scrap) == 0.0)
+	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
+	Game.s.items.erase("components")
+	Game.s.res.scrap = 999.0
+	Game.resources_changed.emit()
+	var before := JSON.stringify(Loot.stash())
+	var denied := Loot.synthesize(0)
+	_check("forge: missing components cannot fall back to scrap", denied.is_empty() and JSON.stringify(Loot.stash()) == before and not Game.s.items.has("components") and float(Game.s.res.scrap) == 999.0 and (loot_ui.find_child("Synthesize0", true, false) as Button).disabled)
+	Dev.flags["free"] = saved_free
+	loot_ui.tab = "gear"
+	loot_ui.refresh()
+
+
 ## settings window: every option applies + persists, version info, save export / validate / reset
 ## MV-422: real UI entry points must leave state untouched until a named confirmation.
 func _confirm_actions_test() -> void:
@@ -1638,17 +1684,33 @@ func _confirm_actions_test() -> void:
 	Game.s.gear.append(later)
 	dialog.confirm_button.pressed.emit()
 	_check("confirm: bulk salvage preserves locked gear and drops arriving after the prompt", Loot.stash().size() == 2 and Loot.stash().has(locked) and Loot.stash().has(later))
+	_forge_cost_test(loot_ui)
 	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
 	Game.s.res.scrap = 200.0
+	Game.s.items["components"] = 45
+	var saved_lang = Settings.get_value("lang")
+	for lang in ["th", "en"]:
+		Settings.set_value("lang", lang)
+		loot_ui._request_synthesize(0)
+		_check("confirm: %s synthesis preview names components" % lang, dialog.is_open and dialog.message.text.begins_with("ใช้ 15 ชิ้นส่วน" if lang == "th" else "Spend 15 components"))
+		dialog.cancel_button.pressed.emit()
+		_check("confirm: cancelling synthesis preserves all items and currencies", Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
+	Settings.set_value("lang", saved_lang)
 	loot_ui._request_synthesize(0)
-	_check("confirm: synthesis waits without consuming items or scrap", dialog.is_open and Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	_check("confirm: synthesis waits without consuming items or currencies", dialog.is_open and Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
 	Game.s.gear[0].lock = true
 	dialog.confirm_button.pressed.emit()
-	_check("confirm: locking an ingredient invalidates synthesis", Loot.stash().size() == 3 and float(Game.s.res.scrap) == 200.0)
+	_check("confirm: locking an ingredient invalidates synthesis", Loot.stash().size() == 3 and int(Game.s.items.components) == 45 and float(Game.s.res.scrap) == 200.0)
 	Game.s.gear[0].lock = false
 	loot_ui._request_synthesize(0)
 	dialog.confirm_button.pressed.emit()
-	_check("confirm: synthesis consumes exactly three ingredients after acceptance", Loot.stash().size() == 1 and int(Loot.stash()[0].rar) == 1 and float(Game.s.res.scrap) == 185.0)
+	_check("confirm: synthesis consumes three ingredients and components, preserving scrap", Loot.stash().size() == 1 and int(Loot.stash()[0].rar) == 1 and int(Game.s.items.components) == 30 and float(Game.s.res.scrap) == 200.0)
+	Game.s.gear = [Loot.roll_item("weapon", 1, 0), Loot.roll_item("armor", 1, 0), Loot.roll_item("boots", 1, 0)]
+	loot_ui._request_synthesize(0)
+	Game.s.items["components"] = 14
+	Game.resources_changed.emit()
+	dialog.confirm_button.pressed.emit()
+	_check("confirm: losing components before acceptance preserves items and scrap", Loot.stash().size() == 3 and int(Game.s.items.components) == 14 and float(Game.s.res.scrap) == 200.0)
 	Game.s.combat.auto_salvage = -1
 	loot_ui._request_auto_salvage(1)
 	dialog.close()
@@ -6698,6 +6760,92 @@ func _drive_help_test() -> void:
 	Game.s.res.power = keep_power
 	Game.s.traveling = keep_travel
 	Game.travel_changed.emit()
+
+
+## MV-541: hull repair cost: the size curve, the crew discount and its cap, the partial repair, the switch off = the
+## old flat 0.6 full repair, the build menu chunk button and the free regen next to the hull bar
+func _hull_repair_test() -> void:
+	var keep_hull := float(Game.s.hull)
+	var keep_scrap := float(Game.s.res.scrap)
+	var keep_rooms := {}
+	for d in Game.s.dwellers:
+		keep_rooms[int(d.id)] = d.room
+	var hmax := Game.hull_max()
+	# nobody in the engine room / workshops: no discount
+	for d in Game.s.dwellers:
+		if int(d.room) == Data.CAB_SLOT or str(Game.room(int(d.room)).get("type", "")) == "workshop":
+			d.room = -1
+	_check("hull repair: no crew = no discount", is_equal_approx(float(Game.repair_discount().total), 0.0))
+	# the size curve: at the reference hull the full 0.6, a hull 300/140 times bigger pays 0.41
+	Features.set_override("tune", "repair.ref_hull", hmax)
+	var r_ref := Game.repair_rate()
+	Features.set_override("tune", "repair.ref_hull", 50.0)    # the tune's lowest value: this hull is "bigger" than the reference
+	var r_big := Game.repair_rate()
+	var r_big_want := 0.6 * sqrt(50.0 / hmax)
+	Features.set_override("tune", "repair.ref_hull", hmax * 2.0)
+	var r_small := Game.repair_rate()
+	Features.set_override("tune", "repair.ref_hull", null)
+	_check("hull repair: bigger hull pays less per HP (ref %.3f, bigger %.3f = 0.6 x sqrt(ref / max) %.3f, smaller never above base %.3f)" % [r_ref, r_big, r_big_want, r_small],
+		is_equal_approx(r_ref, 0.6) and absf(r_big - r_big_want) < 0.001 and r_big < 0.6 and is_equal_approx(r_small, 0.6))
+	# crew discount: 2 in the engine room, one a Mechanic = 5+5+5 %; six Mechanics hit the 40 % cap
+	var crew: Array = Game.s.dwellers.slice(0, 2)
+	for d in crew:
+		d.room = Data.CAB_SLOT
+		d.erase("strike")
+	var had_mech: bool = Crew.has(crew[0], "mechanic") or Crew.has(crew[1], "mechanic")
+	var keep_tr: Array = Crew.traits(crew[0]).duplicate()
+	if not had_mech:
+		crew[0].traits = keep_tr + ["mechanic"]
+	var dc: Dictionary = Game.repair_discount()
+	_check("hull repair: 2 engine crew + a Mechanic = 15 %% or more (%s)" % [dc], float(dc.crew) == 0.10 and float(dc.mechanic) >= 0.05 and float(dc.total) >= 0.15)
+	Features.set_override("tune", "repair.mechanic", 0.25)
+	Features.set_override("tune", "repair.per_crew", 0.25)
+	_check("hull repair: the discount stops at the cap (%.2f)" % float(Game.repair_discount().total), is_equal_approx(float(Game.repair_discount().total), 0.4))
+	Features.set_override("tune", "repair.mechanic", null)
+	Features.set_override("tune", "repair.per_crew", null)
+	# partial repair: 25 % of the max hull, at the discounted rate
+	Game.s.hull = hmax * 0.1
+	Game.s.res.scrap = 5000.0
+	var disc := float(Game.repair_discount().total)
+	var want := int(ceil(hmax * 0.25 * Game.repair_rate() * (1.0 - disc)))
+	var c25 := Game.repair_cost(0.25)
+	var before := float(Game.s.res.scrap)
+	var ok := Game.repair_hull(0.25)
+	_check("hull repair: 25 %% chunk restores %.0f HP for %d scrap (expected %d)" % [hmax * 0.25, c25, want],
+		ok and c25 == want and absf(float(Game.s.hull) - hmax * 0.35) < 0.5 and absf(before - float(Game.s.res.scrap) - c25) < 0.5)
+	# the build menu: the chunk button and the regen / discount line; the HUD: +X/m next to the hull bar
+	var hud: HUD = main.hud
+	hud.open_panel("build")
+	await wait(0.5)
+	var bp = hud.panels.build
+	var part_btn: Button = bp.find_child("RepairPart", true, false)
+	var info: Label = bp.find_child("RepairInfo", true, false)
+	_check("hull repair: build menu shows the 25 %% button and the free regen line (%s)" % [info.text if info else "none"],
+		part_btn != null and part_btn.visible and info != null and info.visible and info.text.contains("HP"))
+	await shot("hull_repair_build")
+	bp.close()
+	await wait(0.3)
+	_check("hull repair: the hull bar shows the free repair rate (%s)" % hud.hull_regen_lbl.text,
+		Game.hull_regen_pm() < 0.05 or (hud.hull_regen_lbl.visible and hud.hull_regen_lbl.text.begins_with("+")))
+	# switch off: the old flat 0.6, always the full repair, no discount
+	Features.set_override("features", "hull_repair_v2", false)
+	Game.s.hull = hmax * 0.5
+	var off_ok := is_equal_approx(Game.repair_rate(), 0.6) and is_equal_approx(float(Game.repair_discount().total), 0.0) 		and Game.repair_cost(0.25) == int(ceil(hmax * 0.5 * 0.6))
+	hud.open_panel("build")
+	await wait(0.4)
+	off_ok = off_ok and not bp.find_child("RepairPart", true, false).visible
+	bp.close()
+	await wait(0.3)
+	Features.set_override("features", "hull_repair_v2", null)
+	_check("hull repair: switch off = 0.6 per HP, full repair only, no chunk button", off_ok)
+	# put everything back
+	crew[0].traits = keep_tr
+	for d in Game.s.dwellers:
+		if keep_rooms.has(int(d.id)):
+			d.room = keep_rooms[int(d.id)]
+	Game.s.hull = keep_hull
+	Game.s.res.scrap = keep_scrap
+	Game.dwellers_changed.emit()
 
 
 func _hull_warning_test() -> void:

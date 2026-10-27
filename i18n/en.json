@@ -1418,7 +1418,7 @@
  "หลอม": "Forge",
  "หลอมสำเร็จ! ได้ %s [%s]": "Forged! Got %s [%s]",
  "หลอมอุปกรณ์": "Synthesize equipment",
- "หลอมอุปกรณ์ระดับเดียวกัน 3 ชิ้น (ไม่ล็อก ตัวอ่อนสุดก่อน) → 1 ชิ้นระดับสูงขึ้น · การแยกชิ้นส่วนให้ 'ชิ้นส่วน' ไว้ตีบวก": "Forge 3 gear of the same rarity (unlocked, weakest first) → 1 of a higher rarity · salvaging gives 'components' for enhancing",
+ "หลอมอุปกรณ์ระดับเดียวกัน 3 ชิ้น (ไม่ล็อก ตัวอ่อนสุดก่อน) → 1 ชิ้นระดับสูงขึ้น · ใช้ชิ้นส่วนจากการแยกอุปกรณ์เป็นค่าหลอม": "Forge 3 gear of the same rarity (unlocked, weakest first) → 1 of a higher rarity · costs components gained from salvaging gear",
  "หอคอย HELIOS": "",
  "หอดูไฟป่า": "",
  "หัวขโมย": "",
@@ -1960,7 +1960,7 @@
  "ใจเย็นนะ MAMMOTH อีกนิดเดียว": "",
  "ใช้": "Use",
  "ใช้ ": "Uses ",
- "ใช้ %d เศษเหล็ก และทำลายอุปกรณ์ 3 ชิ้นนี้เพื่อสุ่มของระดับ %s ย้อนคืนไม่ได้:\n%s": "Spend %d scrap and destroy these three items to create a random %s item. This cannot be undone:\n%s",
+ "ใช้ %d ชิ้นส่วน และทำลายอุปกรณ์ 3 ชิ้นนี้เพื่อสุ่มของระดับ %s ย้อนคืนไม่ได้:\n%s": "Spend %d components and destroy these three items to create a random %s item. This cannot be undone:\n%s",
  "ใช้ %s %d": "",
  "ใช้ 40 เศษเหล็ก (STR ช่วยลดต้นทุน)": "",
  "ใช้%sซื้อความสามารถถาวรให้ทุกรุ่นถัดไป · พาหนะใหม่ต้องมีพิมพ์เขียวด้วย": "Spend %s on permanent upgrades for every future generation · a new vehicle also needs its blueprint",
@@ -1994,7 +1994,7 @@
  "ไข่ดาว": "",
  "ได้กระสุนและชิ้นส่วนจากเป้มา": "",
  "ได้ของมา": "Loot taken",
- "ได้จากการแยกอุปกรณ์ ใช้ตีบวก": "",
+ "ได้จากการแยกอุปกรณ์ ใช้ตีบวกและหลอม": "Gained from salvaging gear. Used for enhancing and forging.",
  "ได้น้ำมันจากทุกทางครึ่งเดียว": "Half the fuel from every source",
  "ได้ยินเสียงหยดน้ำแล้วสบายใจ": "",
  "ได้ยินเสียงอะไรบางอย่าง...": "Heard something...",
@@ -2080,5 +2080,6 @@
  "ปุ่มกด": "Buttons",
  "บรรยากาศ = เสียงพื้นที่ เครื่องยนต์ ฝนและพายุ · บนเว็บเสียงเริ่มหลังแตะจอครั้งแรก": "Ambience = area sounds, the engine, rain and storms · on the web, sound starts after your first tap",
  "รถหยุดอยู่: ": "Stopped: ",
- "ปลายทาง": "the destination"
+ "ปลายทาง": "the destination",
+ "ซ่อมเองฟรี +%.1f HP/นาที (ลูกเรือห้องเครื่อง/โรงช่าง) · ส่วนลดค่าซ่อม %d%%": "Free repair +%.1f HP/min (engine room / workshop crew) · repair discount %d%%"
 }

@@ -279,6 +279,14 @@ func _tab_vehicle() -> void:
 	_row(vb, "Vault Lv")
 	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
+	var rv2 := Features.on("hull_repair_v2")
+	var dc: Dictionary = Game.repair_discount()
+	_note("ค่าซ่อม (MV-541) %s · %.3f เศษเหล็ก/HP · ส่วนลด %d%% (ลูกเรือ %d · ช่าง %d · skill %d · อู่ %d, สูงสุด %d) · ซ่อมเอง +%.1f HP/นาที · เต็ม %d · 25%% %d" % [
+		"แบบใหม่" if rv2 else "แบบเดิม", Game.repair_rate(), roundi(float(dc.total) * 100.0), roundi(float(dc.crew) * 100.0),
+		roundi(float(dc.mechanic) * 100.0), roundi(float(dc.skill) * 100.0), roundi(float(dc.bay) * 100.0),
+		roundi(Features.num("repair.discount_cap", 0.4) * 100.0), Game.hull_regen_pm(), Game.repair_cost(), Game.repair_cost(0.25)])
+	_row([_b("ซ่อม 25%", func(): Dev.repair(0.25), "green"), _b("ซ่อมเต็ม", func(): Dev.repair(1.0), "green"),
+		_b("แบบใหม่" if not rv2 else "แบบเดิม", func(): Dev.hull_repair_v2(not rv2), "yellow" if rv2 else "gray")], "ซ่อมตัวถัง")
 	_row([_b("ขั้น 1", func(): Dev.hull_warning_preview(1), "yellow"), _b("ขั้น 2", func(): Dev.hull_warning_preview(2), "red"),
 		_b("ขั้น 3", func(): Dev.hull_warning_preview(3), "red"), _b("เคลียร์", func(): Dev.hull_warning_preview(0), "green")],
 		"เตือนตัวถัง (MV-250) %s · เส้น %d/%d/%d%%" % ["เปิด" if Features.on("hull_warning") else "ปิด",
