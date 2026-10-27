@@ -370,6 +370,10 @@ func _offline_progress(sec: float) -> void:
 		if Features.on("drive_help"):
 			parts.append("ถึง%sแล้ว รถจอดรอ เลือกปลายทางใหม่บนแผนที่" % WorldMap.offline_arrival)
 		WorldMap.offline_arrival = ""
+	# MV-546: caches picked up on the way
+	if not WorldMap.offline_caches.is_empty():
+		parts.append(Loc.t("เก็บกล่องพิมพ์เขียวระหว่างทาง: ") + ", ".join(WorldMap.offline_caches))
+		WorldMap.offline_caches.clear()
 	if not _offline_built.is_empty():
 		parts.append("ก่อสร้างเสร็จ: " + ", ".join(_offline_built))
 		_offline_built.clear()

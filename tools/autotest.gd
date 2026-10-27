@@ -247,6 +247,11 @@ func _run() -> void:
 		await _world_travel_test()
 		_finish()
 		return
+	if "--only=bp_cache" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _bp_cache_test()
+		_finish()
+		return
 	if "--only=world_screen" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _world_screen_test()
@@ -990,6 +995,7 @@ func _run() -> void:
 	await _quarters_guard_test()
 	await _world_screen_test()
 	await _world_travel_test()
+	await _bp_cache_test()
 	await _world_migrate_test()
 	await _world_map_test()
 	await _stat_view_test()
@@ -8526,6 +8532,158 @@ func _world_travel_test() -> void:
 	Features.set_override("features", "seeded_world_map", null)
 	Features.set_override("features", "road_events", null)
 	Game.s = snap
+	Game.travel_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+	Game.biome_changed.emit(int(Game.s.biome), true)
+	await wait(0.3)
+
+## MV-546: random blueprint caches on the world map: none at the start, the first after bpcache.first_km driven on a
+## reachable stop, the same stop after a reload / replay (seeded), a real finger tap on the cache stop + Drive and
+## arriving grants a blueprint the account didn't own, driving through it picks it up too, the offline catch-up grants
+## it and says so, every eligible one owned = a supply crate, the per-lap cap, switch off = no caches, GOD actions
+func _bp_cache_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	var snap: Dictionary = Game.s.duplicate(true)
+	Features.set_override("features", "seeded_world_map", true)
+	Features.set_override("features", "map_blueprint_caches", true)
+	Features.set_override("features", "road_events", false)
+	Game.s.erase("world")
+	Game.s.biome = 0
+	Game.s.lap = 0
+	Game.s.km = 0.0
+	Game.s.stall = 0.0
+	Game.s.traveling = false
+	Game.s.vault_level = 1
+	Game.s["at_site"] = ""
+	Game.s.combat.boss_beaten = {}
+	Game.s.sites_done = {}
+	Game.s.hull = maxf(80.0, float(Game.s.hull))
+	Game.s.res.power = 1000.0
+	Meta.m().blueprints = []
+	WorldMap.create("BPC-1")
+	var w0: Dictionary = JSON.parse_string(JSON.stringify(Game.s.world))
+	_check("bp cache: a new world starts without a cache", WorldMap.caches_on() and WorldMap.cache_at() == "")
+	WorldMap._cache_drive(2.9)
+	_check("bp cache: none before bpcache.first_km (3 km)", WorldMap.cache_at() == "")
+	WorldMap._cache_drive(0.2)
+	var at1 := WorldMap.cache_at()
+	var n1 := WorldMap.node(at1)
+	_check("bp cache: the first appears after 3 km on a reachable stop (%s)" % at1, at1 != "" and at1 != WorldMap.here()
+		and not str(n1.get("type", "")) in ["start", "exit"] and WorldMap.reachable(WorldMap.here(), 1).has(at1)
+		and int(Data.biome(int(n1.biome)).req) <= 1)
+	Game.s.world = JSON.parse_string(JSON.stringify(Game.s.world))
+	_check("bp cache: a save / reload keeps the same cache", WorldMap.cache_at() == at1)
+	Game.s.world = JSON.parse_string(JSON.stringify(w0))
+	WorldMap._cache_drive(3.1)
+	_check("bp cache: replaying the same world gives the same stop (seeded, no reroll)", WorldMap.cache_at() == at1)
+	var pool := WorldMap.cache_pool()
+	_check("bp cache: Vault 1 pool = its region + one ahead, never bp_train (%s)" % ", ".join(pool.keys()), pool.has("bp_engine_tune")
+		and pool.has("bp_refinery") and pool.has("bp_bus") and not pool.has("bp_tracks") and not pool.has("bp_train") and int(pool.bp_bus) == 1)
+	# the map shows it; a REAL finger tap selects the cache stop, a finger tap on Drive sets off
+	main.hud.open_panel("map")
+	await wait(0.4)
+	var mp = main.hud.panels.map
+	var view: WorldMapView = mp.map_view
+	var icon := view.get_node_or_null("BlueprintCache")
+	_check("bp cache: the map shows the blueprint badge, pointer-transparent", icon != null and icon.visible and icon.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	view.select("")
+	var sb: Button = view.get_node("Stop_" + at1)
+	var tp := sb.get_global_rect().get_center()
+	await _finger(0, tp, true)
+	await wait(0.1)
+	await _finger(0, tp, false)
+	await wait(0.2)
+	_check("bp cache: a finger tap on the cache stop selects it and the strip says what it is (%s)" % mp._dest_title.text, view.selected == at1
+		and mp._dest_title.text == Loc.t("กล่องพิมพ์เขียว (สุ่ม)") and not mp.drive_btn.disabled)
+	await shot("bp_cache_selected")
+	var dp: Vector2 = mp.drive_btn.get_global_rect().get_center()
+	await _finger(0, dp, true)
+	await wait(0.1)
+	await _finger(0, dp, false)
+	await wait(0.2)
+	_check("bp cache: a finger tap on Drive heads for the cache", WorldMap.driving() and str(WorldMap.trip().dest) == at1 and bool(Game.s.traveling))
+	mp.close()
+	await wait(0.3)
+	get_tree().paused = true
+	var drive := func(offline: bool):
+		for guard in 150:
+			Game.s.res.power = 1000.0
+			Game._simulate(60.0, offline)
+			if Expedition.at_site() != "":
+				Expedition.skip_site()
+			if not WorldMap.driving():
+				break
+	drive.call(false)
+	var got: Array = WorldMap.cache_state().got
+	var bps: Array = Meta.m().blueprints
+	_check("bp cache: arriving grants one blueprint the account didn't own, from the pool (%s)" % ", ".join(got), str(WorldMap.world().at) == at1
+		and got.size() == 1 and bps.size() == 1 and pool.has(str(got[0])) and Meta.has_blueprint(str(got[0])) and WorldMap.cache_at() == "")
+	# driving through the cache stop on the way somewhere else picks it up too
+	var via := ""
+	var dest := ""
+	for n in WorldMap.world().nodes:
+		var rt := WorldMap.route(WorldMap.here(), str(n.id), 1)
+		if not rt.is_empty() and (rt.ids as Array).size() >= 3:
+			via = str(rt.ids[1])
+			dest = str(n.id)
+			break
+	WorldMap.cache_state().at = via
+	WorldMap.drive_to(dest)
+	drive.call(false)
+	_check("bp cache: passing through the cache stop picks it up (%s on the way to %s)" % [via, dest], via != "" and str(WorldMap.world().at) == dest
+		and (WorldMap.cache_state().got as Array).size() == 2 and (Meta.m().blueprints as Array).size() == 2 and WorldMap.cache_at() == "")
+	# offline: the catch-up grants it and the away summary says so
+	var at3 := Dev.bpcache_spawn()
+	_check("bp cache: GOD spawns one now", at3 != "" and WorldMap.cache_at() == at3)
+	WorldMap.drive_to(at3)
+	Game.s.traveling = true
+	var said := [""]
+	var cb := func(msg, _kind):
+		if str(msg).contains(Loc.t("เก็บกล่องพิมพ์เขียวระหว่างทาง")):
+			said[0] = str(msg)
+	Game.toast.connect(cb)
+	Game._offline_progress(3600.0)
+	Game.toast.disconnect(cb)
+	_check("bp cache: offline arrival grants it and the away summary says so (%s)" % said[0], (Meta.m().blueprints as Array).size() == 3
+		and said[0] != "" and WorldMap.cache_at() == "" and WorldMap.offline_caches.is_empty())
+	# every eligible blueprint owned: a supply crate instead
+	for bp in WorldMap.BP_WEIGHT:
+		Meta.add_blueprint(bp)
+	_check("bp cache: GOD lists the pool (empty = supply)", WorldMap.cache_pool().is_empty() and Dev.bpcache_pool().contains("กล่องเสบียง"))
+	var scrap0 := float(Game.s.res.scrap)
+	var at4 := Dev.bpcache_spawn()
+	WorldMap.drive_to(at4)
+	drive.call(false)
+	_check("bp cache: all owned = a supply crate with scrap (+%d)" % int(float(Game.s.res.scrap) - scrap0), str((WorldMap.cache_state().got as Array).back()) == "supply"
+		and float(Game.s.res.scrap) >= scrap0 + 79.0 and not Meta.has_blueprint("bp_train"))
+	# the per-lap cap and the switch
+	WorldMap.cache_state().n = 3
+	WorldMap._cache_drive(100.0)
+	_check("bp cache: at most 3 per lap", WorldMap.cache_at() == "")
+	Dev.bpcache_clear()
+	_check("bp cache: GOD clear resets the counters", int(WorldMap.cache_state().n) == 0 and WorldMap.cache_at() == "")
+	Features.set_override("features", "map_blueprint_caches", false)
+	WorldMap._cache_drive(100.0)
+	view.rebuild()
+	_check("bp cache: switch off = no cache, no badge, nothing counted", WorldMap.cache_at() == "" and int(WorldMap.cache_state().n) == 0
+		and view.get_node_or_null("BlueprintCache") == null and float(WorldMap.cache_state().km) == 0.0)
+	Features.set_override("features", "map_blueprint_caches", true)
+	WorldMap.cache_state().at = at1
+	Features.set_override("features", "map_blueprint_caches", false)
+	_check("bp cache: switch off hides a saved cache (kept in the save)", WorldMap.cache_at() == "" and str(WorldMap.cache_state().at) == at1)
+	get_tree().paused = false
+	Features.set_override("features", "seeded_world_map", null)
+	Features.set_override("features", "map_blueprint_caches", null)
+	Features.set_override("features", "road_events", null)
+	Game.s = snap
+	view.rebuild()
 	Game.travel_changed.emit()
 	Game.dwellers_changed.emit()
 	Game.resources_changed.emit()
