@@ -288,7 +288,7 @@
 58
 ],
 "chest": [
-1775,
+1902,
 2020,
 12,
 10
@@ -318,13 +318,13 @@
 18
 ],
 "decal_bus_service_vent": [
-168,
+310,
 2037,
 12,
 8
 ],
 "decal_car_lamp_cage": [
-609,
+934,
 2037,
 2,
 6
@@ -336,25 +336,25 @@
 52
 ],
 "decal_car_tank_detail": [
-926,
+1028,
 2020,
 54,
 12
 ],
 "decal_car_weld_patch": [
-181,
+323,
 2037,
 12,
 8
 ],
 "decal_engine_bus_block": [
-640,
+742,
 2020,
 17,
 14
 ],
 "decal_engine_rig_block": [
-894,
+996,
 2020,
 16,
 13
@@ -366,13 +366,13 @@
 20
 ],
 "decal_engine_van_block": [
-911,
+1013,
 2020,
 14,
 13
 ],
 "decal_rig_door_latch": [
-562,
+878,
 2037,
 8,
 6
@@ -402,43 +402,43 @@
 17
 ],
 "decal_train_access_hinges": [
-246,
+401,
 2037,
 10,
 8
 ],
 "decal_train_bogie_detail": [
-371,
+624,
 2037,
 44,
 6
 ],
 "decal_train_driver_cockpit": [
-488,
+590,
 2020,
 18,
 14
 ],
 "decal_train_driver_cockpit_idle_1": [
-507,
+609,
 2020,
 18,
 14
 ],
 "decal_train_driver_cockpit_idle_2": [
-526,
+628,
 2020,
 18,
 14
 ],
 "decal_train_driver_cockpit_idle_3": [
-545,
+647,
 2020,
 18,
 14
 ],
 "decal_van_door_hardware": [
-1760,
+1887,
 2020,
 14,
 10
@@ -468,19 +468,19 @@
 29
 ],
 "decal_vehicle_fuel_cap": [
-257,
+455,
 2037,
 8,
 8
 ],
 "decal_vehicle_pillar_joint": [
-571,
+896,
 2037,
 6,
 6
 ],
 "decal_vehicle_roof_seam": [
-516,
+786,
 2037,
 12,
 6
@@ -900,61 +900,61 @@
 24
 ],
 "en_bug_0": [
-1847,
+1974,
 2020,
 16,
 9
 ],
 "en_bug_1": [
-1864,
+1991,
 2020,
 16,
 9
 ],
 "en_crawler_0": [
-658,
+760,
 2020,
 16,
 14
 ],
 "en_crawler_1": [
-675,
+777,
 2020,
 16,
 14
 ],
 "en_drone_0": [
-1240,
+1342,
 2020,
 16,
 11
 ],
 "en_drone_1": [
-1257,
+1359,
 2020,
 16,
 11
 ],
 "en_mosquito_0": [
-1057,
+1159,
 2020,
 16,
 12
 ],
 "en_mosquito_1": [
-1074,
+1176,
 2020,
 16,
 12
 ],
 "en_rat_0": [
-1726,
+1837,
 2020,
 16,
 10
 ],
 "en_rat_1": [
-1743,
+1854,
 2020,
 16,
 10
@@ -972,25 +972,25 @@
 18
 ],
 "en_scorpion_0": [
-981,
+1083,
 2020,
 18,
 12
 ],
 "en_scorpion_1": [
-1000,
+1102,
 2020,
 18,
 12
 ],
 "en_screecher_0": [
-442,
+544,
 2020,
 22,
 14
 ],
 "en_screecher_1": [
-465,
+567,
 2020,
 22,
 14
@@ -1020,25 +1020,25 @@
 20
 ],
 "en_toad_0": [
-1274,
+1376,
 2020,
 16,
 11
 ],
 "en_toad_1": [
-1291,
+1393,
 2020,
 16,
 11
 ],
 "en_vulture_0": [
-1019,
+1121,
 2020,
 18,
 12
 ],
 "en_vulture_1": [
-1038,
+1140,
 2020,
 18,
 12
@@ -1056,13 +1056,13 @@
 20
 ],
 "en_wolf_0": [
-852,
+954,
 2020,
 20,
 13
 ],
 "en_wolf_1": [
-873,
+975,
 2020,
 20,
 13
@@ -1128,7 +1128,7 @@
 40
 ],
 "exp_crate": [
-1881,
+2008,
 2020,
 11,
 9
@@ -1188,211 +1188,211 @@
 24
 ],
 "fx_car_exhaust_puff_0": [
-692,
+794,
 2020,
 12,
 14
 ],
 "fx_car_exhaust_puff_1": [
-705,
+807,
 2020,
 12,
 14
 ],
 "fx_car_exhaust_puff_2": [
-718,
+820,
 2020,
 12,
 14
 ],
 "fx_car_exhaust_puff_3": [
-731,
+833,
 2020,
 12,
 14
 ],
 "fx_car_exhaust_puff_4": [
-744,
+846,
 2020,
 12,
 14
 ],
 "fx_car_exhaust_puff_5": [
-757,
+859,
 2020,
 12,
 14
 ],
 "fx_car_roof_rain_drip_0": [
-1204,
+1306,
 2020,
 5,
 12
 ],
 "fx_car_roof_rain_drip_1": [
-1210,
+1312,
 2020,
 5,
 12
 ],
 "fx_car_roof_rain_drip_2": [
-1216,
+1318,
 2020,
 5,
 12
 ],
 "fx_car_roof_rain_drip_3": [
-1222,
+1324,
 2020,
 5,
 12
 ],
 "fx_car_roof_rain_drip_4": [
-1228,
+1330,
 2020,
 5,
 12
 ],
 "fx_car_roof_rain_drip_5": [
-1234,
+1336,
 2020,
 5,
 12
 ],
 "fx_dust_0": [
-529,
+812,
 2037,
 10,
 6
 ],
 "fx_dust_1": [
-540,
+823,
 2037,
 10,
 6
 ],
 "fx_dust_2": [
-551,
+834,
 2037,
 10,
 6
 ],
 "fx_engine_heat_vent_0": [
-1143,
+1245,
 2020,
 8,
 12
 ],
 "fx_engine_heat_vent_1": [
-1152,
+1254,
 2020,
 8,
 12
 ],
 "fx_engine_heat_vent_2": [
-1161,
+1263,
 2020,
 8,
 12
 ],
 "fx_engine_heat_vent_3": [
-1170,
+1272,
 2020,
 8,
 12
 ],
 "fx_engine_heat_vent_4": [
-1179,
+1281,
 2020,
 8,
 12
 ],
 "fx_engine_heat_vent_5": [
-1188,
+1290,
 2020,
 8,
 12
 ],
 "fx_env_puddle_ripple_0": [
-416,
+669,
 2037,
 24,
 6
 ],
 "fx_env_puddle_ripple_1": [
-441,
+694,
 2037,
 24,
 6
 ],
 "fx_env_puddle_ripple_2": [
-466,
+719,
 2037,
 24,
 6
 ],
 "fx_env_puddle_ripple_3": [
-491,
+744,
 2037,
 24,
 6
 ],
 "fx_env_snow_scud_0": [
-1982,
-2020,
+77,
+2037,
 24,
 8
 ],
 "fx_env_snow_scud_1": [
-2007,
-2020,
+102,
+2037,
 24,
 8
 ],
 "fx_env_snow_scud_2": [
-0,
+127,
 2037,
 24,
 8
 ],
 "fx_env_snow_scud_3": [
-25,
+152,
 2037,
 24,
 8
 ],
 "fx_env_snow_scud_4": [
-50,
+177,
 2037,
 24,
 8
 ],
 "fx_env_snow_scud_5": [
-75,
+202,
 2037,
 24,
 8
 ],
 "fx_env_swamp_bubble_0": [
-194,
+336,
 2037,
 12,
 8
 ],
 "fx_env_swamp_bubble_1": [
-207,
+349,
 2037,
 12,
 8
 ],
 "fx_env_swamp_bubble_2": [
-220,
+362,
 2037,
 12,
 8
 ],
 "fx_env_swamp_bubble_3": [
-233,
+375,
 2037,
 12,
 8
@@ -4368,68 +4368,68 @@
 16
 ],
 "fx_room_saloon_steam_0": [
-266,
+473,
 2037,
 6,
 8
 ],
 "fx_room_saloon_steam_1": [
-273,
+480,
 2037,
 6,
 8
 ],
 "fx_room_saloon_steam_2": [
-280,
+487,
 2037,
 6,
 8
 ],
 "fx_room_saloon_steam_3": [
-287,
+494,
 2037,
 6,
 8
 ],
 "fx_splat_0": [
-612,
+981,
 2037,
 12,
 4
 ],
 "fx_splat_1": [
-625,
+994,
 2037,
 12,
 4
 ],
 "fx_splat_2": [
-638,
+1007,
 2037,
 12,
 4
 ],
 "fx_weld_0": [
-1893,
+2020,
 2020,
 9,
 9
 ],
 "fx_weld_1": [
-1903,
+2030,
 2020,
 9,
 9
 ],
 "fx_weld_2": [
-1913,
-2020,
+0,
+2037,
 9,
 9
 ],
 "fx_weld_3": [
-1923,
-2020,
+10,
+2037,
 9,
 9
 ],
@@ -5088,7 +5088,7 @@
 20
 ],
 "mod_rad_shield": [
-1484,
+1595,
 2020,
 208,
 10
@@ -5172,7 +5172,7 @@
 20
 ],
 "mod_solar_cover": [
-1812,
+1939,
 2020,
 34,
 9
@@ -5220,223 +5220,223 @@
 38
 ],
 "pet_cat_0": [
-1376,
+1478,
 2020,
 14,
 11
 ],
 "pet_cat_1": [
-1391,
+1493,
 2020,
 14,
 11
 ],
 "pet_cat_2": [
-1406,
+1508,
 2020,
 14,
 11
 ],
 "pet_cat_3": [
-1421,
+1523,
 2020,
 14,
 11
 ],
 "pet_dog_0": [
-1308,
+1410,
 2020,
 16,
 11
 ],
 "pet_dog_1": [
-1325,
+1427,
 2020,
 16,
 11
 ],
 "pet_dog_2": [
-1342,
+1444,
 2020,
 16,
 11
 ],
 "pet_dog_3": [
-1359,
+1461,
 2020,
 16,
 11
 ],
 "pet_hen_0": [
-1436,
+1538,
 2020,
 11,
 11
 ],
 "pet_hen_1": [
-1448,
+1550,
 2020,
 11,
 11
 ],
 "pet_hen_2": [
-1460,
+1562,
 2020,
 11,
 11
 ],
 "pet_hen_3": [
-1472,
+1574,
 2020,
 11,
 11
 ],
 "prop_car_chain_idle_0": [
-824,
+926,
 2020,
 6,
 14
 ],
 "prop_car_chain_idle_1": [
-831,
+933,
 2020,
 6,
 14
 ],
 "prop_car_chain_idle_2": [
-838,
+940,
 2020,
 6,
 14
 ],
 "prop_car_chain_idle_3": [
-845,
+947,
 2020,
 6,
 14
 ],
 "prop_car_flag_idle_0": [
-319,
+541,
 2037,
 12,
 7
 ],
 "prop_car_flag_idle_1": [
-332,
+554,
 2037,
 12,
 7
 ],
 "prop_car_flag_idle_2": [
-345,
+567,
 2037,
 12,
 7
 ],
 "prop_car_flag_idle_3": [
-358,
+580,
 2037,
 12,
 7
 ],
 "prop_car_leaf_spring": [
-1693,
+1804,
 2020,
 32,
 10
 ],
 "prop_car_mudflap_idle_0": [
-770,
+872,
 2020,
 10,
 14
 ],
 "prop_car_mudflap_idle_1": [
-781,
+883,
 2020,
 10,
 14
 ],
 "prop_car_mudflap_idle_2": [
-792,
+894,
 2020,
 10,
 14
 ],
 "prop_car_mudflap_idle_3": [
-803,
+905,
 2020,
 10,
 14
 ],
 "prop_engine_fan_idle_0": [
-1788,
+1915,
 2020,
 5,
 10
 ],
 "prop_engine_fan_idle_1": [
-1794,
+1921,
 2020,
 5,
 10
 ],
 "prop_engine_fan_idle_2": [
-1800,
+1927,
 2020,
 5,
 10
 ],
 "prop_engine_fan_idle_3": [
-1806,
+1933,
 2020,
 5,
 10
 ],
 "prop_engine_hose_idle_0": [
-585,
+910,
 2037,
 5,
 6
 ],
 "prop_engine_hose_idle_1": [
-591,
+916,
 2037,
 5,
 6
 ],
 "prop_engine_hose_idle_2": [
-597,
+922,
 2037,
 5,
 6
 ],
 "prop_engine_hose_idle_3": [
-603,
+928,
 2037,
 5,
 6
 ],
 "prop_env_grass_sway_0": [
-1091,
+1193,
 2020,
 12,
 12
 ],
 "prop_env_grass_sway_1": [
-1104,
+1206,
 2020,
 12,
 12
 ],
 "prop_env_grass_sway_2": [
-1117,
+1219,
 2020,
 12,
 12
 ],
 "prop_env_grass_sway_3": [
-1130,
+1232,
 2020,
 12,
 12
@@ -5490,25 +5490,25 @@
 18
 ],
 "prop_env_scrap_can_0": [
-100,
+227,
 2037,
 16,
 8
 ],
 "prop_env_scrap_can_1": [
-117,
+244,
 2037,
 16,
 8
 ],
 "prop_env_scrap_can_2": [
-134,
+261,
 2037,
 16,
 8
 ],
 "prop_env_scrap_can_3": [
-151,
+278,
 2037,
 16,
 8
@@ -5538,13 +5538,13 @@
 20
 ],
 "prop_roof_bench_blanket": [
-294,
+501,
 2037,
 24,
 7
 ],
 "prop_roof_caged_lamp": [
-1197,
+1299,
 2020,
 6,
 12
@@ -5580,7 +5580,7 @@
 17
 ],
 "prop_roof_water_can": [
-814,
+916,
 2020,
 9,
 14
@@ -5592,37 +5592,37 @@
 20
 ],
 "pt_acid": [
-651,
+1032,
 2037,
 1,
 4
 ],
 "pt_acid_glob": [
-655,
+1036,
 2037,
 3,
 3
 ],
 "pt_ash": [
-675,
+1056,
 2037,
 2,
 2
 ],
 "pt_blood": [
-678,
+1059,
 2037,
 2,
 2
 ],
 "pt_casing": [
-687,
+1068,
 2037,
 3,
 1
 ],
 "pt_dust": [
-659,
+1040,
 2037,
 3,
 3
@@ -5994,61 +5994,61 @@
 16
 ],
 "pt_gib": [
-667,
+1048,
 2037,
 3,
 2
 ],
 "pt_leaf": [
-671,
+1052,
 2037,
 3,
 2
 ],
 "pt_mud": [
-663,
+1044,
 2037,
 3,
 3
 ],
 "pt_px": [
-697,
+1078,
 2037,
 1,
 1
 ],
 "pt_rain": [
-653,
+1034,
 2037,
 1,
 4
 ],
 "pt_sand": [
-691,
+1072,
 2037,
 2,
 1
 ],
 "pt_shard": [
-694,
+1075,
 2037,
 2,
 1
 ],
 "pt_smoke": [
-578,
+903,
 2037,
 6,
 6
 ],
 "pt_snow": [
-681,
+1062,
 2037,
 2,
 2
 ],
 "pt_spark": [
-684,
+1065,
 2037,
 2,
 2
@@ -6444,8 +6444,8 @@
 52
 ],
 "slam": [
-1933,
-2020,
+28,
+2037,
 48,
 8
 ],
@@ -6486,25 +6486,25 @@
 26
 ],
 "turret_flak": [
-564,
+666,
 2020,
 18,
 14
 ],
 "turret_harpoon": [
-583,
+685,
 2020,
 18,
 14
 ],
 "turret_mg": [
-602,
+704,
 2020,
 18,
 14
 ],
 "turret_tesla": [
-621,
+723,
 2020,
 18,
 14
@@ -6587,6 +6587,156 @@
 27,
 27
 ],
+"ui_map_prop_desert_bones": [
+950,
+2037,
+10,
+5
+],
+"ui_map_prop_desert_dune": [
+769,
+2037,
+16,
+6
+],
+"ui_map_prop_desert_glass": [
+593,
+2037,
+10,
+7
+],
+"ui_map_prop_desert_rock": [
+961,
+2037,
+10,
+5
+],
+"ui_map_prop_desert_stump": [
+615,
+2037,
+8,
+7
+],
+"ui_map_prop_forest_bush": [
+972,
+2037,
+8,
+5
+],
+"ui_map_prop_forest_clump": [
+295,
+2037,
+14,
+8
+],
+"ui_map_prop_forest_log": [
+1020,
+2037,
+11,
+4
+],
+"ui_map_prop_forest_pines": [
+412,
+2037,
+10,
+8
+],
+"ui_map_prop_industrial_factory": [
+1871,
+2020,
+15,
+10
+],
+"ui_map_prop_industrial_heap": [
+845,
+2037,
+10,
+6
+],
+"ui_map_prop_industrial_pylon": [
+445,
+2037,
+9,
+8
+],
+"ui_map_prop_industrial_tank": [
+423,
+2037,
+10,
+8
+],
+"ui_map_prop_metro_block": [
+388,
+2037,
+12,
+8
+],
+"ui_map_prop_metro_mast": [
+20,
+2037,
+7,
+9
+],
+"ui_map_prop_metro_tower": [
+1586,
+2020,
+8,
+11
+],
+"ui_map_prop_metro_wreck": [
+856,
+2037,
+10,
+6
+],
+"ui_map_prop_swamp_pool": [
+526,
+2037,
+14,
+7
+],
+"ui_map_prop_swamp_reeds": [
+887,
+2037,
+8,
+6
+],
+"ui_map_prop_swamp_shack": [
+604,
+2037,
+10,
+7
+],
+"ui_map_prop_swamp_tree": [
+434,
+2037,
+10,
+8
+],
+"ui_map_prop_tundra_drift": [
+937,
+2037,
+12,
+5
+],
+"ui_map_prop_tundra_pine": [
+464,
+2037,
+8,
+8
+],
+"ui_map_prop_tundra_rock": [
+867,
+2037,
+10,
+6
+],
+"ui_map_prop_tundra_wreck": [
+799,
+2037,
+12,
+6
+],
 "ui_map_road_stop": [
 425,
 2020,
@@ -6598,6 +6748,42 @@
 1735,
 33,
 33
+],
+"ui_map_terrain_desert": [
+442,
+2020,
+16,
+16
+],
+"ui_map_terrain_forest": [
+459,
+2020,
+16,
+16
+],
+"ui_map_terrain_industrial": [
+476,
+2020,
+16,
+16
+],
+"ui_map_terrain_metro": [
+493,
+2020,
+16,
+16
+],
+"ui_map_terrain_swamp": [
+510,
+2020,
+16,
+16
+],
+"ui_map_terrain_tundra": [
+527,
+2020,
+16,
+16
 ],
 "ui_trait_card_frame": [
 1342,

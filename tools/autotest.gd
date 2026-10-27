@@ -298,6 +298,11 @@ func _run() -> void:
 		await _world_screen_test()
 		_finish()
 		return
+	if "--only=world_map_detail" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_map_detail_test()
+		_finish()
+		return
 	if "--only=quarters_guard" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _quarters_guard_test()
@@ -1035,6 +1040,7 @@ func _run() -> void:
 	await _engine_rest_test()
 	await _quarters_guard_test()
 	await _world_screen_test()
+	await _world_map_detail_test()
 	await _world_travel_test()
 	await _bp_cache_test()
 	await _world_migrate_test()
@@ -9048,6 +9054,97 @@ func _world_screen_test() -> void:
 	Game.resources_changed.emit()
 	await wait(0.3)
 
+
+
+## MV-556: the clearer world map: calm terrain, region borders, seeded per-biome props that never cover a road, a stop,
+## a region name or each other, name plates; density tune and the switch off (the MV-501 look) both work.
+func _world_map_detail_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	for k in main.hud.panels:
+		if main.hud.panels[k].is_open:
+			main.hud.panels[k].close()
+	var snap: Dictionary = Game.s.duplicate(true)
+	Game.s.vault_level = 3
+	Game.s.traveling = false
+	_check("map detail: the switch ships on", bool((Features.layers.default.get("features", {}) as Dictionary).get("world_map_detail", false)) and Features.on("world_map_detail"))
+	var missing := []
+	for b in ["industrial", "desert", "forest", "swamp", "tundra", "metro"]:
+		if not Atlas.regions.has("ui_map_terrain_" + b):
+			missing.append("ui_map_terrain_" + b)
+		for k in WorldMapView.PROPS.get(b, []):
+			if not Atlas.regions.has("ui_map_prop_" + str(k)):
+				missing.append("ui_map_prop_" + str(k))
+	_check("map detail: every terrain tile and prop is in the atlas (%s)" % [missing], missing.is_empty())
+	Dev.world_map_look(true, 0.7)
+	await wait(0.4)
+	var mp = main.hud.panels.map
+	var view: WorldMapView = mp.map_view
+	var w := WorldMap.world()
+	var props: Array = view.props()
+	var per := {}
+	var bad := []
+	var rects := []
+	for pr in props:
+		var rc := Rect2(pr[1], Atlas.tex(pr[0]).get_size())
+		var ri := view.region_at(rc.position)
+		var rid := str(w.regions[ri].id) if ri >= 0 else "?"
+		per[rid] = int(per.get(rid, 0)) + 1
+		if not str(pr[0]).begins_with("ui_map_prop_" + rid + "_"):
+			bad.append("%s off its biome" % pr[0])
+		for q in [rc.position, rc.end - Vector2.ONE, Vector2(rc.end.x - 1, rc.position.y), Vector2(rc.position.x, rc.end.y - 1)]:
+			if view.region_at(q) != ri:
+				bad.append("%s straddles a border" % pr[0])
+				break
+		var c := rc.get_center()
+		var rad := maxf(rc.size.x, rc.size.y) * 0.5
+		for e in w.edges:
+			var a: Vector2 = view._mp(WorldMap.node(str(e.a)))
+			var b: Vector2 = view._mp(WorldMap.node(str(e.c)))
+			if Geometry2D.get_closest_point_to_segment(c, a, b).distance_to(c) < rad + WorldMapView.ROAD_CLEAR:
+				bad.append("%s on road %s" % [pr[0], e.id])
+		for n in w.nodes:
+			if view._mp(n).distance_to(c) < rad + WorldMapView.STOP_CLEAR:
+				bad.append("%s on stop %s" % [pr[0], n.id])
+		for pl in view.plates():
+			if pl.intersects(rc):
+				bad.append("%s on a region name" % pr[0])
+		for o in rects:
+			if o.intersects(rc):
+				bad.append("%s overlaps another prop" % pr[0])
+		rects.append(rc)
+	_check("map detail: props never sit on a road, a stop, a name, a border or each other (%s)" % [bad.slice(0, 4)], bad.is_empty())
+	var thin := []
+	for r in w.regions:
+		if int(per.get(str(r.id), 0)) < 4:
+			thin.append("%s %d" % [r.id, int(per.get(str(r.id), 0))])
+	_check("map detail: every region gets its own props (%d total, %s; thin %s)" % [props.size(), per, thin], thin.is_empty())
+	var again := props.duplicate(true)
+	view._layout_key = ""
+	_check("map detail: the scatter is a pure function of the world seed", view.props() == again)
+	await shot("world_map_detail")
+	Dev.world_map_look(true, 0.0)
+	await wait(0.2)
+	_check("map detail: density 0 = no props, borders and plates stay", view.props().is_empty() and view.plates().size() == (w.regions as Array).size())
+	Dev.world_map_look(true, 1.0)
+	await wait(0.2)
+	_check("map detail: a denser tune scatters more (%d > %d)" % [view.props().size(), again.size()], view.props().size() > again.size())
+	Dev.world_map_look(false)
+	await wait(0.3)
+	_check("map detail: switch off = the MV-501 tiles, no props", not Features.on("world_map_detail") and view.props().is_empty() and mp.is_open)
+	await shot("world_map_detail_off")
+	mp.close()
+	Features.set_override("features", "world_map_detail", null)
+	Features.set_override("tune", "world_map.props", null)
+	Features.set_override("features", "seeded_world_map", null)
+	Game.s = snap
+	Game.travel_changed.emit()
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+	await wait(0.3)
 
 
 ## MV-550: checkpoint progression at Common +0 and with weapons only, all biomes and repeat laps.
