@@ -53,6 +53,7 @@
     "announce": true,
     "raw_food": true,
     "loot_pity": true,
+    "roaming_boss_balance": true,
     "boss_intro": true,
     "vehicle_detail": true,
     "vehicle_ambience": true,
