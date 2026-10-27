@@ -140,6 +140,8 @@ func _choice_button(ch: Dictionary, i: int) -> ChoiceButton:
 	# MV-243: a choice the vehicle can't do right now (flee while it can't move) is shown closed, with the reason
 	var why := Game.choice_block(ch)
 	var sub_text: String = (Loc.t("รถออกตัวไม่ได้: %s") % Loc.t(Game.drive_block())) if why != "" else ch.get("sub", "")
+	if ch.action == "check" and Features.on("event_progression"):
+		sub_text += "\n" + Loc.t("ทดสอบ %s · เป้าหมาย %d · โอกาสสำเร็จ %d%%") % [str(ch.get("stat", "agi")).to_upper(), Game.event_check_dc(ch), Game.event_check_chance(ch)]
 	var b := ChoiceButton.new(ch.th, ch.en, sub_text, "gray" if why != "" else ch.get("color", "green"))
 	if ch.has("lore") and not Lore.is_unlocked(str(ch.lore)):
 		b.add_badge(Atlas.icon("book"), Loc.t("ปลดล็อกบันทึกใหม่"))
@@ -190,7 +192,7 @@ func _build_defenders(v: VBoxContainer, _ch: Dictionary) -> void:
 	var total := Game.armory_bonus()
 	for did in _selected:
 		total += Game.dweller_power(Game.dweller_by_id(did))
-	var need := 8.0 + Game.event_danger(event_id) * 6.0
+	var need := Game.event_fight_need(event_id)
 	v.add_child(UIKit.wrap_label(Loc.t("พลังทีม %.0f vs อันตราย ~%.0f (ห้องอาวุธ +%.0f)") % [total, need, Game.armory_bonus()], UIKit.FS_SMALL, UIKit.C_GREEN if total >= need else UIKit.C_ORANGE))
 	var hb := UIKit.hbox(4)
 	var back := UIKit.button(Loc.t("< กลับ"), "gray")

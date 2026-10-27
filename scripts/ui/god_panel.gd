@@ -631,6 +631,8 @@ func _tab_world() -> void:
 	_row([_b("ไปด่านตรวจ", func(): Dev.goto_checkpoint()), _b("ผ่านบอสด่านนี้", func(): Dev.beat_warlord()), _b("รอบ +1", func(): Dev.lap_add())],
 		"รอบ %d · %.1f กม." % [int(Game.s.get("lap", 0)) + 1, float(Game.s.km)])
 	_head("EVENTS", "เรียกอีเว้นต์บนถนน")
+	_row([_b("อีเว้นต์: ตามความก้าวหน้า", func(): Dev.event_progression_preview(true), "green", true), _b("อีเว้นต์: กฎเดิม", func(): Dev.event_progression_preview(false), "gray", true)])
+	_note("MV-553: %s · ระดับ %.1f · โจรต้องการพลัง %.0f · ความเสี่ยง ×%.2f" % ["เปิด" if Features.on("event_progression") else "ปิด", Game.event_progress_rank(), Game.event_fight_need("raiders"), Game.event_risk_scale()])
 	var bag: Array = Game.s.get("ev_bag", []) if int(Game.s.get("ev_bag_biome", -1)) == int(Game.s.biome) else []
 	_note("สำรับด่านนี้เหลือ %d ใบ · ล่าสุด: %s" % [bag.size(), ", ".join(Game.s.get("ev_recent", []).map(func(e): return str(Data.EVENTS.get(e, {}).get("th", e))))])
 	_row([_b("จั่วใบถัดไป", func(): Dev.event_draw(), "yellow", true), _b("สับสำรับใหม่", func(): Dev.event_deck_reset())])

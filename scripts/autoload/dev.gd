@@ -1233,7 +1233,12 @@ func bark(kind: String = "") -> String:
 	return k if ok else ""
 
 
-## MV-134: a random road event whose clock runs out in 2 s (as if the player were watching), to see the crew's pick
+## MV-553: compare this progression stage with current / legacy road-event rules.
+func event_progression_preview(enabled: bool) -> void:
+	feature_set("event_progression", enabled)
+	event("raiders")
+
+
 func event_quick_timeout() -> void:
 	var ids := Data.EVENTS.keys()
 	event(str(ids[randi() % ids.size()]))
