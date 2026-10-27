@@ -597,7 +597,7 @@ func _tab_world() -> void:
 		_b("ดูพิมพ์เขียวที่สุ่มได้", func(): Dev.bpcache_pool()), _b("ล้างกล่อง+ตัวนับ", func(): Dev.bpcache_clear(), "red")], "กล่อง")
 	_row([_b("กล่องพิมพ์เขียว: " + ("เปิด" if Features.on("map_blueprint_caches") else "ปิด"), func(): Dev.feature_set("map_blueprint_caches", not Features.on("map_blueprint_caches")),
 		"green" if Features.on("map_blueprint_caches") else "red")], "สวิตช์")
-	_head("INDUSTRIAL SKY", "ฉากนิคมอุตสาหกรรมใหม่ (MV-369) ตามเวลาในเกม")
+	_head("INDUSTRIAL SKY", "นิคมอุตสาหกรรม 20 พาเนล (MV-548) ตามเวลาในเกม")
 	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
 	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])
 	_head("GLASS DESERT", "ทะเลทรายแก้ว (MV-539) ตามเวลาในเกม")

@@ -37,7 +37,7 @@ const FEATURES := {
 	"smooth_ui_text": "ตัวอักษร Chakra Petch เรียบคมตามความละเอียดจอ (MV-540): ปิด = ขอบพิกเซลแบบเดิม",
 	"confirm_actions": "หน้าต่างยืนยันก่อนลบหรือแทนที่ข้อมูล (MV-422)",
 	"desert_parallax": "ทะเลทรายแก้ว (MV-539): ฉากหลังยาว 5 ชั้น ท้องฟ้าตามเวลาในเกม (ปิด = ฉากเดิม)",
-	"industrial_parallax": "ฉากนิคมอุตสาหกรรมแบบใหม่ (MV-369): ฉากหลังยาว ท้องฟ้าตามเวลาในเกม พระอาทิตย์/พระจันทร์ ควันและฝุ่นพิกเซล (ปิด = ฉากเดิม)",
+	"industrial_parallax": "ฉากนิคมอุตสาหกรรม 20 พาเนล (MV-548): ฉากหลังยาว ท้องฟ้าตามเวลาในเกม พระอาทิตย์/พระจันทร์ ควันและฝุ่นพิกเซล (ปิด = ฉากเดิม)",
 	"road_events": "อีเว้นต์สุ่มบนถนน",
 	"raids": "ศัตรูบุกรถ (บอสด่านตรวจยังขวางทางเสมอ)",
 	"encounters": "จุดพิเศษระหว่างสำรวจ",
@@ -100,6 +100,12 @@ const FEATURES := {
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
+	"industrial_background.clouds_speed": [0.0, 0.2, "นิคมอุตสาหกรรม: ความเร็วเมฆเทียบถนน"],
+	"industrial_background.far_speed": [0.0, 0.3, "นิคมอุตสาหกรรม: ความเร็วฉากไกลเทียบถนน"],
+	"industrial_background.mid_speed": [0.0, 0.6, "นิคมอุตสาหกรรม: ความเร็วฉากกลางเทียบถนน"],
+	"industrial_background.near_speed": [0.0, 1.0, "นิคมอุตสาหกรรม: ความเร็วข้างทางเทียบถนน"],
+	"industrial_background.road_speed": [0.0, 2.0, "นิคมอุตสาหกรรม: ความเร็วถนนเทียบถนน"],
+	"industrial_background.cloud_wind": [0.0, 12.0, "นิคมอุตสาหกรรม: ลมเมฆขณะจอด (พิกเซล/วิ)"],
 	"desert_background.clouds_speed": [0.0, 0.2, "ทะเลทราย: ความเร็วเมฆเทียบถนน"],
 	"desert_background.far_speed": [0.0, 0.3, "ทะเลทราย: ความเร็วฉากไกลเทียบถนน"],
 	"desert_background.mid_speed": [0.0, 0.6, "ทะเลทราย: ความเร็วฉากกลางเทียบถนน"],
