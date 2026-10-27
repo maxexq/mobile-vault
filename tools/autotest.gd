@@ -3569,8 +3569,9 @@ func _features_test() -> void:
 	Features.clear_overrides()
 	Features.layers.remote = {}
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
-	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it)
-	var ships_off := ["english", "seeded_world_map"]
+	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
+	# (MV-546) rides on the world map, so it ships off with it
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches"]
 	var all_on := true
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
@@ -8551,6 +8552,11 @@ func _bp_cache_test() -> void:
 		if main.hud.panels[k].is_open:
 			main.hud.panels[k].close()
 	var snap: Dictionary = Game.s.duplicate(true)
+	# earlier groups can leave a landscape window and the map tip over the stops: a phone screen, tips seen
+	var win0 := get_window().size
+	get_window().size = Vector2i(720, 1280)
+	for k in Tutorial.TIPS:
+		Tutorial.mark_tip(k)
 	Features.set_override("features", "seeded_world_map", true)
 	Features.set_override("features", "map_blueprint_caches", true)
 	Features.set_override("features", "road_events", false)
@@ -8594,6 +8600,8 @@ func _bp_cache_test() -> void:
 	var icon := view.get_node_or_null("BlueprintCache")
 	_check("bp cache: the map shows the blueprint badge, pointer-transparent", icon != null and icon.visible and icon.mouse_filter == Control.MOUSE_FILTER_IGNORE)
 	view.select("")
+	view._center_on(Vector2(int(n1.x), int(n1.y)))
+	await wait(0.1)
 	var sb: Button = view.get_node("Stop_" + at1)
 	var tp := sb.get_global_rect().get_center()
 	await _finger(0, tp, true)
@@ -8683,6 +8691,7 @@ func _bp_cache_test() -> void:
 	Features.set_override("features", "map_blueprint_caches", null)
 	Features.set_override("features", "road_events", null)
 	Game.s = snap
+	get_window().size = win0
 	view.rebuild()
 	Game.travel_changed.emit()
 	Game.dwellers_changed.emit()
