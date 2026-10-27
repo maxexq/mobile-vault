@@ -36,6 +36,7 @@ const TIMEOUT_SEC := 10.0
 const FEATURES := {
 	"smooth_ui_text": "ตัวอักษร Chakra Petch เรียบคมตามความละเอียดจอ (MV-540): ปิด = ขอบพิกเซลแบบเดิม",
 	"confirm_actions": "หน้าต่างยืนยันก่อนลบหรือแทนที่ข้อมูล (MV-422)",
+	"desert_parallax": "ทะเลทรายแก้ว (MV-539): ฉากหลังยาว 5 ชั้น ท้องฟ้าตามเวลาในเกม (ปิด = ฉากเดิม)",
 	"industrial_parallax": "ฉากนิคมอุตสาหกรรมแบบใหม่ (MV-369): ฉากหลังยาว ท้องฟ้าตามเวลาในเกม พระอาทิตย์/พระจันทร์ ควันและฝุ่นพิกเซล (ปิด = ฉากเดิม)",
 	"road_events": "อีเว้นต์สุ่มบนถนน",
 	"raids": "ศัตรูบุกรถ (บอสด่านตรวจยังขวางทางเสมอ)",
@@ -96,6 +97,12 @@ const FEATURES := {
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
+	"desert_background.clouds_speed": [0.0, 0.2, "ทะเลทราย: ความเร็วเมฆเทียบถนน"],
+	"desert_background.far_speed": [0.0, 0.3, "ทะเลทราย: ความเร็วฉากไกลเทียบถนน"],
+	"desert_background.mid_speed": [0.0, 0.6, "ทะเลทราย: ความเร็วฉากกลางเทียบถนน"],
+	"desert_background.near_speed": [0.0, 1.0, "ทะเลทราย: ความเร็วข้างทางเทียบถนน"],
+	"desert_background.road_speed": [0.0, 2.0, "ทะเลทราย: ความเร็วถนน"],
+	"desert_background.cloud_wind": [0.0, 12.0, "ทะเลทราย: ลมเมฆขณะจอด (พิกเซล/วิ)"],
 	"background.fps": [2.0, 12.0, "ฉากอุตสาหกรรม: เฟรมต่อวินาทีของควัน/ฝุ่น"],
 	"background.smoke": [0.0, 1.0, "ฉากอุตสาหกรรม: ความหนาของควันปล่องไฟ"],
 	"background.particles": [0.0, 48.0, "ฉากอุตสาหกรรม: จำนวนฝุ่นลอยสูงสุด"],

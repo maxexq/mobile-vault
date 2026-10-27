@@ -85,6 +85,7 @@ func _run() -> void:
 	if "--only=background" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _industrial_background_test()
+		await _desert_background_test()
 		_finish()
 		return
 	if "--only=icons" in OS.get_cmdline_user_args():
@@ -962,6 +963,7 @@ func _run() -> void:
 	await _announce_test()
 	await _scene_art_test()
 	await _industrial_background_test()
+	await _desert_background_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
@@ -4819,7 +4821,7 @@ func _industrial_background_test() -> void:
 	main.background._on_biome_changed(0, true)
 	await wait(0.8)
 	var live: IndustrialBackdrop = main.background.groups.industrial.modern
-	_check("background: new art only on the industrial biome", live.is_visible_in_tree() and not main.background.groups.desert.has("modern"))
+	_check("background: new art only on the industrial biome", live.is_visible_in_tree() and not main.background.groups.desert.modern.is_visible_in_tree())
 	var long_layers := true
 	var periods := {}
 	for key in live.layers:
@@ -4880,6 +4882,115 @@ func _industrial_background_test() -> void:
 	Game.s.biome = old_biome
 	Game.force_weather(old_weather)
 	main.background._on_biome_changed(old_biome, true)
+	get_window().size = old_window
+	await wait(0.3)
+
+
+func _desert_background_test() -> void:
+	var old_window := get_window().size
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "desert_parallax", true)
+	Features.set_override("features", "industrial_parallax", true)
+	Dev.desert_background_preview(0.5)
+	main.background._on_biome_changed(1, true)
+	# goto_biome normally cross-fades: allow its existing transition to finish before sampling.
+	await wait(4.2)
+	var live: DesertBackdrop = main.background.groups.desert.modern
+	_check("desert: GOD action selects biome 1 in clear daylight", int(Game.s.biome) == 1 and Game.s.weather == "clear" and live.is_visible_in_tree())
+	_check("desert: industrial renderer is hidden and remaining biomes keep legacy art", not main.background.groups.industrial.modern.is_visible_in_tree() and not main.background.groups.forest.has("modern") and not main.background.groups.swamp.has("modern") and not main.background.groups.tundra.has("modern") and not main.background.groups.metro.has("modern"))
+	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
+	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
+	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
+	for key in dimensions:
+		var px: Parallax2D = live.layers[key].node
+		var sprite := px.get_child(0) as Sprite2D
+		var size: Vector2i = dimensions[key]
+		native = native and sprite.texture.get_size() == Vector2(size) and px.repeat_size.x == size.x and sprite.scale == Vector2.ONE
+		if key != "clouds" and key != "road":
+			native = native and sprite.position.y + size.y == Background.ROAD_Y
+	_check("desert: all five exact native dimensions, independent repeat widths and ground anchors", native)
+	var count := live.get_child_count()
+	live.set_process(false)
+	Features.set_override("tune", "desert_background.cloud_wind", 0.0)
+	live.preview_offset(0.0)
+	live.road_speed = 100.0
+	live._process(1.0)
+	var rates := true
+	for key in speeds:
+		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
+	_check("desert: real road speed drives .03/.08/.25/.60/1.0 relative scroll", rates)
+	Features.set_override("tune", "desert_background.mid_speed", 0.4)
+	_check("desert: live tuning changes the middle layer without rebuilding nodes", is_equal_approx(float(live.layers.mid.speed), 0.4) and live.get_child_count() == count)
+	Features.set_override("tune", "desert_background.mid_speed", 0.25)
+	Features.set_override("tune", "desert_background.cloud_wind", 4.0)
+	live.preview_offset(0.0)
+	live.road_speed = 0.0
+	live._process(1.0)
+	var stopped := true
+	for key in ["far", "mid", "near", "road"]:
+		stopped = stopped and is_zero_approx(float(live.layers[key].offset))
+	_check("desert: parked road/land stop while high dust drifts independently", stopped and is_equal_approx(float(live.layers.clouds.offset), 4.0))
+	live.preview_offset(99999999.0)
+	var snapped := true
+	for key in live.layers:
+		var px: Parallax2D = live.layers[key].node
+		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
+	_check("desert: long travel wraps every layer on whole pixels", snapped)
+	live.set_process(true)
+	for window in [Vector2i(1280, 640), Vector2i(405, 720)]:
+		get_window().size = window
+		await wait(0.5)
+		for entry in [[0.25, "dawn", true, 1], [0.5, "day", true, 2], [0.75, "dusk", false, 3], [0.0, "night", false, 0]]:
+			Game.s.tod = float(entry[0])
+			live.update_clock()
+			_check("desert: %s %s clock sky and pixel-snapped celestial" % [window, entry[1]], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]) and live.celestial_position == live.celestial_position.round())
+			# Let the existing WeatherFX grade settle after each abrupt clock jump.
+			await wait(3.0)
+			await shot("desert_%s_%s" % ["portrait" if window.y > window.x else "landscape", entry[1]])
+	Game.s.tod = 0.35
+	live.update_clock()
+	var morning := live.celestial_position
+	Game.s.tod = 0.60
+	live.update_clock()
+	_check("desert: sun catches up after an in-game clock jump", morning.distance_to(live.celestial_position) > 20)
+	Game.force_weather("sandstorm")
+	var before := live.phase
+	await wait(0.4)
+	_check("desert: weather uses existing ambience with a fixed scene-node count", live.phase > before and live.get_child_count() == count and Game.s.weather == "sandstorm")
+	await shot("desert_sandstorm")
+	Features.set_override("features", "desert_parallax", false)
+	before = live.phase
+	await wait(0.3)
+	_check("desert: kill switch restores legacy layers and stops hidden updates", not live.visible and main.background.groups.desert.legacy[0].visible and live.phase == before)
+	Features.set_override("features", "desert_parallax", true)
+	main.background._on_biome_changed(0, false)
+	await wait(3.2)
+	before = live.phase
+	await wait(0.3)
+	_check("desert: cross-fade completes and hidden desert stops updating", not live.is_visible_in_tree() and main.background.groups.industrial.modern.is_visible_in_tree() and live.phase == before)
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "world"
+	god.refresh()
+	await wait(0.2)
+	var buttons := {}
+	for row in god._list.get_children():
+		for control in row.get_children():
+			if control is Button:
+				buttons[control.text] = control
+	_check("desert: GOD world tab has four clock previews and both switch buttons", buttons.has("เช้า") and buttons.has("เที่ยง") and buttons.has("เย็น") and buttons.has("คืน") and buttons.has("ทะเลทรายใหม่") and buttons.has("ทะเลทรายเดิม"))
+	await shot("desert_god_world")
+	if buttons.has("เที่ยง"):
+		buttons["เที่ยง"].pressed.emit()
+		_check("desert: GOD button invokes the desert preview action", int(Game.s.biome) == 1 and is_equal_approx(float(Game.s.tod), 0.5) and Game.s.weather == "clear")
+	god.close()
+	await wait(3.2)
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.force_weather(str(old_state.weather))
+	main.background._on_biome_changed(int(old_state.biome), true)
 	get_window().size = old_window
 	await wait(0.3)
 
