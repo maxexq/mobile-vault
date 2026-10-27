@@ -8,6 +8,7 @@ var main: Node
 var out_dir := "user://autotest"
 var n := 0
 var _fails := 0
+var _individual_auto_equip_checks_completed := false
 var _font_checks_completed := false
 var _roaming_boss_checks_completed := false
 
@@ -62,6 +63,12 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=individual_auto_equip" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _individual_auto_equip_test()
+		_check("individual gear: all checks completed", _individual_auto_equip_checks_completed)
+		_finish()
+		return
 	if "--only=roaming_boss" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _roaming_boss_test()
@@ -1023,6 +1030,8 @@ func _run() -> void:
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
+	await _individual_auto_equip_test()
+	_check("individual gear: all checks completed", _individual_auto_equip_checks_completed)
 	await _roaming_boss_test()
 	_check("roaming boss: all combat and economy checks completed", _roaming_boss_checks_completed)
 	await _smooth_ui_text_test()
@@ -9000,4 +9009,165 @@ func _world_screen_test() -> void:
 	Game.dwellers_changed.emit()
 	Game.resources_changed.emit()
 	await wait(0.3)
+
+
+## MV-547: deterministic inventory fixtures; real taps prove the selected person's callback survives refresh.
+func _auto_item(base_id: String, uid: int, ilvl: int = 1) -> Dictionary:
+	return {"uid": uid, "base": base_id, "slot": Loot.BASES[base_id].slot, "rar": 0, "ilvl": ilvl, "plus": 0, "aff": [], "lock": false}
+
+
+func _individual_auto_equip_test() -> void:
+	var saved_state := Game.s
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_size := get_window().size
+	var saved_combat := [Combat.heroes, Combat.sub, Combat.sub_out, Combat.tag_t, Combat.rng.seed, Combat.rng.state]
+	Combat.sub = {}
+	Combat.sub_out = {}
+	Settings.v.tips = false
+	main.hud.tip_card.hide()
+	var saved_processing := [Game.is_processing(), Combat.is_processing()]
+	Game.set_process(false)
+	Combat.set_process(false)
+	Game.s = saved_state.duplicate(true)
+	Features.layers.dev = {"features": {"individual_auto_equip": true, "english": true}, "tune": {}}
+	Features.layers.remote = {}
+	Features.layers.mode = {}
+	var d: Dictionary = Game.s.dwellers[0]
+	var other: Dictionary = Game.s.dwellers[1]
+	var did := int(d.id)
+	Game.s.squad = [did, -1, -1]
+	Game.s.deck = -1
+	d.gear = {}
+	other.gear = {"weapon": _auto_item("hunting_rifle", 9900, 100)}
+	var untouched_other := other.duplicate(true)
+	var untouched_van: Dictionary = Game.s.van_gear.duplicate(true)
+	var untouched_resources: Dictionary = Game.s.res.duplicate(true)
+	var untouched_rooms: Array = Game.s.rooms.duplicate(true)
+	var assignment := int(d.room)
+	var bases := ["pipe_pistol", "leather_jacket", "hard_hat", "work_boots", "targeting_chip", "school_bag"]
+	var returned := []
+	var selected := []
+	Game.s.gear = []
+	for i in bases.size():
+		var old := _auto_item(bases[i], 100 + i)
+		var best := _auto_item(bases[i], 200 + i, 20)
+		old.lock = true
+		d.gear[old.slot] = old
+		Game.s.gear.append(best)
+		returned.append(old.duplicate(true))
+		selected.append(int(best.uid))
+	Game.s.gear.append(_auto_item("mg_turret", 300, 100))
+	_check("individual gear: replaces all six slots", Loot.auto_equip_dweller(did) == 6)
+	for i in bases.size():
+		var equipped := Loot.equipped_on(d, Loot.HERO_SLOTS[i])
+		_check("individual gear: correct best item in " + Loot.HERO_SLOTS[i], int(equipped.uid) == selected[i])
+		_check("individual gear: old item and lock flag returned " + Loot.HERO_SLOTS[i], Loot.stash().has(returned[i]))
+	_check("individual gear: no inventory duplication or loss", Loot.stash().size() == 7)
+	_check("individual gear: no other crew, vehicle, room or resource changes", other == untouched_other and Game.s.van_gear == untouched_van and Game.s.res == untouched_resources and Game.s.rooms == untouched_rooms and int(d.room) == assignment and Game.s.squad == [did, -1, -1])
+	var tie := Loot.equipped_on(d, "weapon").duplicate(true)
+	tie.uid = 400
+	Game.s.gear.append(tie)
+	_check("individual gear: ties and downgrades leave equipment in place", Loot.auto_equip_dweller(did) == 0 and int(d.gear.weapon.uid) == 200)
+	_check("individual gear: nonexistent survivor is a no-op", Loot.auto_equip_dweller(-999) == 0)
+	# Same two weapons: gunner prefers range, bruiser prefers melee, ordinary crew use neutral score.
+	for role in [0, 1, -1]:
+		Game.s.squad = [-1, did, -1] if role == 1 else ([did, -1, -1] if role == 0 else [-1, -1, -1])
+		d.gear = {}
+		Game.s.gear = [_auto_item("pipe_pistol", 501), _auto_item("pipe_wrench", 502)]
+		_check("individual gear: role %d equips once" % role, Loot.auto_equip_dweller(did) == 1)
+		_check("individual gear: role %d chooses the expected weapon" % role, int(d.gear.weapon.uid) == (501 if role == 0 else 502))
+	# Reloaded ids are floats; the role must still resolve to bruiser.
+	Game.s.squad = [-1, did, -1]
+	d.gear = {}
+	Game.s.gear = [_auto_item("pipe_pistol", 601), _auto_item("pipe_wrench", 602)]
+	Game.s = JSON.parse_string(JSON.stringify(Game.s))
+	d = Game.dweller_by_id(did)
+	_check("individual gear: JSON roundtrip retains role and uid matching", Loot.auto_equip_dweller(did) == 1 and int(d.gear.weapon.uid) == 602)
+	Game.s.gear = []
+	_check("individual gear: empty stash is a no-op", Loot.auto_equip_dweller(did) == 0)
+	Features.layers.dev.features.individual_auto_equip = false
+	d.gear = {}
+	Game.s.gear = [_auto_item("pipe_wrench", 701)]
+	var disabled_snapshot := Game.s.duplicate(true)
+	_check("individual gear: switch disables model action", Loot.auto_equip_dweller(did) == 0 and Game.s == disabled_snapshot)
+	main.hud.auto_equip_dweller(did)
+	_check("individual gear: switch disables HUD action", Game.s == disabled_snapshot)
+	_check("individual gear: whole-team AUTO still works with new switch off", Loot.auto_equip_squad() == 1 and int(d.gear.weapon.uid) == 701)
+	var crew: DwellersPanel = main.hud.panels.dwellers
+	var squad: SquadPanel = main.hud.panels.squad
+	main.hud.open_panel("dwellers")
+	crew.manage(did)
+	_check("individual gear: switch hides Crew button", crew.find_child("AutoEquipDweller%d" % did, true, false) == null)
+	crew.close()
+	Features.layers.dev.features.individual_auto_equip = true
+	Game.s.squad = [did, -1, -1]
+	Game.s.mods.roof_deck = 1
+	Game.s.deck = int(other.id)
+	for language in ["th", "en"]:
+		Settings.v.lang = language
+		Loc.apply()
+		for window_size in [Vector2i(360, 780), Vector2i(1280, 720)]:
+			get_window().size = window_size
+			await wait(0.3)
+			for key in ["dwellers", "squad"]:
+				d.gear = {}
+				Game.s.gear = [_auto_item("pipe_pistol", 800)]
+				main.hud.open_panel(key)
+				if key == "dwellers": crew.manage(did)
+				else:
+					squad.tab = "squad"
+					squad.choosing = -1
+					squad.refresh()
+				await wait(0.3)
+				var panel: ModalPanel = main.hud.panels[key]
+				var button := panel.find_child("AutoEquipDweller%d" % did, true, false) as Button
+				_check("individual gear: %s/%s/%s button exists" % [key, language, window_size], button != null)
+				if button:
+					var ancestor := button.get_parent()
+					while ancestor and not ancestor is ScrollContainer:
+						ancestor = ancestor.get_parent()
+					(ancestor as ScrollContainer).ensure_control_visible(button)
+					await wait(0.2)
+					_check("individual gear: button fits %s/%s/%s" % [key, language, window_size], button.size.x >= button.get_minimum_size().x and panel.box.size.x <= main.hud.get_viewport_rect().size.x)
+					var ev := InputEventMouseButton.new()
+					ev.button_index = MOUSE_BUTTON_LEFT
+					ev.position = button.get_global_rect().get_center()
+					ev.global_position = ev.position
+					ev.pressed = true
+					get_viewport().push_input(ev, true)
+					await wait(0.1)
+					ev.pressed = false
+					get_viewport().push_input(ev, true)
+					await wait(0.2)
+					_check("individual gear: tap equips selected survivor %s/%s/%s" % [key, language, window_size], int(d.get("gear", {}).get("weapon", {}).get("uid", -1)) == 800)
+					_check("individual gear: person stays selected after refresh", key != "dwellers" or crew.managing == did)
+					if key == "squad":
+						var reserve := squad.find_child("AutoEquipDweller%d" % int(other.id), true, false) as Button
+						_check("individual gear: occupied reserve has its own action", reserve != null)
+						if reserve:
+							other = Game.dweller_by_id(int(other.id))
+							other.gear = {}
+							Game.s.gear = [_auto_item("pipe_wrench", 801)]
+							reserve.pressed.emit()
+							_check("individual gear: reserve targets reserve only", int(other.gear.weapon.uid) == 801 and int(d.gear.weapon.uid) == 800)
+				await shot("individual_%s_%s_%dx%d" % [key, language, window_size.x, window_size.y])
+				panel.close()
+	# Restore test fixture state before other full-suite groups run.
+	Game.s = saved_state
+	Features.layers = saved_layers
+	Settings.v = saved_settings
+	Loc.apply()
+	get_window().size = saved_size
+	Game.set_process(saved_processing[0])
+	Combat.set_process(saved_processing[1])
+	Features.changed.emit()
+	Combat.heroes = saved_combat[0]
+	Combat.sub = saved_combat[1]
+	Combat.sub_out = saved_combat[2]
+	Combat.tag_t = saved_combat[3]
+	Combat.rng.seed = saved_combat[4]
+	Combat.rng.state = saved_combat[5]
+	Combat.heroes_changed.emit()
+	_individual_auto_equip_checks_completed = true
 

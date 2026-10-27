@@ -265,6 +265,8 @@ func _build_manage(d: Dictionary) -> void:
 	sk.add_child(skb)
 	_list.add_child(sk)
 	# --- gear: 6 slots, 2 rows of 3
+	if Features.on("individual_auto_equip"):
+		_list.add_child((get_parent() as HUD).auto_equip_button(int(d.id)))
 	_list.add_child(UIKit.header("GEAR", Loc.t("อุปกรณ์ 6 ชิ้น (แตะเพื่อเปลี่ยน)")))
 	var grid := GridContainer.new()
 	grid.columns = 3
