@@ -9,6 +9,7 @@ var out_dir := "user://autotest"
 var n := 0
 var _fails := 0
 var _font_checks_completed := false
+var _roaming_boss_checks_completed := false
 
 
 func _check(label: String, ok: bool) -> void:
@@ -61,6 +62,12 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=roaming_boss" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _roaming_boss_test()
+		_check("roaming boss: all combat and economy checks completed", _roaming_boss_checks_completed)
+		_finish()
+		return
 	if "--only=fonts" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _smooth_ui_text_test()
@@ -996,6 +1003,8 @@ func _run() -> void:
 	await _analytics_test()
 	_checkpoint_test()
 	_thai_terms_test()
+	await _roaming_boss_test()
+	_check("roaming boss: all combat and economy checks completed", _roaming_boss_checks_completed)
 	await _smooth_ui_text_test()
 	_check("fonts: rendering and layout checks completed", _font_checks_completed)
 	_finish()
@@ -1497,6 +1506,154 @@ func _tutorial_test() -> void:
 	main._on_start(true)
 	Tutorial.skip()
 	await wait(1.5)
+
+
+## MV-544: real boss deaths / eruptions, scope and rollback, and reproducible repair-economy fights.
+func _roaming_boss_test() -> void:
+	var saved_state := Game.s
+	var saved_account := Account.a
+	var saved_started := Game.started
+	var saved_processing := Game.is_processing()
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_flags := Dev.flags.duplicate(true)
+	var saved_rng := []
+	for generator in [Game.rng, Loot.rng, Combat.rng, Threat.rng]:
+		saved_rng.append([generator, generator.seed, generator.state])
+	var saved_runtime := []
+	for entry in [[Combat, ["enemies", "heroes", "turret", "wave_active", "wave_is_boss", "wave_is_warlord", "spawn_queue", "gap_t", "wave_t", "warlord_cd", "_acc", "_next_id", "_kill_window", "_clock", "dps_meter", "_dmg_window", "sub", "sub_out", "tag_t"]],
+		[Threat, ["phase", "phase_t", "raid_left", "_gap", "_roll_t", "_scav_t", "_blood", "_raid_kills", "_raid_time", "_raid_scrap", "_last_sign", "stats"]]]:
+		var values := {}
+		for key in entry[1]:
+			var value: Variant = entry[0].get(key)
+			values[key] = value.duplicate(true) if value is Array or value is Dictionary else value
+		saved_runtime.append([entry[0], values])
+	var disconnected := []
+	for sig in Combat.get_signal_list():
+		for connection in Combat.get_signal_connection_list(sig.name):
+			if connection.callable.get_object() == main.combat_view:
+				disconnected.append([sig.name, connection.callable])
+				Combat.disconnect(sig.name, connection.callable)
+	Game.set_process(false)
+	Dev.flags = {}
+	Features.layers.dev = {"features": {"road_events": false, "boss_intro": false, "hull_repair_v2": true}, "tune": {}}
+	Features.layers.mode = {}
+	Features.layers.remote = {}
+	Settings.v["pacing"] = "classic"
+	# Keep the old runtime's collections untouched while the fixture clears its own enemies.
+	Combat.enemies = []
+	Combat.heroes = []
+	Combat.spawn_queue = []
+	Combat.sub = {}
+	Combat.sub_out = {}
+	var bench = load("res://tools/roaming_boss_bench.gd").new()
+	bench.prepare()
+	for id in Combat.WAVE_BOSSES:
+		Features.layers.dev.features["roaming_boss_balance"] = false
+		var old: Dictionary = bench.spawn(id)
+		Features.layers.dev.features.roaming_boss_balance = true
+		var balanced: Dictionary = bench.spawn(id)
+		_check("roaming boss: %s has less HP and damage at the same level" % id, float(balanced.max) > 0.0 and float(balanced.max) < float(old.max) and float(balanced.dmg) > 0.0 and float(balanced.dmg) < float(old.dmg))
+	for id in Combat.BOSSES:
+		Features.layers.dev.features.roaming_boss_balance = false
+		var old: Dictionary = bench.spawn(id, 25, true)
+		Features.layers.dev.features.roaming_boss_balance = true
+		var unchanged: Dictionary = bench.spawn(id, 25, true)
+		_check("roaming boss: checkpoint %s keeps its original stats and burst rules" % id, old.max == unchanged.max and old.dmg == unchanged.dmg and is_equal_approx(Combat.van_hit_damage(unchanged, 100.0, true), 100.0))
+	for elite in [false, true]:
+		Features.layers.dev.features.roaming_boss_balance = false
+		Combat._clear_enemies()
+		Combat._spawn({"mob": "scorpion", "lvl": 25, "elite": elite, "no_mutate": true})
+		var old: Dictionary = Combat.enemies[0]
+		Features.layers.dev.features.roaming_boss_balance = true
+		Combat._clear_enemies()
+		Combat._spawn({"mob": "scorpion", "lvl": 25, "elite": elite, "no_mutate": true})
+		var unchanged: Dictionary = Combat.enemies[0]
+		var defense := float(Combat.van_stats().def)
+		var expected := 1000.0 * (1.0 - defense / (defense + Combat.def_k(25.0)))
+		_check("roaming boss: normal/elite %s keeps its stats and uncapped armor calculation" % elite, old.max == unchanged.max and old.dmg == unchanged.dmg and is_equal_approx(Combat.van_hit_damage(unchanged, 1000.0), expected) and Combat.van_hit_damage(unchanged, 1000.0, true) == 1000.0)
+	# The actual on-kill path used to destroy a full vehicle even after winning the fight.
+	for enabled in [false, true]:
+		bench.prepare()
+		Features.layers.dev.features.roaming_boss_balance = enabled
+		Game.s.van_gear.plating = null
+		Game.s.hull = Game.hull_max()
+		var before := float(Game.s.hull)
+		var boss: Dictionary = bench.spawn("bloat_king")
+		boss.x = Combat.MELEE_STOP
+		boss.hp = 0.0
+		Combat._on_kill(boss)
+		var loss := before - float(Game.s.hull)
+		_check("roaming boss: real explosion rollback %s" % enabled, loss > 0.0 and (loss <= before * 0.12 + 0.001 and Game.s.hull > 0.0 if enabled else Game.s.hull == 0.0))
+		_check("roaming boss: kill still pays scrap and two Rare+ gear drops (%s)" % enabled, is_equal_approx(float(Game.s.res.scrap), 39.6) and Loot.stash().size() == 2 and Loot.stash().all(func(it): return int(it.rar) >= 2))
+	bench.prepare()
+	Features.layers.dev.features.roaming_boss_balance = true
+	var boss: Dictionary = bench.spawn("bloat_king")
+	boss.x = Combat.MELEE_STOP
+	boss.dmg = 4.0                 # below the cap: measure defense, not the cap
+	Combat.enemies = []
+	Combat.heroes = []
+	var plating: Dictionary = Game.s.van_gear.plating
+	Game.s.van_gear.plating = null
+	Game.s.hull = Game.hull_max()
+	var before := float(Game.s.hull)
+	Combat._explode(boss)
+	var bare_loss := before - float(Game.s.hull)
+	Game.s.van_gear.plating = plating
+	Game.s.hull = Game.hull_max()
+	before = float(Game.s.hull)
+	Combat._explode(boss)
+	_check("roaming boss: vehicle armor reduces a real special hit below the cap", before - float(Game.s.hull) > 0.0 and before - float(Game.s.hull) < bare_loss)
+	Features.layers.dev.tune["boss.hull_hit_cap"] = 0.05
+	Game.s.hull = Game.hull_max()
+	before = float(Game.s.hull)
+	boss.dmg = 10000.0
+	Combat._explode(boss)
+	_check("roaming boss: special-hit cap follows remote tuning", is_equal_approx(before - float(Game.s.hull), before * 0.05))
+	Features.layers.dev.tune.erase("boss.hull_hit_cap")
+	var worm: Dictionary = bench.spawn("drill_worm")
+	worm.burrowed = true
+	worm.burrow_t = 0.0
+	Game.s.hull = Game.hull_max()
+	before = float(Game.s.hull)
+	Combat._tick_mechanics(0.1)
+	_check("roaming boss: an actual worm eruption is armor-aware and bounded", before - float(Game.s.hull) > 0.0 and before - float(Game.s.hull) <= before * 0.12 + 0.001)
+	# Same fixed level-20 Rare +0 squad versus Desert wave10 level25: no travel/event income.
+	var legacy_repairs := 0.0
+	var balanced_repairs := 0.0
+	for id in bench.DESERT_BOSSES:
+		for seed_value in [544, 545, 546]:
+			var old: Dictionary = bench.fight(id, seed_value, false)
+			var balanced: Dictionary = bench.fight(id, seed_value, true)
+			print("[roaming-boss] ", JSON.stringify({"legacy": old, "balanced": balanced}))
+			legacy_repairs += float(old.repair)
+			balanced_repairs += float(balanced.repair)
+			_check("roaming boss: %s seed%d clears before timeout with an intact vehicle" % [id, seed_value], balanced.killed and float(balanced.seconds) < Combat.WAVE_TIMEOUT and float(balanced.hull_min) > 0.0)
+			_check("roaming boss: %s seed%d reward covers its paid hull repair" % [id, seed_value], float(balanced.scrap) >= float(balanced.repair))
+			_check("roaming boss: %s seed%d shortens the fight" % [id, seed_value], float(balanced.seconds) <= float(old.seconds))
+			await wait(0.02)
+	_check("roaming boss: sampled repair bills fall by more than half", legacy_repairs > 0.0 and balanced_repairs < legacy_repairs * 0.5)
+	Combat._clear_enemies()
+	Game.s = saved_state
+	Account.a = saved_account
+	Game.started = saved_started
+	Settings.v = saved_settings
+	Dev.flags = saved_flags
+	Features.layers = saved_layers
+	for entry in saved_runtime:
+		for key in entry[1]:
+			entry[0].set(key, entry[1][key])
+	for entry in saved_rng:
+		entry[0].seed = entry[1]
+		entry[0].state = entry[2]
+	for connection in disconnected:
+		Combat.connect(connection[0], connection[1])
+	Features.changed.emit()
+	Combat.heroes_changed.emit()
+	Combat.wave_changed.emit()
+	Threat.phase_changed.emit(Threat.phase)
+	Game.set_process(saved_processing)
+	_roaming_boss_checks_completed = true
 
 
 ## MV-543: recipes spend components at every tier, even with no scrap; resource ticks update affordability.
