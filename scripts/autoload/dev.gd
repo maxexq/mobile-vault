@@ -608,6 +608,35 @@ func gear_sample(r: int, slot: String, plus: int = 0, lock: bool = false) -> Dic
 			base = str(k)
 			break
 	return {"uid": -1, "base": base, "slot": slot, "rar": r, "ilvl": 5 + r * 4, "plus": plus, "aff": [], "lock": lock}
+
+
+# ------------------------------------------------------------------ MV-554 multi-salvage
+## put 8 low-rarity items (one locked) in the stash and open the loot window in select mode with three ticked
+func multi_salvage_demo() -> void:
+	act("multi salvage demo")
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud == null:
+		return
+	var lvl := maxi(1, int(Game.s.combat.get("wave", 1)) / 2)
+	var made: Array = []
+	for i in 8:
+		var it := Loot.roll_random(lvl, 0.0, 0, 0.3, false)
+		it.rar = mini(int(it.rar), 2)
+		it.lock = i == 7
+		if Loot.add_to_stash(it):
+			made.append(it)
+	for k in hud.panels:
+		if k != "inventory" and hud.panels[k].is_open:
+			hud.panels[k].close()
+	var inv: LootPanel = hud.panels.inventory
+	hud.open_panel("inventory")
+	inv.tab = "gear"
+	inv.filter = "all"
+	inv.salvage_pick = true
+	inv.salvage_sel = {}
+	for it in made.slice(0, 3):
+		inv.salvage_sel[int(it.uid)] = true
+	inv.refresh()
 # ------------------------------------------------------------------ MV-483 trait cards
 ## every trait card's light: "" = live, "still", "off" (read-only, not cheated)
 func trait_preview(mode: String) -> void:

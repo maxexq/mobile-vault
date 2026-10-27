@@ -2100,5 +2100,12 @@
  "แพ้... ทีมบาดเจ็บหนัก ตัวถังเสียหาย -%d HP\n(พลังทีม %.0f vs อันตราย %.0f)": "Defeat... The team is badly hurt. Hull -%d HP\n(Team power %.0f vs threat %.0f)",
  "หนีพ้น แต่โดนโจมตีท้ายรถ! ไฟ -%d ตัวถัง -%d HP": "Escaped, but the rear was hit! Power -%d, hull -%d HP",
  "ชนฝ่าไปได้! ตัวถังเสียหาย -%d HP": "Rammed through! Hull -%d HP",
- "ฝ่าไปได้... ตัวถัง -%d HP ทุกคนได้รับรังสี (ใช้ยาต้านรังสีหรือห้องพยาบาลรักษา)": "Made it through... Hull -%d HP. Everyone received radiation (treat with Radaway or the infirmary)"
+ "ฝ่าไปได้... ตัวถัง -%d HP ทุกคนได้รับรังสี (ใช้ยาต้านรังสีหรือห้องพยาบาลรักษา)": "Made it through... Hull -%d HP. Everyone received radiation (treat with Radaway or the infirmary)",
+ "เลือกแยกหลายชิ้น": "Select to salvage",
+ "เลิกเลือก": "Stop selecting",
+ "แตะอุปกรณ์เพื่อเลือก · ของล็อกเลือกไม่ได้": "Tap gear to select · locked gear can't be picked",
+ "เลือก %d ชิ้น · ได้ %d ชิ้นส่วน + %d เศษเหล็ก": "%d selected · gives %d components + %d scrap",
+ "เลือกทั้งหมด": "Select all",
+ "แยก %d ชิ้น": "Salvage %d",
+ "อุปกรณ์ที่เลือก %d ชิ้นจะหายไปถาวร ได้ %d ชิ้นส่วน และ %d เศษเหล็ก ย้อนคืนไม่ได้": "The %d selected items will be gone for good. You get %d components and %d scrap. This can't be undone."
 }
