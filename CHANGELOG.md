@@ -14,6 +14,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Changed
 - Checkpoint Warlords and their summons now scale with ordinary gear, have much less HP/damage and bounded hits, letting armed squads keep progressing without boss wipes (MV-550).
+- Item details in the loot window show stats as a table with icons, +/- against the equipped item, and what a swap would lose (MV-552).
 - Industrial Ruins now uses twenty approved native pixel-art panels: pale broken skyline, rusted factories, roadside wrecks, thin smog and cracked asphalt, with smoke and lamp effects anchored to the new scenery (MV-548)
 
 - Every-10th-wave bosses have one-third less HP and damage; their special hull hits now respect vehicle armor and each hit is limited to 12% of maximum hull, helping prevent boss wins from turning into a scrap-draining repair bill (MV-544)

@@ -288,7 +288,7 @@ func sum_key(items: Array, key: String) -> float:
 
 
 func describe(item: Dictionary) -> Array:
-	## returns [[label, value_text], ...] for UI
+	## returns [[label, value_text, key], ...] for UI (special rows have no key)
 	var out := []
 	var b := base(item)
 	for key in ["dmg", "aspd", "range", "splash", "hp", "def", "regen", "crit", "aspd_pct", "dodge", "loot", "supply", "hull", "speed", "power", "thorns"]:
@@ -312,6 +312,7 @@ func describe(item: Dictionary) -> Array:
 			"speed": out.append(["ความเร็วรถ", "+%d%%" % int(v)])
 			"power": out.append(["ผลิตไฟ", "+%.1f/นาที" % v])
 			"thorns": out.append(["ดาเมจสะท้อน", "%.1f/วิ" % v])
+		out[-1].append(key)   # MV-552: row[2] = stat key, so the detail window can compare it
 	if b.get("melee", false):
 		out.append(["พิเศษ", "นักสู้ท้ายรถ +40% / คนอื่น -40%"])
 	if b.has("engine"):
