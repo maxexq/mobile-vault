@@ -71,6 +71,8 @@
     "audio_ambience": true,
     "audio_sfx": true,
     "audio_bgm": true,
+    "audio_clean": true,
+    "audio_cues": true,
     "desert_parallax": true
   },
   "events": {},

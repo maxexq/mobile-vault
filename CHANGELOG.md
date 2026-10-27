@@ -9,12 +9,14 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- New sounds: getting resources, a road event won or lost, and the expedition moments (team heads out, finds something, comes home, fails, unpacks the haul) (MV-555).
 - World map (test builds): clearer, calmer ground with region borders and name plates, and each region dotted with its own landmarks: factories, dunes and glass, forests, swamp pools and shacks, snowy pines, city towers (MV-556).
 - Salvage several gear items at once: tick them in the stash and confirm once (MV-554).
 - Auto Equip for one survivor in Crew details and Squad / roof-reserve cards (MV-547).
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
 
 ### Changed
+- Clearer sound: fixed the hiss and crackle (most of all on the web), and reworked rain, storm, sandstorm, snow, fog, acid rain, ashfall, overcast and thunder (MV-555).
 - Road-event fights and stat checks now grow gently with biome, laps and Vault upgrades, with bounded risks, matching resource rewards and visible stat-check targets/odds (MV-553).
 - Checkpoint Warlords and their summons now scale with ordinary gear, have much less HP/damage and bounded hits, letting armed squads keep progressing without boss wipes (MV-550).
 - Item details in the loot window show stats as a table with icons, +/- against the equipped item, and what a swap would lose (MV-552).

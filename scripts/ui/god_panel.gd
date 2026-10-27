@@ -809,7 +809,7 @@ func _tab_sys() -> void:
 
 ## MV-536: listen to every biome bed, weather layer and effect group without changing the run
 func _tab_sound() -> void:
-	_head("SOUND", "เสียง (MV-536)")
+	_head("SOUND", "เสียง (MV-536, MV-555)")
 	var amb := "เปิด" if Sound.ambience_on() else "ปิด"
 	var fx := "เปิด" if Sound.sfx_on() else "ปิด"
 	_note("สวิตช์ audio_ambience: %s · audio_sfx: %s · audio_bgm: %s · แตะจอแล้ว: %s · พื้นที่ตอนนี้: %s · อากาศ: %s · เสียงล่าสุด: %s" % [
@@ -829,12 +829,22 @@ func _tab_sound() -> void:
 		var id: String = g
 		gs.append(_b(id, func(): Dev.sound_preview("group", id)))
 	_row(gs, "เอฟเฟกต์")
+	var cs := []
+	for c in Sound.CUES:
+		var id: String = c
+		cs.append(_b(id, func(): Dev.sound_preview("sound", id), "yellow" if Sound.last_sfx == id else "gray"))
+	_row(cs, "เหตุการณ์ (MV-555)")
+	_row([_b("ฟ้าร้องใกล้", func(): Dev.sound_preview("sound", "thunder_1")), _b("ฟ้าร้องไกล", func(): Dev.sound_preview("sound", "thunder_2")),
+		_b(("ปิด" if Sound.cues_on() else "เปิด") + "เสียงเหตุการณ์", func(): Dev.feature_set("audio_cues", not Features.on("audio_cues"))),
+		_b(("ปิด" if Sound.clean_on() else "เปิด") + "เสียงใส (เฟดไขว้+ลิมิตเตอร์)", func(): Dev.feature_set("audio_clean", not Sound.clean_on()))], "ทดสอบ")
 	_row([_b("เพลงหน้าแรก (โลไฟ)", func(): Dev.sound_preview("bgm"), "yellow" if Sound.preview.has("bgm") else "gray"),
 		_b(("ปิด" if Sound.bgm_on() else "เปิด") + "เพลง", func(): Dev.feature_set("audio_bgm", not Sound.bgm_on()))], "เพลง")
 	_row([_b("กลับเสียงตามเกม", func(): Dev.sound_preview("clear"), "green"),
 		_b(("ปิด" if Sound.ambience_on() else "เปิด") + "เสียงบรรยากาศ", func(): Dev.feature_set("audio_ambience", not Sound.ambience_on())),
 		_b(("ปิด" if Sound.sfx_on() else "เปิด") + "เสียงเอฟเฟกต์", func(): Dev.feature_set("audio_sfx", not Sound.sfx_on()))])
 	_note("ปุ่มพื้นที่/อากาศเล่นวนจนกด กลับเสียงตามเกม (ฟังอย่างเดียว เซฟไม่ถูกทำเครื่องหมายโกง) · ปรับดังเบาใน ตั้งค่า > เสียง")
+	_note("audio_clean: %s (วนแบบเฟดไขว้ · ลิมิตเตอร์ %s) · audio_cues: %s" % ["เปิด" if Sound.clean_on() else "ปิด",
+		"ทำงาน" if Sound.limiter_on() else "ปิด", "เปิด" if Sound.cues_on() else "ปิด"])
 
 
 func _tab_features() -> void:
