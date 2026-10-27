@@ -596,9 +596,21 @@ func _spawn(q: Dictionary) -> void:
 			mult_dmg = 1.5
 			e.tint = "ffd56b"
 	var L := float(e.lvl)
-	e.max = float(def.hp) * pow(HP_GROWTH, L - 1.0) * mult_hp * Modes.mul("enemy_hp")
+	# MV-550: checkpoint fights grow with gear, without the +28 reward-level power spike.
+	# Summons inherit the encounter tag so ordinary mob growth cannot recreate the wall.
+	e["warlord_add"] = bool(q.get("warlord_add", false))
+	var hp_growth := HP_GROWTH
+	var dmg_growth := DMG_GROWTH
+	var combat_level := L
+	if warlord_balanced(e):
+		combat_level = maxf(1.0, L - WARLORD_OFFSET)
+		hp_growth = Loot.ILVL_GROWTH
+		dmg_growth = Loot.ILVL_GROWTH
+		mult_hp = Features.num("warlord.hp", 6.0) if e.warlord else Features.num("warlord.add_hp", 1.0)
+		mult_dmg = Features.num("warlord.damage", 0.6)
+	e.max = float(def.hp) * pow(hp_growth, combat_level - 1.0) * mult_hp * Modes.mul("enemy_hp")
 	e.hp = e.max
-	e.dmg = float(def.dmg) * pow(DMG_GROWTH, L - 1.0) * mult_dmg * Modes.mul("enemy_dmg")
+	e.dmg = float(def.dmg) * pow(dmg_growth, combat_level - 1.0) * mult_dmg * Modes.mul("enemy_dmg")
 	e.spd = float(def.spd) * (0.7 if e.boss else 1.0) * rng.randf_range(0.9, 1.1)
 	e.cd = float(def.cd) * (1.3 if e.boss else 1.0)
 	e.kind = "air" if e.get("boss_air", false) else def.kind
@@ -681,7 +693,7 @@ func tick(dt: float) -> void:
 		if mech.has("acid"):
 			Game.corrode(6.0 if e.boss else 3.0)
 		if target >= 0:
-			_damage_hero(target, float(e.dmg))
+			_damage_hero(target, float(e.dmg), e)
 		else:
 			_damage_van(e, float(e.dmg) * 0.35, false, float(vs.def))
 		# thorns: melee contact with the van's spikes / bruiser parry
@@ -793,7 +805,7 @@ func _tick_mechanics(dt: float) -> void:
 				e.x = MELEE_STOP + 4.0
 				boss_event.emit("erupt", e)
 				if _alive(1):
-					_damage_hero(1, float(e.dmg) * 1.6)
+					_damage_hero(1, float(e.dmg) * 1.6, e)
 				_damage_van(e, float(e.dmg) * 0.6, true)
 			continue
 		if e.mech_t > 0.0:
@@ -802,7 +814,7 @@ func _tick_mechanics(dt: float) -> void:
 		var mobs: Array = BIOME_MOBS.get(biome_id(), BIOME_MOBS.industrial)
 		if mech.has("summon") and enemies.size() < 9:
 			for i in 2:
-				spawn_queue.append({"t": 0.2 + i * 0.4, "mob": mobs[rng.randi() % mobs.size()], "lvl": maxi(1, int(e.lvl) - 2)})
+				spawn_queue.append({"t": 0.2 + i * 0.4, "mob": mobs[rng.randi() % mobs.size()], "lvl": maxi(1, int(e.lvl) - 2), "warlord_add": bool(e.get("warlord", false))})
 			boss_event.emit("summon", e)
 		if mech.has("revive") and enemies.size() < 9:
 			spawn_queue.append({"t": 0.3, "mob": mobs[rng.randi() % mobs.size()], "lvl": int(e.lvl), "elite": true, "no_mutate": true})
@@ -818,7 +830,7 @@ func _explode(e: Dictionary) -> void:
 	var power := float(e.dmg) * (5.0 if e.boss else 3.0)
 	if float(e.x) <= MELEE_STOP + 40.0:
 		if _alive(1):
-			_damage_hero(1, power)
+			_damage_hero(1, power, e)
 		_damage_van(e, power * 0.3, true)
 	for o in enemies:
 		if absf(float(o.x) - float(e.x)) < 40.0:
@@ -853,22 +865,30 @@ func _alive_count() -> int:
 	return n
 
 
-## MV-544: checkpoint warlords and normal mutants keep their original rules.
+## MV-550: only checkpoint bosses and their explicitly tagged summons use progression balance.
+func warlord_balanced(e: Dictionary) -> bool:
+	return Features.on("warlord_progression") and (bool(e.get("warlord", false)) or bool(e.get("warlord_add", false)))
+
+
+## MV-544: roaming bosses have their own independent rules.
 func roaming_boss_balanced(e: Dictionary) -> bool:
 	return Features.on("roaming_boss_balance") and bool(e.get("boss", false)) and not bool(e.get("warlord", false))
 
 
-## Ordinary attacks already used vehicle defense. Roaming boss bursts now use it too,
+## Ordinary attacks already used vehicle defense. Balanced boss bursts now use it too,
 ## and no single hit can erase more than the configured share of the vehicle's max hull.
 ## Basic attacks pass their cached defense so acid keeps its original corrosion timing.
 func van_hit_damage(e: Dictionary, raw: float, special: bool = false, defense: float = -1.0) -> float:
+	var checkpoint := warlord_balanced(e)
 	var balanced := roaming_boss_balanced(e)
-	if special and not balanced:
+	if special and not balanced and not checkpoint:
 		return raw
 	defense = float(van_stats().def) if defense < 0.0 else defense
 	var red := defense / (defense + def_k(float(e.lvl)))
 	var damage := raw * (1.0 - red)
-	if balanced:
+	if checkpoint:
+		damage = minf(damage, Game.hull_max() * Features.num("warlord.hull_hit_cap", 0.01))
+	elif balanced:
 		damage = minf(damage, Game.hull_max() * Features.num("boss.hull_hit_cap", 0.12))
 	return damage
 
@@ -945,7 +965,7 @@ func _damage_enemy(e: Dictionary, dmg: float, crit: bool, _slot: int, show: bool
 		hit.emit("enemy", int(e.id), dmg, crit)
 
 
-func _damage_hero(slot: int, raw: float) -> void:
+func _damage_hero(slot: int, raw: float, source: Dictionary = {}) -> void:
 	var h: Dictionary = heroes[slot]
 	if Dev.on("invincible"):
 		hit.emit("hero", slot, 0.0, false)
@@ -957,6 +977,8 @@ func _damage_hero(slot: int, raw: float) -> void:
 	var lvl := float(enemy_level()) if not wave_is_warlord else float(warlord_level())
 	var red := float(st.def) / (float(st.def) + def_k(lvl))
 	var dmg := raw * (1.0 - red)
+	if warlord_balanced(source):
+		dmg = minf(dmg, float(h.max) * Features.num("warlord.hero_hit_cap", 0.02))
 	h.hp = float(h.hp) - dmg
 	hit.emit("hero", slot, dmg, false)
 	if float(h.hp) <= 0.0:
