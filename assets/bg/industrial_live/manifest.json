@@ -1,36 +1,45 @@
 {
   "native": true,
+  "ticket": "MV-548",
   "sky_height": 900,
-  "smokestacks": [
-    [
-      440,
-      96
-    ],
-    [
-      1704,
-      126
-    ],
-    [
-      1732,
-      116
-    ]
-  ],
-  "lamps": [
-    [
-      282,
-      202
-    ],
-    [
-      784,
-      194
-    ],
-    [
-      1504,
-      204
-    ]
-  ],
-  "source": "user-approved wide industrial daylight draft; palette/grid-normalized imagegen input",
+  "source": "tools/art/industrial/source/manifest.json",
+  "effect_anchors": {
+    "smokestacks": {
+      "layer": "mid",
+      "points": [
+        [
+          425,
+          85
+        ],
+        [
+          1630,
+          132
+        ],
+        [
+          1646,
+          123
+        ]
+      ]
+    },
+    "lamps": {
+      "layer": "near",
+      "points": [
+        [
+          221,
+          78
+        ],
+        [
+          1794,
+          89
+        ]
+      ]
+    }
+  },
   "layers": {
+    "clouds": [
+      1984,
+      220
+    ],
     "far": [
       1920,
       300
@@ -46,10 +55,6 @@
     "road": [
       2304,
       64
-    ],
-    "clouds": [
-      1984,
-      220
     ]
   }
 }
