@@ -290,31 +290,18 @@ func _build_detail(item: Dictionary, equipped: bool) -> void:
 	v.add_child(UIKit.label(Loot.base(item).get("en", ""), UIKit.FP, UIKit.C_DIM, true))
 	top.add_child(v)
 	_list.add_child(top)
-	# stats
-	var sp := UIKit.panel()
-	var sv := UIKit.vbox(1)
-	sp.add_child(sv)
-	for row in Loot.describe(item):
-		sv.add_child(UIKit.label("%s: %s" % [row[0], row[1]], UIKit.FS_SMALL, UIKit.C_TEXT))
-	for a in item.aff:
-		sv.add_child(UIKit.label("+ " + Loot.affix_text(a, int(item.plus)), UIKit.FS_SMALL, rar.col.lightened(0.2)))
-	if item.aff.is_empty():
-		sv.add_child(UIKit.wrap_label(Loc.t("(ไม่มีคุณสมบัติพิเศษ — ระดับสูงขึ้นจะได้ 1-4 อย่าง)")))
-	_list.add_child(sp)
-	# compare
+	# stats + compare
 	var owner_did: int = detail_equipped.get("did", pick_did)
+	var cur := {}
 	if not equipped:
-		var cur := {}
 		if Loot.VAN_SLOTS.has(item.slot):
 			cur = Loot.van_equipped(item.slot)
-			owner_did = -2
 		elif pick_did >= 0:
 			cur = Loot.equipped_on(Game.dweller_by_id(pick_did), item.slot)
-		var a := Loot.power_score(item)
-		var b := Loot.power_score(cur)
-		if not cur.is_empty():
-			var pct := (a / maxf(b, 0.01) - 1.0) * 100.0
-			_list.add_child(UIKit.wrap_label(Loc.t("เทียบกับที่ใส่อยู่ (%s): %+.0f%% พลัง") % [Loot.item_name(cur), pct], UIKit.FS_SMALL, UIKit.C_GREEN if pct >= 0 else UIKit.C_RED))
+	if Features.on("gear_detail_v2"):
+		_stats_table(item, cur)
+	else:
+		_stats_legacy(item, cur)
 	# actions
 	var acts := UIKit.flow(3)
 	if equipped:
@@ -390,6 +377,217 @@ func _after_equip() -> void:
 		close()
 	else:
 		refresh()
+
+
+# ------------------------------------------------------------------ MV-552 stat table
+const STAT_ICON := {"dmg": "sword", "aspd": "ammo", "range": "zoom", "splash": "acid", "hp": "heal", "def": "shield",
+	"regen": "medkit", "crit": "eye", "critd": "fist", "aspd_pct": "ammo", "dodge": "dodge", "loot": "chest",
+	"supply": "supply", "hull": "hull", "speed": "fuel", "power": "power", "thorns": "spikes", "lifesteal": "pill",
+	"scrap": "scrap", "xp": "xp", "turret": "turret"}
+const BASE_PCT := ["crit", "aspd_pct", "loot", "supply", "dodge", "speed"]
+
+
+func _stats_legacy(item: Dictionary, cur: Dictionary) -> void:
+	var rar := Loot.rarity(int(item.rar))
+	var sp := UIKit.panel()
+	var sv := UIKit.vbox(1)
+	sp.add_child(sv)
+	for row in Loot.describe(item):
+		sv.add_child(UIKit.label("%s: %s" % [row[0], row[1]], UIKit.FS_SMALL, UIKit.C_TEXT))
+	for a in item.aff:
+		sv.add_child(UIKit.label("+ " + Loot.affix_text(a, int(item.plus)), UIKit.FS_SMALL, rar.col.lightened(0.2)))
+	if item.aff.is_empty():
+		sv.add_child(UIKit.wrap_label(Loc.t("(ไม่มีคุณสมบัติพิเศษ — ระดับสูงขึ้นจะได้ 1-4 อย่าง)")))
+	_list.add_child(sp)
+	if not cur.is_empty():
+		var pct := _power_pct(item, cur)
+		_list.add_child(UIKit.wrap_label(Loc.t("เทียบกับที่ใส่อยู่ (%s): %+.0f%% พลัง") % [Loot.item_name(cur), pct], UIKit.FS_SMALL, UIKit.C_GREEN if pct >= 0 else UIKit.C_RED))
+
+
+## every stat line of the item next to cur (same slot, {} = nothing to compare): {key, name, text, diff (item - cur),
+## cmp, affix, lost (only cur has it)}; base stats first, then affixes
+func _stat_rows(item: Dictionary, cur: Dictionary) -> Array:
+	var rows: Array = []
+	var cmp := not cur.is_empty()
+	var melee: bool = Loot.base(item).get("melee", false) or (cmp and Loot.base(cur).get("melee", false))
+	var seen := {}
+	for row in Loot.describe(item):
+		if row.size() < 3:
+			continue
+		var k: String = row[2]
+		seen[k] = true
+		var d := Loot.base_stat(item, k) - (Loot.base_stat(cur, k) if cmp else 0.0)
+		rows.append({"key": k, "name": Loc.t(row[0]), "text": row[1], "diff": d, "cmp": cmp and not (k == "range" and melee), "affix": false, "lost": false})
+	if cmp:
+		for row in Loot.describe(cur):
+			if row.size() >= 3 and not seen.has(row[2]):
+				rows.append({"key": row[2], "name": Loc.t(row[0]), "text": "-", "diff": -Loot.base_stat(cur, row[2]), "cmp": true, "affix": false, "lost": true})
+	var mine := _affix_sums(item)
+	var theirs := _affix_sums(cur)
+	for k in mine:
+		rows.append({"key": k, "name": _affix_name(k), "text": _affix_val(k, mine[k]), "diff": float(mine[k]) - float(theirs.get(k, 0.0)), "cmp": cmp, "affix": true, "lost": false})
+	for k in theirs:
+		if not mine.has(k):
+			rows.append({"key": k, "name": _affix_name(k), "text": "-", "diff": -float(theirs[k]), "cmp": true, "affix": true, "lost": true})
+	return rows
+
+
+## rows without a stat key (melee note, engine type)
+func _stat_notes(item: Dictionary) -> Array:
+	var out: Array = []
+	for row in Loot.describe(item):
+		if row.size() < 3:
+			out.append("%s: %s" % [Loc.t(row[0]), Loc.t(row[1])])
+	return out
+
+
+func _affix_sums(item: Dictionary) -> Dictionary:
+	var out := {}
+	if item.is_empty():
+		return out
+	for a in item.aff:
+		var k: String = a.k
+		out[k] = float(out.get(k, 0.0)) + float(a.v) * (1.0 + 0.05 * int(item.plus))
+	return out
+
+
+func _affix_name(k: String) -> String:
+	return Loc.t(str(Loot.AFFIXES.get(k, ["?"])[0]))
+
+
+func _affix_pct(k: String) -> bool:
+	return bool(Loot.AFFIXES.get(k, ["?", 0, 0, false, [], false])[5])
+
+
+func _affix_val(k: String, v: float) -> String:
+	return ("+%.1f%%" % v) if _affix_pct(k) else ("+%.1f" % v)
+
+
+func _diff_text(r: Dictionary) -> String:
+	if not r.cmp:
+		return ""
+	var d: float = r.diff
+	var k: String = r.key
+	if absf(d) < 0.005:
+		return "="
+	if r.affix:
+		return ("%+.1f%%" % d) if _affix_pct(k) else ("%+.1f" % d)
+	if k == "aspd":
+		return "%+.2f" % d
+	if BASE_PCT.has(k):
+		return "%+.1f%%" % d if absf(d) < 1.0 else "%+d%%" % roundi(d)
+	if k in ["range", "splash", "hp", "hull"]:
+		return "%+d" % roundi(d)
+	return "%+.1f" % d
+
+
+func _diff_color(r: Dictionary) -> Color:
+	if not r.cmp or absf(float(r.diff)) < 0.005:
+		return UIKit.C_DIM
+	return UIKit.C_GREEN if float(r.diff) > 0.0 else UIKit.C_RED
+
+
+func _value_color(r: Dictionary, item: Dictionary) -> Color:
+	if r.lost:
+		return UIKit.C_DIM
+	return Loot.rar_color(item).lightened(0.2) if r.affix else UIKit.C_WHITE
+
+
+func _power_pct(item: Dictionary, cur: Dictionary) -> float:
+	return (Loot.power_score(item) / maxf(Loot.power_score(cur), 0.01) - 1.0) * 100.0
+
+
+func _cell(text: String, size: int, col: Color, w: int) -> Label:
+	var l := UIKit.label(text, size, col)
+	l.custom_minimum_size.x = w
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return l
+
+
+func _name_cell(text: String, col: Color) -> Label:
+	var l := UIKit.wrap_label(text, UIKit.FS_SMALL, col)
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return l
+
+
+## "compared with the equipped one" strip: its tile, name and the power change, or why there is nothing to compare
+func _compare_bar(item: Dictionary, cur: Dictionary) -> Control:
+	if cur.is_empty():
+		var why := UIKit.wrap_label(Loc.t("ไม่มีของที่ใส่อยู่ให้เทียบ · เปิดจากช่องอุปกรณ์ของลูกเรือเพื่อดูส่วนต่าง"))
+		why.name = "CompareBar"
+		return why
+	var pct := _power_pct(item, cur)
+	var p := PanelContainer.new()
+	p.name = "CompareBar"
+	p.add_theme_stylebox_override("panel", UIKit.card_style(UIKit.C_BG2, UIKit.C_GREEN.darkened(0.4) if pct >= 0 else UIKit.C_RED.darkened(0.4), 3))
+	var h := UIKit.hbox(4)
+	p.add_child(h)
+	h.add_child(_name_cell(Loc.t("เทียบกับที่ใส่อยู่"), UIKit.C_DIM))
+	var t := UIKit.gear_tile(cur, cur.slot, 28)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(t)
+	var cn := UIKit.label(Loot.item_name(cur), UIKit.FS_SMALL, Loot.rar_color(cur))
+	cn.clip_text = true
+	cn.custom_minimum_size.x = 40
+	cn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(cn)
+	h.add_child(_cell(Loc.t("พลัง %+.0f%%") % pct, UIKit.FS_BIG, UIKit.C_GREEN if pct >= 0 else UIKit.C_RED, 0))
+	return p
+
+
+func _no_affix_note(item: Dictionary, parent: Control) -> void:
+	if item.aff.is_empty():
+		parent.add_child(UIKit.wrap_label(Loc.t("(ไม่มีคุณสมบัติพิเศษ — ระดับสูงขึ้นจะได้ 1-4 อย่าง)")))
+	for n in _stat_notes(item):
+		parent.add_child(UIKit.wrap_label(n, UIKit.FS_SMALL, UIKit.C_GOLD))
+
+
+## one table, icon · name · value · +/- against the equipped item, striped rows, affixes under their own heading
+func _stats_table(item: Dictionary, cur: Dictionary) -> void:
+	if detail_equipped.is_empty():
+		_list.add_child(_compare_bar(item, cur))
+	var rows := _stat_rows(item, cur)
+	var cmp := not cur.is_empty()
+	var col := Loot.rar_color(item)
+	var sp := UIKit.panel()
+	sp.name = "StatTable"
+	var sv := UIKit.vbox(0)
+	sp.add_child(sv)
+	var head := UIKit.hbox(4)
+	var hn := UIKit.label(Loc.t("ค่าสถานะ"), UIKit.FS_SMALL, UIKit.C_DIM)
+	hn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(hn)
+	head.add_child(_cell(Loc.t("ของนี้"), UIKit.FS_SMALL, UIKit.C_DIM, 64))
+	if cmp:
+		head.add_child(_cell("+/-", UIKit.FS_SMALL, UIKit.C_DIM, 56))
+	sv.add_child(head)
+	sv.add_child(UIKit.divider(UIKit.C_LINE_DIM))
+	var i := 0
+	var in_affix := false
+	for r in rows:
+		if r.affix and not in_affix:
+			in_affix = true
+			var ah := UIKit.label(Loc.t("คุณสมบัติพิเศษ"), UIKit.FS_SMALL, col)
+			sv.add_child(ah)
+		var stripe := PanelContainer.new()
+		var bg := UIKit.C_BG if i % 2 == 0 else UIKit.C_BG2.lightened(0.04)
+		stripe.add_theme_stylebox_override("panel", UIKit.card_style(bg, bg, 2))
+		var h := UIKit.hbox(4)
+		stripe.add_child(h)
+		var ic := UIKit.icon_rect(STAT_ICON.get(r.key, "gear"), 16)
+		if r.lost:
+			ic.modulate = Color(1, 1, 1, 0.4)
+		h.add_child(ic)
+		h.add_child(_name_cell(r.name, UIKit.C_DIM if r.lost else (col.lightened(0.2) if r.affix else UIKit.C_TEXT)))
+		h.add_child(_cell(r.text, UIKit.FS, _value_color(r, item), 64))
+		if cmp:
+			h.add_child(_cell(_diff_text(r), UIKit.FS_SMALL, _diff_color(r), 56))
+		sv.add_child(stripe)
+		i += 1
+	_no_affix_note(item, sv)
+	_list.add_child(sp)
 
 
 # ------------------------------------------------------------------ items & forge

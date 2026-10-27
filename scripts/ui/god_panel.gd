@@ -161,6 +161,15 @@ func _gear_slots_preview() -> void:
 	var ms := _b("ใส่ของ 8 ชิ้นแล้วเปิดโหมดเลือกแยก", func(): Dev.multi_salvage_demo(), "green", true)
 	ms.name = "MultiSalvageDemo"
 	_row([ms])
+	_gear_detail_preview()
+
+
+## MV-552: open a weapon next to the equipped one to check the item detail's stat table
+func _gear_detail_preview() -> void:
+	_head("ITEM DETAIL", "ตารางค่าสถานะอุปกรณ์ (MV-552) · gear_detail_v2 %s (สลับได้ที่แท็บฟีเจอร์)" % ("เปิด" if Features.on("gear_detail_v2") else "ปิด"))
+	var demo := _b("เปิดตัวอย่าง: อาวุธเทียบของที่ใส่อยู่", func(): Dev.gear_detail_demo(), "green", true)
+	demo.name = "GearDetailDemo"
+	_row([demo])
 
 
 func _tab_main() -> void:

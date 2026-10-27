@@ -12,6 +12,7 @@ var _warlord_checks_completed := false
 
 var _individual_auto_equip_checks_completed := false
 var _multi_salvage_checks_completed := false
+var _gear_detail_checks_completed := false
 var _event_progression_checks_completed := false
 var _font_checks_completed := false
 var _roaming_boss_checks_completed := false
@@ -77,6 +78,12 @@ func _run() -> void:
 		Tutorial.skip()
 		await _warlord_test()
 		_check("warlord: all progression checks completed", _warlord_checks_completed)
+		_finish()
+		return
+	if "--only=gear_detail" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _gear_detail_test()
+		_check("gear detail: all checks completed", _gear_detail_checks_completed)
 		_finish()
 		return
 	if "--only=multi_salvage" in OS.get_cmdline_user_args():
@@ -1061,6 +1068,8 @@ func _run() -> void:
 	_check("individual gear: all checks completed", _individual_auto_equip_checks_completed)
 	await _multi_salvage_test()
 	_check("multi salvage: all checks completed", _multi_salvage_checks_completed)
+	await _gear_detail_test()
+	_check("gear detail: all checks completed", _gear_detail_checks_completed)
 	await _roaming_boss_test()
 	_check("roaming boss: all combat and economy checks completed", _roaming_boss_checks_completed)
 	await _smooth_ui_text_test()
@@ -9186,6 +9195,90 @@ func _warlord_test() -> void:
 ## MV-547: deterministic inventory fixtures; real taps prove the selected person's callback survives refresh.
 func _auto_item(base_id: String, uid: int, ilvl: int = 1) -> Dictionary:
 	return {"uid": uid, "base": base_id, "slot": Loot.BASES[base_id].slot, "rar": 0, "ilvl": ilvl, "plus": 0, "aff": [], "lock": false}
+
+
+## MV-552: the item detail's stat table (switch off = the old text list), the +/- against the equipped weapon, what
+## a swap loses, the equipped item's own view, the GOD demo, and a phone-size shot of both
+func _gear_detail_test() -> void:
+	var saved_state := Game.s
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_size := get_window().size
+	Settings.v.tips = false
+	main.hud.tip_card.hide()
+	var saved_processing := [Game.is_processing(), Combat.is_processing()]
+	Game.set_process(false)
+	Combat.set_process(false)
+	Game.s = saved_state.duplicate(true)
+	Features.layers.dev = {"features": {"gear_detail_v2": false}, "tune": {}}
+	Features.layers.remote = {}
+	Features.layers.mode = {}
+	get_window().size = Vector2i(780, 1688)
+	await wait(0.3)
+	var d: Dictionary = Game.s.dwellers[0]
+	var held := _auto_item("pipe_pistol", 9950, 5)
+	held.rar = 1
+	held.aff = [{"k": "crit", "v": 2.0}, {"k": "lifesteal", "v": 1.5}]
+	d.gear = {"weapon": held}
+	var rifle := _auto_item("hunting_rifle", 9951, 8)
+	rifle.rar = 3
+	rifle.plus = 2
+	rifle.aff = [{"k": "dmg", "v": 6.0}, {"k": "crit", "v": 3.0}, {"k": "xp", "v": 5.0}]
+	Game.s.gear = [rifle]
+	var loot: LootPanel = main.hud.panels.inventory
+	main.hud.open_panel("inventory")
+	loot.open_pick("weapon", int(d.id))
+	loot.detail_uid = 9951
+	loot.refresh()
+	await wait(0.25)
+	_check("gear detail: switch off keeps the old text list", loot.find_child("StatTable", true, false) == null and loot.find_child("CompareBar", true, false) == null)
+	await shot("gear_detail_old")
+	Features.layers.dev.features.gear_detail_v2 = true
+	loot.refresh()
+	await wait(0.25)
+	_check("gear detail: switch on shows the stat table and the compare strip", loot.find_child("StatTable", true, false) != null and loot.find_child("CompareBar", true, false) != null)
+	var text := _gear_detail_text(loot)
+	_check("gear detail: table shows the range gain over the pistol", text.contains("+80"))
+	_check("gear detail: table shows the power change against the equipped weapon", text.contains("%+.0f%%" % loot._power_pct(rifle, held)))
+	_check("gear detail: table lists the affix a swap would lose", text.contains("ดูดเลือด"))
+	await shot("gear_detail_table")
+	var rows := loot._stat_rows(rifle, held)
+	var lost_ls := rows.filter(func(r): return r.key == "lifesteal")
+	_check("gear detail: an affix only the equipped item has is a red loss", lost_ls.size() == 1 and lost_ls[0].lost and loot._diff_color(lost_ls[0]) == UIKit.C_RED)
+	var crit := rows.filter(func(r): return r.key == "crit" and r.affix)
+	_check("gear detail: a shared affix compares the enhanced values", crit.size() == 1 and absf(float(crit[0].diff) - (3.0 * 1.1 - 2.0)) < 0.001)
+	_check("gear detail: rows without a compare target have no +/- text", loot._stat_rows(rifle, {}).all(func(r): return loot._diff_text(r) == ""))
+	# equipped view: no compare strip
+	loot.detail_uid = -1
+	loot.detail_equipped = {"item": held, "did": int(d.id)}
+	loot.refresh()
+	_check("gear detail: the equipped item's own view has no compare strip", loot.find_child("CompareBar", true, false) == null and loot.find_child("StatTable", true, false) != null)
+	main.hud.open_panel("god")
+	var god: Node = main.hud.panels.god
+	god.tab = "icons"
+	god.refresh()
+	_check("gear detail: GOD Icons tab has the demo", god.find_child("GearDetailDemo", true, false) != null)
+	god.close()
+	Dev.gear_detail_demo()
+	_check("gear detail: GOD demo opens a weapon next to the equipped one", loot.is_open and loot.pick_slot == "weapon" and loot.detail_uid >= 0 and loot.find_child("StatTable", true, false) != null)
+	loot.close()
+	await wait(0.2)
+	Game.s = saved_state
+	Features.layers = saved_layers
+	get_window().size = saved_size
+	Game.set_process(saved_processing[0])
+	Combat.set_process(saved_processing[1])
+	Features.changed.emit()
+	_gear_detail_checks_completed = true
+
+
+func _gear_detail_text(n: Node) -> String:
+	var out := ""
+	if n is Label:
+		out += (n as Label).text + "
+"
+	for c in n.get_children():
+		out += _gear_detail_text(c)
+	return out
 
 
 ## MV-554: select mode in the stash grid ticks several items, the sticky bar totals them, one confirmation salvages
