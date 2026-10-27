@@ -60,7 +60,9 @@ func fight(biome: int, lap: int, profile: String, seed_value: int, enabled: bool
 	var elapsed := 0.1
 	while Combat.wave_active and elapsed < Combat.WARLORD_TIMEOUT + 1.0 and float(Game.s.hull) > 0.0:
 		Game._simulate(0.1, true)
+		metrics.hull_min = minf(float(metrics.hull_min), float(Game.s.hull))
 		Combat.tick(0.1)
+		metrics.hull_min = minf(float(metrics.hull_min), float(Game.s.hull))
 		elapsed += 0.1
 	Combat.hit.disconnect(on_hit)
 	Combat.enemy_spawned.disconnect(on_spawn)
