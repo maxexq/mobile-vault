@@ -371,6 +371,12 @@ func hull_repair_v2(on: bool) -> void:
 	act("hull repair v2 %s" % ("on" if on else "off"))
 
 
+## MV-545: session override of the vault_upgrade_v2 switch
+func vault_upgrade_v2(on: bool) -> void:
+	Features.set_override("features", "vault_upgrade_v2", on)
+	act("vault upgrade v2 %s" % ("on" if on else "off"))
+
+
 func set_hull(frac: float) -> void:
 	Game.s.hull = Game.hull_max() * frac
 	act("hull %d%%" % int(frac * 100))

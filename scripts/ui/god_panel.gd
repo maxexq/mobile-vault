@@ -277,6 +277,13 @@ func _tab_vehicle() -> void:
 		var lv: int = n
 		vb.append(_b(str(lv), func(): Dev.set_vault(lv), "yellow" if int(Game.s.vault_level) == lv else "gray"))
 	_row(vb, "Vault Lv")
+	var vv2 := Features.on("vault_upgrade_v2")
+	_note("โครงรถ (MV-545) %s · ห้อง %d/%d (รถ %s %d ชั้น) · ห้องที่รอรถคันใหญ่ %d · ตัวถัง +%d · การผลิต ×%.2f" % ["แบบใหม่" if vv2 else "แบบเดิม",
+		Game.vault_rooms_at(int(Game.s.vault_level)), Game.main_slots() - 1, Game.tier(), Game.floors(), Game.vault_banked_rooms(),
+		roundi(Game.vault_hull_bonus()), Game.vault_prod_mult()])
+	if int(Game.s.vault_level) < Data.MAX_VAULT_LEVEL:
+		_note("การ์ดอัปเกรด: " + BuildPanel.vault_card_text(int(Game.s.vault_level), "", ""))
+	_row([_b("แบบเดิม" if vv2 else "แบบใหม่", func(): Dev.vault_upgrade_v2(not vv2), "yellow" if vv2 else "gray")], "อัปเกรดโครงรถ")
 	_row([_b("100%", func(): Dev.set_hull(1.0), "green"), _b("50%", func(): Dev.set_hull(0.5)), _b("10%", func(): Dev.set_hull(0.1)), _b("0", func(): Dev.set_hull(0.0), "red")],
 		"ตัวถัง %d/%d" % [int(Game.s.hull), int(Game.hull_max())])
 	var rv2 := Features.on("hull_repair_v2")
