@@ -6,7 +6,8 @@ extends Control
 ## selected route in amber, border roads with a red / white checkpoint marker; landmarks sit in the 27x27 frame
 ## (MV-507) with their existing 16x16 icon, junctions are road stops (MV-508), unknown reports show "?" with the suspect
 ## ping (MV-511), locked stops a padlock; the selection rim (MV-509) marks the chosen stop; the vehicle marker (MV-510)
-## sits above everything, follows the trip's progress and never takes a tap.
+## sits above everything, follows the trip's progress and never takes a tap. MV-546: a blueprint cache shows the
+## existing 16x16 blueprint icon as a badge above its stop, bobbing 1 px (never takes a tap).
 ##  * a tap that didn't drag selects a stop (signal stop_selected); dragging only pans. Selecting never drives.
 ##  * stops are 44x44 focusable buttons (keyboard / gamepad focus moves between them).
 ##  * redrawn only when the world, the trip or the selection change; the marker moves and the small loops (vehicle
@@ -34,6 +35,7 @@ var _route: Dictionary = {}
 var _buttons := {}
 var _marker: TextureRect
 var _pings := {}
+var _cache_icon: TextureRect
 var _t := 0.0
 var _press := Vector2(-1, -1)
 var _dragging := false
@@ -53,6 +55,9 @@ func _ready() -> void:
 		if is_visible_in_tree() and _stale():
 			rebuild())
 	Game.travel_changed.connect(_refresh_route)
+	Features.changed.connect(func():
+		if (_cache_icon != null) != (WorldMap.cache_at() != ""):
+			rebuild())
 	resized.connect(_clamp_pan)
 	rebuild()
 
@@ -89,6 +94,9 @@ func rebuild() -> void:
 	if _marker:
 		_drop(_marker)
 		_marker = null
+	if _cache_icon:
+		_drop(_cache_icon)
+		_cache_icon = null
 	var w := WorldMap.world()
 	if w.is_empty():
 		queue_redraw()
@@ -118,6 +126,12 @@ func rebuild() -> void:
 			p.texture = Atlas.tex("fx_map_suspect_ping_0")
 			add_child(p)
 			_pings[id] = p
+	if WorldMap.cache_at() != "":
+		_cache_icon = TextureRect.new()
+		_cache_icon.name = "BlueprintCache"
+		_cache_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_cache_icon.texture = Atlas.icon("blueprint")
+		add_child(_cache_icon)
 	_marker = TextureRect.new()
 	_marker.name = "VehicleMarker"
 	_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE      # above every stop, never takes a tap
@@ -154,6 +168,8 @@ func label_of(id: String) -> String:
 	var n := WorldMap.node(id)
 	if n.is_empty():
 		return id
+	if id == WorldMap.cache_at():
+		return Loc.t("กล่องพิมพ์เขียว (สุ่ม)")
 	match str(n.type):
 		"landmark":
 			return str(Expedition.SITES[n.site].th)
@@ -282,6 +298,8 @@ func _place_children() -> void:
 		_buttons[id].position = (_p(WorldMap.node(id)) - Vector2(TOUCH, TOUCH) * 0.5).round()
 	for id in _pings:
 		_pings[id].position = (_p(WorldMap.node(id)) - Vector2(16, 16)).round()
+	if _cache_icon and WorldMap.cache_at() != "":
+		_cache_icon.position = (_p(WorldMap.node(WorldMap.cache_at())) - Vector2(-4, 29 + (int(_t * LOOP_FPS) % 2))).round()
 	if _marker:
 		_marker.position = (_origin() + _vehicle_pos() - Vector2(11, 14)).round()
 		move_child(_marker, get_child_count() - 1)
@@ -294,6 +312,8 @@ func _process(delta: float) -> void:
 	var f := int(_t * LOOP_FPS) % 4
 	for id in _pings:
 		_pings[id].texture = Atlas.tex("fx_map_suspect_ping_%d" % f)
+	if _cache_icon:
+		_cache_icon.position.y = (_p(WorldMap.node(WorldMap.cache_at())) - Vector2(-4, 29 + (int(_t * LOOP_FPS) % 2))).round().y
 	if _marker:
 		var moving := Game.is_moving() and WorldMap.driving()
 		_marker.texture = Atlas.tex("fx_map_vehicle_marker_%d" % (int(_t * 4.0) % 4 if moving else 0))

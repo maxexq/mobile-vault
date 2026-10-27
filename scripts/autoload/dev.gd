@@ -753,6 +753,49 @@ func world_cancel() -> void:
 	Trace.rec("god", "world cancel trip")
 
 
+# ------------------------------------------------------------------ MV-546 blueprint caches on the world map
+## put a cache on the map now (ignores the km count and the per-lap cap; replaces an unclaimed one)
+func bpcache_spawn() -> String:
+	if not WorldMap.caches_on():
+		Game.toast.emit("กล่องพิมพ์เขียวปิดอยู่ (ต้องเปิดแผนที่โลก + map_blueprint_caches)", "warn")
+		return ""
+	WorldMap.cache_state().at = ""
+	WorldMap.spawn_cache()
+	act("bpcache spawn", {"at": WorldMap.cache_at()})
+	return WorldMap.cache_at()
+
+
+## drive to the cache (the normal route)
+func bpcache_drive() -> bool:
+	var at := WorldMap.cache_at()
+	var ok := at != "" and WorldMap.drive_to(at)
+	if ok and not Game.s.traveling:
+		Game.set_traveling(true)
+	Trace.rec("god", "bpcache drive %s" % at, {"ok": ok})
+	return ok
+
+
+## the blueprints a cache can give now, with their weights (read-only)
+func bpcache_pool() -> String:
+	var pool := WorldMap.cache_pool()
+	var parts := []
+	for bp in pool:
+		parts.append("%s ×%d" % [str(Mods.BLUEPRINT_TH.get(bp, bp)), int(pool[bp])])
+	var txt := ", ".join(parts) if not parts.is_empty() else "ครบแล้ว: กล่องถัดไปเป็นกล่องเสบียง"
+	Game.toast.emit("กล่องพิมพ์เขียวให้ได้: " + txt, "info")
+	return txt
+
+
+## remove the cache and reset this world's counters (the next one comes after bpcache.first_km again)
+func bpcache_clear() -> void:
+	var st := WorldMap.cache_state()
+	if st.is_empty():
+		return
+	st.merge({"n": 0, "km": 0.0, "rolls": 0, "at": ""}, true)
+	act("bpcache clear")
+	WorldMap.world_changed.emit()
+
+
 ## regenerate from the saved seed and compare with the saved graph (nothing is replaced); read-only, not cheated
 func world_verify() -> bool:
 	var w := WorldMap.world()

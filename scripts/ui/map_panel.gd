@@ -89,6 +89,8 @@ func refresh() -> void:
 	if map_on:
 		_list.add_child(UIKit.wrap_label(Loc.t("รอบที่ %d · โลก seed %s · แตะจุดบนแผนที่เพื่อดูเส้นทาง แล้วกดขับไป · ผ่านทางออกในมหานครแห่งสัญญาณ = รอบใหม่ในโลกใหม่ ศัตรูอันตรายขึ้นแต่รางวัลมากขึ้น") % [
 			int(Game.s.lap) + 1, str(WorldMap.world().seed)]))
+		if WorldMap.cache_at() != "":
+			_list.add_child(UIKit.wrap_label(Loc.t("มีกล่องพิมพ์เขียวรออยู่บนแผนที่ (ไอคอนพิมพ์เขียว) แตะจุดนั้นแล้วกดขับไปเก็บ"), UIKit.FS_SMALL, UIKit.C_GOLD))
 	for i in (0 if map_on else Data.BIOMES.size()):
 		if i == 0:
 			_list.add_child(UIKit.header("ROUTE", Loc.t("เส้นทาง · จุดสำรวจ")))
@@ -166,7 +168,9 @@ func _refresh_strip() -> void:
 		info = Loc.t("%.1f กม. · ~%d นาที · ") % [float(rt.km), int(ceil(float(rt.km) / maxf(0.01, rate)))] + info
 	_dest_info.text = info
 	var note := ""
-	match str(n.type):
+	match str(n.type) if id != WorldMap.cache_at() else "cache":
+		"cache":
+			note = Loc.t("ขับไปถึงจุดนี้ (หรือผ่าน) เพื่อเปิดกล่อง: ได้พิมพ์เขียวที่ยังไม่มีแบบสุ่ม 1 แบบ ถ้ามีครบแล้วได้เสบียงแทน")
 		"landmark":
 			note = str(Expedition.SITES[n.site].goal) + (Loc.t(" (สำรวจแล้วรอบนี้)") if Expedition.is_done(str(n.site)) else "")
 		"rumor":
