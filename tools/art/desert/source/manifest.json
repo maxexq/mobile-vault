@@ -20,22 +20,29 @@
       "panels": [
         {
           "file": "clouds-panel-01.png",
-          "sha256": "d7d32a285aa44071146d77a9af39c180431ef0efe11e5d9eca39dfcd32ebdbd1"
+          "sha256": "739043702ad053aaf35f177d92b9b923087f6e86c0299469cf666a0044c935e6"
         },
         {
           "file": "clouds-panel-02.png",
-          "sha256": "be591d16f5b687cc631563ea0e7deff5c17c6dc5ac066b5bdfc0f1d206690310"
+          "sha256": "5190f994187a882984c0e97cdc5e6f345e386b7ea2710b31cbc3ceaa05a75e5d"
         },
         {
           "file": "clouds-panel-03.png",
-          "sha256": "1a079bbdc7376ad7f9eca5ea89e626a402afa29ec72228c81302530aeddcd73e"
+          "sha256": "7caaaccd3e1c52338259b20a07a789dd40bdb6983c1c17f86a53ac997d3ca458"
         },
         {
           "file": "clouds-panel-04.png",
-          "sha256": "68606fa4749c55e15d1a6b88e6907722d724ea30145a4397773d4c0f62d9e479"
+          "sha256": "3eae0978600ea5970796915141a960935b048302cf42abc7f3b1b6101f7c62e0"
         }
       ],
-      "approved_rgb_sha256": "300f08f6c8ffe25332c6f1702acb1b4f5f87cdee913f83b6108d72791810d926"
+      "approved_rgb_sha256": "f639f29d9090bea61c77ec9fb8eabbd0a656696e470123d51eaf64e91c4f9c8e",
+      "revision": {
+        "reason": "User rejected billowy cloud style; replace with thin flat veils matching the industrial sprite language.",
+        "tool": "built-in image_gen",
+        "generated_image_sha256": "95988e13b869980396cd626c58ad85b3f11b170463807b961035d6884aa77d83",
+        "prompt": "../clouds-v2-prompt.txt",
+        "normalization": "Nearest-neighbour to 1984x220, exact cream1/cream2/cream3 and magenta; no resampling filter, quiet 12px edges, bottom40 empty."
+      }
     },
     {
       "name": "far",
