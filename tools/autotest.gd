@@ -6972,8 +6972,9 @@ func _audio_clean_test() -> void:
 ## MV-555: resources in, road event good / bad, expedition out / encounter / home / failed / haul
 func _audio_cues_test() -> void:
 	var grew := func(id: String, before: Dictionary): return int(Sound.played.get(id, 0)) > int(before.get(id, 0))
-	Features.set_override("tune", "audio.res_gap", 1.0)
-	await wait(1.1)
+	# rooms keep floating +N during a full run, so the gap is long and cleared here: only these calls count
+	Features.set_override("tune", "audio.res_gap", 30.0)
+	Sound._last_at.erase("res_gain")
 	var b := Sound.played.duplicate()
 	Sound._on_floating_text(0, "+5", "food")
 	Sound._on_floating_text(1, "+7", "water")
