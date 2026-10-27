@@ -180,6 +180,11 @@ func _run() -> void:
 		await _audio_test()
 		_finish()
 		return
+	if "--only=drive_help" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _drive_help_test()
+		_finish()
+		return
 	if "--only=hull_repair" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _hull_repair_test()
@@ -987,6 +992,7 @@ func _run() -> void:
 	await _flee_guard_test()
 	await _barks_test()
 	await _hull_warning_test()
+	await _drive_help_test()
 	await _hull_repair_test()
 	await _audio_test()
 	await _morale_test()
@@ -6816,6 +6822,57 @@ func _audio_test() -> void:
 	_check("audio: back to the game's own bed after the preview", Sound.preview.is_empty() and Sound.want_bed() == str(Data.biome(keep_biome).id))
 
 
+## MV-542 (Parames's report): driving on the world map, the player leaves, the trip ends during the offline catch-up;
+## back in the game the vehicle must say it arrived, Go must open the map (not just toggle park), a tap on STOPPED
+## and Go into another blocker must say why, and the switch off keeps the old toggle
+func _drive_help_test() -> void:
+	_no_events()
+	var hud: HUD = main.hud
+	var keep_power := float(Game.s.res.power)
+	var keep_travel := bool(Game.s.traveling)
+	var toasts := []
+	var grab := func(msg: String, _kind: String = ""): toasts.append(msg)
+	Game.toast.connect(grab)
+	Features.set_override("features", "seeded_world_map", true)
+	WorldMap.ensure()
+	WorldMap.reconcile()
+	var dest := Dev.world_arrive_offline()
+	await wait(0.3)
+	var told := toasts.any(func(t): return str(t).contains("เลือกปลายทางใหม่บนแผนที่"))
+	_check("drive help: the trip ended while away (%s), the away summary says so %s" % [dest, toasts.slice(-1)],
+		dest.length() > 0 and not dest.begins_with("no") and dest != "map off" and not WorldMap.driving() and Game.needs_destination() and told)
+	await wait(0.2)
+	_check("drive help: the Go button shows the map while a destination is needed", hud.go_btn.icon != null and hud.go_btn.icon.region == Atlas.icon("map").region)
+	hud.go_btn.pressed.emit()
+	await wait(0.5)
+	var mp: ModalPanel = hud.panels.map
+	_check("drive help: Go opens the map instead of parking (open %s, still set to drive %s)" % [mp.is_open, Game.s.traveling], mp.is_open and Game.s.traveling)
+	await shot("drive_help_map")
+	mp.close()
+	await wait(0.3)
+	# another blocker (no power) with the map off: Go sets off and says why it can't
+	Features.set_override("features", "seeded_world_map", false)
+	Game.s.traveling = false
+	Game.s.res.power = 0.0
+	toasts.clear()
+	hud.go_btn.pressed.emit()
+	await wait(0.2)
+	_check("drive help: Go into another blocker says why %s" % [toasts], Game.s.traveling and toasts.any(func(t): return str(t).begins_with(Loc.t("รถหยุดอยู่: "))))
+	# switch off: the old toggle, nothing opens
+	Features.set_override("features", "drive_help", false)
+	Features.set_override("features", "seeded_world_map", true)
+	var was := bool(Game.s.traveling)
+	hud.go_btn.pressed.emit()
+	await wait(0.3)
+	_check("drive help: switch off = Go only toggles drive / park", bool(Game.s.traveling) != was and not hud.panels.map.is_open)
+	Features.set_override("features", "drive_help", null)
+	Features.set_override("features", "seeded_world_map", null)
+	Game.toast.disconnect(grab)
+	Game.s.res.power = keep_power
+	Game.s.traveling = keep_travel
+	Game.travel_changed.emit()
+
+
 ## MV-541: hull repair cost: the size curve, the crew discount and its cap, the partial repair, the switch off = the
 ## old flat 0.6 full repair, the build menu chunk button and the free regen next to the hull bar
 func _hull_repair_test() -> void:
@@ -8352,6 +8409,64 @@ func _world_screen_test() -> void:
 		if n.has("site") and int(n.biome) == 0 and str(n.id) != WorldMap.here():
 			target = str(n.id)
 			break
+	# a REAL tap on the stop (press, a few frames, release through the viewport), as a finger / mouse does
+	var sb: Button = view.get_node("Stop_" + target)
+	var tp := sb.get_global_rect().get_center()
+	var hov_ok := false
+	for pressed in [true, false]:
+		var mb := InputEventMouseButton.new()
+		mb.button_index = MOUSE_BUTTON_LEFT
+		mb.pressed = pressed
+		mb.position = tp
+		mb.global_position = tp
+		if pressed:
+			var mm := InputEventMouseMotion.new()
+			mm.position = tp
+			mm.global_position = tp
+			get_viewport().push_input(mm, true)
+			await wait(0.05)
+			var hov := get_viewport().gui_get_hovered_control()
+			hov_ok = hov == sb
+		get_viewport().push_input(mb, true)
+		await wait(0.12)
+	_check("world screen: a real tap on a stop selects it (selected '%s', wanted '%s', stop under the finger %s)" % [view.selected, target, hov_ok],
+		view.selected == target and hov_ok)
+	# the same with a finger (screen touch through Input, which turns it into the emulated mouse like a phone does)
+	var target2 := ""
+	for n in w.nodes:
+		if int(n.biome) == 0 and str(n.id) != WorldMap.here() and str(n.id) != target:
+			target2 = str(n.id)
+			break
+	view.select("")
+	var sb2: Button = view.get_node("Stop_" + target2)
+	var tp2 := sb2.get_global_rect().get_center()
+	await _finger(0, tp2, true)
+	await wait(0.1)
+	await _finger(0, tp2, false)
+	await wait(0.1)
+	_check("world screen: a finger tap on a stop selects it (selected '%s', wanted '%s')" % [view.selected, target2], view.selected == target2)
+	# MV-542 (Parames, Safari, a continued game): the map window was built before the save loaded, so it had no stop
+	# buttons for the save's world (which arrives without world_changed): the map drew but no stop could be tapped
+	var keep_world: Dictionary = Game.s.world
+	mp.close()
+	await wait(0.3)
+	Game.s.erase("world")
+	view.rebuild()
+	var none_before := view.find_children("Stop_*", "Button", false, false).is_empty()
+	Game.s["world"] = keep_world          # the save brings its world, no signal
+	main.hud.open_panel("map")
+	await wait(0.4)
+	var n_btn := view.find_children("Stop_*", "Button", false, false).size()
+	view.select("")
+	var sb4: Button = view.get_node_or_null("Stop_" + target2)
+	if sb4:
+		var p4 := sb4.get_global_rect().get_center()
+		await _finger(0, p4, true)
+		await wait(0.1)
+		await _finger(0, p4, false)
+		await wait(0.2)
+	_check("world screen: a continued save's world gets its stop buttons when the map opens, and a tap selects (%d buttons, before none %s, selected '%s')" % [n_btn, none_before, view.selected],
+		none_before and n_btn == (keep_world.nodes as Array).size() and view.selected == target2)
 	view.select(target)
 	await wait(0.2)
 	var rt := view.route()
@@ -8393,6 +8508,21 @@ func _world_screen_test() -> void:
 	var vr := get_viewport().get_visible_rect()
 	_check("world screen: the map window stays inside a 320x568 screen", mp.visible and vr.encloses(mp.box.get_global_rect().grow(-1)))
 	await shot("world_screen_narrow")
+	# a finger on a phone-sized screen: tap a visible stop of the first region
+	var tgt3 := ""
+	for n in w.nodes:
+		if int(n.biome) == 0 and str(n.id) != WorldMap.here():
+			var r3: Rect2 = (view.get_node("Stop_" + str(n.id)) as Control).get_global_rect()
+			if view.get_global_rect().grow(-2).encloses(r3):
+				tgt3 = str(n.id)
+				break
+	view.select("")
+	var p3: Vector2 = (view.get_node("Stop_" + tgt3) as Control).get_global_rect().get_center() if tgt3 != "" else Vector2.ZERO
+	await _finger(0, p3, true)
+	await wait(0.1)
+	await _finger(0, p3, false)
+	await wait(0.2)
+	_check("world screen: a finger tap selects a stop on a narrow phone too (%s -> %s)" % [tgt3, view.selected], tgt3 != "" and view.selected == tgt3)
 	get_window().size = win
 	await wait(0.4)
 	mp.close()

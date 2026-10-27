@@ -46,6 +46,12 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	custom_minimum_size = Vector2(0, MAP.y)
 	WorldMap.world_changed.connect(rebuild)
+	# MV-542: a loaded save brings its own world without world_changed (nothing about it changed), so the stop
+	# buttons built at startup (no world yet) stayed missing: the map drew but no stop could be tapped
+	Game.game_started.connect(rebuild)
+	visibility_changed.connect(func():
+		if is_visible_in_tree() and _stale():
+			rebuild())
 	Game.travel_changed.connect(_refresh_route)
 	resized.connect(_clamp_pan)
 	rebuild()
@@ -55,6 +61,19 @@ func _drop(n: Node) -> void:
 	if n.get_parent() == self:
 		remove_child(n)
 	n.queue_free()
+
+
+## the stop buttons don't belong to the world being shown (another save / cloud load / new world)
+func _stale() -> bool:
+	var w := WorldMap.world()
+	if w.is_empty():
+		return not _buttons.is_empty()
+	if _buttons.size() != (w.nodes as Array).size():
+		return true
+	for n in w.nodes:
+		if not _buttons.has(str(n.id)):
+			return true
+	return false
 
 
 ## all stop buttons + overlays for the current world (only when the world changes)

@@ -8,9 +8,6 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ## [Unreleased]
 
-### Fixed
-- Forge synthesis now spends components instead of scrap; affordability and Thai/English cost descriptions match the components icon (MV-543)
-
 ## [4.7.0-alpha.4] - 2026-10-27
 
 ### Merged pull requests
@@ -33,8 +30,14 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - MV-538: stuck acid-rain preview fixed, cozy lo-fi biome ambience ([#129](https://github.com/maxexq/mobile-vault/pull/129))
 - MV-541: fairer hull repair (size curve, 25 % repair, crew discount, free regen shown) ([#132](https://github.com/maxexq/mobile-vault/pull/132))
 - MV-540: render Chakra Petch UI text smoothly ([#131](https://github.com/maxexq/mobile-vault/pull/131))
+- MV-543: Forge synthesis spends components ([#133](https://github.com/maxexq/mobile-vault/pull/133))
+- MV-542: vehicle stuck after coming back; map stops tappable after continuing a save ([#135](https://github.com/maxexq/mobile-vault/pull/135))
+- MV-539: Glass Desert wide parallax panorama ([#134](https://github.com/maxexq/mobile-vault/pull/134))
 
 ### Fixed
+- Forge synthesis now spends components instead of scrap; affordability and Thai/English cost descriptions match the components icon (MV-543)
+- On the world map you can tap stops again after continuing a saved game (the map was drawn but its stops didn't respond until a new world was made) (MV-542)
+- Coming back to the game after the vehicle reached its map destination while you were away no longer leaves it stuck: the away summary says it arrived, the go button turns into a map button that opens the map to pick the next stop, and tapping STOPPED (or go) tells you why the vehicle isn't moving (MV-542)
 - Windows no longer slide around when what's inside them changes: the title and the button you just tapped stay where they are, and the room close-up keeps the room still when you switch tabs, so nothing moves under your finger (MV-537)
 - Acid rain could be heard on the first map without any acid rain, after a weather sound had been previewed in the tester panel (MV-538)
 

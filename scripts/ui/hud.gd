@@ -308,6 +308,13 @@ func _build_top() -> void:
 	var sb := _chip_box()
 	status_lbl = UIKit.label("DRIVING", UIKit.FP, UIKit.C_ORANGE, true)
 	sb.add_child(status_lbl)
+	# MV-542: phones have no tooltips: a tap on STOPPED says why
+	sb.mouse_filter = Control.MOUSE_FILTER_STOP
+	sb.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT and Features.on("drive_help"):
+			var br := Game.blocked_reason()
+			if br != "" and Game.s.traveling:
+				Game.toast.emit(Loc.t("รถหยุดอยู่: ") + Loc.t(br), "info"))
 	_info_row.add_child(sb)
 	# route
 	_route_row = UIKit.hbox(4)
@@ -337,7 +344,7 @@ func _build_bottom() -> void:
 	_travel.add_child(th)
 	go_btn = UIKit.button("", "green", "pause")
 	go_btn.custom_minimum_size = Vector2(26, 22)
-	go_btn.pressed.connect(func(): Game.set_traveling(not Game.s.traveling))
+	go_btn.pressed.connect(_on_go)
 	th.add_child(go_btn)
 	_scav_btn = UIKit.button("", "yellow", "explore")
 	_scav_btn.custom_minimum_size = Vector2(26, 22)
@@ -636,7 +643,8 @@ func _refresh_travel() -> void:
 	var b := Data.biome(Game.s.biome)
 	biome_lbl.text = b.th + ((Loc.t(" ·รอบ%d") % (int(Game.s.lap) + 1)) if int(Game.s.lap) > 0 else "")
 	_update_hull_bar()
-	go_btn.icon = Atlas.icon("pause" if Game.s.traveling else "play")
+	# MV-542: waiting for a destination: the button shows the map (it opens it)
+	go_btn.icon = Atlas.icon("map" if Features.on("drive_help") and Game.needs_destination() else ("pause" if Game.s.traveling else "play"))
 	UIKit.style_button(go_btn, "gray" if Game.s.traveling else "green")
 	_refresh_status()
 
@@ -880,6 +888,22 @@ func open_loot_pick(slot: String, did: int) -> void:
 
 func open_loot_equipped(item: Dictionary, did: int) -> void:
 	(panels.inventory as LootPanel).open_equipped(item, did)
+
+
+## MV-542: Go / pause. Waiting for a destination on the world map: open the map instead of parking (the button
+## used to toggle drive / park and do nothing visible); set off into another blocker: say what it is
+func _on_go() -> void:
+	if not Features.on("drive_help"):
+		Game.set_traveling(not Game.s.traveling)
+		return
+	if Game.needs_destination():
+		open_panel("map")
+		return
+	Game.set_traveling(not Game.s.traveling)
+	if Game.needs_destination():
+		open_panel("map")
+	elif Game.s.traveling and Game.blocked_reason() != "":
+		Game.toast.emit(Loc.t("รถหยุดอยู่: ") + Loc.t(Game.blocked_reason()), "info")
 
 
 func open_panel(key: String) -> void:

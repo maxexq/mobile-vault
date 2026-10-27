@@ -696,6 +696,31 @@ func world_finish_road() -> void:
 	act("world finish road")
 
 
+## MV-542: the reported case: drive to the nearest reachable stop, then the real "while you were away" catch-up
+## (Game._offline_progress) long enough to arrive; the vehicle should say it arrived and Go should open the map
+func world_arrive_offline() -> String:
+	if not WorldMap.usable():
+		return "map off"
+	var here := WorldMap.here()
+	var best := ""
+	var best_km := INF
+	for n in WorldMap.world().nodes:
+		var id := str(n.id)
+		if id == here or str(n.type) == "exit":
+			continue
+		var rt := WorldMap.route(here, id, int(Game.s.vault_level))
+		if not rt.is_empty() and float(rt.km) < best_km:
+			best_km = float(rt.km)
+			best = id
+	if best == "" or not WorldMap.drive_to(best):
+		return "no destination"
+	Game.s.traveling = true
+	Game._offline_progress(1800.0)
+	act("world arrive offline at %s (%.1f km)" % [best, best_km])
+	Game.travel_changed.emit()
+	return best
+
+
 ## drive offline for this many minutes (the real offline catch-up step), to watch arrivals and blockers
 func world_offline(minutes: float) -> void:
 	var left := minutes * 60.0

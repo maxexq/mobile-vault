@@ -571,6 +571,8 @@ func _tab_world() -> void:
 		_b("แผนที่: " + ("เปิด" if Features.on("seeded_world_map") else "ปิด"), func(): Dev.feature_set("seeded_world_map", not Features.on("seeded_world_map")),
 		"green" if Features.on("seeded_world_map") else "red")], "MV-514")
 	_row([_b("เปิดแผนที่ (TEST-515)", func(): Dev.world_screen(), "green", true)], "หน้าจอ")
+	_row([_b("ถึงปลายทางตอนออฟไลน์", func(): Dev.world_arrive_offline(), "yellow")],
+		"MV-542 %s · รอเลือกปลายทาง %s" % ["เปิด" if Features.on("drive_help") else "ปิด", "ใช่" if Game.needs_destination() else "ไม่"])
 	if not wm.is_empty():
 		var t := WorldMap.trip()
 		if t.is_empty():

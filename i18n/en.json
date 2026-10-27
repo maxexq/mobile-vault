@@ -2079,5 +2079,7 @@
  "บรรยากาศ": "Ambience",
  "ปุ่มกด": "Buttons",
  "บรรยากาศ = เสียงพื้นที่ เครื่องยนต์ ฝนและพายุ · บนเว็บเสียงเริ่มหลังแตะจอครั้งแรก": "Ambience = area sounds, the engine, rain and storms · on the web, sound starts after your first tap",
+ "รถหยุดอยู่: ": "Stopped: ",
+ "ปลายทาง": "the destination",
  "ซ่อมเองฟรี +%.1f HP/นาที (ลูกเรือห้องเครื่อง/โรงช่าง) · ส่วนลดค่าซ่อม %d%%": "Free repair +%.1f HP/min (engine room / workshop crew) · repair discount %d%%"
 }
