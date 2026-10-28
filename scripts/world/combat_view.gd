@@ -36,6 +36,11 @@ static func hero_view(slot: int) -> Vector2:
 	return HERO_VIEW[slot] + Vector2(0, roof_shift)
 
 
+## the rear-wall turret hangs a fixed drop below the roof, so it moves down with it on shorter chassis
+static func turret_view() -> Vector2:
+	return Vehicle.TURRET_POS + Vector2(0, roof_shift)
+
+
 ## the cot on the roof deck (feet position, truck-local)
 static func deck_cot_view() -> Vector2:
 	return Vector2(Vehicle.ROOF_DECK_COT.x, Vehicle.ROOF_Y + roof_shift - Vehicle.ROOF_DECK_H + Vehicle.ROOF_DECK_COT.y)
@@ -100,7 +105,7 @@ func setup(v: Vehicle) -> void:
 	vehicle = v
 	turret = Sprite2D.new()
 	turret.centered = false
-	turret.position = Vehicle.TURRET_POS
+	turret.position = turret_view()
 	vehicle.body.add_child(turret)
 	spikes = Sprite2D.new()
 	spikes.texture = Atlas.tex("spikes")
@@ -148,6 +153,7 @@ func _sync_heroes() -> void:
 	roof_shift = vehicle.roof_dy()
 	rear_shift = vehicle.rear_shift()
 	spikes.position = Vehicle.SPIKES_POS + Vector2(rear_shift, 0)
+	turret.position = turret_view()
 	for i in Combat.ROLES.size():
 		var h: Dictionary = Combat.heroes[i] if i < Combat.heroes.size() else {}
 		var node: HeroActor = hero_nodes[i]
@@ -297,7 +303,7 @@ func _on_shot(from_kind: String, from_id: int, to_kind: String, to_id: int, styl
 			if style == "bullet":
 				_casing(a)
 		"turret":
-			a = vehicle.body.to_global(TURRET_MUZZLE)
+			a = vehicle.body.to_global(TURRET_MUZZLE + Vector2(0, roof_shift))
 			_casing(a)
 		"roof":
 			a = vehicle.mod_motion.roof_shot()

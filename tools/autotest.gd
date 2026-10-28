@@ -5805,6 +5805,8 @@ func _exterior_mods_test() -> void:
 			floors_ok = floors_ok and v.floors == Game.floors() and not m._roof.is_empty()
 			floors_ok = floors_ok and m._roof.sprite.position == Vector2(200, v.roof_y() - 18)
 			floors_ok = floors_ok and is_instance_valid(m._catcher) and m._catcher.position == Vector2(146, v.roof_y() - 36)
+			# MV-567: the rear-wall vault turret hangs the same drop under the roof on every height (was fixed at 4 floors)
+			floors_ok = floors_ok and main.combat_view.turret.position == Vehicle.TURRET_POS + Vector2(0, v.roof_y() - Vehicle.ROOF_Y)
 			if vault_level == 6: await shot("exterior_mods_five_floors_" + tier)
 	_check("exterior mods: roof bindings follow every chassis at Vault 1/2/4/6 up to five floors", floors_ok)
 	Dev.set_tier("van")
