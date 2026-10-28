@@ -25,6 +25,11 @@ until it is snapped to the grid and palette and Parames approves it.
   [`docs/art/room-style-reference.md`](../../../docs/art/room-style-reference.md) and use an
   existing `room_*` sprite as the actual visual input. Every new furnished room gets its own
   2-4 frame micro animation.
+- **Crew:** the chibi field medic in
+  [`docs/art/crew-style-reference.md`](../../../docs/art/crew-style-reference.md) is the
+  approved model for crew art style and animation: 2D side view, about 20x40 px on a 48x48
+  canvas, snapped to the master palette. That doc has the PixelLab design -> character ->
+  animation steps. In-game crew stay 14x20 `dw_*` until moving to that scale is decided.
 - **UI:** rusted riveted-steel windows with a red title plate, soot-black panels, bone text,
   amber accents, 9-slice frames in `assets/ui`, button faces 24x24 with 6 px caps
   (`UIKit.button_style()`, `tools/art/ui.py:gen_button_skins()`), CRT mood shader. Fonts:
