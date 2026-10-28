@@ -2964,6 +2964,7 @@ func _large_room_test() -> void:
 	Game.setup_default_state()
 	Game.s.tier = "rig"
 	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	Game.fit_body()       # MV-563: grow the fresh 2-floor van body to this rig at Vault Lv6
 	while Game.s.rooms.size() < Game.slot_count():
 		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for i in range(1, Game.s.rooms.size()):
@@ -4630,6 +4631,7 @@ func _crew_roster_test() -> void:
 	Features.set_override("features", "crew_roster_20", false)
 	Game.s.tier = "rig"
 	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	Game.fit_body()       # MV-563: the body follows tier / Vault only through fit_body
 	var types := ["quarters", "kitchen", "hydroponics", "water", "workshop", "medical", "science", "radio", "armory", "refinery"]
 	while Game.s.rooms.size() < Game.slot_count():
 		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
@@ -4692,6 +4694,7 @@ func _ambience_test() -> void:
 	Game.setup_default_state()
 	Game.s.tier = "rig"
 	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	Game.fit_body()       # MV-563: the body follows tier / Vault only through fit_body (a fresh state is a 2-floor van)
 	var types := ["medical", "quarters", "kitchen", "hydroponics", "water", "armory", "science", "radio", "engine", "refinery", "workshop", "empty"]
 	while Game.s.rooms.size() < Game.slot_count():
 		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
