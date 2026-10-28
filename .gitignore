@@ -19,3 +19,8 @@ tools/art/pixellab/candidates/
 
 # micro-asset specs (tools/micro_asset.py): local drafts and grid sheets
 tools/art/micro/
+
+# PixelLab asset log (tools/asset-log, MV-584): local wrangler state, dev vars, uploader config
+tools/asset-log/.wrangler/
+tools/asset-log/.dev.vars
+.asset-log.json

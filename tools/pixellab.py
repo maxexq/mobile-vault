@@ -249,6 +249,13 @@ def cmd_gen(a):
     out_dir = os.path.join(CANDIDATES, a.sprite)
     os.makedirs(out_dir, exist_ok=True)
     old.save(os.path.join(out_dir, "current.png"))
+    # what the asset log (tools/asset_log.py) records next to each call
+    params = {kk: body[kk] for kk in ("init_image_strength", "text_guidance_scale", "outline", "shading", "detail", "view",
+                                      "direction", "no_background", "style_strength") if kk in body}
+    params.update(no_init=bool(a.no_init), style=a.style if a.endpoint == "bitforge" else None, custom_prompt=bool(a.prompt))
+    if "init_image_strength" in params:
+        params["strength"] = params.pop("init_image_strength")
+    sha_current = _sha(os.path.join(out_dir, "current.png"))
     spent, cands = 0.0, []
     for i in range(a.seeds):
         if a.budget and spent >= a.budget:
@@ -265,10 +272,25 @@ def cmd_gen(a):
         cands.append(snapped)
         with open(os.path.join(CANDIDATES, "usage.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps({"t": int(time.time()), "sprite": a.sprite, "endpoint": path, "seed": seed,
-                                "size": [gw, gh], "usd": usd}) + "\n")
+                                "size": [gw, gh], "native": [w, h], "usd": usd, "prompt": desc, "negative": neg,
+                                "params": params, "sha_raw": _sha(os.path.join(out_dir, f"{seed}_raw.png")),
+                                "sha_snapped": _sha(os.path.join(out_dir, f"{seed}.png")), "sha_current": sha_current},
+                               ensure_ascii=False) + "\n")
         print(f"  seed {seed}: {out_dir}/{seed}.png  (${usd:.4f})")
     preview(old, cands, os.path.join(out_dir, "preview.png"))
     print(f"spent ${spent:.4f}; compare {out_dir}/preview.png, then: python tools/pixellab.py accept {a.sprite} <seed>")
+    try:  # MV-584: log the batch to the private asset log web app when it is configured
+        import asset_log
+        if asset_log.configured():
+            asset_log.sync(a.sprite)
+    except (SystemExit, Exception) as e:
+        print(f"asset log sync failed ({e}); retry with: python tools/asset_log.py sync")
+
+
+def _sha(path):
+    import hashlib
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
 
 
 def cmd_accept(a):
