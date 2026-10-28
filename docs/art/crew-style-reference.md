@@ -119,6 +119,22 @@ Notes:
 If they are animated, keep these designs as they are and add accents only through a new
 approved edit.
 
+## Cast animations
+
+All 24 cast designs are PixelLab characters (ids in the manifest `cast_animations`) with five
+east clips each: `walk`, `eat`, `drink` (one-shot), `work` (hammer) and `talk`, 9 frames with
+frame 0 as the reference pose. Files in
+[`approved/cast_animations/<name>/<clip>/`](crew-style-reference/approved/cast_animations/),
+plus each character's `east.png`.
+
+![Frames 2, 4 and 6 of every clip](crew-style-reference/previews/cast-animations.png)
+
+The characters were rebuilt from the designs, so their side view can differ slightly from
+`approved/cast/` (the construction worker gained a clearer hard hat and vest). Use the
+animation frames together; do not mix them with the design PNG. In `work`, some characters
+gained a small anvil or bench at their feet (pilot, gunslinger, hunter, lounge singer,
+fortune teller) and a few wind up behind the head.
+
 ## Making a new crew character
 
 1. **Design** (5 generations per draft): `edit_image_pro_flash`, `method` text, `image` =
