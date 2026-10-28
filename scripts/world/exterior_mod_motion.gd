@@ -53,6 +53,11 @@ func _sprite(parent: Node2D, prefix: String, at: Vector2) -> Sprite2D:
 	return s
 
 
+## MV-566: the strip cut from the finer mod art while mod_detail_fine is on
+func _art(prefix: String) -> String:
+	return prefix + "_fine" if Features.on("mod_detail_fine") and Atlas.has(prefix + "_fine_0") else prefix
+
+
 func _remember(s: Sprite2D) -> void:
 	_restores.append({"sprite": s, "texture": s.texture})
 
@@ -98,7 +103,7 @@ func rebuild() -> void:
 		if not enabled(): continue
 		if region.begins_with("mod_roof_turret_"):
 			_remember(s)
-			_bind(s, "anim_ext_turret_lv%d_recoil" % Mods.level("roof_turret"), 20.0, "shot", Vector2.ZERO)
+			_bind(s, _art("anim_ext_turret_lv%d_recoil" % Mods.level("roof_turret")), 20.0, "shot", Vector2.ZERO)
 		elif region.begins_with("mod_roof_deck_"):
 			_remember(s)
 			s.texture = Atlas.tex("ext_base_" + region)
@@ -116,14 +121,15 @@ func rebuild() -> void:
 		elif region == "mod_rain_catcher":
 			_catcher = s
 			_remember(s)
-			_bind(s, "anim_ext_catcher_hem", 4.0, "wind", Vector2(4, 7))
+			_bind(s, _art("anim_ext_catcher_hem"), 4.0, "wind", Vector2(4, 7))
 		elif region == "mod_heater":
 			_remember(s)
-			s.texture = Atlas.tex("ext_base_mod_heater")
-			_bind(_sprite(s, "anim_ext_heater_cap", Vector2.ZERO), "anim_ext_heater_cap", 4.0, "wind", Vector2(6, 10))
+			var cap := _art("anim_ext_heater_cap")
+			s.texture = Atlas.tex("ext_base_mod_heater_fine" if cap.ends_with("_fine") else "ext_base_mod_heater")
+			_bind(_sprite(s, cap, Vector2.ZERO), cap, 4.0, "wind", Vector2(6, 10))
 		elif region.begins_with("mod_shock_"):
 			_remember(s)
-			_bind(s, "anim_ext_shock_lv%d" % Mods.level("suspension"), 8.0, "drive", Vector2(2.5, 5))
+			_bind(s, _art("anim_ext_shock_lv%d" % Mods.level("suspension")), 8.0, "drive", Vector2(2.5, 5))
 	if enabled() and Mods.level("armor_plates") == 1:
 		for x in [37, 247]:
 			var tab := Sprite2D.new()

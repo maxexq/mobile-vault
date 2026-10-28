@@ -566,7 +566,12 @@ func _sync_pets() -> void:
 
 # ------------------------------------------------------------------ exterior mods on the model
 func _mod_sprite(region: String, pos: Vector2) -> Sprite2D:
-	return _add_sprite(_mods_root, region, pos)
+	# MV-566: the finer redraw (same size and anchor) while mod_detail_fine is on; meta "region" keeps the mod's name
+	var fine := region + "_fine"
+	var s := _add_sprite(_mods_root, fine if Features.on("mod_detail_fine") and Atlas.has(fine) else region, pos)
+	s.set_meta("art", s.get_meta("region"))
+	s.set_meta("region", region)
+	return s
 
 
 func _refresh_mods() -> void:
@@ -619,6 +624,9 @@ func _refresh_mods() -> void:
 		for w in vd.wheels:
 			_mod_sprite("mod_shock_%d" % mini(susp, 3), Vector2(float(w[0]) - 4, 252))
 	var has_tracks: bool = Mods.level("tracks") > 0 and not vd.get("rail", false)
+	var track_art := Atlas.track_frames(Features.on("mod_detail_fine"))
+	if tracks.sprite_frames != track_art:
+		tracks.sprite_frames = track_art
 	tracks.visible = has_tracks
 	var rear_wheels := []
 	if has_tracks:

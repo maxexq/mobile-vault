@@ -72,6 +72,7 @@
     "vehicle_ambience": true,
     "enemy_size": true,
     "cozy_roof": true,
+    "mod_detail_fine": true,
     "driver_cab": true,
     "audio_ambience": true,
     "audio_sfx": true,

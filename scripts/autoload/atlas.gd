@@ -113,14 +113,16 @@ func strip_frames(prefix: String, n: int, fps: float, loop: bool = true) -> Spri
 	return sf
 
 
-func track_frames() -> SpriteFrames:
-	if _frames_cache.has("_tracks"):
-		return _frames_cache["_tracks"]
+## MV-566: fine = the redrawn belt (mod_tracks_<i>_fine, switch mod_detail_fine)
+func track_frames(fine: bool = false) -> SpriteFrames:
+	var key := "_tracks_fine" if fine else "_tracks"
+	if _frames_cache.has(key):
+		return _frames_cache[key]
 	var sf := SpriteFrames.new()
 	if not sf.has_animation("default"):
 		sf.add_animation("default")
 	sf.set_animation_speed("default", 12.0)
 	for i in 4:
-		sf.add_frame("default", tex("mod_tracks_%d" % i))
-	_frames_cache["_tracks"] = sf
+		sf.add_frame("default", tex(("mod_tracks_%d_fine" if fine else "mod_tracks_%d") % i))
+	_frames_cache[key] = sf
 	return sf

@@ -364,6 +364,11 @@ func _run() -> void:
 		await _engine_detail_test()
 		_finish()
 		return
+	if "--only=mod_detail" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _mod_detail_fine_test()
+		_finish()
+		return
 	if "--only=cozy_roof" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _cozy_roof_test()
@@ -1072,6 +1077,7 @@ func _run() -> void:
 	await _enemy_size_test()
 	await _vehicle_detail_test()
 	await _cozy_roof_test()
+	await _mod_detail_fine_test()
 	await _engine_detail_test()
 	await _idle_motion_test()
 	await _driver_cab_test()
@@ -5894,6 +5900,59 @@ func _exterior_mods_test() -> void:
 	m.set_process(true)
 	v.set_xray(saved_view)
 	Game.weather_changed.emit(str(Game.s.weather))
+
+
+## MV-566: finer exterior mod art (*_fine) swaps in with the switch and keeps every size / anchor
+func _mod_detail_fine_test() -> void:
+	var v: Vehicle = main.vehicle
+	var bases := ["mod_spike_ram_1", "mod_spike_ram_2", "mod_spike_ram_3", "mod_roof_turret_1", "mod_roof_turret_2",
+		"mod_roof_turret_3", "mod_shock_1", "mod_shock_2", "mod_shock_3", "mod_fuel_tank", "mod_tracks_0", "mod_tracks_1",
+		"mod_tracks_2", "mod_tracks_3", "mod_armor_wall", "mod_solar_cover", "mod_rad_shield", "mod_rain_catcher", "mod_heater"]
+	var ok := true
+	for b in bases:
+		var r0 = Atlas.regions.get(b)
+		var r1 = Atlas.regions.get(b + "_fine")
+		if r0 == null or r1 == null or int(r0[2]) != int(r1[2]) or int(r0[3]) != int(r1[3]):
+			ok = false
+			print("[autotest] fine mod sprite wrong: %s %s / %s" % [b, str(r0), str(r1)])
+	_check("mod detail: 19 fine sprites at the size of their originals", ok)
+	var was_mods: Dictionary = Game.s.mods.duplicate(true)
+	var was_tier := Game.tier()
+	var was_tr := Game.trailers()
+	Features.set_override("features", "exterior_mod_ambience", true)
+	Dev.set_trailers(0)
+	for t in ["van", "rig"]:
+		Dev.set_tier(t)
+		Dev.mods_all(true)
+		await wait(0.1)
+		for on in [true, false]:
+			Dev.mod_detail_fine_switch(on)
+			await wait(0.05)
+			var mods := v._mods_root.get_children().filter(func(m): return not m.is_queued_for_deletion() and m.has_meta("art"))
+			var good := mods.size() > 0
+			for m in mods:
+				var art := str(m.get_meta("art"))
+				var want := str(m.get_meta("region")) + ("_fine" if on and Atlas.has(str(m.get_meta("region")) + "_fine") else "")
+				var at: AtlasTexture = m.texture
+				if art != want or at.region.size != Atlas.tex(str(m.get_meta("region"))).region.size:
+					good = false
+			var fine_n := mods.filter(func(m): return str(m.get_meta("art")).ends_with("_fine")).size()
+			_check("mod detail %s: switch %s = %d of %d mod sprites fine, tracks %s" % [t, "on" if on else "off", fine_n, mods.size(),
+				"fine" if v.tracks.sprite_frames == Atlas.track_frames(true) else "old"],
+				good and (fine_n > 0) == on and (v.tracks.sprite_frames == Atlas.track_frames(true)) == on)
+			# MV-565 motion strips that replace a whole mod texture are cut from the same art
+			var strips: Array = v.mod_motion.bindings.map(func(b): return str(b.prefix)).filter(func(p):
+				return p.begins_with("anim_ext_turret") or p.begins_with("anim_ext_shock") or p.begins_with("anim_ext_heater_cap") or p.begins_with("anim_ext_catcher_hem"))
+			_check("mod detail %s: switch %s = motion strips %s" % [t, "on" if on else "off", str(strips)],
+				strips.size() > 0 and strips.all(func(p): return p.ends_with("_fine") == on))
+			if on:
+				await shot("mod_detail_fine_" + t)
+	Features.set_override("features", "exterior_mod_ambience", null)
+	Features.set_override("features", "mod_detail_fine", null)
+	Game.s.mods = was_mods
+	Mods.mods_changed.emit()
+	Dev.set_tier(was_tier)
+	Dev.set_trailers(was_tr)
 	await wait(0.1)
 
 

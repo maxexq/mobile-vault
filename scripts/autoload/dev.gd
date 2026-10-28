@@ -433,6 +433,11 @@ func exterior_mod_preview(what: String) -> bool:
 	return v != null and v.mod_motion.preview(what)
 
 
+## MV-566: the mod_detail_fine switch (finer exterior mod art; off = the old sprites)
+func mod_detail_fine_switch(v: bool) -> void:
+	feature_set("mod_detail_fine", v)
+
+
 ## MV-462: the cozy_roof switch (new water tank, dish, planter trays and rest-deck art; off = the old roof)
 func cozy_roof_switch(v: bool) -> void:
 	feature_set("cozy_roof", v)

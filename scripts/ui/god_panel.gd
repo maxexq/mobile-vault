@@ -327,6 +327,9 @@ func _tab_vehicle() -> void:
 		"green" if Features.on("cozy_roof") else "red"), _b("ไม่มี", func(): Dev.roof_deck_preview(0), "gray"),
 		_b("Lv1", func(): Dev.roof_deck_preview(1)), _b("Lv2", func(): Dev.roof_deck_preview(2)), _b("Lv3", func(): Dev.roof_deck_preview(3))],
 		"หลังคา MV-462 · ดาดฟ้าพัก Lv%d" % Mods.level("roof_deck"))
+	_row([_b("ของแต่งละเอียด: " + ("เปิด" if Features.on("mod_detail_fine") else "ปิด"), func(): Dev.mod_detail_fine_switch(not Features.on("mod_detail_fine")),
+		"green" if Features.on("mod_detail_fine") else "red"), _b("มอดเต็มทุกตัว", func(): Dev.mods_all(true), "gray")],
+		"ของแต่งรถภายนอก MV-566 (ปิด = ภาพเดิม)")
 	_row([_b("คนขับขยับ: " + ("เปิด" if Features.on("driver_cab") else "ปิด"), func(): Dev.driver_cab_switch(not Features.on("driver_cab")),
 		"green" if Features.on("driver_cab") else "red"), _b("กะพริบตา", func(): Dev.driver_cab_preview("blink"), "gray", true),
 		_b("ไฟหน้าปัด", func(): Dev.driver_cab_preview("lamp"), "gray", true), _b("จับพวงมาลัย", func(): Dev.driver_cab_preview("wheel"), "gray", true)],
