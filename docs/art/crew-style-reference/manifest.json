@@ -1949,7 +1949,7 @@
   "cast_animations/truck_driver/work/7.png": "06648f5bb255a913c4a2da9db14dff5566fb59878565056ea322c95cce01615b",
   "cast_animations/truck_driver/work/8.png": "38fca3cf6ba4767c1ca67108000c473db478fe29261f8e58992c05b6584dc7af",
   "concept_front.png": "6b79d72a573787cc7bbaeac906b11599815994edf9e3cdcd078442dfed22b521",
-  "portraits/aviator_pilot.png": "baa8b9780297647885166d8136bf327bd205a166942cbdcc651b8719fff8f755",
+  "portraits/aviator_pilot.png": "62239e6ed7293350981460efb52207d123390ddf120f99423f9b77fd5d4691ca",
   "portraits/biker.png": "9d2b1674684f32b1aafd4322c5fd3925ad3c949ea39753d48fd1094acb92eef7",
   "portraits/bus_mechanic.png": "0f40660ac5233be5958ef011518a202fc5cd2e98223c1cfe8b99530957e25e87",
   "portraits/construction_worker.png": "fbff7b28229e1d860ca12a593c6ac781d3a4a7d9fe2b8796110134001b0b8136",
@@ -1968,7 +1968,7 @@
   "portraits/punk_musician.png": "59764663d919af32a9c218c76312c6e998b8ad740a5007b71ff9ceff7b035560",
   "portraits/retired_teacher.png": "08bb10207b4890df3bc57be00999d7d6ba7e969de1efc2486500ec1bafe2d256",
   "portraits/scientist.png": "ced14ee0372b2ff7483fcfcc89d37753d3cb867f368b622c98b7189f8e8cacd0",
-  "portraits/soldier.png": "5557acf4b60592b24b8a5d8e775e44a51143b5ccb2425cb057a32a01d62c2b35",
+  "portraits/soldier.png": "2afa14b28ae8ecc843a7a8449d936e3a820377099fe02bad6b26bae4c924474b",
   "portraits/street_cook.png": "69c14573a2822c426faefeb8fed1e54dd5ff1212ad625d9ae6ffce7f53440110",
   "portraits/teen_scrap_runner.png": "1685094a5805307eb3eb8aee310afe7604f9ecc7a16bdb3a3e56cc5e6e5e4367",
   "portraits/teen_tinkerer.png": "1c7f02031ba8719e035f3f85e24e60f7335a2ceb1fa4a63ebeec4d080d7e4fad",
@@ -2385,7 +2385,9 @@
     "firefighter",
     "old_fisherman",
     "teen_tinkerer",
-    "street_cook"
+    "street_cook",
+    "aviator_pilot",
+    "soldier"
    ],
    "how": "edit_image_pro_flash on the teen_scrap_runner portrait itself: \"Turn this portrait into a different person while keeping exactly the same art style, pixel size, head size, framing, three-quarter angle, shading and muted palette: <person>\", then snapped. Use this for every new portrait so head size and cartoon style match."
   }
