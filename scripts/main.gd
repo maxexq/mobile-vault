@@ -176,7 +176,11 @@ func _ready() -> void:
 	Features.changed.connect(_on_features_changed)
 
 	Game.floating_text.connect(_spawn_float)
-	get_viewport().size_changed.connect(_on_resize)
+	# MV-571: deferred. Changing content_scale_size inside size_changed re-entered the window's own resize update; the
+	# outer update then attached the picture to the screen with the rect it had worked out from the OLD design size.
+	# Desktop resizes come in bursts that hid it; one web rotation left the game shrunk in the middle of the screen
+	# (black bars) while touches still mapped to the full canvas, so taps landed away from what was drawn.
+	get_viewport().size_changed.connect(_on_resize, CONNECT_DEFERRED)
 	_on_resize()
 
 	# live backdrop behind the title screen

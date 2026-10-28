@@ -8705,6 +8705,15 @@ func _window_fit_test() -> void:
 	await wait(0.4)
 	_check("window fit: rotating drops a gesture in flight (touches %s, pressing %s)" % [main._touches, main._pressing],
 		main._touches.is_empty() and not main._pressing)
+	var deferred := false
+	for c in get_viewport().size_changed.get_connections():
+		if c.callable == Callable(main, "_on_resize"):
+			deferred = (int(c.flags) & CONNECT_DEFERRED) != 0
+	_check("window fit: the UI scale follows a resize deferred (not inside the window's own resize update)", deferred)
+	var full := Rect2(Vector2.ZERO, Vector2(get_window().size))
+	var drawn := Rect2(get_window().get_final_transform().origin, Vector2(get_window().content_scale_size) * get_window().get_final_transform().get_scale())
+	_check("window fit: after rotating, the game fills the window (drawn %s, window %s)" % [drawn, full],
+		drawn.size.x >= full.size.x - main.pixel_scale and drawn.size.y >= full.size.y - main.pixel_scale)
 	get_window().size = keep_win
 	await wait(0.6)
 	Settings.set_value("tips", keep_tips)
