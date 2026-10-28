@@ -152,6 +152,17 @@ towards a realistic look with smaller heads.
 
 ![The 24 cast portraits](crew-style-reference/previews/portraits.png)
 
+### Medic portrait and tutorial poses
+
+The reference medic has its own portrait (`approved/portraits/medic.png`) and four tutorial
+poses for the guide who explains the game, in `approved/portraits/tutorial/`:
+`medic_listen` (index finger raised), `medic_point` (open hand to the right: put the
+tutorial text or highlighted UI on that side), `medic_thumbs_up` (well done) and
+`medic_clipboard` (shows a clipboard: how something works). Same face, framing and palette
+as the cast portraits.
+
+![Medic sprite, portrait and the four tutorial poses](crew-style-reference/previews/medic-portraits.png)
+
 ## Making a new crew character
 
 1. **Design** (5 generations per draft): `edit_image_pro_flash`, `method` text, `image` =
