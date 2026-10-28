@@ -64,7 +64,7 @@ v3 over templates: the v3 clips keep the reference look, the templates drift.
 
 ## Approved cast designs
 
-Nineteen more crew were designed from the medic and approved on 2026-10-29 as designs only
+Twenty-four more crew were designed from the medic and approved on 2026-10-29 as designs only
 (no character rotations or animations yet). Files in
 [`approved/cast/`](crew-style-reference/approved/cast/), prompts and post-processing in the
 manifest `cast`. All stand on row 42 like the medic.
@@ -94,6 +94,11 @@ In the HD rooms: [`previews/cast-in-rooms.png`](crew-style-reference/previews/ca
 | `hunter.png` | Middle-aged woman, hunter: fur-lined parka, bow and quiver |
 | `scientist.png` | Young woman, scientist: light-blue lab coat, goggles, glowing test tube |
 | `truck_driver.png` | Middle-aged man, truck driver: red cap, red-and-black flannel, thermos |
+| `lounge_singer.png` | Adult woman, lounge singer: auburn waves, red evening gown, long gloves, microphone |
+| `biker.png` | Adult woman, biker: platinum-blonde hair, cropped leather jacket, tight jeans |
+| `gunslinger.png` | Adult woman, gunslinger: cowboy hat, leather corset vest, hip revolver |
+| `aviator_pilot.png` | Adult woman, aviator: black bob, flying cap and goggles, bomber jacket, white scarf |
+| `fortune_teller.png` | Adult woman, fortune teller and dancer: long black hair, gold jewellery, violet skirt, tarot cards |
 
 Notes:
 
@@ -105,7 +110,10 @@ Notes:
 - **Back foot:** the medic stands slightly angled and shows its back foot. Sixteen of the
   designs only showed one leg, so their bottom leg rows were copied 3 px right and 1 px up,
   darkened and put behind the figure (manifest `cast.postprocess`). The cook, teacher and
-  firefighter already showed both feet. Check this on every new design.
+  firefighter already showed both feet; the lounge singer and fortune teller wear
+  floor-length skirts. Check this on every new design.
+- The five glamorous women were made without palette correction; the fortune teller's
+  violet has few matches in the master palette.
 - The punk musician's legs came out 2 px long; two shin rows were removed.
 
 If they are animated, keep these designs as they are and add accents only through a new

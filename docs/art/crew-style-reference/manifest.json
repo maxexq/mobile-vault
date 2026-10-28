@@ -318,6 +318,46 @@
     "job": "truck driver",
     "palette_correction": false,
     "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a big-bellied middle-aged man truck driver, scruffy beard, faded red trucker cap, red-and-black checked flannel shirt with rolled sleeves (the shirt is clearly red and black), worn blue jeans, cowboy boots, thermos in hand"
+   },
+   "lounge_singer": {
+    "file": "cast/lounge_singer.png",
+    "age": "adult",
+    "gender": "female",
+    "job": "lounge singer",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a beautiful glamorous adult woman lounge singer, long wavy auburn hair over one shoulder, red lipstick, elegant fitted deep-red evening gown with a side slit, long black gloves, small fur stole, holding an old microphone"
+   },
+   "biker": {
+    "file": "cast/biker.png",
+    "age": "adult",
+    "gender": "female",
+    "job": "biker",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a beautiful confident adult woman biker, long platinum-blonde hair, aviator sunglasses pushed up on her head, cropped black leather jacket over a fitted white top, tight dark jeans, black biker boots, chain belt"
+   },
+   "gunslinger": {
+    "file": "cast/gunslinger.png",
+    "age": "adult",
+    "gender": "female",
+    "job": "gunslinger bounty hunter",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a beautiful adult woman gunslinger bounty hunter, long wavy dark-brown hair, worn tan cowboy hat, fitted brown leather corset vest over a white shirt with rolled sleeves, revolver in a hip holster, tall leather boots, confident smirk"
+   },
+   "aviator_pilot": {
+    "file": "cast/aviator_pilot.png",
+    "age": "adult",
+    "gender": "female",
+    "job": "aviator pilot",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a beautiful adult woman aviator pilot, short glossy black bob hair, red lipstick, leather aviator cap with goggles, fitted brown bomber jacket with a fur collar, long white scarf trailing behind, slim khaki trousers tucked into boots"
+   },
+   "fortune_teller": {
+    "file": "cast/fortune_teller.png",
+    "age": "adult",
+    "gender": "female",
+    "job": "fortune teller and dancer",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a beautiful mysterious adult woman fortune teller and dancer, very long straight black hair, gold hoop earrings and bangles, cropped purple top, flowing layered violet skirt with gold trim, bare feet with ankle bells, holding tarot cards"
    }
   },
   "postprocess": {
@@ -338,12 +378,16 @@
      "punk_musician",
      "hunter",
      "scientist",
-     "truck_driver"
+     "truck_driver",
+     "biker",
+     "gunslinger",
+     "aviator_pilot"
     ],
     "how": "copy the bottom leg rows whose opaque width is <= 8 px (truck_driver: last 6 rows at <= 9 px), shift them +3 x and -1 y, darken non-outline pixels to 60 %, composite behind the figure, so a back foot shows like the medic's angled stance"
    },
    "punk_musician": "shin rows 38-39 removed (legs were 2 px too long), then the back foot",
-   "feet_row": "every figure ends on row 42 like the medic; old_fisherman and street_cook moved up 1 px"
+   "feet_row": "every figure ends on row 42 like the medic; old_fisherman, street_cook and lounge_singer moved up 1 px",
+   "long_skirts": "lounge_singer and fortune_teller wear floor-length skirts, so no back foot is added"
   }
  },
  "files_sha256": {
@@ -440,10 +484,15 @@
   "animations/work/6.png": "a600e86d32fe9b11c893d83bb8596b869fc6939a6ea4e6da69a9c47717456840",
   "animations/work/7.png": "c8144c5934ef7769c7d5c87bf6b4e8a0796cbfe8a70001b2de91b51ea33a265f",
   "animations/work/8.png": "2461560e8462d4004800e9ec0c5d42ed7a972efb58c95bffa9297dcbf6e78455",
+  "cast/aviator_pilot.png": "87263fed3312bae2959a1ade42c26c0f4fc2b5103a2f96de49ad7060900f33de",
+  "cast/biker.png": "a5681ab3077bdfa9cd4e2e286c0e28bcbd72abdba923086b044e2eb5264de64f",
   "cast/bus_mechanic.png": "b2a31b00e9eddc3b03899eb760670f701411366d3feb4dcd17fc1bbdac4ba94c",
   "cast/construction_worker.png": "df257afd5c2e3764e5cb3adde53fa54d2da8296edb94051d03ad75cdcbe84e73",
   "cast/firefighter.png": "0154cc71fc7c69d6a9269921059fe7d3d2542897d95aadf2e15f9a3b48c605dd",
+  "cast/fortune_teller.png": "f062906d39e676c2df1b04cc839244f02df8c3d701120699c59cccd7aab8fa2d",
+  "cast/gunslinger.png": "c1367972768b7a4d5e530097d76e3506e8ef0dd4b38ec8f2f738ab8bc2057e01",
   "cast/hunter.png": "31aa4a7a605be4519c33fad0b1bdd058be2055a26ee23b60b9ed2340a33e1f62",
+  "cast/lounge_singer.png": "3aa1f7f5ca2e8a3e2d9230447ce8a43157bb6f7e19230a15f331d811b11f8630",
   "cast/monk.png": "e87349313a01533987220a59c599fc059bc8bbddb31078132872819bd38f9712",
   "cast/motorbike_courier.png": "233df300e0ac5aa9275387ece067108f6700ac15518dc5081ca2b649303c4bae",
   "cast/office_worker.png": "301e89954766d9349f34875a4857fd27867b358d5e53f61d03016f87b47b96bd",
