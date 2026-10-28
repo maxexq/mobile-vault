@@ -8,7 +8,7 @@ compatibility_date = "2026-10-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "mobile-vault-asset-log"
-database_id = "00000000-0000-0000-0000-000000000000"  # replaced by `wrangler d1 create` output
+database_id = "df3cb7e6-a59d-49a2-a176-990a8b8bf0ca"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
