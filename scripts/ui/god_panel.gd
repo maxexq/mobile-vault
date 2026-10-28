@@ -739,6 +739,9 @@ func _tab_sys() -> void:
 		chb.append(_b(cid, func(): Dev.channel_preview(cid), "yellow" if BuildInfo.channel_preview == cid else "gray"))
 	chb.append(_b("ของจริง", func(): Dev.channel_preview(""), "green" if BuildInfo.channel_preview == "" else "gray"))
 	_row(chb, "ดูป้ายช่อง")
+	_row([_b("ผู้ทดสอบ (ครบ)", func(): Dev.settings_player_view(false), "yellow" if not Dev.player_view else "gray"),
+		_b("ผู้เล่น", func(): Dev.settings_player_view(true), "yellow" if Dev.player_view else "gray")],
+		"ตั้งค่าแบบ (MV-588) · settings_privacy %s" % ("เปิด" if Features.on("settings_privacy") else "ปิด"))
 	_note("สภาพแวดล้อม: %s · เซิร์ฟเวอร์ %s · ไฟล์ตั้งค่ารีโมต %s%s" % [BuildInfo.env().to_upper(), BuildInfo.cloud_project(),
 		Features.remote_files(BuildInfo.env())[0], (" · " + BuildInfo.page_host()) if BuildInfo.page_host() != "" else ""])
 	var eb := []
