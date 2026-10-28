@@ -163,7 +163,7 @@
   }
  },
  "cast": {
-  "method": "edit_image_pro_flash, method text, image = approved/rotations/east.png, no_background, use_color_palette_correction, seed 1, 5 generations each",
+  "method": "edit_image_pro_flash, method text, image = approved/rotations/east.png, no_background, seed 1, 5 generations each; use_color_palette_correction true unless the character needs an accent colour the medic lacks (then false and say the colour explicitly)",
   "status": "approved designs (no animations yet)",
   "approved_on": "2026-10-29",
   "characters": {
@@ -172,64 +172,178 @@
     "age": "teen",
     "gender": "female",
     "job": "scrap runner",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a teenage girl scrap runner, short messy bob hair with a faded red bandana, oversized patched olive-green hoodie, dark cargo shorts over grey leggings, worn sneakers, slingshot tucked in her belt"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a teenage girl scrap runner, short messy bob hair with a faded red bandana, oversized patched olive-green hoodie, dark cargo shorts over grey leggings, worn sneakers, slingshot tucked in her belt",
+    "palette_correction": true
    },
    "bus_mechanic": {
     "file": "cast/bus_mechanic.png",
     "age": "middle-aged",
     "gender": "female",
     "job": "bus mechanic",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a middle-aged woman bus mechanic, hair tied up under a faded blue headscarf, welding goggles on her forehead, grease-stained grey overalls with rolled sleeves, tool belt with a wrench, heavy work boots"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a middle-aged woman bus mechanic, hair tied up under a faded blue headscarf, welding goggles on her forehead, grease-stained grey overalls with rolled sleeves, tool belt with a wrench, heavy work boots",
+    "palette_correction": true
    },
    "street_cook": {
     "file": "cast/street_cook.png",
     "age": "middle-aged",
     "gender": "male",
     "job": "former street food cook",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a stocky middle-aged man, former street food cook, short greying hair, thick moustache and stubble, white towel over his shoulder, stained apron over a brown shirt, dark trousers, sandals"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a stocky middle-aged man, former street food cook, short greying hair, thick moustache and stubble, white towel over his shoulder, stained apron over a brown shirt, dark trousers, sandals",
+    "palette_correction": true
    },
    "retired_teacher": {
     "file": "cast/retired_teacher.png",
     "age": "old",
     "gender": "male",
     "job": "retired school teacher turned radio operator",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: an old man, retired school teacher, slightly hunched, bald top with messy white side hair, round glasses, white moustache, beige knitted cardigan over a grey shirt, grey trousers, worn shoes, holding a walking cane"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: an old man, retired school teacher, slightly hunched, bald top with messy white side hair, round glasses, white moustache, beige knitted cardigan over a grey shirt, grey trousers, worn shoes, holding a walking cane",
+    "palette_correction": true
    },
    "soldier": {
     "file": "cast/soldier.png",
     "age": "young",
     "gender": "male",
     "job": "soldier",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a young male soldier, dented olive army helmet, worn olive camouflage fatigues with a tactical vest, rifle slung on his back, combat boots, dog tags"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a young male soldier, dented olive army helmet, worn olive camouflage fatigues with a tactical vest, rifle slung on his back, combat boots, dog tags",
+    "palette_correction": true
    },
    "police_officer": {
     "file": "cast/police_officer.png",
     "age": "middle-aged",
     "gender": "female",
     "job": "police officer",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a middle-aged woman police officer, short dark hair under a navy police cap with a badge, faded navy uniform shirt with a dark bulletproof vest, baton and radio on her belt, dark trousers, boots"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a middle-aged woman police officer, short dark hair under a navy police cap with a badge, faded navy uniform shirt with a dark bulletproof vest, baton and radio on her belt, dark trousers, boots",
+    "palette_correction": true
    },
    "teen_tinkerer": {
     "file": "cast/teen_tinkerer.png",
     "age": "teen",
     "gender": "male",
     "job": "electronics tinkerer",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a teenage boy electronics tinkerer, messy brown hair, magnifying goggles on his head, oversized grey t-shirt with a utility vest full of screwdrivers, coiled wires over his shoulder, shorts, sneakers"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a teenage boy electronics tinkerer, messy brown hair, magnifying goggles on his head, oversized grey t-shirt with a utility vest full of screwdrivers, coiled wires over his shoulder, shorts, sneakers",
+    "palette_correction": true
    },
    "plant_grower": {
     "file": "cast/plant_grower.png",
     "age": "young",
     "gender": "female",
     "job": "plant grower",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a young woman plant grower, long braided hair, wide straw hat, green work apron with seed pouches over a rolled-sleeve shirt, rubber boots, holding a small watering can"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a young woman plant grower, long braided hair, wide straw hat, green work apron with seed pouches over a rolled-sleeve shirt, rubber boots, holding a small watering can",
+    "palette_correction": true
    },
    "old_seamstress": {
     "file": "cast/old_seamstress.png",
     "age": "old",
     "gender": "female",
     "job": "seamstress",
-    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: an old woman seamstress, grey hair in a bun, reading glasses on a chain, maroon knitted shawl over a long dark dress, measuring tape around her neck, small sewing bag in hand"
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: an old woman seamstress, grey hair in a bun, reading glasses on a chain, maroon knitted shawl over a long dark dress, measuring tape around her neck, small sewing bag in hand",
+    "palette_correction": true
+   },
+   "motorbike_courier": {
+    "file": "cast/motorbike_courier.png",
+    "age": "young",
+    "gender": "female",
+    "job": "motorbike courier",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a young woman motorbike courier, short ponytail, scuffed dull red leather jacket (the jacket is clearly red), fingerless gloves, dark jeans, tall boots, motorbike helmet held under one arm, delivery bag across the back"
+   },
+   "firefighter": {
+    "file": "cast/firefighter.png",
+    "age": "middle-aged",
+    "gender": "male",
+    "job": "firefighter",
+    "palette_correction": true,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a burly middle-aged man firefighter, soot-stained tan turnout coat with yellow reflective stripes, dented fire helmet, thick gloves, heavy boots, fire axe on his back"
+   },
+   "old_fisherman": {
+    "file": "cast/old_fisherman.png",
+    "age": "old",
+    "gender": "male",
+    "job": "fisherman",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: an old man fisherman, white beard, faded bucket hat, worn mustard-yellow rain jacket (the jacket is clearly yellow), rolled-up trousers, rubber boots, fishing rod over his shoulder and a small bucket in hand"
+   },
+   "office_worker": {
+    "file": "cast/office_worker.png",
+    "age": "middle-aged",
+    "gender": "male",
+    "job": "ex office worker",
+    "palette_correction": true,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a middle-aged man ex office worker, neat side-parted hair, cracked glasses, torn grey suit jacket over a dirty white shirt, red necktie tied around his head like a headband, battered briefcase in hand"
+   },
+   "construction_worker": {
+    "file": "cast/construction_worker.png",
+    "age": "middle-aged",
+    "gender": "female",
+    "job": "construction worker",
+    "palette_correction": true,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a strong middle-aged woman construction worker, scuffed yellow hard hat, faded orange hi-vis vest over a grey t-shirt, work trousers with knee pads, steel-toe boots, sledgehammer resting on her shoulder"
+   },
+   "monk": {
+    "file": "cast/monk.png",
+    "age": "young",
+    "gender": "male",
+    "job": "Thai Buddhist monk",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a young Thai Buddhist monk, shaved head, calm face, faded saffron-orange robe draped over one shoulder (the robe is clearly orange), simple sandals, wooden prayer beads in one hand, alms bowl on a strap"
+   },
+   "punk_musician": {
+    "file": "cast/punk_musician.png",
+    "age": "teen",
+    "gender": "female",
+    "job": "punk musician",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a teenage girl punk musician, short spiky hair dyed faded pink (the hair is clearly pink), studded black jacket covered in patches, ripped tights, chunky boots, battered guitar case on her back"
+   },
+   "hunter": {
+    "file": "cast/hunter.png",
+    "age": "middle-aged",
+    "gender": "female",
+    "job": "hunter and tracker",
+    "palette_correction": true,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a middle-aged woman hunter and tracker, weathered face, fur-lined hooded brown parka, leather bracers, quiver of arrows on her back, recurve bow in hand, fur boots"
+   },
+   "scientist": {
+    "file": "cast/scientist.png",
+    "age": "young",
+    "gender": "female",
+    "job": "scientist",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a young woman scientist, long dark hair in a low ponytail, safety goggles pushed up on her head, stained pale-blue lab coat (the coat is clearly light blue) over a black turtleneck, clipboard under her arm, glowing green test tube in hand"
+   },
+   "truck_driver": {
+    "file": "cast/truck_driver.png",
+    "age": "middle-aged",
+    "gender": "male",
+    "job": "truck driver",
+    "palette_correction": false,
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted tones, chibi proportions, side-view pose and canvas: a big-bellied middle-aged man truck driver, scruffy beard, faded red trucker cap, red-and-black checked flannel shirt with rolled sleeves (the shirt is clearly red and black), worn blue jeans, cowboy boots, thermos in hand"
    }
+  },
+  "postprocess": {
+   "back_foot": {
+    "who": [
+     "teen_scrap_runner",
+     "bus_mechanic",
+     "soldier",
+     "police_officer",
+     "teen_tinkerer",
+     "plant_grower",
+     "old_seamstress",
+     "motorbike_courier",
+     "old_fisherman",
+     "office_worker",
+     "construction_worker",
+     "monk",
+     "punk_musician",
+     "hunter",
+     "scientist",
+     "truck_driver"
+    ],
+    "how": "copy the bottom leg rows whose opaque width is <= 8 px (truck_driver: last 6 rows at <= 9 px), shift them +3 x and -1 y, darken non-outline pixels to 60 %, composite behind the figure, so a back foot shows like the medic's angled stance"
+   },
+   "punk_musician": "shin rows 38-39 removed (legs were 2 px too long), then the back foot",
+   "feet_row": "every figure ends on row 42 like the medic; old_fisherman and street_cook moved up 1 px"
   }
  },
  "files_sha256": {
@@ -326,15 +440,25 @@
   "animations/work/6.png": "a600e86d32fe9b11c893d83bb8596b869fc6939a6ea4e6da69a9c47717456840",
   "animations/work/7.png": "c8144c5934ef7769c7d5c87bf6b4e8a0796cbfe8a70001b2de91b51ea33a265f",
   "animations/work/8.png": "2461560e8462d4004800e9ec0c5d42ed7a972efb58c95bffa9297dcbf6e78455",
-  "cast/bus_mechanic.png": "06c3d13fca3323ba4c02c0b5a3157689ba06950a0758f407673ced42a258415b",
-  "cast/old_seamstress.png": "5dbd02c24694fc96c70400f7c56db08dd7ca3bd61c99b95a230ca34ded8185d2",
-  "cast/plant_grower.png": "625107b95a321c2e50ece26b43f03fcd7ce17ce88b995774209919c3cd57eda6",
-  "cast/police_officer.png": "4935b491f7752c792e2c196fe3c99196c97b6e6a5ee2e348ab223d42c1e62b8a",
-  "cast/retired_teacher.png": "8442b01595e85922935722972fd3878ee18815d431a0d11a839e012633cfc464",
-  "cast/soldier.png": "28486f8f7413e5bb0af8bf83116bd9c76293468c74b26c7a4d4cbbc73c4d0ba0",
-  "cast/street_cook.png": "9860bae4fbac11861eff6946e8bcd72be9d3a90b1f8fbf5048d83541e1eba26f",
-  "cast/teen_scrap_runner.png": "7be3f8627944d47f736434e0c411f4d85bc9b41ff3827340b3cefbfc0b4889b7",
-  "cast/teen_tinkerer.png": "de1b4f1f5aacf6f17b173820bf6c177b8d441d3a8dc379776071ad56f93f1233",
+  "cast/bus_mechanic.png": "b2a31b00e9eddc3b03899eb760670f701411366d3feb4dcd17fc1bbdac4ba94c",
+  "cast/construction_worker.png": "df257afd5c2e3764e5cb3adde53fa54d2da8296edb94051d03ad75cdcbe84e73",
+  "cast/firefighter.png": "0154cc71fc7c69d6a9269921059fe7d3d2542897d95aadf2e15f9a3b48c605dd",
+  "cast/hunter.png": "31aa4a7a605be4519c33fad0b1bdd058be2055a26ee23b60b9ed2340a33e1f62",
+  "cast/monk.png": "e87349313a01533987220a59c599fc059bc8bbddb31078132872819bd38f9712",
+  "cast/motorbike_courier.png": "233df300e0ac5aa9275387ece067108f6700ac15518dc5081ca2b649303c4bae",
+  "cast/office_worker.png": "301e89954766d9349f34875a4857fd27867b358d5e53f61d03016f87b47b96bd",
+  "cast/old_fisherman.png": "1f1238751a9069bc684669e487657b5d371c25684e974c0c1847dcbfd5213851",
+  "cast/old_seamstress.png": "d7ebd4fb58715009480a3daf8552bd75d364491ad293db476dea073ab6d238a9",
+  "cast/plant_grower.png": "7604c4c6c973b1a527d30a0cc32aa72023c2e0b898e2eeb550c9fd3d1281cf92",
+  "cast/police_officer.png": "87e6a924bc34887dbd8508c61bf4b840f61adfc22de844c4a44b614c9fa94fea",
+  "cast/punk_musician.png": "962f756c328916ac15fee948865c469f50accd2ca4e02b2e243a225ef2d24ad5",
+  "cast/retired_teacher.png": "f92e72c8a2ce63ba9134fc590ba84c9bc6d708fab9a5346e7a6b9638b4d0cc22",
+  "cast/scientist.png": "c6fbb69f7d7ca43dec638dd75db427b9237f953e39386aadb826d7031be848f2",
+  "cast/soldier.png": "af2eaa0fc9e5c454f3bfa0742ee6a784877560010961a90a00b55e2fb0ad68f6",
+  "cast/street_cook.png": "2a666122221232ab60b5974de3d9a87e87ac22652d9c6f46fab37de67eea7c75",
+  "cast/teen_scrap_runner.png": "92d83eb09de2fb01e3aa4e1a5fef5147bf6b6cc31023495ea40b6b7f060f8500",
+  "cast/teen_tinkerer.png": "1acfd10548e918d184b38e8fb4896513a133ce1ea3da960facb63f1efdfeae80",
+  "cast/truck_driver.png": "09fe8e4736de9e4c09cc058858b2f980d9adb9dd0206d4dd742ed8d5ff0d000f",
   "concept_front.png": "6b79d72a573787cc7bbaeac906b11599815994edf9e3cdcd078442dfed22b521",
   "rotations/east.png": "748aa0440ee6d879ee64ce4f622b7fddc1fcc5193b6ace3827ba04cdc5cd611b",
   "rotations/north-east.png": "175db82adb2718b88faafc34c8e531c527c97534943045ed6ecc9ea5996f9c6f",

@@ -64,12 +64,14 @@ v3 over templates: the v3 clips keep the reference look, the templates drift.
 
 ## Approved cast designs
 
-Nine more crew were designed from the medic and approved on 2026-10-29 as designs only (no
-character rotations or animations yet). Files in
-[`approved/cast/`](crew-style-reference/approved/cast/), prompts in the manifest `cast`.
+Nineteen more crew were designed from the medic and approved on 2026-10-29 as designs only
+(no character rotations or animations yet). Files in
+[`approved/cast/`](crew-style-reference/approved/cast/), prompts and post-processing in the
+manifest `cast`. All stand on row 42 like the medic.
 
-![The medic and the first four cast designs](crew-style-reference/previews/cast.png)
-![The medic and the next five cast designs](crew-style-reference/previews/cast-2.png)
+![The medic and the cast designs](crew-style-reference/previews/cast.png)
+
+In the HD rooms: [`previews/cast-in-rooms.png`](crew-style-reference/previews/cast-in-rooms.png).
 
 | File | Who |
 |---|---|
@@ -82,10 +84,32 @@ character rotations or animations yet). Files in
 | `teen_tinkerer.png` | Teenage boy, electronics tinkerer: magnifying goggles, tool vest, coiled wires |
 | `plant_grower.png` | Young woman, plant grower: straw hat, braid, green apron, watering can |
 | `old_seamstress.png` | Old woman, seamstress: grey bun, glasses on a chain, maroon shawl, sewing bag |
+| `motorbike_courier.png` | Young woman, motorbike courier: red leather jacket, helmet under the arm |
+| `firefighter.png` | Middle-aged man, firefighter: turnout coat, helmet, axe |
+| `old_fisherman.png` | Old man, fisherman: bucket hat, yellow rain jacket, rod and bucket |
+| `office_worker.png` | Middle-aged man, ex office worker: torn suit, necktie headband, briefcase |
+| `construction_worker.png` | Middle-aged woman, construction worker: hard hat, hi-vis vest, sledgehammer |
+| `monk.png` | Young man, Thai Buddhist monk: saffron robe, prayer beads, alms bowl |
+| `punk_musician.png` | Teenage girl, punk musician: pink spiky hair, studded jacket, guitar case |
+| `hunter.png` | Middle-aged woman, hunter: fur-lined parka, bow and quiver |
+| `scientist.png` | Young woman, scientist: light-blue lab coat, goggles, glowing test tube |
+| `truck_driver.png` | Middle-aged man, truck driver: red cap, red-and-black flannel, thermos |
 
-Palette correction made the hoodie and headscarf greyer than asked, and the soldier and
-police officer are dark overall (they can sink into dark rooms). If they are animated, keep
-these designs as they are and add accents only through a new approved edit.
+Notes:
+
+- Palette correction made the hoodie and headscarf greyer than asked, and the soldier and
+  police officer are dark overall (they can sink into dark rooms). The six with a strong
+  accent colour (courier, fisherman, monk, punk, scientist, truck driver) were made without
+  palette correction. In a master-palette snap the punk's pink turns salmon and the
+  scientist's light blue turns cream: the palette has no pink or light blue.
+- **Back foot:** the medic stands slightly angled and shows its back foot. Sixteen of the
+  designs only showed one leg, so their bottom leg rows were copied 3 px right and 1 px up,
+  darkened and put behind the figure (manifest `cast.postprocess`). The cook, teacher and
+  firefighter already showed both feet. Check this on every new design.
+- The punk musician's legs came out 2 px long; two shin rows were removed.
+
+If they are animated, keep these designs as they are and add accents only through a new
+approved edit.
 
 ## Making a new crew character
 
@@ -98,6 +122,7 @@ these designs as they are and add accents only through a new approved edit.
    the pose but drifts to a cleaner, more saturated generic chibi, so it is not used. Palette
    correction pulls everything towards the medic's greys: ask for one clear accent colour.
 2. **Review** beside the medic at the same integer scale and inside the HD rooms; Parames picks.
+   Check the figure height (about 36-41 px, no long legs), feet on row 42 and the back foot.
 3. **Character** (about 10 generations): `create_character` mode `pro`, `concept_image_url` =
    the approved draft, size 48.
 4. **Animations** (1 generation per clip): `animate_character` v3, `directions: ["east"]`,
