@@ -9,7 +9,9 @@ no Sentry addon, SDK package or credential is bundled with Godot.
 
 `Activity.record → Trace category activity → existing Telemetry/rpc_log → Supabase logs → durable outbox → tools/sentry_forward.py → Sentry Logs`
 
-- Client switch `activity_cloud` defaults **off** until the server is configured.
+- Client switch `activity_cloud` defaults **off** in the build. The staging remote
+  config enables it after test-server setup; regular staging URLs work without
+  temporary `?ff=` overrides. UAT and production remain off by default.
   It also requires `activity_log`, `cloud_logs`, and the player's telemetry setting.
   Disabling telemetry stops new activity from entering the upload queue.
 - Existing diagnostics in category `error` are eligible for forwarding. Session,
@@ -66,7 +68,8 @@ no Sentry addon, SDK package or credential is bundled with Godot.
    minutes (GitHub scheduling can be delayed). Client upload normally adds up to 60 s.
    This is not a seconds-latency live stream. For that, run the same script in an
    existing server worker more frequently; never run it on player devices.
-6. On the staging game, enable `activity_cloud` with the remote feature switch.
+6. Reload the staging game to fetch `features.staging.json` (`activity_cloud=true`).
+   Enable the player telemetry setting and check that cloud sign-in succeeds.
    GOD → LOG/เซฟ → **ทดสอบส่งกิจกรรมไป Sentry** generates `monitoring.test` and uses
    the normal opt-in upload. In Sentry Explore → Logs, search
    `event.name:monitoring.test` and environment **test**. Verify a real player ID,
