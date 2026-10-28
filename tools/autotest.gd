@@ -7738,8 +7738,12 @@ func _drive_help_test() -> void:
 	var dest := Dev.world_arrive_offline()
 	await wait(0.3)
 	var told := toasts.any(func(t): return str(t).contains("เลือกปลายทางใหม่บนแผนที่"))
+	if Features.on("offline_summary"):
+		told = hud.offline_summary.is_open and _find_text(hud.offline_summary, "เลือกปลายทางใหม่บนแผนที่")
 	_check("drive help: the trip ended while away (%s), the away summary says so %s" % [dest, toasts.slice(-1)],
 		dest.length() > 0 and not dest.begins_with("no") and dest != "map off" and not WorldMap.driving() and Game.needs_destination() and told)
+	if hud.offline_summary.is_open:
+		hud.offline_summary.close()
 	await wait(0.2)
 	_check("drive help: the Go button shows the map while a destination is needed", hud.go_btn.icon != null and hud.go_btn.icon.region == Atlas.icon("map").region)
 	hud.go_btn.pressed.emit()

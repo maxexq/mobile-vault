@@ -859,9 +859,11 @@ func world_arrive_offline() -> String:
 	if best == "" or not WorldMap.drive_to(best):
 		return "no destination"
 	Game.s.traveling = true
-	Game._offline_progress(1800.0)
+	var report := Game._offline_progress(1800.0)
 	act("world arrive offline at %s (%.1f km)" % [best, best_km])
 	Game.travel_changed.emit()
+	if Features.on("offline_summary"):
+		Game.offline_summary_ready.emit(report)
 	return best
 
 
