@@ -137,6 +137,15 @@ animation frames together; do not mix them with the design PNG. In `work`, some 
 gained a small anvil or bench at their feet (pilot, gunslinger, hunter, lounge singer,
 fortune teller) and a few wind up behind the head.
 
+## Cast portraits
+
+Every cast character has a 64x64 bust portrait in
+[`approved/portraits/`](crew-style-reference/approved/portraits/): three-quarter view facing
+right, an expression that fits the character, snapped to the master palette so it keeps the
+game's muted tone. Recipe in the manifest `cast_portraits`.
+
+![The 24 cast portraits](crew-style-reference/previews/portraits.png)
+
 ## Making a new crew character
 
 1. **Design** (5 generations per draft): `edit_image_pro_flash`, `method` text, `image` =

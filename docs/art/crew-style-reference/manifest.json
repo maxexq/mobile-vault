@@ -1949,6 +1949,30 @@
   "cast_animations/truck_driver/work/7.png": "06648f5bb255a913c4a2da9db14dff5566fb59878565056ea322c95cce01615b",
   "cast_animations/truck_driver/work/8.png": "38fca3cf6ba4767c1ca67108000c473db478fe29261f8e58992c05b6584dc7af",
   "concept_front.png": "6b79d72a573787cc7bbaeac906b11599815994edf9e3cdcd078442dfed22b521",
+  "portraits/aviator_pilot.png": "baa8b9780297647885166d8136bf327bd205a166942cbdcc651b8719fff8f755",
+  "portraits/biker.png": "9d2b1674684f32b1aafd4322c5fd3925ad3c949ea39753d48fd1094acb92eef7",
+  "portraits/bus_mechanic.png": "0f40660ac5233be5958ef011518a202fc5cd2e98223c1cfe8b99530957e25e87",
+  "portraits/construction_worker.png": "fbff7b28229e1d860ca12a593c6ac781d3a4a7d9fe2b8796110134001b0b8136",
+  "portraits/firefighter.png": "998a64b124c587959196cb5be2feed9f393141d33b69747c85759eab044668e8",
+  "portraits/fortune_teller.png": "377b42cae887509d75dcf8547c9836926a272397fb3c2ddfd03cca3c478ae1fe",
+  "portraits/gunslinger.png": "2c4f413215ecebf87db1369a69d596006a5669b5c060ec47166ae6a276e8830e",
+  "portraits/hunter.png": "ed6cacf2001b7b019eb95be3f6ff6c7097eeea66caee0f5f06f0f8694559ba51",
+  "portraits/lounge_singer.png": "493fd95d64807b6c0f0b091dcf693e0d6788762684d695c9bb4397fcd55606a1",
+  "portraits/monk.png": "b71e7ebd55f96441dcc37fa1d10612f8dc857438bd624aabe2b4a65308387ce0",
+  "portraits/motorbike_courier.png": "f4d7e4b3f8ca5cc7de4a99742a82aeb13c2035bf006ead770f7debc6e5b59f4b",
+  "portraits/office_worker.png": "7d19c50ab729149e9f102bfb2804e2024c6995afe05cf308dd7c34f661154deb",
+  "portraits/old_fisherman.png": "91165443bcf31ab357116f281050c8b2824924b3f8f7db3e69d0fe503df79272",
+  "portraits/old_seamstress.png": "a875db93d4a98efa82221c72a71f35dfbb6dd8e7788ab6d8121527810adfd6d6",
+  "portraits/plant_grower.png": "a75318d8b8ca01ba3604f2fa6fb523893ad7335308d6c21a461f248216a137d0",
+  "portraits/police_officer.png": "1fb2aeaa7ff34fd4d53065e17274914ecdf2656ba241c12589a8b8aa08a66ed2",
+  "portraits/punk_musician.png": "59764663d919af32a9c218c76312c6e998b8ad740a5007b71ff9ceff7b035560",
+  "portraits/retired_teacher.png": "08bb10207b4890df3bc57be00999d7d6ba7e969de1efc2486500ec1bafe2d256",
+  "portraits/scientist.png": "ced14ee0372b2ff7483fcfcc89d37753d3cb867f368b622c98b7189f8e8cacd0",
+  "portraits/soldier.png": "5557acf4b60592b24b8a5d8e775e44a51143b5ccb2425cb057a32a01d62c2b35",
+  "portraits/street_cook.png": "cfada643ee44915a2098b97e6553c1a58942e4aa316bfe9245f3522578b17998",
+  "portraits/teen_scrap_runner.png": "1685094a5805307eb3eb8aee310afe7604f9ecc7a16bdb3a3e56cc5e6e5e4367",
+  "portraits/teen_tinkerer.png": "b1e57a0b569babaef1cfef598ddddea11f94539a4e43ed380d2bb2491f7bc2c2",
+  "portraits/truck_driver.png": "8ac6e2a10969a16762c5f2e6b2c54228c5eb53b3bc14f8566d15243b4a6a0c4b",
   "rotations/east.png": "748aa0440ee6d879ee64ce4f622b7fddc1fcc5193b6ace3827ba04cdc5cd611b",
   "rotations/north-east.png": "175db82adb2718b88faafc34c8e531c527c97534943045ed6ecc9ea5996f9c6f",
   "rotations/north-west.png": "93251109129abfaa5eced3f6b3d9cc38eaf353b9e110bcf9f023ab9f0782c18a",
@@ -2346,5 +2370,14 @@
   },
   "notes": "work: some characters gained a small anvil or bench at their feet (pilot, gunslinger, hunter, lounge singer, fortune teller) and a few wind up behind the head; reviewed and kept.",
   "west": "left-facing = horizontal mirror of every east clip (Sprite2D.flip_h); not stored"
+ },
+ "cast_portraits": {
+  "size": [
+   64,
+   64
+  ],
+  "files": "portraits/<name>.png",
+  "how": "create_portrait_character (character_to_portrait, low top-down, 64 px, seed 1, ~15 generations) from the character south rotation, then edit_image_pro_flash (5 generations): \"Same person ... turned to a three-quarter view facing right, <personal expression>; muted desaturated colours, dark gritty post-apocalyptic mood, soft warm lamp light from the side\", then snapped to the master palette with pixelize.nearest().",
+  "notes": "teen_scrap_runner came back with a red beanie instead of the bandana; the punk pink turns salmon in the palette snap."
  }
 }
