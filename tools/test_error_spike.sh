@@ -62,6 +62,11 @@ else
   else
     echo "FAIL sql anticheat:"; echo "$out"; fails=$((fails+1))
   fi
+  if out=$("${Q[@]}" -f tools/tests/sentry_forward_test.sql 2>&1); then
+    echo "PASS sql Sentry outbox"
+  else
+    echo "FAIL sql Sentry outbox:"; echo "$out"; fails=$((fails+1))
+  fi
 fi
 
 [ "$fails" = 0 ] && echo "error spike tests: all passed" || { echo "error spike tests: $fails failed"; exit 1; }

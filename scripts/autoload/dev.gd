@@ -149,6 +149,32 @@ func window_preset(sz: Vector2i) -> void:
 	get_window().size = sz
 
 
+## MV-569: exercise real activity hooks, rather than inserting invented history rows.
+func activity_test() -> void:
+	if not Features.on("activity_log"):
+		return
+	act("activity log test")
+	Game.recruit_random()
+	Loot.add_to_stash(Loot.roll_item("weapon", 6, 2, "hunting_rifle"))
+	Game._add_res("scrap", 28.0)
+	Game._add_res("food", 12.0)
+	if not Game.s.dwellers.is_empty():
+		Game.s.dwellers[0].happy = 18.0
+	Activity.sample()
+	Activity.flush_resources()
+	Game.toast.emit("ทีมสำรวจกลับถึงรถอย่างปลอดภัย (ทดสอบกิจกรรม)", "good")
+
+
+func activity_remote_test() -> void:
+	if not Features.on("activity_cloud") or not Features.on("cloud_logs") or not bool(Settings.get_value("telemetry")):
+		Game.toast.emit("เปิด activity_cloud / cloud_logs และอนุญาตส่ง log ก่อนทดสอบ", "warn")
+		return
+	act("activity remote test")
+	Activity.record("event", "ทดสอบการส่งกิจกรรมไป Sentry จาก GOD MODE", "info", {"test": true}, "monitoring.test")
+	var sent := await Telemetry.flush()
+	Game.toast.emit("ส่งชุด log ถึงเซิร์ฟเวอร์เกมแล้ว (รอส่งต่อ Sentry)" if sent else "เก็บ log ทดสอบไว้ในคิวแล้ว · ยังส่งไม่สำเร็จ", "info")
+
+
 ## one line for GOD: real window, UI pixel scale S, world scale (art px -> screen px) and why
 func view_info() -> String:
 	var m = get_tree().current_scene

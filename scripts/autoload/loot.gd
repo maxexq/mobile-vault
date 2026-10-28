@@ -372,6 +372,7 @@ func add_to_stash(item: Dictionary) -> bool:
 		_give_salvage(st[worst])
 		st.remove_at(worst)
 	st.append(item)
+	Activity.loot_received(item)
 	return true
 
 
@@ -381,6 +382,7 @@ func salvage_value(item: Dictionary) -> Dictionary:
 
 
 func _give_salvage(item: Dictionary) -> void:
+	Activity.loot_received(item, true)
 	var v := salvage_value(item)
 	Game.add_item("components", int(v.components))
 	Game._add_res("scrap", float(v.scrap))

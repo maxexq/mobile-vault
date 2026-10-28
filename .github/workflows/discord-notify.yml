@@ -21,7 +21,7 @@ on:
   # CI workflows to report: put each new workflow's `name:` here. Scheduled runs and Error spike
   # are reported only when they fail (Error spike runs every 15 min and posts to its own channel).
   workflow_run:
-    workflows: [Autotest, Web export, Release, Error spike]
+    workflows: [Autotest, Web export, Release, Error spike, Sentry forward]
     types: [completed]
   # Actions tab > Discord notify > Run workflow: sends a test message.
   workflow_dispatch:

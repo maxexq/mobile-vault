@@ -2721,6 +2721,7 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 	resources_changed.emit()
 	dwellers_changed.emit()
 	travel_changed.emit()
+	Activity.record("event", "%s · %s\n%s" % [ev.th, ch.th, res.text], "good" if res.ok else "bad")
 	save_game()
 	event_resolved.emit(id, str(ch.action), res)
 	return res
