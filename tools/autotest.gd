@@ -197,6 +197,13 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=god_fit" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		Dev.unlocked = true
+		await _god_fit_test()
+		main.hud.panels.god.close()
+		_finish()
+		return
 	if "--only=nextgen_crew" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _nextgen_crew_test()
@@ -1133,6 +1140,7 @@ func _run() -> void:
 	main.hud.panels.god.refresh()
 	await wait(0.4)
 	await shot("god_panel_vehicle")
+	await _god_fit_test()
 	main.hud.panels.god.close()
 	Dev.set_overlay(false)
 	await _god_update_test()
@@ -1367,6 +1375,35 @@ func _button_skin_menu_test() -> void:
 	Settings.set_value("lang", previous_lang)
 	Settings.set_value("tips", previous_tips)
 	DisplayServer.window_set_size(previous_size)
+
+
+## MV-586: no GOD MODE tab may be wider than the window (long feature names pushed the Features tab off screen)
+func _god_fit_test() -> void:
+	if not main.hud.panels.god.is_open:
+		main.hud.open_panel("god")
+		await wait(0.6)
+	var god_wide := []
+	var god_vp: Rect2 = main.get_viewport().get_visible_rect()
+	for t in GodPanel.TABS:
+		main.hud.panels.god.tab = t[0]
+		main.hud.panels.god.refresh()
+		await wait(0.2)
+		var gl: VBoxContainer = main.hud.panels.god._list
+		var box: Control = main.hud.panels.god.box
+		var gw := gl.get_combined_minimum_size().x
+		var sw := (gl.get_parent() as Control).size.x
+		if gw > sw + 0.5 or not god_vp.grow(0.5).encloses(box.get_global_rect()):
+			god_wide.append("%s (list %.0f / %.0f, box %s)" % [t[0], gw, sw, box.get_global_rect()])
+		if t[0] == "feat":
+			await shot("god_panel_features")
+			var fk: String = Features.FEATURES.keys()[0]
+			var was := Features.on(fk)
+			var fb: Array = gl.get_children().filter(func(c): return c is ChoiceButton)
+			if not fb.is_empty():
+				(fb[0] as ChoiceButton).button.pressed.emit()
+			_check("god: a wrapped feature button still toggles its switch", not fb.is_empty() and Features.on(fk) != was)
+			Dev.feature_set(fk, was)
+	_check("god: every tab fits the window (MV-586) %s" % [god_wide], god_wide.is_empty())
 
 
 func _god_update_test() -> void:

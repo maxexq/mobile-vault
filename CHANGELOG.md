@@ -34,6 +34,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Upgrading the Mobile Vault frame always does something now: +15 max hull and +5 % production per level, and when your vehicle has no space for the room a level unlocks, you get +10 % production instead until a bigger vehicle can use it. The upgrade card shows the real number of rooms and tells you which vehicle to switch to when this one is full (MV-545)
 
 ### Fixed
+- Windows no longer grow wider than the screen when a section heading has a long description; GOD MODE Features and Icons tabs fit the phone again (MV-586).
 - World map window scrolls again: the map, the destination and the notes below it now scroll together, by finger (also starting on the map) or mouse wheel (MV-568).
 - Phones and tablets: after rotating the screen the game fills the screen again (it used to shrink into the middle with black bars) and taps land where your finger is; the web page also keeps the game inside the safe area (notch / home bar) through a rotation. The room close-up now shows the whole room centred above its window on iPads and on phones like the iPhone 12-15, instead of a too-big room off to one side and under the window (MV-571).
 - The vault turret on the rear wall no longer floats in the air above the roof on vehicles with fewer than 4 floors; it stays mounted below the roof at every height (MV-567).
