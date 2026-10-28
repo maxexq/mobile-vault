@@ -1,0 +1,269 @@
+{
+ "version": 1,
+ "title": "Crew style + animation reference: chibi field medic",
+ "status": "approved",
+ "approved_by": "Parames",
+ "approved_on": "2026-10-29",
+ "pixellab": {
+  "character_name": "Medic chibi 3",
+  "character_id": "49025236-cc83-41ee-a937-46f984f7bc5c",
+  "mode": "pro (concept image -> 8 rotations)",
+  "size": 48,
+  "view": "low top-down rotations; the side view (east) is the one used"
+ },
+ "concept": {
+  "file": "concept_front.png",
+  "how": "create_image_pixflux 48x48, init = earlier chibi medic side sprite at strength 70, forced master palette, seed 22, direction south",
+  "prompt": "chibi survivor medic, front view facing the viewer, full body standing, very big head, messy spiky black hair, white coat with red cross armband, blue jeans, dark shoes, thick black outline, 16-bit pixel art"
+ },
+ "character_prompt": "chibi survivor field medic, big head, messy spiky black hair falling over the eyes, long grubby cream-white coat open over a dark grey shirt, red cross patch on the arm, dark grey trousers, worn boots, muted desaturated grey tones, thick black outline, dark post-apocalyptic 16-bit pixel art",
+ "figure_bbox_east": [
+  14,
+  3,
+  34,
+  43
+ ],
+ "palette": {
+  "raw_colours": 204,
+  "in_master_palette": 23,
+  "production_rule": "snap every frame to tools/art/common.py PALETTE with tools/art/pixelize.py nearest(); see previews/palette-snap-check.png"
+ },
+ "animations": {
+  "idle": {
+   "source": "breathing-idle template",
+   "frames": 4,
+   "canvas": [
+    48,
+    48
+   ],
+   "fps": 5,
+   "playback": "loop",
+   "frame0_is_reference": false,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "walk": {
+   "source": "walking-8-frames template",
+   "frames": 8,
+   "canvas": [
+    48,
+    48
+   ],
+   "fps": 10,
+   "playback": "loop",
+   "frame0_is_reference": false,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "work": {
+   "source": "v3: hammer raised and struck down in front onto a workbench",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 9,
+   "playback": "loop",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "sit": {
+   "source": "v3: lowers into a seated pose, stays seated",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 7,
+   "playback": "one-shot, hold last frame",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "chuuni_pose": {
+   "source": "v3: flips the coat open, hand over one eye, smug lean back",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 8,
+   "playback": "one-shot, hold last frame",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "talk": {
+   "source": "v3: chatting, head nods, one hand gestures",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 7,
+   "playback": "loop",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "eat": {
+   "source": "v3: bowl at chest height, spoon to mouth, chewing",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 7,
+   "playback": "loop",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "drink": {
+   "source": "v3: canteen raised, head tilted back, wipes mouth",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 6,
+   "playback": "one-shot",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "exercise": {
+   "source": "v3: squats with arms forward",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 8,
+   "playback": "loop",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "activity_guitar": {
+   "source": "v3: strums an acoustic guitar, head bobbing",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 8,
+   "playback": "loop",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  },
+  "stressed": {
+   "source": "v3: hunched, clutching head, shaking",
+   "frames": 9,
+   "canvas": [
+    60,
+    60
+   ],
+   "fps": 9,
+   "playback": "loop",
+   "frame0_is_reference": true,
+   "direction": "east (west = horizontal mirror)"
+  }
+ },
+ "files_sha256": {
+  "animations/activity_guitar/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/activity_guitar/1.png": "3b926e54c075d79e26ccc7e9b4e4e02fdfa7d8bcd93d3fa0701f9f01bc51680c",
+  "animations/activity_guitar/2.png": "13eb7669f9a1e6e0066d09e6a66544eef3eb848f1aa333fb1dee45cb2b1be690",
+  "animations/activity_guitar/3.png": "5ac37d63f612457ca9267db7052c8146a82b64bf28cd10ad91433668643589c8",
+  "animations/activity_guitar/4.png": "ee92c48be7891d9cae4840b0284e360e20eab7fd0d94d4c1e79431210509a02a",
+  "animations/activity_guitar/5.png": "0109e734c0189f17811e5b733fe0a02a1b744fa60dd3146011406745d435380a",
+  "animations/activity_guitar/6.png": "615f63d5818d2f0087c046e1769472c9a6dab79e4867e1f62f4f810d4d8b7833",
+  "animations/activity_guitar/7.png": "58e5549fc42bcb9091848148fe9e570daa4dbc652e540750b1cb91d856af200d",
+  "animations/activity_guitar/8.png": "eac34004be03c1dd5cc581416a917f3c209f2b982af965f15a65b9aab0b165fb",
+  "animations/chuuni_pose/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/chuuni_pose/1.png": "c389b8488ee250c2a615b1012c6d85906e6a4d511b16373461eb14ffd57594ea",
+  "animations/chuuni_pose/2.png": "2eaf1cb68e396ed09c4870914bf7d0144be58520e6a616944ccd5144be3b20d6",
+  "animations/chuuni_pose/3.png": "50a3907c1cd78e45c36daabf9ccab606a50328b2ac83c971fe8b0f74aee02991",
+  "animations/chuuni_pose/4.png": "6527a12040735848c1fad88142ed7ba7fba4d426af3acf65e3f7690124c5ebf7",
+  "animations/chuuni_pose/5.png": "576fd74416d9ae5f52cec5933137a8b6cba0a432783ec69be154ecae1be58168",
+  "animations/chuuni_pose/6.png": "f3a0df14799719dba834c4df2520c1d974ce2f44d376ea438e7718a3aa69f97a",
+  "animations/chuuni_pose/7.png": "a62122edb93835f5ebc21675fde2dcede30859d30fe26ca28d8fcd9eb6ec3afe",
+  "animations/chuuni_pose/8.png": "49e115ed4fdf5bf9f68ccab97cbc69c37c3d1387e5f72ad11067ce0475621d2c",
+  "animations/drink/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/drink/1.png": "f1dfc5ca2af97bbfedf845f08493c137955e39eb20f35069cd9289d45e18f29f",
+  "animations/drink/2.png": "72fd4bd8d4d9ced95e1bed3eb397eaefe9fd2a265357434ae00c78e35bfd6411",
+  "animations/drink/3.png": "fe80809d1f022ef4f525f056d5f0b5b25282ba96e54c47966fc15a20d4d76d73",
+  "animations/drink/4.png": "5bf4dad7ab6c8a0490d9b36884424f5f7c3932b0c640e75c2d590c6c5cdf9b13",
+  "animations/drink/5.png": "0957270211de06f0545184bba59a275aa5a05830e2ce285cb71e359de163be88",
+  "animations/drink/6.png": "e7565129512ac84e6c607b9eebf68d02971f24af796ce074adce24ee18860397",
+  "animations/drink/7.png": "444e2a80b254e26e23538047dbc7a931437b93ee20a3cd0fceda1ff112a4cce4",
+  "animations/drink/8.png": "f1abe426d0f6bc994aafa9a44b7831766d81dfd97d875cec2e11feda1f7a69df",
+  "animations/eat/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/eat/1.png": "f1446e55b5e0d84391bfb328e7f9471ff3f2accb4bb6379c7fb476b894a3467e",
+  "animations/eat/2.png": "404aac346b231335c19023f86310f9734f73bd0c1c83c529f2909ee879ad2467",
+  "animations/eat/3.png": "e0b288de4c68b2fb1a1d7cad0142e53ef4c3e6afb33ca2a4c2af13e78a0222b0",
+  "animations/eat/4.png": "e9994c5eb5b60a7775aa68fd392b9153a4a01e2503262c3ed57a862b89eb36b4",
+  "animations/eat/5.png": "62624d9b9e5358e583cd31b271ba13c89c835b4b9826e9d5b766ebe3a6712817",
+  "animations/eat/6.png": "4347f962100ae4a93c0697d30991aef6715a2812c8573d480a6a7ecd47448e9a",
+  "animations/eat/7.png": "e36ca20f3db3f3bd788160857d8b7ab80d84d4c8e10d9b6700d1621df807beec",
+  "animations/eat/8.png": "3cfd94736e9221567fb33e051eb86165796f363e283184e1fd8ed23d300cb252",
+  "animations/exercise/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/exercise/1.png": "d27ce5d300b5f404269b8eb120fa3c9aa1f83457ccde1ece11fd6b382f503703",
+  "animations/exercise/2.png": "2678d5d97ca35553971ccbd61c8aac1367a6d774457f8de239aaa22ee2ad88a2",
+  "animations/exercise/3.png": "0c0110741e4bf5cf009bbb7eb974a3c1ad3c94fbfbcaf2316faee22d0f7cebec",
+  "animations/exercise/4.png": "7943f4187c592514782256c5a9b2b54ffb30b6cf84cbb6ade40cc3c0429cd60b",
+  "animations/exercise/5.png": "5f9b2da30d71778644cc8232075cfdc721fb05461d1fa34d7b711f35a240a37b",
+  "animations/exercise/6.png": "f4d9b7992abcf3a12ba895263f9515bb1656960495c2d901b9ca9f235e7e337a",
+  "animations/exercise/7.png": "e139eedb7e200f1d41d4dcb18661a14385c023ced4de93be712fe1fb0b203ef9",
+  "animations/exercise/8.png": "95d95a194e8a73231c9dd35b73f77c9caad9f4b4fc9e377f10ee6a2276b43ec2",
+  "animations/idle/0.png": "d574fb1b5a5261251e7bd9058d38365a605b3ea287e7db84da93aa6c3add3c25",
+  "animations/idle/1.png": "4b815938464a058f9606de7397c970693801836549175232c6f9ebbf36c85504",
+  "animations/idle/2.png": "b894f2d9e782ba05d547f0920c8d7492f859c964fb8157dafb998bd3eef2c519",
+  "animations/idle/3.png": "1cf831f3f5e99d03c7b5b8a75b48197ad2cfb1d1d8292605e46d4940b59758b8",
+  "animations/sit/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/sit/1.png": "063cc866c88ee2d1a5151bcd8abccd19bce20011cc4cac295b847c2ba2a1fe0a",
+  "animations/sit/2.png": "afbba2209246e07fee78d375e7b89c0e883612b610879dc9c542c7a0337e02af",
+  "animations/sit/3.png": "587e0db2af4e9ac4e73989b7cc367505baa9974c06b44b13e7d6dffcb512d3fa",
+  "animations/sit/4.png": "bca2373834a56f289c62bf0f4525e9672f9d5bc46f29ea36efa0631b53d491b7",
+  "animations/sit/5.png": "b5f7c8a42eb1c8a75c2317396023cc3c31f0c3c1996cfb63531c84138b16c2f1",
+  "animations/sit/6.png": "a1332b056dfd45f49631e7ac5f24dd16d13dc3bd16696521f04702926d8b48d6",
+  "animations/sit/7.png": "c7f62a9d703ff0dcb16ade25d4d506d4495e1f702fea78e182733cf062e0987c",
+  "animations/sit/8.png": "3757bd0c9ca549c465f63863c006c5cb05c39092255f60c7b8e21ad53ae1001b",
+  "animations/stressed/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/stressed/1.png": "4f1259b91be16892002f6d58b67063df2080f7ecc2a522eea0c7c58b4a2b35ca",
+  "animations/stressed/2.png": "2242589878246aaa11924ab9ae7eed003d111a0d8418e24929e45cc342eb5ddf",
+  "animations/stressed/3.png": "9d4c7477190e0cc70c0aeeee30db80a65541e03a95864747fc7afbd11225c776",
+  "animations/stressed/4.png": "ec20c9aab7f193541b73f02e29cf0e37c0cd263dc61bc9c2d34ec65faa4152da",
+  "animations/stressed/5.png": "0461b559451edc201a343c86813118f249066b0a3f3a5ae3b66b7fe413081cf0",
+  "animations/stressed/6.png": "a0c097b3b34cda655398a0fd972c0ae67f736ad2401c216b7af88ed64e5da1ef",
+  "animations/stressed/7.png": "a915644dcfa8c8976fe1fbf46c37ed34c00e53244aa51747b13bbfe67205ed51",
+  "animations/stressed/8.png": "6f081a81ed65cafc646e7e03f27c46e219f0ad57cc5953835a62da9ea7777d21",
+  "animations/talk/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/talk/1.png": "d870d82384a7e12ae8e7fd5edd5da3bf9534c560b9e937f7ab5134db5c2ee9a0",
+  "animations/talk/2.png": "6f514278eb86cfc7a7b9dea346abdd8126074cd953a278fc039aa2e590bf50ed",
+  "animations/talk/3.png": "aded26935e1fe2dce405f5fdb4962557c8882dbf282a431121c6148ce6041981",
+  "animations/talk/4.png": "4794a81dd934fbd92d66b8a78bfd51f7867af019da8a6aa558647ee66629bbf6",
+  "animations/talk/5.png": "a177732dfab38bc18f16b3978a07872fa3fb5d50944d8577b6d05b2838abfffc",
+  "animations/talk/6.png": "4b6ee06b5b81b9ae6d565f4f21ac02daaa7f2e50caa900ec9aeae7083568c90c",
+  "animations/talk/7.png": "788111a2417fbfd8f3e6b4d9d10e6154f61f246974aa47880b7f8ce94e4cf18a",
+  "animations/talk/8.png": "0622ac9a8e340b6d3cc3f8211ba7aa31833f88adb4059911fb80a33f872ac642",
+  "animations/walk/0.png": "ef6b77213b6bfe51669a1adeec536651955343c4c27822fb93903a67d1fe19bd",
+  "animations/walk/1.png": "c3cc48cd71b9fed123001c9c9d265dd3a99fc5fde4aef6fe20fb07d8ae781455",
+  "animations/walk/2.png": "60dc0cf70358f9a56782cf14322da2c090ba38475099a329a203300426390f5f",
+  "animations/walk/3.png": "307a2a42098871574fcf4f3efc7f0ce2da845dca52270015d3cd108a2ba70330",
+  "animations/walk/4.png": "2e0c02ee29810926b63265890ad8f40bc020f5bbbe24c13fa14760f8c2e622bb",
+  "animations/walk/5.png": "c6f91c3e3dc48ba78feb387a0fff40405006218fbebbb60be46884266663feea",
+  "animations/walk/6.png": "1a3f74e90f8434c0884c8a844e4a29dcdc73614b7a5d5c84e55e8817b6bc6098",
+  "animations/walk/7.png": "2c8ed54aacd031af8593611c4faa486f0974637fd43b8ce978819dbc781b8045",
+  "animations/work/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
+  "animations/work/1.png": "5f5f7dae7335480bc5c448e5032d377b36911d3f6a084bf3acbc71ecf9f29c4f",
+  "animations/work/2.png": "c377e5b8ed30620432c0488cbd5e7878f528a7092b48f5be037e76405e329f5d",
+  "animations/work/3.png": "d535b2d06e53e908a19695824de303ab6070c26814b96d3ccd6d789785b9da2d",
+  "animations/work/4.png": "6349dd191d91bae7b32f99ba4c9ae4b990f8d409564e692f5c909f1920d21b2a",
+  "animations/work/5.png": "3d4326e71ea05a0088034d46df41dac0ce4be140fdeaad14f8083a6f4ea7c7bd",
+  "animations/work/6.png": "a600e86d32fe9b11c893d83bb8596b869fc6939a6ea4e6da69a9c47717456840",
+  "animations/work/7.png": "c8144c5934ef7769c7d5c87bf6b4e8a0796cbfe8a70001b2de91b51ea33a265f",
+  "animations/work/8.png": "2461560e8462d4004800e9ec0c5d42ed7a972efb58c95bffa9297dcbf6e78455",
+  "concept_front.png": "6b79d72a573787cc7bbaeac906b11599815994edf9e3cdcd078442dfed22b521",
+  "rotations/east.png": "748aa0440ee6d879ee64ce4f622b7fddc1fcc5193b6ace3827ba04cdc5cd611b",
+  "rotations/north-east.png": "175db82adb2718b88faafc34c8e531c527c97534943045ed6ecc9ea5996f9c6f",
+  "rotations/north-west.png": "93251109129abfaa5eced3f6b3d9cc38eaf353b9e110bcf9f023ab9f0782c18a",
+  "rotations/north.png": "63b1e22b75de337899ccf7a148a3cefac7dd5aca3adc52f1c1a0dcb6fea4d64f",
+  "rotations/south-east.png": "ba5b672d75651caf984d03bb864bf765dd60cf8d7b2c15a9f0f13e0adba30ada",
+  "rotations/south-west.png": "5878963aeac7000ea07655560721d5364b59c7660151101e056d6763b2a373ad",
+  "rotations/south.png": "74a5fad6c05a4dd23f13bb7ceb23d5d5e1b078a59ded6dfbbef550731293a7ac",
+  "rotations/west.png": "1212d2373987255c539314633ca0c51649817b038fa7e1039b69bc4651c98e53"
+ }
+}
