@@ -1956,7 +1956,7 @@
   "portraits/firefighter.png": "4e39f6594810c60bff1b1443ed43eed686482a3f6f34f16dd7de6c1ee6515637",
   "portraits/fortune_teller.png": "377b42cae887509d75dcf8547c9836926a272397fb3c2ddfd03cca3c478ae1fe",
   "portraits/gunslinger.png": "2c4f413215ecebf87db1369a69d596006a5669b5c060ec47166ae6a276e8830e",
-  "portraits/hunter.png": "ed6cacf2001b7b019eb95be3f6ff6c7097eeea66caee0f5f06f0f8694559ba51",
+  "portraits/hunter.png": "9886179cf354ddfa46dd24f7bce4ddf83ab557df2c85eb3340a20ec3450d9669",
   "portraits/lounge_singer.png": "493fd95d64807b6c0f0b091dcf693e0d6788762684d695c9bb4397fcd55606a1",
   "portraits/monk.png": "b71e7ebd55f96441dcc37fa1d10612f8dc857438bd624aabe2b4a65308387ce0",
   "portraits/motorbike_courier.png": "f4d7e4b3f8ca5cc7de4a99742a82aeb13c2035bf006ead770f7debc6e5b59f4b",
@@ -1964,7 +1964,7 @@
   "portraits/old_fisherman.png": "26ea20c18ea2921a46e4ef65c76a59cf849ab3d51ea493e0f1028c35b9212c65",
   "portraits/old_seamstress.png": "a875db93d4a98efa82221c72a71f35dfbb6dd8e7788ab6d8121527810adfd6d6",
   "portraits/plant_grower.png": "a75318d8b8ca01ba3604f2fa6fb523893ad7335308d6c21a461f248216a137d0",
-  "portraits/police_officer.png": "1fb2aeaa7ff34fd4d53065e17274914ecdf2656ba241c12589a8b8aa08a66ed2",
+  "portraits/police_officer.png": "869eb4cac04821f0fc38663f11fd0e02cc7ad06f849334d6ce975fc4a3ec10ba",
   "portraits/punk_musician.png": "59764663d919af32a9c218c76312c6e998b8ad740a5007b71ff9ceff7b035560",
   "portraits/retired_teacher.png": "08bb10207b4890df3bc57be00999d7d6ba7e969de1efc2486500ec1bafe2d256",
   "portraits/scientist.png": "ced14ee0372b2ff7483fcfcc89d37753d3cb867f368b622c98b7189f8e8cacd0",
@@ -2387,7 +2387,9 @@
     "teen_tinkerer",
     "street_cook",
     "aviator_pilot",
-    "soldier"
+    "soldier",
+    "police_officer",
+    "hunter"
    ],
    "how": "edit_image_pro_flash on the teen_scrap_runner portrait itself: \"Turn this portrait into a different person while keeping exactly the same art style, pixel size, head size, framing, three-quarter angle, shading and muted palette: <person>\", then snapped. Use this for every new portrait so head size and cartoon style match."
   }

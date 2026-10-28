@@ -147,7 +147,7 @@ game's muted tone. Recipe in the manifest `cast_portraits`.
 Portraits must share one cartoon style and head size: the punk musician, courier, monk and
 teen scrap runner are the style references. Make a new portrait by editing the teen scrap
 runner portrait into the new person (manifest `cast_portraits.restyled_from_reference`); the
-truck driver, firefighter, fisherman, tinkerer, cook, pilot and soldier were redone that way after drifting
+truck driver, firefighter, fisherman, tinkerer, cook, pilot, soldier, police officer and hunter were redone that way after drifting
 towards a realistic look with smaller heads.
 
 ![The 24 cast portraits](crew-style-reference/previews/portraits.png)
