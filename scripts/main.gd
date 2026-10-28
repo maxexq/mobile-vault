@@ -58,6 +58,7 @@ var world_scale := 1.0           # physical px per art pixel used by the world (
 var view_k := 1.0                # world viewport px per UI/design px (S / world_scale)
 var pan_right := PAN_LIMIT       # how far right a swipe may move the camera (world px), set by _fit_camera
 var _touches := {}
+var _real_size := Vector2.ZERO    # MV-571: the window size seen last (a change = the phone rotated / the window resized)
 var _pinch_d := 0.0
 
 
@@ -175,7 +176,11 @@ func _ready() -> void:
 	Features.changed.connect(_on_features_changed)
 
 	Game.floating_text.connect(_spawn_float)
-	get_viewport().size_changed.connect(_on_resize)
+	# MV-571: deferred. Changing content_scale_size inside size_changed re-entered the window's own resize update; the
+	# outer update then attached the picture to the screen with the rect it had worked out from the OLD design size.
+	# Desktop resizes come in bursts that hid it; one web rotation left the game shrunk in the middle of the screen
+	# (black bars) while touches still mapped to the full canvas, so taps landed away from what was drawn.
+	get_viewport().size_changed.connect(_on_resize, CONNECT_DEFERRED)
 	_on_resize()
 
 	# live backdrop behind the title screen
@@ -219,6 +224,14 @@ func is_portrait() -> bool:
 ## window divided by S, so the picture fills the screen edge to edge with no letterbox bars.
 func _on_resize() -> void:
 	var real := Vector2(DisplayServer.window_get_size())
+	if real != _real_size:
+		# MV-571: a rotation moves everything under a finger that is still down; its old position would make the next
+		# one-finger swipe a pinch or a stray tap, so a gesture in flight is dropped
+		_real_size = real
+		_touches.clear()
+		_pinch_d = 0.0
+		_pressing = false
+		_dragged = false
 	var base := Vector2(PORTRAIT_BASE if is_portrait() else LANDSCAPE_BASE)
 	var s := ui_scale_for(real, base)
 	if Settings.get_value("ui_scale") == "small":
@@ -312,6 +325,7 @@ func _apply_world_scale() -> void:
 	var ws := target_ws()
 	world_scale = ws
 	view_k = s / ws
+	hud.room_closeup.world_k = view_k
 	var design := Vector2(get_window().content_scale_size)
 	# zoomed in, the viewport is rounded UP and the texture drawn at exactly vp * ws screen px (anchored top-left,
 	# the overhang is off-screen) so every art pixel is ws screen px; zoomed out, the design size divides evenly
@@ -562,9 +576,17 @@ func open_closeup(slot: int) -> void:
 	tw.tween_method(func(v: float): blur_mat.set_shader_parameter("amount", v), 0.0, 1.0, 0.45)
 
 
+## the close-up's room area in world-viewport px. focus_rect() is in UI px; when a portrait screen fills with the
+## main body (MV-148: world scale above the UI scale, view_k < 1) the two differ, and mixing them drew the room too
+## big, under the panel and off-centre (MV-571: iPhone 12-15, iPads)
+func _closeup_focus() -> Rect2:
+	var focus: Rect2 = hud.room_closeup.focus_rect()
+	return Rect2(focus.position * view_k, focus.size * view_k)
+
+
 func closeup_zoom() -> int:
 	var vp := vp_size()
-	var focus: Rect2 = hud.room_closeup.focus_rect()
+	var focus := _closeup_focus()
 	var sz := vehicle.room_size(_closeup_slot) if _closeup_slot >= 0 else Vehicle.ROOM_SIZE
 	var z := int(minf(focus.size.x / sz.x, focus.size.y / sz.y))
 	# a large room (v4.4) still has to fit: it may drop to 1x instead of overflowing the screen
@@ -575,8 +597,7 @@ func _closeup_target() -> Dictionary:
 	var vp := vp_size()
 	var z := float(closeup_zoom())
 	var r := vehicle.slot_rect(_closeup_slot)
-	var focus: Rect2 = hud.room_closeup.focus_rect()
-	var target := focus.get_center()
+	var target := _closeup_focus().get_center()
 	var cam := r.get_center() - (target - vp * 0.5) / z
 	cam = (cam * z).round() / z
 	return {"pos": cam, "zoom": z}

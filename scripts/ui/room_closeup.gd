@@ -24,6 +24,9 @@ var _site_bar: ProgressBar
 var _site_lbl: Label
 var _rush_btn: Button
 var _content: VBoxContainer
+## MV-571: world-viewport px per UI px (Main.view_k, set by Main): below 1 when a portrait screen fills with the main
+## body, so a room at camera zoom z takes z / world_k UI px per art pixel
+var world_k := 1.0
 
 
 func _build() -> void:
@@ -66,14 +69,14 @@ func _top_y() -> float:
 	return 26.0
 
 
-## the portrait zoom (whole number, 2-3 as before) and the room height it needs, frame included
+## the portrait zoom (whole number, 2-3 as before) and the room height it needs on screen (UI px), frame included
 func _room_zoom() -> int:
-	var vp := get_viewport_rect().size
-	return clampi(int(minf((vp.x - 16.0) / float(Vehicle.ROOM_SIZE.x), vp.y * 0.3 / float(Vehicle.ROOM_SIZE.y))), 2, 3)
+	var vp := get_viewport_rect().size * world_k
+	return clampi(int(minf((vp.x - 16.0 * world_k) / float(Vehicle.ROOM_SIZE.x), vp.y * 0.3 / float(Vehicle.ROOM_SIZE.y))), 2, 3)
 
 
 func _room_h() -> float:
-	return float(Vehicle.ROOM_SIZE.y * _room_zoom()) + 12.0
+	return ceilf(float(Vehicle.ROOM_SIZE.y * _room_zoom()) / world_k) + 12.0
 
 
 ## the width the panel's content needs (not the box's own custom minimum, which _layout sets from the focus rect)
