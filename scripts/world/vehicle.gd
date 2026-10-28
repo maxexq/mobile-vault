@@ -92,6 +92,7 @@ var _seams_root: Node2D          # large-room interior strips drawn over the hul
 var _exteriors: Node2D
 var _rooms_root: Node2D
 var _mods_root: Node2D
+var mod_motion: ExteriorModMotion # MV-565: pooled exterior details and local strips
 var _roof_root: Node2D
 var _roof_parts: Node2D          # MV-462: under the solar panels, rebuilt by _sync_roof
 var pets_root: Node2D
@@ -212,6 +213,9 @@ func _ready() -> void:
 	_sparks.position = Vector2(254, 200)
 	_sparks.emitting = false
 	body.add_child(_sparks)
+	mod_motion = ExteriorModMotion.new()
+	body.add_child(mod_motion)
+	mod_motion.setup(self)
 
 	Game.rooms_changed.connect(refresh_rooms)
 	Game.dwellers_changed.connect(refresh_rooms)
@@ -567,6 +571,7 @@ func _mod_sprite(region: String, pos: Vector2) -> Sprite2D:
 
 func _refresh_mods() -> void:
 	for ch in _mods_root.get_children():
+		_mods_root.remove_child(ch)
 		ch.queue_free()
 	if Game.s.is_empty():
 		return
@@ -626,6 +631,7 @@ func _refresh_mods() -> void:
 			w.visible = not rear_wheels.has(w.position)
 			w.sprite_frames = Atlas.wheel_frames(off)
 	_sync_detail()
+	mod_motion.rebuild()
 
 
 ## MV-462: the cozy roof parts (water tank, dish, two planter trays) or, with cozy_roof off, the old ones
@@ -733,7 +739,7 @@ func _process(delta: float) -> void:
 		else:
 			tracks.pause()
 	for d in dusts:
-		d.emitting = moving and not Game.vehicle_def().get("rail", false)
+		d.emitting = moving and not Game.vehicle_def().get("rail", false) and not mod_motion.replaces_dust()
 		if d is GPUParticles2D:
 			(d as GPUParticles2D).amount_ratio = clampf(_speed, 0.2, 1.0)
 	if smoke is GPUParticles2D:

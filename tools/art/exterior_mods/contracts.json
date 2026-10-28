@@ -1,0 +1,2490 @@
+[
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_catcher_hem",
+    "title": "Rain funnel: shallow cloth flex",
+    "why": "Give the collector a small wind response while keeping its outlet fixed.",
+    "parent": "mod_rain_catcher",
+    "kind": "anim",
+    "size": [
+      40,
+      16
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 4,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "teal0",
+      "teal1",
+      "teal2",
+      "teal3",
+      "cream1",
+      "gray3",
+      "sky3"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four full 40x16 frames derived from mod_rain_catcher. Posts, ties, upper rim and outlet remain pixel-identical; only two interior lower folds move vertically [0,1,0,0]px. Replace the base displayed texture, then draw Lv2 collar above it; never stack two funnels.",
+      "One 1s cycle every 4..7s while driving or in storm/sandstorm; parked calm holds 0. No bouncing water tank or stretching the entire cloth. Rain runoff is a separate pooled effect."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Rain catcher",
+    "dependencies": [
+      "mod_rain_catcher"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_deck_awning",
+    "title": "Deck shelter: tied canvas hem flutter",
+    "why": "Give the existing approved cozy shelter a small cloth motion.",
+    "parent": "mod_roof_deck_1",
+    "kind": "anim",
+    "size": [
+      38,
+      13
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 4,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "green1",
+      "green2",
+      "green3",
+      "green4",
+      "cream1",
+      "gray3",
+      "wood2"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 12,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Driving: one 1s cycle every 3..5s. Parked: one every 9..14s. Do not animate continuously or add any sleep/body motion beyond the already approved separate sleeping-crew ticket.",
+      "Current-source amendment: cozy cloth actually spans 38x13 above its posts. Animate cozy Lv1 only, preserving the approved tied corners, patch and support pixels. Lv2/3 retain their corrugated caps and net; their existing brazier and lookout lamp supply motion instead.",
+      "Four full crop cells from deck-local (0,12), same 38x13 canvas; change only two loose green fringe pixels by at most 1px. Use a cleaned static deck source so old cloth pixels never show through."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof rest deck",
+    "dependencies": [
+      "MV-467"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_deck_lamp",
+    "title": "Lookout lamp: tiny brightness variation",
+    "why": "Make the Lv3 searchlight feel powered while preserving its stable silhouette.",
+    "parent": "mod_roof_deck_3",
+    "kind": "anim",
+    "size": [
+      4,
+      7
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 3,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray3",
+      "lamp0",
+      "lamp1"
+    ],
+    "outline": "ol0",
+    "light": "emissive",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 63,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 4x7 cells replacing the lamp nose at deck-local x=63..66,y=0..6. Fixed ol0 rim, two inner light columns only; frames [lamp1,lamp1,lamp0,lamp1] on the same pixels. No position/beam sweep or strobing.",
+      "Only deck Lv3; one 1.33s cycle every 8..12s, rest frame otherwise. Keep any existing approved beam and caged shelter lamp independent; no second searchlight or broad fullscreen light."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof rest deck",
+    "dependencies": [],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_fuel_strap",
+    "title": "Fuel drum: loose strap-end twitch",
+    "why": "Add movement to a safe tie-down rather than the fuel drum itself.",
+    "parent": "mod_fuel_tank",
+    "kind": "anim",
+    "size": [
+      6,
+      18
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 5,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray2",
+      "gray4",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 10,
+      "y": 2,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four sparse transparent 6x18 cells. Keep attachment pixels at local drum (13,3)/(13,17); only a 3px loose tail next to the lower mount swings horizontally [0,1,0,0]px. Drum, warning stamp, hoops and paint never move. Remove just the replaced tail pixels from the base.",
+      "One 800ms cycle every 4..7s while driving, still when parked. At most one strip per displayed drum, phase-offset by drum index. No sloshing fill, flashing fuel light, leak or fuel deduction."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Fuel tanks",
+    "dependencies": [
+      "mod_fuel_tank"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_heater_cap",
+    "title": "Heater chimney: cowl-edge rattle",
+    "why": "Add a small external heater motion without implying continuous combustion.",
+    "parent": "mod_heater",
+    "kind": "anim",
+    "size": [
+      12,
+      5
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 4,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray3",
+      "gray4",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 12x5 cells replacing only the original cap. Pipe opening and contact row y=4 stay fixed. Only a 2px loose right-edge cap lip shifts down [0,1,0,0]px; all other cap pixels are identical. No movement of pipe/body and no exhaust particles.",
+      "Both heater levels; one 1s cycle every 6..10s driving or in parked storm/sandstorm, otherwise still. Keep separate from existing engine puffs and cooling vents. Do not infer an active burner from heater purchase alone."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Heater chimney (visible interior mod)",
+    "dependencies": [
+      "mod_heater"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_offroad_lv2_rim",
+    "title": "Off-road Lv2: reinforced rim phase set",
+    "why": "Make higher off-road levels distinct while reusing approved knobby tyres.",
+    "parent": "bwheel_0",
+    "kind": "anim",
+    "size": [
+      16,
+      16
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 12,
+      "loop": true
+    },
+    "palette": [
+      "ol0",
+      "gray0",
+      "gray2",
+      "gray3",
+      "gray4",
+      "yellow1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 8,
+      "y": 8,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 16x16 rim replacement patches aligned to bwheel-local x=8..23,y=8..23, optical center (7.5,7.5). Keep all tyre pixels outside that box from the approved MV-390 bwheel_0..3 unchanged. All four patches contain the complete rim interior, so no old lugs show through.",
+      "Lv2 uses a dark steel reinforced rim ring with six broad bolt clusters and the same rust hub; keep muted yellow1 at the outer rim.",
+      "Lug/lock geometry follows exactly the existing bwheel phase k/6*tau + f*tau/24, while light stays top-left. Sample this strip from the existing wheel frame index; do not start an independent 12fps timer or rotate the patch at runtime.",
+      "Only offroad_wheels == 2. Lv1 uses MV-390 base unchanged. Apply to every visible road wheel on lead and road trailers; hide beneath tracks, never on train/wagon rail wheels. Feature off hides patches and shows current bwheel. Parked holds current wheel frame, phase wrap has no pop."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Off-road wheels",
+    "dependencies": [
+      "MV-390"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_offroad_lv3_rim",
+    "title": "Off-road Lv3: reinforced rim phase set",
+    "why": "Make higher off-road levels distinct while reusing approved knobby tyres.",
+    "parent": "bwheel_0",
+    "kind": "anim",
+    "size": [
+      16,
+      16
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 12,
+      "loop": true
+    },
+    "palette": [
+      "ol0",
+      "gray0",
+      "gray2",
+      "gray3",
+      "gray4",
+      "yellow1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 8,
+      "y": 8,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 16x16 rim replacement patches aligned to bwheel-local x=8..23,y=8..23, optical center (7.5,7.5). Keep all tyre pixels outside that box from the approved MV-390 bwheel_0..3 unchanged. All four patches contain the complete rim interior, so no old lugs show through.",
+      "Lv3 adds a second dark outer retaining ring and six paired lock heads around the same rust hub; distinguish it from Lv2 by the double-ring silhouette inside the rim, not more saturation.",
+      "Lug/lock geometry follows exactly the existing bwheel phase k/6*tau + f*tau/24, while light stays top-left. Sample this strip from the existing wheel frame index; do not start an independent 12fps timer or rotate the patch at runtime.",
+      "Only offroad_wheels == 3. Lv1 uses MV-390 base unchanged. Apply to every visible road wheel on lead and road trailers; hide beneath tracks, never on train/wagon rail wheels. Feature off hides patches and shows current bwheel. Parked holds current wheel frame, phase wrap has no pop."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Off-road wheels",
+    "dependencies": [
+      "MV-390"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_shield_tab",
+    "title": "Lead skirt: bolted safety-tab sway",
+    "why": "Add a restrained flexible edge cue and a visible second upgrade.",
+    "parent": "mod_rad_shield",
+    "kind": "anim",
+    "size": [
+      6,
+      5
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 4,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray2",
+      "gray4",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 22,
+      "y": 4,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 6x5 cells, one tiny clamp with a 3px flexible attached tab. Fixed top clamp; lower tab offsets [0,1,0,0]px horizontally. Use the original skirt background underneath transparent pixels; do not animate full panels or alter the lower silhouette.",
+      "Lv1: two copies at skirt-local (22,4),(178,4). Lv2: four at (22,4),(74,4),(126,4),(178,4), producing a clearly denser clamp line. Four total maximum, run one 1s cycle every 6..10s driving, otherwise frame 0. Even feature off retains frame-0 clamp count for level identity."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Radiation shield",
+    "dependencies": [
+      "mod_rad_shield"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_shock_lv1",
+    "title": "Heavy suspension Lv1: bounded compression",
+    "why": "Give the visible shocks a small local road response.",
+    "parent": "mod_shock_1",
+    "kind": "anim",
+    "size": [
+      8,
+      20
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "yellow1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four full 8x20 cells from the tier redraw. Frame sequence rest, two central coil gaps compressed by 1px, half return, exact rest. Both mounting brackets and the endpoints of the piston stay pixel-identical; re-space only inner coil clusters. Never translate the entire shock or wheel.",
+      "Replace the static shock texture while cycling. One 500ms cycle per 2.5..5s driving, phase-offset by axle; parked holds 0. Do not show road shocks on train, trailers or through tracks. Preserve current physical speed, load and existing body rumble."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Heavy suspension",
+    "dependencies": [
+      "mod_shock_1"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_shock_lv2",
+    "title": "Heavy suspension Lv2: bounded compression",
+    "why": "Give the visible shocks a small local road response.",
+    "parent": "mod_shock_2",
+    "kind": "anim",
+    "size": [
+      10,
+      20
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "red2",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four full 10x20 cells from the tier redraw. Frame sequence rest, two central coil gaps compressed by 1px, half return, exact rest. Both mounting brackets and the endpoints of the piston stay pixel-identical; re-space only inner coil clusters. Never translate the entire shock or wheel.",
+      "Replace the static shock texture while cycling. One 500ms cycle per 2.5..5s driving, phase-offset by axle; parked holds 0. Do not show road shocks on train, trailers or through tracks. Preserve current physical speed, load and existing body rumble."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Heavy suspension",
+    "dependencies": [
+      "mod_shock_2"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_shock_lv3",
+    "title": "Heavy suspension Lv3: bounded compression",
+    "why": "Give the visible shocks a small local road response.",
+    "parent": "mod_shock_3",
+    "kind": "anim",
+    "size": [
+      12,
+      20
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "blue3",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four full 12x20 cells from the tier redraw. Frame sequence rest, two central coil gaps compressed by 1px, half return, exact rest. Both mounting brackets and the endpoints of the piston stay pixel-identical; re-space only inner coil clusters. Never translate the entire shock or wheel.",
+      "Replace the static shock texture while cycling. One 500ms cycle per 2.5..5s driving, phase-offset by axle; parked holds 0. Do not show road shocks on train, trailers or through tracks. Preserve current physical speed, load and existing body rumble."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Heavy suspension",
+    "dependencies": [
+      "mod_shock_3"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_solar_latch",
+    "title": "Solar hood: small latch rattle",
+    "why": "Animate one loose protective-hood latch without obscuring the panel.",
+    "parent": "mod_solar_cover",
+    "kind": "anim",
+    "size": [
+      6,
+      5
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 5,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray3",
+      "gray5",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 26,
+      "y": 3,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four sparse 6x5 frames at local (26,3). Fixed hinge pin, only a 2px tab offsets [0,1,0,0]px vertically; remove replaced tab pixels from static redraw. Ribbing, hood outline, panel and highlights remain still.",
+      "One 800ms cycle every 5..8s driving or 10..15s during parked storm/sandstorm. Still in calm parked weather. Two existing hoods may phase-offset; do not cycle solar pose frames, open shutters or fake electricity sparks."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Solar covers",
+    "dependencies": [
+      "mod_solar_cover"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_turret_lv1_recoil",
+    "title": "Roof turret Lv1: barrel recoil",
+    "why": "Give actual roof-turret shots a compact mechanical response.",
+    "parent": "mod_roof_turret_1",
+    "kind": "anim",
+    "size": [
+      24,
+      18
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 20,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray3",
+      "gray4",
+      "gray5",
+      "green2",
+      "green3",
+      "teal2",
+      "red1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four full 24x18 cells derived from the approved mod_roof_turret_1 redraw: rest, barrel group 1px left, barrel group 1px left, rest. Receiver, mount, antenna, optic and shading remain identical. Remove the old barrel pixels before drawing the shifted group.",
+      "Replace the static display while this strip is active, never stack two full turret images. At 200ms end hold frame 0. Trigger only Combat.shot from_kind=\"roof\", not main turret/hero/enemy shots. Restart on a new shot; do not queue shots. Defer muzzle location to the current drawn muzzle after its 1px recoil."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof turret",
+    "dependencies": [
+      "mod_roof_turret_1"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_turret_lv2_recoil",
+    "title": "Roof turret Lv2: barrel recoil",
+    "why": "Give actual roof-turret shots a compact mechanical response.",
+    "parent": "mod_roof_turret_2",
+    "kind": "anim",
+    "size": [
+      24,
+      18
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 20,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray3",
+      "gray4",
+      "gray5",
+      "blue2",
+      "blue3",
+      "teal2",
+      "red1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four full 24x18 cells derived from the approved mod_roof_turret_2 redraw: rest, barrel group 1px left, barrel group 1px left, rest. Receiver, mount, antenna, optic and shading remain identical. Remove the old barrel pixels before drawing the shifted group.",
+      "Replace the static display while this strip is active, never stack two full turret images. At 200ms end hold frame 0. Trigger only Combat.shot from_kind=\"roof\", not main turret/hero/enemy shots. Restart on a new shot; do not queue shots. Defer muzzle location to the current drawn muzzle after its 1px recoil."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof turret",
+    "dependencies": [
+      "mod_roof_turret_2"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "anim_ext_turret_lv3_recoil",
+    "title": "Roof turret Lv3: barrel recoil",
+    "why": "Give actual roof-turret shots a compact mechanical response.",
+    "parent": "mod_roof_turret_3",
+    "kind": "anim",
+    "size": [
+      24,
+      18
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 20,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray3",
+      "gray4",
+      "gray5",
+      "purple2",
+      "purple3",
+      "teal2",
+      "red1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four full 24x18 cells derived from the approved mod_roof_turret_3 redraw: rest, barrel group 1px left, barrel group 1px left, rest. Receiver, mount, antenna, optic and shading remain identical. Remove the old barrel pixels before drawing the shifted group.",
+      "Replace the static display while this strip is active, never stack two full turret images. At 200ms end hold frame 0. Trigger only Combat.shot from_kind=\"roof\", not main turret/hero/enemy shots. Restart on a new shot; do not queue shots. Defer muzzle location to the current drawn muzzle after its 1px recoil."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof turret",
+    "dependencies": [
+      "mod_roof_turret_3"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "fx_ext_armor_chip",
+    "title": "Armor hit: compact steel-chip response",
+    "why": "Show armor contact only when a real incoming hit lands on a plate.",
+    "parent": "mod_armor_wall",
+    "kind": "fx",
+    "size": [
+      8,
+      8
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 16,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray2",
+      "gray4",
+      "gray5",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "fx",
+    "anchor": {
+      "x": 0,
+      "y": 20,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 8x8 frames: 2px gray contact fleck, three dark chips, separated chips, clear. No persistent dent, glow, fire or additional damage number.",
+      "Only real rendered incoming hull impacts whose local hit coordinate intersects a visible installed armor strip or Lv1 mounting tab. At most one per convoy, 150ms retrigger guard. If the current impact missed the plate, leave existing effects; never move a hit to the plate or add simulated damage. Use the local impact coordinate instead of always the reference anchor."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Armor plates",
+    "dependencies": [],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "fx_ext_catcher_runoff",
+    "title": "Rain funnel: short outlet runoff",
+    "why": "Show collected rain draining from the visible funnel.",
+    "parent": "veh_rig",
+    "kind": "fx",
+    "size": [
+      4,
+      10
+    ],
+    "frames": {
+      "count": 5,
+      "fps": 10,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "teal2",
+      "sky2",
+      "sky3"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "fx",
+    "anchor": {
+      "x": 164,
+      "y": 16,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Five 4x10 frames: bead at y=0, 2px vertical streak y=1..3, bead y=5, tiny bottom splash y=8, clear. Use binary pixels without additive light.",
+      "Reference anchor (164,16) = catcher top-left (146,0) + outlet (18,16); all tiers use (164,roof_y()-20). Require installed rain_catcher and existing normal rain/storm weather, never acid_rain, snow or dry. One active stream maximum; gap Lv1 2.5..4s, Lv2 1.5..2.5s. Cosmetic interval does not collect water.",
+      "Keep stream behind any solid receiving tank/cab art and away from crew. Coordinate with existing fx_car_roof_rain_drip (MV-388 family): if its runoff occupies the same site, use one stream only."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Rain catcher",
+    "dependencies": [
+      "mod_rain_catcher"
+    ],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "fx_ext_deck_brazier",
+    "title": "Deck brazier: restrained ember flicker",
+    "why": "Animate the existing small warm source on reinforced decks.",
+    "parent": "mod_roof_deck_2",
+    "kind": "fx",
+    "size": [
+      6,
+      8
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 4,
+      "loop": true
+    },
+    "palette": [
+      "ol0",
+      "gray3",
+      "lamp0",
+      "lamp1"
+    ],
+    "outline": "ol0",
+    "light": "emissive",
+    "layer": "fx",
+    "anchor": {
+      "x": 50,
+      "y": 26,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 6x8 cells, deck-local x=50..55,y=26..33; fixed brazier metal at y=30..33, only the existing flame pixels y=27..29 change by at most 1px. Replace that local static patch once, not an overlay over a second flame.",
+      "Only purchased deck Lv2/3 and only while its visible brazier remains part of the approved roof composition; no flame at Lv0/1, no smoke or new light pool. If cozy roof integration removes the brazier, mark this draft Needs Decision rather than resurrect a conflicting prop. Freeze frame 0 with feature off."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof rest deck",
+    "dependencies": [],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "fx_ext_offroad_grit",
+    "title": "Off-road tyre: contact grit kick",
+    "why": "Let the knobby tyre leave a small dry-road contact cue.",
+    "parent": "bwheel_0",
+    "kind": "fx",
+    "size": [
+      12,
+      8
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "sand0",
+      "sand1",
+      "sand2",
+      "gray2"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "fx",
+    "anchor": {
+      "x": 20,
+      "y": 24,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 12x8 cells with 2..3 tiny grit groups: near-contact, 1px lift rear/right, separated fragments, clear. Keep wheel and hub outside the FX; no orange flame/sparks.",
+      "All installed off-road levels on visible driving road wheels only, dry nonrail weather. Use just the rearmost exposed road tyre of the convoy (prefer road trailer rear tyre when present), max one active burst every 2..4s. A wheel hidden by tracks cannot emit.",
+      "Replace overlapping stock dust at this contact, not additive to stock dust/track grit/mudflap. Train/wagon, parked, wet/snow weather, level0 and offscreen contact have no burst."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Off-road wheels",
+    "dependencies": [],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "fx_ext_ram_contact",
+    "title": "Ram contact: compact grit burst",
+    "why": "Show a real front collision with a short local material response.",
+    "parent": "mod_spike_ram_1",
+    "kind": "fx",
+    "size": [
+      12,
+      12
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 16,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray2",
+      "gray4",
+      "cream1",
+      "orange1",
+      "orange2"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "fx",
+    "anchor": {
+      "x": 0,
+      "y": 16,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four frames: small gray chip at contact, 3-chip fan spreading right/up, separated dark grit, fully clear final frame. Keep displacement inside the 12x12 cell; no blood, fire or implied explosion.",
+      "One 250ms nonlooping burst only from the actual road-zombie front-impact branch in CombatView._tick_ram; installed spike_ram > 0, feature on. Parent reference is ram Lv1, shared unchanged for Lv2/3. At most one active ram burst; a new collision restarts it. No timer-driven fake impacts."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Spiked ram",
+    "dependencies": [],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "fx_ext_track_grit",
+    "title": "Track contact: short dry grit scatter",
+    "why": "Make the moving belt contact feel grounded.",
+    "parent": "mod_tracks_0",
+    "kind": "fx",
+    "size": [
+      16,
+      10
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "sand0",
+      "sand1",
+      "sand2",
+      "gray2"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "fx",
+    "anchor": {
+      "x": 64,
+      "y": 28,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 16x10 cells: three small grit clumps at bottom-left, lift 1..3 whole pixels toward rear/right, fragment, clear. No saturated sparks or large dust cloud.",
+      "Only visible installed tracks, driving and dry nonrail terrain; one burst every 1.5..3s, one active at rear contact. Suppress in rain/storm/acid_rain/snow and when the existing wheel/road dust already occupies this contact: replace that local emitter, do not stack. Suppress if the contact is outside view."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Snow tracks",
+    "dependencies": [],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "fx_ext_turret_muzzle",
+    "title": "Roof muzzle: two-frame amber flash",
+    "why": "Locate the shot at the visible roof barrel.",
+    "parent": "veh_rig",
+    "kind": "fx",
+    "size": [
+      8,
+      8
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 24,
+      "loop": false
+    },
+    "palette": [
+      "ol0",
+      "gray3",
+      "lamp0",
+      "lamp1"
+    ],
+    "outline": "ol0",
+    "light": "emissive",
+    "layer": "fx",
+    "anchor": {
+      "x": 224,
+      "y": 21,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Four 8x8 cells: compact 3px flash, shorter 2px amber flash, clear, clear; luminous pixels only in the first two frames. One-pixel gray soot cluster is optional in frame 1, no large glow.",
+      "Reference anchor is rig top-left (224,21), derived from turret origin (200,18) plus muzzle edge (24,7) minus vertical flash offset 4. For Lv2/3 use (turret_x+24-recoil,roof_y()-18+7-4); the two barrel centers are local y=7/10, so luminous lobes sit at FX-local y=4/7. Lv1 has only the y=8 barrel: shift the whole FX down 1px and clip the second lobe from the rendered patch, retaining the 8x8 atlas canvas. Shared sprite supplies both lobes without overlapping bursts.",
+      "Only on actual Combat.shot from_kind=\"roof\", at most one active flash. Align the tracer/casing origin to the same actual muzzle for the renderer only; do not alter aim, firing cadence, projectile damage or simulation. Requires matching recoil strip; if disabled keep the existing tracer behavior."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof turret",
+    "dependencies": [],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_armor_wall",
+    "title": "Armor pillar: seams, bolts and chipped steel",
+    "why": "Make the purchased armor strips read as reinforced plates.",
+    "parent": "mod_armor_wall",
+    "kind": "overlay",
+    "size": [
+      8,
+      56
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "orange1",
+      "orange2"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 8x56, retaining the two 8x27 panels and transparent seam y=27/55. Add 2px bolt-head clusters at x=2..5,y=3/23 and y=31/51, a vertical weld at x=6 and one rust run under a bolt. All detail stays within the existing opaque footprint.",
+      "Preserve Vehicle placement at x=37/247,y=208-56*floor. Lv2 covers lower two floors (or available floors); Lv3 covers all floors. Keep the unused legacy mod_armor_cab unused: cab engine view must remain open."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Armor plates",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_fuel_tank",
+    "title": "Fuel drum: dull paint, hoops and tied straps",
+    "why": "Make stacked fuel capacity read as salvaged equipment.",
+    "parent": "mod_fuel_tank",
+    "kind": "overlay",
+    "size": [
+      16,
+      22
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray2",
+      "gray4",
+      "yellow0",
+      "yellow1",
+      "orange1",
+      "orange2",
+      "red1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 16x22. Retain barrel bounds x=1..13 and strap mounts x=13..15 at y=3/17. Replace broad bright yellow3 with dull yellow1, shade yellow0; paint two dark metal hoops at y=5/15, a 2px rust cluster under a hoop and a dark red stamped warning patch.",
+      "Preserve the existing one-drum-per-level placement algorithm (up to 3). Rig uses x=20 or roof fallback; other tiers x=40 or roof fallback. Do not reposition drums beneath/on the deck or imply leaking fuel."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Fuel tanks",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_heater",
+    "title": "Exterior heater chimney: sooted cap and rusty joints",
+    "why": "Include the visible chimney even though heater is listed as an interior mod.",
+    "parent": "mod_heater",
+    "kind": "overlay",
+    "size": [
+      12,
+      20
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray3",
+      "gray4",
+      "red0",
+      "red1",
+      "orange1",
+      "orange2"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 12x20. Retain cap x=0..11,y=0..4, pipe x=2..9,y=4..19, and all current band positions. Add cap underside soot, two dark rivets and a 1px rust seam. No permanent orange glow or smoke: heater has no explicit cosmetic firing state.",
+      "Both heater levels share the chimney. Keep top-left (130,roof_y()-20) in every tier and the normal engine chimney/exhaust at its separate Data.VEHICLES.chimney location. No changes to heating bonuses or resource use."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Heater chimney (visible interior mod)",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_rad_shield",
+    "title": "Lead skirt: overlapping sheets and clamps",
+    "why": "Make radiation shielding read as heavy dull metal.",
+    "parent": "mod_rad_shield",
+    "kind": "overlay",
+    "size": [
+      208,
+      10
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "yellow1",
+      "orange1",
+      "orange2"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 208x10, at lead vehicle (42,268). Retain radiation-emblem positions x=10+40*k; use muted yellow1. Add overlapping panel seams every 26px, sparse 2px clamp heads at y=2 and limited edge chips at y=8. Keep the bottom outline y=9 intact.",
+      "No glowing green radiation or moving metal highlights. Both purchased levels share this base; a separate small tab strip supplies the additional Lv2 clamp read. Preserve wheel/rail and bogie visibility."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Radiation shield",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_rain_catcher",
+    "title": "Rain funnel: patched cloth and reinforced outlet",
+    "why": "Make the water collector legible as tied salvaged fabric.",
+    "parent": "mod_rain_catcher",
+    "kind": "overlay",
+    "size": [
+      40,
+      16
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "teal0",
+      "teal1",
+      "teal2",
+      "teal3",
+      "cream1",
+      "gray3",
+      "sky3"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 40x16. Retain posts x=1/38,y=3..15 and funnel outlet x=18..21,y=13..15. Add one 4x3 desaturated stitched patch on a side fold, tie clusters on both corners, a dark reinforced throat and readable radiating fold groups. No water moving in this static sprite.",
+      "Keep top-left (146,roof_y()-36) across chassis. Both levels retain the single funnel and posts. Do not introduce a second tank, storage capacity or new weather collection rule."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Rain catcher",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_roof_turret_1",
+    "title": "Roof turret Lv1: bolted receiver and cooling slots",
+    "why": "Separate receiver, barrel and mount without increasing weapon size.",
+    "parent": "mod_roof_turret_1",
+    "kind": "overlay",
+    "size": [
+      24,
+      18
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray3",
+      "gray4",
+      "gray5",
+      "green2",
+      "green3",
+      "teal2",
+      "red1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 24x18. Preserve Lv1 color family and 1 right-facing barrel(s); Lv3 retains its x=2..8 raised shield. Keep mount x=4..17,y=13..17 and muzzle end x=23 fixed.",
+      "Use one dark receiver seam, a 2px bolt cluster on the mount and 1px cooling slots on barrel shadows. Use fixed steel highlights, a muted teal optic and dark red antenna tip; no sweeping lens or fake idle fire.",
+      "Place at (200,roof_y()-18) on the lead vehicle; check the neighboring fuel drums and the deck crew. This static redraw is the source for the matching recoil strip."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof turret",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_roof_turret_2",
+    "title": "Roof turret Lv2: bolted receiver and cooling slots",
+    "why": "Separate receiver, barrel and mount without increasing weapon size.",
+    "parent": "mod_roof_turret_2",
+    "kind": "overlay",
+    "size": [
+      24,
+      18
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray3",
+      "gray4",
+      "gray5",
+      "blue2",
+      "blue3",
+      "teal2",
+      "red1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 24x18. Preserve Lv2 color family and 2 right-facing barrel(s); Lv3 retains its x=2..8 raised shield. Keep mount x=4..17,y=13..17 and muzzle end x=23 fixed.",
+      "Use one dark receiver seam, a 2px bolt cluster on the mount and 1px cooling slots on barrel shadows. Use fixed steel highlights, a muted teal optic and dark red antenna tip; no sweeping lens or fake idle fire.",
+      "Place at (200,roof_y()-18) on the lead vehicle; check the neighboring fuel drums and the deck crew. This static redraw is the source for the matching recoil strip."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof turret",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_roof_turret_3",
+    "title": "Roof turret Lv3: bolted receiver and cooling slots",
+    "why": "Separate receiver, barrel and mount without increasing weapon size.",
+    "parent": "mod_roof_turret_3",
+    "kind": "overlay",
+    "size": [
+      24,
+      18
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray3",
+      "gray4",
+      "gray5",
+      "purple2",
+      "purple3",
+      "teal2",
+      "red1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 24x18. Preserve Lv3 color family and 2 right-facing barrel(s); Lv3 retains its x=2..8 raised shield. Keep mount x=4..17,y=13..17 and muzzle end x=23 fixed.",
+      "Use one dark receiver seam, a 2px bolt cluster on the mount and 1px cooling slots on barrel shadows. Use fixed steel highlights, a muted teal optic and dark red antenna tip; no sweeping lens or fake idle fire.",
+      "Place at (200,roof_y()-18) on the lead vehicle; check the neighboring fuel drums and the deck crew. This static redraw is the source for the matching recoil strip."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Roof turret",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_shock_1",
+    "title": "Heavy suspension Lv1: piston and coil detail",
+    "why": "Make the visible load-support upgrade read as a coil-over shock.",
+    "parent": "mod_shock_1",
+    "kind": "overlay",
+    "size": [
+      8,
+      20
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "yellow1",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 8x20. Preserve upper mount y=0..1, lower mount y=18..19, current coil count/width and muted tier color yellow1. Add a 1px exposed steel piston, 2px mounting-eye shadows and a small dirty seal. No bright chrome or emissive paint.",
+      "Keep source top-left x=wheel_x-4,y=252 (including the existing differing tier widths). Road lead-vehicle wheels only; train/wagons excluded. Existing suspension/leaf-spring precedence stays unchanged. Rear shocks under installed tracks must not show through opaque track geometry."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Heavy suspension",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_shock_2",
+    "title": "Heavy suspension Lv2: piston and coil detail",
+    "why": "Make the visible load-support upgrade read as a coil-over shock.",
+    "parent": "mod_shock_2",
+    "kind": "overlay",
+    "size": [
+      10,
+      20
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "red2",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 10x20. Preserve upper mount y=0..1, lower mount y=18..19, current coil count/width and muted tier color red2. Add a 1px exposed steel piston, 2px mounting-eye shadows and a small dirty seal. No bright chrome or emissive paint.",
+      "Keep source top-left x=wheel_x-4,y=252 (including the existing differing tier widths). Road lead-vehicle wheels only; train/wagons excluded. Existing suspension/leaf-spring precedence stays unchanged. Rear shocks under installed tracks must not show through opaque track geometry."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Heavy suspension",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_shock_3",
+    "title": "Heavy suspension Lv3: piston and coil detail",
+    "why": "Make the visible load-support upgrade read as a coil-over shock.",
+    "parent": "mod_shock_3",
+    "kind": "overlay",
+    "size": [
+      12,
+      20
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "blue3",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 12x20. Preserve upper mount y=0..1, lower mount y=18..19, current coil count/width and muted tier color blue3. Add a 1px exposed steel piston, 2px mounting-eye shadows and a small dirty seal. No bright chrome or emissive paint.",
+      "Keep source top-left x=wheel_x-4,y=252 (including the existing differing tier widths). Road lead-vehicle wheels only; train/wagons excluded. Existing suspension/leaf-spring precedence stays unchanged. Rear shocks under installed tracks must not show through opaque track geometry."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Heavy suspension",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_solar_cover",
+    "title": "Solar hood: hinges, rivets and dust lip",
+    "why": "Make the existing protective hood visibly mechanical.",
+    "parent": "mod_solar_cover",
+    "kind": "overlay",
+    "size": [
+      34,
+      9
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "orange0",
+      "orange1",
+      "orange2",
+      "orange3",
+      "gray3",
+      "gray5",
+      "sand1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Exactly 34x9, same trapezoid silhouette and 24px ridge. Keep ribs separated in coarse groups; add two 2px hinge clusters at x=5/27,y=5 and a narrow dull dust lip y=7. Keep cells below visible.",
+      "Retain two instances at (SOLAR_X-17,8+roof_dy), independent of the sun-tracking poses from MV-461. This is a fixed protective hood; do not invent a weather-driven deployment, new state or power mechanic."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Solar covers",
+    "dependencies": [
+      "MV-461"
+    ],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_spike_ram_1",
+    "title": "Spiked ram Lv1: welded salvage steel",
+    "why": "Make the purchased ram read as a repaired steel implement at 1x.",
+    "parent": "mod_spike_ram_1",
+    "kind": "overlay",
+    "size": [
+      28,
+      34
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "gray6",
+      "orange1",
+      "orange2",
+      "yellow1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Replace exactly mod_spike_ram_1, 28x34; retain 3 spikes and existing spike length 5+2*level. Keep all tip positions and outline silhouette.",
+      "Add a 2px-wide weld cluster beside the rear edge x=24..26, two readable bolt heads around (22,8)/(22,26), one dark gouge on the plate and sparse rust below the bolts. Keep gray6 on sharpened upper edges; mute hazard paint to yellow1. Lv3 keeps the dark red badge using orange2/ol0 rather than a glowing light.",
+      "Vehicle._refresh_mods keeps top-left (-20,242) for every current chassis. Do not shift the bumper or replace the train cowcatcher; show their combined silhouette."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Spiked ram",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_spike_ram_2",
+    "title": "Spiked ram Lv2: welded salvage steel",
+    "why": "Make the purchased ram read as a repaired steel implement at 1x.",
+    "parent": "mod_spike_ram_2",
+    "kind": "overlay",
+    "size": [
+      28,
+      34
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "gray6",
+      "orange1",
+      "orange2",
+      "yellow1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Replace exactly mod_spike_ram_2, 28x34; retain 4 spikes and existing spike length 5+2*level. Keep all tip positions and outline silhouette.",
+      "Add a 2px-wide weld cluster beside the rear edge x=24..26, two readable bolt heads around (22,8)/(22,26), one dark gouge on the plate and sparse rust below the bolts. Keep gray6 on sharpened upper edges; mute hazard paint to yellow1. Lv3 keeps the dark red badge using orange2/ol0 rather than a glowing light.",
+      "Vehicle._refresh_mods keeps top-left (-20,242) for every current chassis. Do not shift the bumper or replace the train cowcatcher; show their combined silhouette."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Spiked ram",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_spike_ram_3",
+    "title": "Spiked ram Lv3: welded salvage steel",
+    "why": "Make the purchased ram read as a repaired steel implement at 1x.",
+    "parent": "mod_spike_ram_3",
+    "kind": "overlay",
+    "size": [
+      28,
+      34
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "gray6",
+      "orange1",
+      "orange2",
+      "yellow1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 0,
+      "y": 0,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Replace exactly mod_spike_ram_3, 28x34; retain 5 spikes and existing spike length 5+2*level. Keep all tip positions and outline silhouette.",
+      "Add a 2px-wide weld cluster beside the rear edge x=24..26, two readable bolt heads around (22,8)/(22,26), one dark gouge on the plate and sparse rust below the bolts. Keep gray6 on sharpened upper edges; mute hazard paint to yellow1. Lv3 keeps the dark red badge using orange2/ol0 rather than a glowing light.",
+      "Vehicle._refresh_mods keeps top-left (-20,242) for every current chassis. Do not shift the bumper or replace the train cowcatcher; show their combined silhouette."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Spiked ram",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "mod_tracks",
+    "title": "Snow tracks: linked belt and bogie detail",
+    "why": "Replace plain track blocks with legible linked steel and restrained rust.",
+    "parent": "veh_rig",
+    "kind": "anim",
+    "size": [
+      84,
+      38
+    ],
+    "frames": {
+      "count": 4,
+      "fps": 12,
+      "loop": true
+    },
+    "palette": [
+      "ol0",
+      "gray0",
+      "gray1",
+      "gray2",
+      "gray3",
+      "gray4",
+      "gray5",
+      "orange1",
+      "orange2",
+      "yellow1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 202,
+      "y": 284,
+      "pivot": "center"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": true,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "Replace exactly mod_tracks_0..3, each 84x38. Keep center (42,19), outline bounds, inner road-wheel centers (12,22),(32,22),(52,22),(72,22) and fixed light. Add distinct 2px tread blocks/1px link gaps on top and bottom, a bolted inner beam and sparse dirt clusters.",
+      "Four phases must wrap continuously with opposite top/bottom belt travel and linked end-turn progression. Preserve Atlas.track_frames 12fps contract and current Vehicle.play_backwards speed control; no runtime rotation, no changing track radius.",
+      "Vehicle center is (200,284) van/bus or (202,284) rig. Preserve the existing canvas overhang to y=302 (top-left y=265): the validator warns about 3px outside the 300px shell; this is intentional existing placement, not permission to expand it. Retain installed-track-only visibility, rear-wheel occlusion and parked pause. Train gets no tracks; road trailers keep their current exposed wheels. Do not redraw bwheel from MV-390."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Snow tracks",
+    "dependencies": [],
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "prop_ext_armor_lv1",
+    "title": "Armor Lv1: bottom-sill mounting tabs",
+    "why": "Give the currently invisible first armor purchase a small honest visual cue.",
+    "parent": "veh_rig",
+    "kind": "prop",
+    "size": [
+      8,
+      6
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray2",
+      "gray3",
+      "gray5",
+      "orange1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 37,
+      "y": 262,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": "exterior_mod_ambience",
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "One 8x6 steel mounting-tab sprite, a 2px bolt cluster and chipped upper lip; no cab plate or extra floor skin. Exact bounds x=37..44,y=262..267 for left bottom sill; second instance top-left (247,262). Geometry derives from wall-strip x and bottom room edge ROW0+52.",
+      "Show exactly two tabs only when armor_plates == 1, on the lead vehicle in all tiers. At Lv2/3 the wall strips replace these cues. Hide at Lv0. The cosmetic feature off hides this new cue while retaining current armor functionality. Check no room/ladder/cab pixels are blocked."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Armor plates",
+    "dependencies": [],
+    "rest_frame": 0,
+    "plane": "MV-565"
+  },
+  {
+    "spec": "micro-asset/1",
+    "id": "prop_ext_catcher_lv2",
+    "title": "Rain catcher Lv2: reinforced drain collar",
+    "why": "Make the second rain-collection upgrade visible at the throat.",
+    "parent": "mod_rain_catcher",
+    "kind": "prop",
+    "size": [
+      8,
+      4
+    ],
+    "frames": {
+      "count": 1
+    },
+    "palette": [
+      "ol0",
+      "gray2",
+      "gray4",
+      "teal1",
+      "cream1"
+    ],
+    "outline": "ol0",
+    "light": "top-left",
+    "layer": "on_parent",
+    "anchor": {
+      "x": 16,
+      "y": 12,
+      "pivot": "top-left"
+    },
+    "generator": {
+      "method": "drawn",
+      "module": "tools/art/exterior_mods.py",
+      "function": "gen_exterior_mods"
+    },
+    "feature": null,
+    "replace": false,
+    "refs": [
+      "tools/art/truck.py",
+      "tools/art/extra.py",
+      "tools/art/common.py",
+      "scripts/world/vehicle.gd",
+      "scripts/world/exterior_mod_motion.gd"
+    ],
+    "acceptance": [
+      "Native whole pixels, binary alpha (0/255), declared palette only, nearest sampling, fixed top-left light. No blur, bloom, runtime rotation or fractional scaling. Show native 1x and nearest 4x review crops.",
+      "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
+      "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
+      "One 8x4 nonemissive reinforced collar at parent-local x=16..23,y=12..15, with two 1px rivets and a centered dark 4px opening. Preserve the original outlet bottom and posts. No second funnel.",
+      "Only rain_catcher Lv2; Lv1 remains cloth throat. Build after the catcher redraw, retain through flutter and runoff. Hide on uninstall and preserve the existing water-collection multipliers."
+    ],
+    "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
+    "priority": "medium",
+    "author": "Codex art analyst",
+    "review_group": "Rain catcher",
+    "dependencies": [
+      "mod_rain_catcher"
+    ],
+    "plane": "MV-565"
+  }
+]

@@ -422,6 +422,17 @@ func vehicle_detail_switch(v: bool) -> void:
 	feature_set("vehicle_detail", v)
 
 
+## MV-565: exterior-mod motion toggle and real rendering hooks without combat/resource changes.
+func exterior_mod_switch(v: bool) -> void:
+	feature_set("exterior_mod_ambience", v)
+
+
+func exterior_mod_preview(what: String) -> bool:
+	act("exterior mod preview " + what)
+	var v = get_tree().get_first_node_in_group("vehicle_fx")
+	return v != null and v.mod_motion.preview(what)
+
+
 ## MV-462: the cozy_roof switch (new water tank, dish, planter trays and rest-deck art; off = the old roof)
 func cozy_roof_switch(v: bool) -> void:
 	feature_set("cozy_roof", v)

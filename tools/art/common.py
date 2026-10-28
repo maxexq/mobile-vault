@@ -350,21 +350,22 @@ def add(name, img, q=True):
 def pack_atlas(max_w=2048):
     import json
     items = sorted(atlas_items.items(), key=lambda kv: (-kv[1].height, -kv[1].width, kv[0]))
-    x = y = 0
-    row_h = 0
+    rows = []
+    y = 0
     padd = 1     # MV-473: nearest filtering never samples a neighbour; 1 px keeps the sheet at 2048 tall
     regions = {}
     for name, im in items:
-        if x + im.width + padd > max_w:
-            x = 0
-            y += row_h + padd
-            row_h = 0
-        regions[name] = (x, y, im.width, im.height)
-        x += im.width + padd
-        row_h = max(row_h, im.height)
-    H = y + row_h
-    # MV-563: the sheet no longer fits 2048x2048; a 64 px multiple instead of the next power of two (4096) keeps
-    # it near 20 MB of video memory. Lossless, no mipmaps: WebGL2 / Compatibility take non-power-of-two sizes.
+        # First-fit decreasing shelves reclaim gaps in earlier rows. Small mod strips
+        # must not double the 2048 atlas just because the final shelf is full (MV-565).
+        row = next((r for r in rows if im.height <= r[2] and r[0] + im.width + padd <= max_w), None)
+        if row is None:
+            row = [0, y, im.height]
+            rows.append(row)
+            y += im.height + padd
+        regions[name] = (row[0], row[1], im.width, im.height)
+        row[0] += im.width + padd
+    H = y - padd
+    # Retain MV-563's 64px height rounding for the grown five-floor shells.
     H2 = (H + 63) // 64 * 64
     sheet = new(max_w, H2)
     for name, im in items:
