@@ -7,6 +7,7 @@ extends Control
 
 const H := 14
 const TAG_W := 40
+const BG_ALPHA := 0.70
 
 var msg: Dictionary = {}
 var loops_done := 0
@@ -63,7 +64,7 @@ func _on_features_changed() -> void:
 
 func _style() -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(UIKit.C_BG, 0.92)
+	sb.bg_color = Color(UIKit.C_BG, BG_ALPHA)
 	sb.border_color = UIKit.C_LINE
 	sb.border_width_bottom = 1
 	return sb
@@ -86,7 +87,12 @@ func _next() -> void:
 	_tag.add_theme_stylebox_override("normal", _tag_style(update))
 	_label.text = str(msg.text)
 	_label.add_theme_color_override("font_color", UIKit.C_GREEN if update else UIKit.C_GOLD)
-	_label.size = Vector2(_label.get_minimum_size().x, H - 1)
+	# Font fallbacks can make NEWS taller than H. Share one content height so the
+	# background, tag and scrolling text stay aligned without clipping Thai marks.
+	var content_h := ceilf(maxf(H - 1, maxf(_tag.get_combined_minimum_size().y, _label.get_combined_minimum_size().y)))
+	_strip.offset_bottom = content_h + 1
+	_tag.size = Vector2(TAG_W, content_h)
+	_label.size = Vector2(_label.get_minimum_size().x, content_h)
 	_strip.mouse_filter = Control.MOUSE_FILTER_STOP if update else Control.MOUSE_FILTER_IGNORE
 	loops_done = 0
 	x = _width()
