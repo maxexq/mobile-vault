@@ -29,6 +29,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Upgrading the Mobile Vault frame always does something now: +15 max hull and +5 % production per level, and when your vehicle has no space for the room a level unlocks, you get +10 % production instead until a bigger vehicle can use it. The upgrade card shows the real number of rooms and tells you which vehicle to switch to when this one is full (MV-545)
 
 ### Fixed
+- The announcement background now matches the NEWS / UPDATE tag height and shows HUD resources faintly through its 70% opaque background while keeping text fully opaque (MV-564).
 - Web: no sound at all after the sound update; the game is audible again (MV-560).
 
 ## [4.7.0-alpha.4] - 2026-10-27
