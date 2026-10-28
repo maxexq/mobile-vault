@@ -121,9 +121,11 @@ approved edit.
 
 ## Cast animations
 
-All 24 cast designs are PixelLab characters (ids in the manifest `cast_animations`) with five
-east clips each: `walk`, `eat`, `drink` (one-shot), `work` (hammer) and `talk`, 9 frames with
-frame 0 as the reference pose. Files in
+All 24 cast designs are PixelLab characters (ids in the manifest `cast_animations`) with seven
+east clips each: `walk`, `eat`, `drink` (one-shot), `work` (hammer), `talk`, `idle` (5 frames)
+and a personal `signature` move that fits the character (one-shot; per-character prompt in the
+manifest, e.g. the hunter draws her bow, the monk gives a wai). Clips have 9 frames with frame 0
+as the reference pose; left-facing is a mirror of each clip. Files in
 [`approved/cast_animations/<name>/<clip>/`](crew-style-reference/approved/cast_animations/),
 plus each character's `east.png`.
 
