@@ -1496,7 +1496,7 @@
       "Keep existing mod silhouettes, room/cab openings, ladders, solar faces, roof crew, sleeping crew and purchase-level identity readable. Motion is local: do not shake the vehicle, camera, room or crew.",
       "Check van/bus/rig/train, zero/one/two trailers, cutaway and closed hull, supported floor counts, mod level 0 through max, parked/driving, pause, feature off and rebuild. Use current Data geometry, not obsolete README size prose.",
       "Exactly 16x22. Retain barrel bounds x=1..13 and strap mounts x=13..15 at y=3/17. Replace broad bright yellow3 with dull yellow1, shade yellow0; paint two dark metal hoops at y=5/15, a 2px rust cluster under a hoop and a dark red stamped warning patch.",
-      "Preserve the existing one-drum-per-level placement algorithm (up to 3). Rig uses x=20 or roof fallback; other tiers x=40 or roof fallback. Do not reposition drums beneath/on the deck or imply leaking fuel."
+      "Preserve the existing one-drum-per-level placement algorithm (up to 3). Follow current staging: front-wall drums only on rig/bus, bounded by their own roof; van/train drums stay on the current roof, including grown five-floor shells. Do not reposition drums beneath/on the deck or imply leaking fuel."
     ],
     "notes": "MV-565. Parames approved implementation by Codex on 2026-10-28. Deterministic drawn art; no paid generation. Source geometry/road-rail applicability retained. See docs/art/exterior-mods.md for current-source amendments and integration.",
     "priority": "medium",
