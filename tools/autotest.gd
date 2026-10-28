@@ -341,6 +341,14 @@ func _run() -> void:
 		_env_micro_test()
 		_finish()
 		return
+	if "--only=exterior_mods" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		# This visual fixture changes weather quickly; let ambience fade out before
+		# shutdown instead of quitting the Dummy audio driver with active WAV loops.
+		Features.set_override("features", "audio_ambience", false)
+		await _exterior_mods_test()
+		_finish()
+		return
 	if "--only=driver_cab" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _driver_cab_test()
@@ -1067,6 +1075,7 @@ func _run() -> void:
 	await _engine_detail_test()
 	await _idle_motion_test()
 	await _driver_cab_test()
+	await _exterior_mods_test()
 	_env_micro_test()
 	await _engine_rest_test()
 	await _quarters_guard_test()
@@ -5738,6 +5747,153 @@ func _cozy_roof_test() -> void:
 	Mods.mods_changed.emit()
 	Dev.set_tier(was_tier)
 	Dev.set_trailers(was_tr)
+	await wait(0.1)
+
+
+func _exterior_mods_test() -> void:
+	var v: Vehicle = main.vehicle
+	var m: ExteriorModMotion = v.mod_motion
+	var state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var saved_view := v.xray
+	Features.set_override("features", "exterior_mod_ambience", true)
+	Features.set_override("features", "cozy_roof", true)
+	Game.s.traveling = false
+	Game.s.weather = "clear"
+	m.set_process(false) # explicit phase steps below; no timing race against the renderer
+	var contracts: Array = JSON.parse_string(FileAccess.get_file_as_string("res://tools/art/exterior_mods/contracts.json"))
+	var cells := 0
+	var sizes_ok := true
+	for spec in contracts:
+		for f in int(spec.frames.count):
+			var key := str(spec.id) if int(spec.frames.count) == 1 else "%s_%d" % [spec.id, f]
+			var r: Array = Atlas.regions.get(key, [])
+			sizes_ok = sizes_ok and r.size() == 4 and int(r[2]) == int(spec.size[0]) and int(r[3]) == int(spec.size[1])
+			cells += 1
+	_check("exterior mods: 40 contracts / 110 exact-sized atlas cells", sizes_ok and contracts.size() == 40 and cells == 110)
+	_check("exterior mods: atlas stays within the five-floor staging budget", Atlas.sheet.get_width() == 2048 and Atlas.sheet.get_height() <= 2816)
+	var matrix_ok := true
+	for tier in Data.TIER_ORDER:
+		Dev.set_tier(tier)
+		for trailers in 3:
+			Dev.set_trailers(trailers)
+			for lv in range(1, 4):
+				for id in Mods.MODS:
+					Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+				Game.s.mods.tracks = 1 if lv == 3 else 0
+				Mods.mods_changed.emit()
+				await wait(0.03)
+				var rail: bool = Data.VEHICLES[tier].rail
+				var expected_rims: int = 0 if rail or lv == 1 else int(Data.VEHICLES[tier].wheels.size()) + trailers * 2
+				if not rail and lv == 3: expected_rims -= int(Data.VEHICLES[tier].wheels.size()) - 1
+				matrix_ok = matrix_ok and m.rims.size() == expected_rims and v.tracks.visible == (not rail and lv == 3)
+				var armor_cues := v.sprite_regions(false).count("prop_ext_armor_lv1")
+				matrix_ok = matrix_ok and armor_cues == (2 if lv == 1 else 0)
+				for xr in [false, true]:
+					v.set_xray(xr)
+					matrix_ok = matrix_ok and m.pool.size() == 12 and m.active_fx() == 0
+				if trailers == 0 and lv == 2:
+					await shot("exterior_mods_" + tier)
+	_check("exterior mods: all chassis, 0-2 trailers, all levels, cutaway/closed, rail/track/rim precedence", matrix_ok)
+	var floors_ok := true
+	for tier in Data.TIER_ORDER:
+		Dev.set_tier(tier)
+		Dev.set_trailers(0)
+		for vault_level in [1, 2, 4, 6]:
+			Dev.set_vault(vault_level)
+			await wait(0.08)
+			floors_ok = floors_ok and v.floors == Game.floors() and not m._roof.is_empty()
+			floors_ok = floors_ok and m._roof.sprite.position == Vector2(200, v.roof_y() - 18)
+			floors_ok = floors_ok and is_instance_valid(m._catcher) and m._catcher.position == Vector2(146, v.roof_y() - 36)
+			if vault_level == 6: await shot("exterior_mods_five_floors_" + tier)
+	_check("exterior mods: roof bindings follow every chassis at Vault 1/2/4/6 up to five floors", floors_ok)
+	Dev.set_tier("van")
+	Dev.set_vault(1)
+	await wait(0.1)
+	var ghost_ok := v.preview_next_floor(0.5)
+	var lifted_at: Vector2 = m._roof.sprite.position + Vector2(24, 7)
+	_check("exterior mods: muzzle follows the lifted roof during next-floor preview", ghost_ok and m.roof_shot() == v.body.to_global(lifted_at))
+	v._clear_floor_ghost()
+	Dev.set_tier("rig")
+	Dev.set_trailers(0)
+	Game.s.mods.tracks = 0
+	Game.s.mods.armor_plates = 3
+	Mods.mods_changed.emit()
+	v.set_xray(true)
+	await wait(0.3)
+	v._speed = 0.0
+	m.rebuild()
+	var baseline: Dictionary = Game.s.duplicate(true)
+	var muzzle := m.roof_shot()
+	m._tick(0.06)
+	_check("exterior mods: real roof-shot hook starts 1px recoil at the visible muzzle", not m._roof.is_empty() and int(m._roof.frame) == 1
+		and muzzle == v.body.to_global(Vector2(224, v.roof_y() - 11)))
+	m._tick(0.3)
+	_check("exterior mods: recoil returns to rest without queued shots", int(m._roof.frame) == 0 and float(m._roof.time) < 0.0)
+	var phase: float = float(m._roof.time)
+	m._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	m._process(2.0)
+	_check("exterior mods: hidden application freezes cosmetic phase", float(m._roof.time) == phase)
+	m._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_IN)
+	# An offscreen owner retains both its delay and phase, with no catch-up jump on return.
+	var turret: Sprite2D = m._roof.sprite
+	var pos := turret.position
+	turret.position += Vector2(10000, 0)
+	m._roof.time = 0.05
+	m._tick(0.1)
+	_check("exterior mods: offscreen owner freezes phase", is_equal_approx(float(m._roof.time), 0.05))
+	turret.position = pos
+	for r in m.rims:
+		r.wheel.pause()
+		r.wheel.frame = 2
+	m._tick(0.0)
+	_check("exterior mods: rim phase samples tyre, including while parked", m.rims.size() == 3 and m.rims.all(func(r): return int(r.frame) == 2))
+	m.rebuild()
+	Game.s.weather = "acid_rain"
+	_check("exterior mods: acid rain has no collection runoff or dry grit", not m.runoff_now() and not m.grit_now(true))
+	Game.s.weather = "rain"
+	_check("exterior mods: normal rain drains behind the receiving tank", m.runoff_now() and m.pool[0].sprite.get_parent() == m._water_root)
+	Game.s.weather = "clear"
+	m.rebuild()
+	_check("exterior mods: parked tyre makes no grit", not m.grit_now(false))
+	_check("exterior mods: driving dry tyre can make contact grit", m.grit_now(true))
+	Features.set_override("tune", "mods.fx_cap", 1.0)
+	m.grit_now(true) # changing a feature/tune rebuilds bindings and clears the earlier fixture
+	m.roof_shot()
+	_check("exterior mods: combat reclaims ambient capacity and stays within cap", m.active_fx() <= 1 and m.pool.any(func(p): return float(p.time) >= 0.0 and bool(p.combat)))
+	m.rebuild()
+	Game.s.weather = "rain"
+	var had_runoff := m.runoff_now()
+	m.roof_shot()
+	_check("exterior mods: capped combat also reclaims the separate rain layer", had_runoff and m.active_fx() == 1 and float(m.pool[0].time) < 0.0
+		and m.pool.any(func(p): return float(p.time) >= 0.0 and bool(p.combat)))
+	Game.s.weather = "clear"
+	Features.set_override("tune", "mods.fx_cap", null)
+	m.rebuild()
+	var plate := v.body.to_global(Vector2(250, 220))
+	_check("exterior mods: real plate intersection accepts a contact, room hit rejects it", m.armor_hit(plate) and not m.armor_hit(v.body.to_global(Vector2(100, 220))))
+	m.rebuild()
+	m.preview("ram")
+	m.preview("shot")
+	m.preview("motion")
+	_check("exterior mods: rendering hooks do not change simulation/save data", Game.s == baseline)
+	var nodes := m.get_child_count()
+	for i in 8: m.rebuild()
+	_check("exterior mods: repeated rebuilds reuse the fixed transient pool", m.get_child_count() == nodes and m.pool.size() == 12 and m.active_fx() == 0)
+	Dev.exterior_mod_switch(false)
+	_check("exterior mods: feature off clears motion, rim overlays and transient FX", m.bindings.is_empty() and m.rims.is_empty() and m.active_fx() == 0 and not m.preview("shot"))
+	Dev.exterior_mod_switch(true)
+	Dev.mods_all(false)
+	await wait(0.05)
+	_check("exterior mods: uninstall leaves no old bindings or level cues", m.bindings.is_empty() and m.rims.is_empty() and m.active_fx() == 0
+		and not v.sprite_regions(false).has("prop_ext_armor_lv1"))
+	Game.s = state
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	v.rebuild()
+	m.set_process(true)
+	v.set_xray(saved_view)
+	Game.weather_changed.emit(str(Game.s.weather))
 	await wait(0.1)
 
 

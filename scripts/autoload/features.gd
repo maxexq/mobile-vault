@@ -34,6 +34,7 @@ const TIMEOUT_SEC := 10.0
 
 ## every switch the game knows; the remote file cannot invent new ones
 const FEATURES := {
+	"exterior_mod_ambience": "มอดภายนอก MV-565: สายรัด/ผ้าใบ/โช้คขยับ ปืนถอยตามการยิง เศษดินและหยดฝน (ปิด = ภาพนิ่ง)",
 	"nextgen_all_crew": "รุ่นถัดไปพาผู้รอดชีวิตทุกคน พร้อมเลเวล สกิล และอุปกรณ์ครบ รวมคลังและของติดรถ (ปิด = เลือกหนีตามกฎเดิม)",
 	"event_progression": "อีเว้นต์ยากขึ้นตามไบโอม รอบเล่น และ Vault (MV-553): โตตามอุปกรณ์ เช็กสเตตัสยากขึ้นแบบมีเพดาน ความเสียหายจำกัด",
 	"warlord_progression": "บอสด่านตรวจผ่านได้ต่อเนื่อง (MV-550): ความแกร่งโตตามอุปกรณ์ รวมลูกน้อง จำกัดความเสียหายต่อครั้ง",
@@ -114,6 +115,9 @@ const FEATURES := {
 }
 ## tune key: [min, max, label]; the code that reads one passes its own constant as the default
 const TUNE := {
+	"mods.fps": [0.25, 2.0, "มอดภายนอก: ความเร็วแอนิเมชัน (เท่า)"],
+	"mods.gap": [0.5, 4.0, "มอดภายนอก: ระยะห่างระหว่างการขยับ/เอฟเฟกต์ (เท่า)"],
+	"mods.fx_cap": [1.0, 12.0, "มอดภายนอก: จำนวนเอฟเฟกต์ชั่วคราวสูงสุดทั้งขบวน"],
 	"industrial_background.clouds_speed": [0.0, 0.2, "นิคมอุตสาหกรรม: ความเร็วเมฆเทียบถนน"],
 	"industrial_background.far_speed": [0.0, 0.3, "นิคมอุตสาหกรรม: ความเร็วฉากไกลเทียบถนน"],
 	"industrial_background.mid_speed": [0.0, 0.6, "นิคมอุตสาหกรรม: ความเร็วฉากกลางเทียบถนน"],

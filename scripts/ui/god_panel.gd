@@ -332,6 +332,11 @@ func _tab_vehicle() -> void:
 		_b("ไฟหน้าปัด", func(): Dev.driver_cab_preview("lamp"), "gray", true), _b("จับพวงมาลัย", func(): Dev.driver_cab_preview("wheel"), "gray", true)],
 		"ห้องคนขับ MV-519 (วิกเตอร์)")
 	_head("ENGINE BAY", "ห้องเครื่อง · %s %d°C สภาพ %d%%" % [EngineBay.t().th, int(EngineBay.heat()), int(EngineBay.cond())])
+	_row([_b("มอดขยับ: " + ("เปิด" if Features.on("exterior_mod_ambience") else "ปิด"), func(): Dev.exterior_mod_switch(not Features.on("exterior_mod_ambience")),
+		"green" if Features.on("exterior_mod_ambience") else "red"), _b("ผ้า/สายรัด", func(): Dev.exterior_mod_preview("motion"), "gray", true),
+		_b("ยิงปืนหลังคา", func(): Dev.exterior_mod_preview("shot"), "gray", true)], "มอดภายนอก MV-565 (ต้องติดตั้งมอดก่อน)")
+	_row([_b("ชนกันชน", func(): Dev.exterior_mod_preview("ram"), "gray", true), _b("เศษดิน", func(): Dev.exterior_mod_preview("grit"), "gray", true),
+		_b("น้ำฝนไหล", func(): Dev.exterior_mod_preview("rain"), "gray", true)], "เอฟเฟกต์มอด (น้ำไหลเฉพาะฝน/พายุ)")
 	_row([_b("ระบบห้องเครื่อง: " + ("เปิด" if EngineBay.on() else "ปิด (ดีเซลเดิม)"), func(): Dev.engine_bay_switch(not EngineBay.on()),
 		"green" if EngineBay.on() else "red", true)], "สวิตช์")
 	_row([_b("ห้องเครื่องมีชีวิต: " + ("เปิด" if Features.on("vehicle_ambience") else "ปิด"), func(): Dev.vehicle_ambience_switch(not Features.on("vehicle_ambience")),

@@ -300,7 +300,7 @@ func _on_shot(from_kind: String, from_id: int, to_kind: String, to_id: int, styl
 			a = vehicle.body.to_global(TURRET_MUZZLE)
 			_casing(a)
 		"roof":
-			a = vehicle.body.to_global(Vector2(222, Vehicle.ROOF_Y + vehicle.roof_dy() - 12))
+			a = vehicle.mod_motion.roof_shot()
 			_casing(a)
 		"enemy":
 			var en: EnemyActor = enemy_nodes.get(from_id)
@@ -319,6 +319,8 @@ func _on_shot(from_kind: String, from_id: int, to_kind: String, to_id: int, styl
 			b = vehicle.body.to_global(Vector2(randi_range(248, 254) + rear_shift, randi_range(int(vehicle.roof_y()) + 10, 250)))
 		"solar":
 			b = vehicle.body.to_global(Vector2(randi_range(66, 118), Vehicle.SOLAR_Y + vehicle.roof_dy() + 8))
+	if from_kind == "enemy" and to_kind == "van":
+		vehicle.mod_motion.armor_hit(b)
 	if style == "melee":
 		_spark(b)
 		return
@@ -706,6 +708,7 @@ func _tick_ram(delta: float) -> void:
 			get_tree().call_group("shake", "shake", 1.5 if Mods.level("spike_ram") == 0 else 2.5)
 			vehicle.spark()
 			var dmg := 0.6 * (1.0 - 0.25 * Mods.level("spike_ram"))
+			vehicle.mod_motion.ram_contact()
 			Game.s.hull = maxf(0.0, float(Game.s.hull) - dmg)
 			Game._add_res("scrap", 0.5 + Mods.level("spike_ram"))
 			z.queue_free()

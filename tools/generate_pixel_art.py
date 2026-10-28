@@ -14,7 +14,7 @@ Run:  python3 tools/generate_pixel_art.py      (needs Pillow)
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from art.common import pack_atlas, OUT_ATLAS
-from art import rooms, truck, engine_bay, chars, ui, bg, events, landmarks, extra, expedition, inspect, encounters
+from art import rooms, truck, engine_bay, chars, ui, bg, events, landmarks, extra, expedition, inspect, encounters, exterior_mods
 
 
 def main():
@@ -36,11 +36,13 @@ def main():
     ui.gen_trait_cards()      # MV-483: compact trait card frame (+ the light reference sheet, not shipped)
     ui.gen_world_map()        # MV-500 / MV-501..513: seeded world map tiles, frames, markers
     bg.gen_env_micro()        # MV-388 phase 4: atlas sprites for the living backgrounds
+    exterior_mods.gen_exterior_mods()  # MV-565: mod-only materials and bounded local strips
     pack_atlas()
-    bg.gen_backgrounds()
-    events.gen_events()
-    inspect.gen_inspect()
-    encounters.gen_encounters()
+    if '--atlas-only' not in sys.argv:
+        bg.gen_backgrounds()
+        events.gen_events()
+        inspect.gen_inspect()
+        encounters.gen_encounters()
     with open(os.path.join(OUT_ATLAS, "dweller_variants.json"), "w") as f:
         json.dump(dvars, f)
     print("done")
