@@ -4,6 +4,7 @@ extends ModalPanel
 ## MV-515: with the seeded world map (switch seeded_world_map + a world), the stage list is replaced by WorldMapView and
 ## one destination strip (stop, region, distance / time, danger, what is known, Drive). Park / resume, weather,
 ## blockers, hazards, the lap note and the next generation stay. Selecting a stop never drives; only Drive does.
+## MV-568: the map, the strip and the notes scroll together as one list (the 360 px map left the notes a sliver).
 
 var _list: VBoxContainer
 var _summary: Label
@@ -28,12 +29,13 @@ func _build() -> void:
 		refresh())
 	top.add_child(_go)
 	body.add_child(top)
+	var content := make_list(3)
 	# MV-515: the world map and its destination strip (shown only in map mode)
 	map_view = WorldMapView.new()
 	map_view.name = "WorldMap"
 	map_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	map_view.stop_selected.connect(func(_id): _refresh_strip())
-	body.add_child(map_view)
+	content.add_child(map_view)
 	_strip = UIKit.vbox(1)
 	_strip.name = "DestinationStrip"
 	_dest_title = UIKit.label("", UIKit.FS, UIKit.C_GOLD)
@@ -50,8 +52,10 @@ func _build() -> void:
 	drive_btn.pressed.connect(_drive)
 	dh.add_child(drive_btn)
 	_strip.add_child(dh)
-	body.add_child(_strip)
-	_list = make_list(3)
+	content.add_child(_strip)
+	_list = UIKit.vbox(3)
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(_list)
 
 
 func refresh() -> void:

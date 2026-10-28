@@ -9682,6 +9682,42 @@ func _world_screen_test() -> void:
 	await _finger(0, tp2, false)
 	await wait(0.1)
 	_check("world screen: a finger tap on a stop selects it (selected '%s', wanted '%s')" % [view.selected, target2], view.selected == target2)
+	# MV-568: the map, the destination strip and the notes scroll as one list; a finger drag that starts on the map
+	# scrolls the window (the 360 px map used to leave the notes a ~96 px sliver that a drag on the map never moved)
+	var msc := view.get_parent().get_parent() as ScrollContainer
+	var one_list: bool = msc != null and mp._list.get_parent() == view.get_parent() and mp._strip.get_parent() == view.get_parent()
+	var touch_was := Input.emulate_touch_from_mouse
+	Input.emulate_touch_from_mouse = true
+	var scrolled := 0
+	var diag := ""
+	var filler := Control.new()            # what the notes hold depends on earlier checks: always leave room to scroll
+	filler.custom_minimum_size = Vector2(0, 300)
+	if one_list:
+		mp._list.add_child(filler)
+		msc.scroll_vertical = 0
+		await wait(0.3)
+		var mr := msc.get_global_rect().intersection(view.get_global_rect())
+		var d0 := mr.get_center()
+		var mm0 := InputEventMouseMotion.new()
+		mm0.position = d0
+		mm0.global_position = d0
+		get_viewport().push_input(mm0, true)
+		await wait(0.05)
+		var hov := get_viewport().gui_get_hovered_control()
+		diag = "under=%s range=%d tip=%s" % [hov.get_path() if hov else "none", int(msc.get_v_scroll_bar().max_value - msc.get_v_scroll_bar().page),
+			main.hud.tip_card.visible]
+		await _finger(41, d0, true)
+		await _fingers_drag([41], [d0], [d0 - Vector2(0, 160)], 12)
+		await _finger(41, d0 - Vector2(0, 160), false)
+		await _scroll_settled(msc)
+		scrolled = msc.scroll_vertical
+		msc.scroll_vertical = 0
+		mp._list.remove_child(filler)
+		await wait(0.2)
+	filler.free()
+	Input.emulate_touch_from_mouse = touch_was
+	_check("world screen: map + strip + notes are one list; a finger drag on the map scrolls it (%d px, %s)" % [scrolled, diag],
+		one_list and view.mouse_filter == Control.MOUSE_FILTER_PASS and scrolled > 20)
 	# MV-542 (Parames, Safari, a continued game): the map window was built before the save loaded, so it had no stop
 	# buttons for the save's world (which arrives without world_changed): the map drew but no stop could be tapped
 	var keep_world: Dictionary = Game.s.world
@@ -10981,3 +11017,4 @@ func _nextgen_crew_test() -> void:
 	Game._emit_all(true)
 	Game.set_process(saved_processing)
 	_nextgen_crew_checks_completed = true
+
