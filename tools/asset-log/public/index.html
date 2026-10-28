@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PixelLab Asset Log</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%23161311'/%3E%3Crect x='2' y='2' width='4' height='4' fill='%23e0a43c'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark"></span>PixelLab Asset Log <small>Apocarlypse: Mobile Vault</small></div>
+  <nav id="tabs">
+    <button data-tab="gallery" class="on">Gallery</button>
+    <button data-tab="review">Review <b id="review-count"></b></button>
+    <button data-tab="prompts">Prompts</button>
+    <button data-tab="dashboard">Cost</button>
+  </nav>
+  <div id="me" class="me"></div>
+</header>
+
+<main>
+  <section id="tab-gallery" class="tab on">
+    <form id="filters" class="filters">
+      <input name="q" type="search" placeholder="ค้นหา sprite, prompt, note">
+      <select name="prefix"><option value="">ทุกกลุ่ม</option></select>
+      <select name="status">
+        <option value="">ทุกสถานะ</option><option value="new">new</option><option value="approved">approved</option>
+        <option value="accepted">accepted</option><option value="rejected">rejected</option>
+      </select>
+      <select name="order"><option value="new">ใหม่สุดก่อน</option><option value="old">เก่าสุดก่อน</option></select>
+      <label class="scale">ขยาย <select name="scale"><option>2</option><option selected>4</option><option>8</option></select></label>
+    </form>
+    <div id="grid" class="grid"></div>
+    <button id="more" class="more" hidden>โหลดเพิ่ม</button>
+  </section>
+
+  <section id="tab-review" class="tab">
+    <p class="hint">รายการที่ยังไม่ได้ตัดสิน (new) เรียงตาม sprite กด Approve แล้วรัน <code>python tools/asset_log.py pull</code> ในเครื่องเพื่อ accept เป็น override</p>
+    <div id="review-grid" class="grid"></div>
+  </section>
+
+  <section id="tab-prompts" class="tab">
+    <form id="prompt-filter" class="filters"><input name="q" type="search" placeholder="ค้นหา prompt"></form>
+    <div id="prompt-list" class="prompt-list"></div>
+  </section>
+
+  <section id="tab-dashboard" class="tab">
+    <div id="kpis" class="kpis"></div>
+    <h2>ค่าใช้จ่ายรายวัน (USD)</h2>
+    <div id="day-chart" class="chart"></div>
+    <h2>ราย sprite</h2>
+    <div class="table-wrap"><table id="sprite-table" class="table"><thead><tr><th>Sprite</th><th>Calls</th><th>Approved</th><th>USD</th><th>ล่าสุด</th></tr></thead><tbody></tbody></table></div>
+  </section>
+</main>
+
+<dialog id="detail">
+  <div class="detail-head">
+    <h2 id="d-title"></h2>
+    <div class="detail-tools">
+      <label>ขยาย <select id="d-scale"><option>2</option><option>4</option><option selected>6</option><option>8</option></select></label>
+      <label><input type="checkbox" id="d-offpal"> ไฮไลต์สีนอก palette</label>
+      <label><input type="checkbox" id="d-grid"> เส้น grid</label>
+      <button id="d-close" class="ghost" aria-label="ปิด">✕</button>
+    </div>
+  </div>
+  <div class="compare">
+    <figure><figcaption>ก่อน (sprite ปัจจุบัน)</figcaption><canvas id="c-current"></canvas></figure>
+    <figure><figcaption>หลัง (snap แล้ว)</figcaption><canvas id="c-snapped"></canvas></figure>
+    <figure><figcaption>Raw จาก PixelLab</figcaption><canvas id="c-raw"></canvas></figure>
+  </div>
+  <div id="d-checks" class="checks"></div>
+  <h3>Family (กลุ่มเดียวกัน ขนาดเท่ากัน)</h3>
+  <div id="d-family" class="family"></div>
+  <h3>Prompt</h3>
+  <div class="prompt-box"><pre id="d-prompt"></pre><button class="ghost" data-copy="d-prompt">Copy</button></div>
+  <div id="d-neg-wrap" class="prompt-box"><pre id="d-neg"></pre><button class="ghost" data-copy="d-neg">Copy</button></div>
+  <pre id="d-params" class="params"></pre>
+  <pre id="d-cmd" class="params"></pre>
+  <h3>Review</h3>
+  <textarea id="d-note" rows="2" placeholder="โน้ต เช่น สีหลอดไฟสว่างเกิน, เส้นขอบหนาไม่เท่าห้องอื่น"></textarea>
+  <div class="review-actions">
+    <button id="d-approve" class="ok">Approve</button>
+    <button id="d-reject" class="bad">Reject</button>
+    <button id="d-reset" class="ghost">กลับเป็น new</button>
+    <button id="d-save" class="ghost">บันทึกโน้ต</button>
+    <span id="d-reviewed" class="muted"></span>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

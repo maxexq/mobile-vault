@@ -545,6 +545,7 @@ assets/fonts/                 Chakra Petch (Thai) + Silkscreen (pixel), SIL OFL
 tools/generate_pixel_art.py   regenerates every PNG (python3 + Pillow) via tools/art/*.py
 tools/gen_audio.py            synthesises every sound into assets/audio/ (stdlib python3, MV-536)
 tools/pixellab.py             redraws single atlas sprites with the PixelLab API -> tools/art/pixellab/overrides/
+tools/asset_log.py            syncs PixelLab generations to the private asset log web app (tools/asset-log) and pulls approvals
 tools/autotest.gd             smoke test (excluded from export)
 tools/ci_autotest.sh          runs the autotest like CI does (xvfb, fails on FAIL / SCRIPT ERROR / hang)
 tools/ci_scope.sh             do these changed files need the Godot run in CI? (MV-549)
@@ -618,6 +619,7 @@ python tools/pixellab.py reject room_medical               # back to the drawn s
 - `common.add()` uses `overrides/<sprite>.png` when the size matches; `MV_NO_OVERRIDES=1` builds the drawn set.
 - Token: env `PIXELLAB_API_KEY` or `.pixellab-api-key` in the repo root (git-ignored). In the claude.ai cloud environment a Network secret for `api.pixellab.ai` adds the `Authorization: Bearer` header, so no key is needed there.
 - Not for `dw_*` dweller strips (20-frame animation sheets) or sprites over 400 px; those need PixelLab's character/animation endpoints.
+- **Asset log (MV-584):** every `gen --yes` call is also logged (prompt, settings, sha256) and synced to a private Cloudflare Pages app (R2 + D1, behind Cloudflare Access): gallery and search, before/after with its same-size family, palette/size checks, Approve / Reject / notes, prompt library and cost dashboard. `python tools/asset_log.py pull` turns approvals into overrides. Setup and commands: [`tools/asset-log/README.md`](tools/asset-log/README.md).
 
 Fonts: Chakra Petch & Silkscreen — SIL Open Font License (see `assets/fonts/OFL_*.txt`).
 
