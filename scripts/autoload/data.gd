@@ -13,7 +13,12 @@ const SLOT_COUNT := 12            # rig body, kept for tools / tests
 const MAX_TRAILERS := 2
 const TRAILER_FLOORS := 2
 const TRAILER_SLOTS := 6
-const MAX_SLOTS := 24             # 4-floor body + 2 trailers
+const MAX_SLOTS := 27             # 5-floor body + 2 trailers
+## MV-563 (switch five_floors): the body grows with the Mobile Vault level, from the vehicle's START_FLOORS by one
+## floor at each FLOOR_GAIN_LEVELS level (tune vault.floor_gain_1..3) up to BODY_FLOORS
+const BODY_FLOORS := 5
+const START_FLOORS := {"van": 2, "bus": 3, "rig": 4, "train": 5}
+const FLOOR_GAIN_LEVELS := [2, 4, 6]
 ## v3 -> v4 save migration: old slot index -> (column, floor)
 const V3_SLOT_CELL := [[0, 2], [1, 2], [0, 3], [1, 3], [0, 1], [1, 1], [1, 0], [0, 0], [2, 0], [2, 1], [2, 2], [2, 3],
 	[0, 4], [1, 4], [2, 4], [0, 5], [1, 5], [2, 5]]

@@ -10,6 +10,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Added
 - Squad: the AUTO button is now "Auto-assign crew" (จัดคนอัตโนมัติ): it puts the crew whose stats best fit each slot into the squad, skipping anyone away, sick or badly hurt (MV-561).
+- Vehicles grow taller with the Mobile Vault: the van starts with 2 floors, the bus 3, the rig 4 and the armoured train 5, and Vault Lv.2 / 4 / 6 each add a floor up to 5. The upgrade card shows the new floor on the vehicle before you buy it (MV-563).
 - The Build menu and the build list of an empty room slot say what each room does (food, water, healing, defence...) (MV-557).
 - New sounds: getting resources, a road event won or lost, and the expedition moments (team heads out, finds something, comes home, fails, unpacks the haul) (MV-555).
 - World map (test builds): clearer, calmer ground with region borders and name plates, and each region dotted with its own landmarks: factories, dunes and glass, forests, swamp pools and shacks, snowy pines, city towers (MV-556).

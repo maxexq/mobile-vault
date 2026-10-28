@@ -2084,6 +2084,8 @@
  "ซ่อมเองฟรี +%.1f HP/นาที (ลูกเรือห้องเครื่อง/โรงช่าง) · ส่วนลดค่าซ่อม %d%%": "Free repair +%.1f HP/min (engine room / workshop crew) · repair discount %d%%",
  "อัปเกรดโครงรถ": "Upgrade the frame",
  "ห้อง +%d": "Rooms +%d",
+ "รถสูงขึ้นเป็น %d ชั้น (ห้อง +%d)": "Vehicle grows to %d floors (rooms +%d)",
+ "ดูชั้นใหม่": "See new floor",
  "ห้องเต็มรถแล้ว (การผลิต +%d%% แทน)": "Vehicle full (production +%d%% instead)",
  " · เปลี่ยนเป็น%s (%d ชั้น) เพื่อใช้ห้องที่ปลดล็อกไว้": " · switch to the %s (%d floors) to use the unlocked rooms",
  "ตัวถังสูงสุด +%d": "Max hull +%d",
