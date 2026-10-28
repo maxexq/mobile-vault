@@ -363,9 +363,9 @@ def pack_atlas(max_w=2048):
         x += im.width + padd
         row_h = max(row_h, im.height)
     H = y + row_h
-    H2 = 1
-    while H2 < H:
-        H2 *= 2
+    # MV-563: the sheet no longer fits 2048x2048; a 64 px multiple instead of the next power of two (4096) keeps
+    # it near 20 MB of video memory. Lossless, no mipmaps: WebGL2 / Compatibility take non-power-of-two sizes.
+    H2 = (H + 63) // 64 * 64
     sheet = new(max_w, H2)
     for name, im in items:
         rx, ry, _, _ = regions[name]

@@ -298,26 +298,8 @@ func set_tier(t: String) -> void:
 	if not Data.VEHICLES.has(t) or t == Game.tier():
 		return
 	var old_main := Game.main_slots()
-	var rooms: Array = Game.s.rooms
-	var main_part := rooms.slice(0, old_main)
-	var trailer_part := rooms.slice(old_main)
 	Game.s.tier = t
-	var new_main := Game.main_slots()
-	while main_part.size() > new_main:
-		main_part.pop_back()
-		var idx := main_part.size()
-		for d in Game.s.dwellers:
-			if int(d.room) == idx:
-				d.room = -1
-	while main_part.size() < new_main:
-		main_part.append({"type": "empty", "level": 1, "job": {}})
-	# dwellers working in trailers move with their rooms (the cab crew, slot Data.CAB_SLOT, stays put)
-	var shift := new_main - old_main
-	for d in Game.s.dwellers:
-		if int(d.room) >= old_main and int(d.room) != Data.CAB_SLOT:
-			d.room = int(d.room) + shift
-	main_part.append_array(trailer_part)
-	Game.s.rooms = main_part
+	Game.relayout_body(old_main, Data.ROOMS_PER_FLOOR * Game.target_floors())
 	act("tier " + t)
 	_vehicle_changed()
 
@@ -352,6 +334,7 @@ func _vehicle_changed() -> void:
 
 func set_vault(n: int) -> void:
 	Game.s.vault_level = clampi(n, 1, Data.MAX_VAULT_LEVEL)
+	Game.fit_body()       # MV-563: the body follows the Vault level
 	act("vault %d" % n)
 	Game.vault_level_changed.emit(int(Game.s.vault_level))
 	Game.rooms_changed.emit()
@@ -369,6 +352,22 @@ func repair(part: float) -> void:
 func hull_repair_v2(on: bool) -> void:
 	Features.set_override("features", "hull_repair_v2", on)
 	act("hull repair v2 %s" % ("on" if on else "off"))
+
+
+## MV-563: session override of the five_floors switch (the body and its trailer rooms re-lay out at once)
+func five_floors(on: bool) -> void:
+	Features.set_override("features", "five_floors", on)
+	act("five floors %s" % ("on" if on else "off"))
+	_vehicle_changed()
+
+
+## MV-563: show the floor the next Vault level adds, at half opacity on the vehicle (false = nothing to add)
+func floor_preview(sec: float = 5.0) -> bool:
+	var m = get_tree().current_scene
+	if m == null or m.get("vehicle") == null:
+		return false
+	act("floor preview")
+	return m.vehicle.preview_next_floor(sec)
 
 
 ## MV-545: session override of the vault_upgrade_v2 switch

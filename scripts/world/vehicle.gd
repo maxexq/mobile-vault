@@ -11,6 +11,8 @@ const COLS := [44, 118, 184]
 const TRAILER_COLS := [22, 88, 154]
 const ROOM_SIZE := Vector2(64, 52)
 const FLOOR_H := 56
+const WALL_DRUMS := ["rig", "bus"]   # tiers whose spare fuel drums stack on the front (others: on the roof)
+const SHELL_H := 300              # height of a 4-floor (or smaller) shell; taller shells sit above it
 const ROW0 := 210                 # y of the bottom floor's rooms
 const MAIN_W := 280.0
 const TRAILER_W := 248.0
@@ -84,6 +86,8 @@ var _driver_t := 2.0
 var _driver_left := 0.0
 var _driver_seq: Array = []       # [[frame, s], ...] still to show
 var _shells: Node2D
+var _floor_ghost: Sprite2D = null       # MV-563: next Vault level's floor at half opacity
+var _ghost_tw: Tween = null
 var _seams_root: Node2D          # large-room interior strips drawn over the hull partitions (v4.4)
 var _exteriors: Node2D
 var _rooms_root: Node2D
@@ -241,10 +245,14 @@ func rebuild() -> void:
 		for ch in n.get_children():
 			ch.queue_free()
 	wheels.clear()
-	_add_sprite(_shells, "veh_" + tier, Vector2.ZERO)
+	_clear_floor_ghost()
+	# MV-563: a body grown by the Vault draws vehf<n>_ / extf<n>_; the 5-floor ones are taller, bottom-aligned
+	var sh := _add_sprite(_shells, shell_region("veh", tier, floors), Vector2.ZERO)
+	sh.position.y = SHELL_H - sh.texture.get_height()
 	_driver_seq.clear()
 	driver_cab.visible = false
-	_add_sprite(_exteriors, "ext_" + tier, Vector2.ZERO)
+	var ex := _add_sprite(_exteriors, shell_region("ext", tier, floors), Vector2.ZERO)
+	ex.position.y = SHELL_H - ex.texture.get_height()
 	var kind: String = vd.get("trailer", "trailer")
 	for t in n_trailers:
 		var x := unit_x(t)
@@ -284,6 +292,59 @@ func rebuild() -> void:
 	refresh_rooms()
 	_refresh_mods()
 	_sync_pets()
+
+
+## atlas region of a main shell ("veh" / "ext") of this tier with n floors: its own shell, or the grown one
+static func shell_region(kind: String, t: String, n: int) -> String:
+	var grown := "%sf%d_%s" % [kind, n, t]
+	return grown if n != int(Data.VEHICLES.get(t, Data.VEHICLES.rig).floors) and Atlas.has(grown) else "%s_%s" % [kind, t]
+
+
+## MV-563: the floor the next Vault level adds (closed exterior), drawn at half opacity over the roof for sec seconds (the roof
+## parts move up onto it meanwhile). False when the next level adds none.
+func preview_next_floor(sec: float = 5.0) -> bool:
+	_clear_floor_ghost()
+	if Game.s.is_empty() or not Game.vault_adds_floor(int(Game.s.vault_level)):
+		return false
+	var n := Game.floors_at(int(Game.s.vault_level) + 1)
+	var region := shell_region("ext", tier, n)      # the plated exterior: the new floor reads as a whole floor
+	var full := Atlas.tex(region)
+	var top := SHELL_H - full.get_height()                  # local y of the grown shell's top
+	var cut := roof_y() + 6.0 - float(top)                  # down to just under the current roof slab
+	_floor_ghost = Sprite2D.new()
+	_floor_ghost.centered = false
+	_floor_ghost.texture = Atlas.sub(region, Rect2(0, 0, full.get_width(), cut))
+	_floor_ghost.position = Vector2(0, top)
+	_floor_ghost.modulate.a = 0.5
+	_floor_ghost.set_meta("region", region)
+	body.add_child(_floor_ghost)
+	var lift := roof_dy_for(n) - roof_dy()
+	_roof_root.position.y = roof_dy_for(n)
+	for m in _mods_root.get_children():         # roof turret, deck, solar covers... ride up with the roof
+		if m is Node2D and (m as Node2D).position.y < roof_y() + 6.0:
+			(m as Node2D).position.y += lift
+	_ghost_tw = create_tween()
+	_ghost_tw.tween_interval(sec)
+	_ghost_tw.tween_callback(_clear_floor_ghost)
+	return true
+
+
+func floor_ghost() -> Sprite2D:
+	return _floor_ghost if is_instance_valid(_floor_ghost) else null
+
+
+func _clear_floor_ghost() -> void:
+	if _ghost_tw != null:
+		_ghost_tw.kill()
+		_ghost_tw = null
+	var was := _floor_ghost != null
+	if is_instance_valid(_floor_ghost):
+		_floor_ghost.queue_free()
+	_floor_ghost = null
+	if _roof_root != null:
+		_roof_root.position.y = roof_dy()
+	if was and not Game.s.is_empty():
+		_refresh_mods()       # puts the roof mods back on the roof
 
 
 func _add_sprite(parent: Node, region: String, pos: Vector2) -> Sprite2D:
@@ -366,7 +427,7 @@ static func deck_lift() -> float:
 
 ## top of the vehicle incl. roof props (local y) – the camera keeps this on screen
 func top_y() -> float:
-	return roof_y() - 40.0 - deck_lift()
+	return roof_y() - 40.0 - deck_lift() - (float(FLOOR_H) if floor_ghost() != null else 0.0)
 
 
 ## how hard the body shakes: tune fx.engine_shake, 0 when "car_shake" is off in settings (MV-176)
@@ -386,7 +447,7 @@ static func px_amp(a: float) -> float:
 func refresh_rooms() -> void:
 	if Game.s.is_empty():
 		return
-	if Game.tier() != tier or Game.trailers() != n_trailers or room_views.size() != Game.slot_count():
+	if Game.tier() != tier or Game.floors() != floors or Game.trailers() != n_trailers or room_views.size() != Game.slot_count():
 		rebuild()
 		return
 	_sync_large_rooms()
@@ -521,9 +582,14 @@ func _refresh_mods() -> void:
 	if deck > 0:
 		var deck_art := "mod_roof_deck_cozy_%d" if Features.on("cozy_roof") else "mod_roof_deck_%d"
 		_mod_sprite(deck_art % mini(deck, 3), Vector2(ROOF_DECK_X, ROOF_Y + dy - 60))
+	# the drums stack on a front face only where there is one (the rig's cab-over front, beside the bus's tall
+	# nose) and only as high as the vehicle's own roof; elsewhere they ride on the roof. MV-563: on a body grown
+	# by the Vault they used to hang in the air above the low van cab, and half behind the train's nose.
+	var own_roof := ROOF_Y + roof_dy_for(int(vd.floors))
+	var wall := tier in WALL_DRUMS
 	for k in mini(Mods.level("fuel_tanks"), 3):
 		var fy := 140 - 24 * k
-		if fy > roof_y() + 6:
+		if wall and fy > own_roof + 6:
 			_mod_sprite("mod_fuel_tank", Vector2(20 if tier == "rig" else 40, fy))
 		else:
 			_mod_sprite("mod_fuel_tank", Vector2(232 - 16 * k, roof_y() - 22))

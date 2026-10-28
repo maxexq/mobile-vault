@@ -14,6 +14,12 @@ Shared geometry (scripts/world/vehicle.gd + scripts/autoload/data.gd VEHICLES â€
   trailer / wagon: 248x300, 2 floors, rooms at local cols x=22/88/154, hitch x=0..15, rear deck x=224..247.
 
   ext_<id>: the same shell with every room hole plated over (closed "exterior" view for the X-ray toggle).
+
+  vehf<n>_<tier> / extf<n>_<tier> (MV-563, switch five_floors): the body grown to n floors with the Vault level,
+  for every n above the tier's own floors up to 5 (GROW_TO). Up to 4 floors it is the normal 280x300 shell; the
+  5-floor one is 280x356, the 4-floor shell with one more floor band copied in. The nose / cab / wheels keep their
+  place (bottom-aligned, the game draws a taller shell higher), so the body rises behind the van / bus cab and
+  above the train's nose.
 """
 import math, random
 from .common import *
@@ -754,7 +760,7 @@ def roof_props(img, floors, tier):
     paste(img, props, 0, roof_y(floors) - 36)
     if tier == "van":
         # roof rack with crates/jerrycans over the front
-        r = roof_y(2)
+        r = roof_y(floors)
         rect(img, 40, r - 4, 40, 2, OL)
         for x in (42, 56, 70):
             vline(img, x, r - 4, 4, OL)
@@ -783,9 +789,9 @@ def split_roof_parts(raw, shells, floors):
     return legacy
 
 
-def gen_tier(tier):
+def gen_tier(tier, floors=None):
     cfg = TIERS[tier]
-    floors, paint = cfg["floors"], cfg["paint"]
+    floors, paint = floors or cfg["floors"], cfg["paint"]
     img = new(TW, 300)
     body(img, floors, paint)
     if tier == "train":
@@ -888,21 +894,75 @@ def rails_strip():
     return img
 
 
+GROW_TO = 5           # MV-563: floors a body can grow to with the Vault level (Data.BODY_FLOORS)
+FRONT_X = 35          # columns left of the body's roof slab: the nose / cab, never stretched by add_floor
+
+
+def add_floor(img):
+    """MV-563: one more floor on a finished 4-floor shell. The floor-2 band (divider + room row, one 56 px period:
+    bolts, shaft rungs and seams repeat every 4/8 px) is copied in, everything below it moves down; the nose
+    columns move down whole, so they keep their height. Returns a 56 px taller image."""
+    w, h = img.size
+    y0 = row_y(2) - 4
+    out = new(w, h + FLOOR_H)
+    body = img.crop((FRONT_X, 0, w, h))
+    out.paste(body.crop((0, 0, w - FRONT_X, y0)), (FRONT_X, 0))
+    out.paste(body.crop((0, y0, w - FRONT_X, y0 + FLOOR_H)), (FRONT_X, y0))
+    # the rear strip of the copy comes from floor 1: floor 2 carries the turret mount, which must stay single
+    rear = BODY[1] - FRONT_X
+    clear = new(w - BODY[1], FLOOR_H)
+    out.paste(clear, (BODY[1], y0))
+    out.alpha_composite(body.crop((rear, y0 + FLOOR_H, w - FRONT_X, y0 + 2 * FLOOR_H)), (BODY[1], y0))
+    out.paste(body.crop((0, y0, w - FRONT_X, h)), (FRONT_X, y0 + FLOOR_H))
+    out.paste(img.crop((0, 0, FRONT_X, h)), (0, FLOOR_H))
+    # the seam columns under the roof slab's overhang (the bus nose is 39 px wide): the slab stays on top,
+    # everything under it moves down with the nose; the 56 new rows are air beside the wall's outline column,
+    # so no nose pixel is copied up into the new floor
+    sw = BODY[0] + 1 - FRONT_X
+    seam = img.crop((FRONT_X, 0, BODY[0] + 1, h))
+    lip = roof_y(4) + 7
+    out.paste(new(sw, h + FLOOR_H - lip), (FRONT_X, lip))
+    wall = img.crop((BODY[0], lip, BODY[0] + 1, lip + 1))
+    for y in range(lip, lip + FLOOR_H):
+        out.paste(wall, (BODY[0], y))
+    out.paste(seam.crop((0, lip, sw, h)), (FRONT_X, lip + FLOOR_H))
+    # the train's nose edge that rose to the old roof stops where the nose beside it starts (only above the nose:
+    # lower down, x 34 is the engine room's cut-out and the cab frame next to it must stay)
+    y = lip + FLOOR_H
+    while y < h + FLOOR_H and out.getpixel((FRONT_X - 1, y))[3] == 0:
+        for x in range(FRONT_X, BODY[0]):
+            out.putpixel((x, y), CLEAR)
+        y += 1
+    return out
+
+
+def build_tier(tier, floors):
+    """(shell, exterior, roof legacy parts, driver cab frames) of one tier drawn with this many floors"""
+    cfg = TIERS[tier]
+    raw = gen_tier(tier, floors)
+    shell = T.weather(raw.copy(), len(tier) * 11)
+    shell_details(shell, floors, False, tier)
+    cab = driver_cab_frames(tier)
+    paste(shell, cab[0], *DRIVER_CAB[tier]["at"])      # MV-519: before exterior() copies the shell
+    ext = exterior(shell, floors, COLS, cfg["paint"], tier)
+    EB.cut_cab(shell, tier)          # v4.6: the cab's bottom floor is the walk-in engine room
+    if tier in LAMP_CAGE_AT:
+        paste(shell, LAMP_CAGE, *LAMP_CAGE_AT[tier][0])
+        paste(ext, LAMP_CAGE, *LAMP_CAGE_AT[tier][1])
+    legacy = split_roof_parts(raw, [shell, ext], floors)
+    return shell, ext, legacy, cab
+
+
 def gen_vehicles():
     for tier, cfg in TIERS.items():
-        raw = gen_tier(tier)
-        shell = T.weather(raw.copy(), len(tier) * 11)
-        shell_details(shell, cfg["floors"], False, tier)
-        cab = driver_cab_frames(tier)
-        paste(shell, cab[0], *DRIVER_CAB[tier]["at"])      # MV-519: before exterior() copies the shell
-        ext = exterior(shell, cfg["floors"], COLS, cfg["paint"], tier)
-        EB.cut_cab(shell, tier)          # v4.6: the cab's bottom floor is the walk-in engine room
-        if tier in LAMP_CAGE_AT:
-            paste(shell, LAMP_CAGE, *LAMP_CAGE_AT[tier][0])
-            paste(ext, LAMP_CAGE, *LAMP_CAGE_AT[tier][1])
-        add(f"roof_legacy_{tier}", split_roof_parts(raw, [shell, ext], cfg["floors"]))
+        shell, ext, legacy, cab = build_tier(tier, cfg["floors"])
+        add(f"roof_legacy_{tier}", legacy)
         add(f"ext_{tier}", ext)
         add(f"veh_{tier}", shell)
+        for n in range(cfg["floors"] + 1, GROW_TO + 1):
+            sh, ex, _, _ = build_tier(tier, min(n, 4))
+            add(f"vehf{n}_{tier}", add_floor(sh) if n > 4 else sh)
+            add(f"extf{n}_{tier}", add_floor(ex) if n > 4 else ex)
         add(f"decal_{tier}_driver_cockpit", cab[0])
         for i in range(1, len(cab)):
             add(f"decal_{tier}_driver_cockpit_idle_{i}", cab[i])

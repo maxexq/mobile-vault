@@ -257,6 +257,11 @@ func _run() -> void:
 		await _build_effects_test()
 		_finish()
 		return
+	if "--only=five_floors" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _five_floors_test()
+		_finish()
+		return
 	if "--only=vault_upgrade" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _vault_upgrade_test()
@@ -591,8 +596,9 @@ func _run() -> void:
 		Game._simulate(1.0, true)
 	_check("enters desert after upgrade", Game.s.biome == 1)
 	var new_slot: int = 4
-	_check("new slot unlocked at Lv2", Game.is_slot_unlocked(new_slot) and Game.unlocked_slots().size() == mini(Data.SLOTS_PER_LEVEL[2], Game.main_slots() - 1) + 1)
-	_check("first run is a camper van: 2 floors x 3 rooms", Game.tier() == "van" and Game.slot_count() == 6 and Game.s.rooms.size() == 6)
+	_check("new slot unlocked at Lv2", Game.is_slot_unlocked(new_slot) and Game.unlocked_slots().size() == Game.vault_rooms_at(2) + 1)
+	var van_cells := 3 * (Game.floors_at(int(Game.s.vault_level)) if Features.on("five_floors") else 2)     # MV-563: grows with the Vault
+	_check("first run is a camper van: %d cells" % van_cells, Game.tier() == "van" and Game.slot_count() == van_cells and Game.s.rooms.size() == van_cells)
 	_check("build quarters", Game.build_room(new_slot, "quarters") and Game.pop_cap() == Data.BASE_POP_CAP)
 	Dev.finish_construction()
 	_check("quarters add beds once built", Game.pop_cap() == Data.BASE_POP_CAP + 4)
@@ -877,7 +883,8 @@ func _run() -> void:
 	Meta.next_generation([int(Game.s.dwellers[0].id)])
 	_no_events()
 	await wait(1.5)
-	_check("gen 2 is a bus: 3 floors / 9 rooms", Game.tier() == "bus" and Game.slot_count() == 9 and main.vehicle.room_views.size() == 9)
+	var bus_cells := 3 * (Game.floors_at(int(Game.s.vault_level)) if Features.on("five_floors") else 3)
+	_check("gen 2 is a bus: %d cells" % bus_cells, Game.tier() == "bus" and Game.slot_count() == bus_cells and main.vehicle.room_views.size() == bus_cells)
 	await shot("gen2_bus")
 	Meta.add_blueprint("bp_rig")
 	Meta.add_blueprint("bp_train")
@@ -890,7 +897,7 @@ func _run() -> void:
 	Game.s.res.scrap = 9000.0
 	Game.s.items.components = 9999
 	Meta.add_blueprint("bp_trailer")
-	_check("hitch two wagons to the train", Mods.add_trailer() and Mods.add_trailer() and Game.slot_count() == 24)
+	_check("hitch two wagons to the train", Mods.add_trailer() and Mods.add_trailer() and Game.slot_count() == Game.main_slots() + 12)
 	Game.vault_level_changed.emit(6)
 	main.set_zoom_mode("wide")
 	await wait(1.6)
@@ -928,7 +935,7 @@ func _run() -> void:
 	_check("god: free build", free_slot >= 0 and Game.build_room(free_slot, "kitchen") and is_equal_approx(float(Game.s.res.scrap), scrap_before))
 	Dev.set_flag("free", false)
 	Dev.set_tier("van")
-	_check("god: swap chassis keeps trailers", Game.tier() == "van" and Game.slot_count() == 6 + 12 and main.vehicle.room_views.size() == 18)
+	_check("god: swap chassis keeps trailers", Game.tier() == "van" and Game.slot_count() == Game.main_slots() + 12 		and main.vehicle.room_views.size() == Game.main_slots() + 12)
 	Dev.set_tier("train")
 	Dev.set_flag("invincible", true)
 	Dev.set_hull(0.1)
@@ -1077,6 +1084,7 @@ func _run() -> void:
 	await _barks_test()
 	await _hull_warning_test()
 	await _vault_upgrade_test()
+	await _five_floors_test()
 	await _build_effects_test()
 	await _drive_help_test()
 	await _hull_repair_test()
@@ -2956,6 +2964,7 @@ func _large_room_test() -> void:
 	Game.setup_default_state()
 	Game.s.tier = "rig"
 	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	Game.fit_body()       # MV-563: grow the fresh 2-floor van body to this rig at Vault Lv6
 	while Game.s.rooms.size() < Game.slot_count():
 		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for i in range(1, Game.s.rooms.size()):
@@ -4622,6 +4631,7 @@ func _crew_roster_test() -> void:
 	Features.set_override("features", "crew_roster_20", false)
 	Game.s.tier = "rig"
 	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	Game.fit_body()       # MV-563: the body follows tier / Vault only through fit_body
 	var types := ["quarters", "kitchen", "hydroponics", "water", "workshop", "medical", "science", "radio", "armory", "refinery"]
 	while Game.s.rooms.size() < Game.slot_count():
 		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
@@ -4684,6 +4694,7 @@ func _ambience_test() -> void:
 	Game.setup_default_state()
 	Game.s.tier = "rig"
 	Game.s.vault_level = Data.MAX_VAULT_LEVEL
+	Game.fit_body()       # MV-563: the body follows tier / Vault only through fit_body (a fresh state is a 2-floor van)
 	var types := ["medical", "quarters", "kitchen", "hydroponics", "water", "armory", "science", "radio", "engine", "refinery", "workshop", "empty"]
 	while Game.s.rooms.size() < Game.slot_count():
 		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
@@ -7351,6 +7362,108 @@ func _hull_repair_test() -> void:
 	Game.dwellers_changed.emit()
 
 
+## MV-563: the body grows with the Vault level: van 2, bus 3, rig 4, train 5 floors at Lv1, +1 floor at Lv2 / 4 / 6
+## up to 5 (vehf<n>_ shells, cab and wheels where they were); the Vault card / GOD show the next floor at half
+## opacity on the vehicle; the trailer rooms move with the body when it grows; switch off = as before
+func _five_floors_test() -> void:
+	_no_events()
+	var keep_state: Dictionary = Game.s.duplicate(true)
+	var v: Vehicle = main.vehicle
+	Features.set_override("features", "five_floors", null)
+	var want := {"van": [2, 3, 3, 4, 4, 5], "bus": [3, 4, 4, 5, 5, 5], "rig": [4, 5, 5, 5, 5, 5], "train": [5, 5, 5, 5, 5, 5]}
+	var bad := []
+	for tr in Data.TIER_ORDER:
+		Game.s.tier = tr
+		var got := []
+		for lv in range(1, 7):
+			got.append(Game.floors_at(lv))
+		if got != want[tr]:
+			bad.append("%s %s" % [tr, got])
+		for n in range(int(Data.VEHICLES[tr].floors) + 1, 6):
+			for kind in ["veh", "ext"]:
+				var r = Atlas.regions.get("%sf%d_%s" % [kind, n, tr])
+				if r == null or int(r[2]) != 280 or int(r[3]) != (356 if n == 5 else 300):
+					bad.append("%sf%d_%s %s" % [kind, n, tr, r])
+	_check("five floors: floors per vehicle and Vault level, and a shell for every grown body %s" % [bad], bad.is_empty())
+	# a fresh van: 2 floors, every cell open; the card names the next floor and offers the preview
+	Game.s = keep_state.duplicate(true)
+	Dev.set_tier("van")
+	Dev.set_vault(1)
+	var unl_ok := Game.floors() == 2 and Game.slot_count() == 6 + 6 * Game.trailers() and Game.is_slot_unlocked(5) 		and Game.vault_rooms_at(1) == 5 and Game.vault_rooms_at(6) == 14 and Game.vault_banked_rooms() == 0
+	_check("five floors: a van starts with 2 open floors, Lv6 = 14 rooms, nothing banked", unl_ok)
+	var card := BuildPanel.vault_card_text(1, "", "")
+	_check("five floors: the Vault card says the van grows to 3 floors (%s)" % card.left(60), card.contains(Loc.t("รถสูงขึ้นเป็น %d ชั้น (ห้อง +%d)") % [3, 3]))
+	main.hud.open_panel("build")
+	await wait(0.5)
+	var bp = main.hud.panels.build
+	var btn_on: bool = bp._floor_btn.visible
+	await shot("five_floors_vault_card")
+	bp._floor_btn.pressed.emit()
+	await wait(0.6)
+	var g := v.floor_ghost()
+	_check("five floors: 'see new floor' closes the window and shows extf3_van at half opacity", btn_on and not bp.is_open and g != null 		and str(g.get_meta("region")) == "extf3_van" and is_equal_approx(g.modulate.a, 0.5) and is_equal_approx(v.top_y(), v.roof_y() - 40.0 - Vehicle.deck_lift() - 56.0))
+	await shot("five_floors_van_preview")
+	# upgrading grows the body; trailer rooms and their crew move behind it
+	Game.s.res.scrap = 99999.0
+	Game.upgrade_vault()
+	await wait(0.5)
+	var shell: Sprite2D = v._shells.get_child(0)
+	# spare fuel drums: on the grown van they stay on the roof (they used to hang above the low cab)
+	var keep_ft := int(Game.s.mods.get("fuel_tanks", 0))
+	Game.s.mods["fuel_tanks"] = 3
+	Mods.mods_changed.emit()
+	await wait(0.3)
+	var drums := v._mods_root.get_children().filter(func(m): return str(m.get_meta("region", "")) == "mod_fuel_tank" and not m.is_queued_for_deletion())
+	_check("five floors: the grown van's 3 fuel drums sit on its roof (%s)" % [drums.map(func(m): return m.position)],
+		drums.size() == 3 and drums.all(func(m): return m.position.y < v.roof_y()))
+	Game.s.mods["fuel_tanks"] = keep_ft
+	Mods.mods_changed.emit()
+	_check("five floors: Vault Lv2 grows the van to 3 floors (vehf3_van, %d room views)" % v.room_views.size(),
+		Game.floors() == 3 and str(shell.get_meta("region")) == "vehf3_van" and v.room_views.size() == Game.slot_count() and v.floor_ghost() == null)
+	var old := {"tier": "train", "vault_level": 1, "trailers": 1, "body_slots": 12, "rooms": [], "dwellers": [{"room": 13}, {"room": 2}, {"room": Data.CAB_SLOT}]}
+	for i in 18:
+		old.rooms.append({"type": "trailer_mark" if i == 13 else "empty", "level": 1, "job": {}, "build": {}})
+	var real: Dictionary = Game.s
+	Game.s = old
+	var moved := Game.fit_body()
+	var lay_ok: bool = moved and Game.s.rooms.size() == 21 and str(Game.s.rooms[16].type) == "trailer_mark" 		and int(Game.s.dwellers[0].room) == 16 and int(Game.s.dwellers[1].room) == 2 and int(Game.s.dwellers[2].room) == Data.CAB_SLOT 		and int(Game.s.body_slots) == 15 and not Game.fit_body()
+	Game.s = real
+	_check("five floors: an old 4-floor train grows to 5 floors, trailer rooms and crew move with it", lay_ok)
+	# every vehicle: its start body with the next floor previewed, then fully grown
+	var tier_ok := true
+	for tr in Data.TIER_ORDER:
+		Dev.set_tier(tr)
+		Dev.set_vault(1)
+		await wait(0.4)
+		var shown := v.preview_next_floor(30.0)
+		tier_ok = tier_ok and shown == (tr != "train")
+		await wait(0.3)
+		await shot("five_floors_%s_lv1" % tr)
+		Dev.set_vault(6)
+		await wait(0.4)
+		tier_ok = tier_ok and str(v._shells.get_child(0).get_meta("region")) == "vehf5_" + tr and is_equal_approx(v._shells.get_child(0).position.y, -56.0) 			and not v.preview_next_floor() and v.room_views.size() == Game.slot_count()
+		await shot("five_floors_%s_lv6" % tr)
+		if tr == "train":     # the drums ride on the roof, not half behind the nose
+			Game.s.mods["fuel_tanks"] = 3
+			Mods.mods_changed.emit()
+			await wait(0.3)
+			var td := v._mods_root.get_children().filter(func(m): return str(m.get_meta("region", "")) == "mod_fuel_tank" and not m.is_queued_for_deletion())
+			tier_ok = tier_ok and td.size() == 3 and td.all(func(m): return m.position.y < v.roof_y())
+			await shot("five_floors_train_drums")
+			Game.s.mods["fuel_tanks"] = 0
+			Mods.mods_changed.emit()
+	_check("five floors: every vehicle previews its next floor at Lv1 (not the train) and reaches 5 floors at Lv6", tier_ok)
+	Dev.five_floors(false)
+	await wait(0.4)
+	_check("five floors: switch off = the vehicle's own floors and shell (%d floors)" % Game.floors(),
+		Game.floors() == int(Game.vehicle_def().floors) and str(v._shells.get_child(0).get_meta("region")) == "veh_" + Game.tier() 		and int(Game.s.body_slots) == Game.main_slots())
+	Features.set_override("features", "five_floors", null)
+	Game.s = keep_state
+	Game.fit_body()
+	Dev._vehicle_changed()
+	await wait(0.3)
+
+
 ## MV-545: the Vault upgrade never promises a room the vehicle has no space for, names the bigger vehicle, and every
 ## level gives max hull and production (a full vehicle's levels give more production instead); switch off = as before
 ## MV-557: both build lists (the Build window and an empty slot's list) say what each room does, wrap inside the
@@ -7365,10 +7478,19 @@ func _build_effects_test() -> void:
 	for t in Data.buildable():
 		want[Data.room_effect(t)] = true
 	_check("build effects: every buildable room has an effect line", not want.has("") and want.size() > 0)
+	# no empty cell left (earlier groups fill the body): empty the last open cell of the body for this check
+	# and put its room back afterwards (a room appended past the body has no view, MV-563)
 	var made := -1
+	var kept := {}
 	if not Dev.build_list_preview("slot"):
-		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}})
-		made = Game.s.rooms.size() - 1
+		for i in range(Game.main_slots() - 1, 0, -1):
+			if Game.is_slot_unlocked(i) and not Game.is_annex(i) and Game.room_cells(i).size() == 1:
+				made = i
+				break
+		if made >= 0:
+			kept = (Game.s.rooms[made] as Dictionary).duplicate(true)
+			Game.s.rooms[made] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+			Game.rooms_changed.emit()
 	hud.room_closeup.close()
 	await wait(0.3)
 	for size in [Vector2i(720, 1280), Vector2i(360, 640), Vector2i(1280, 640)]:
@@ -7439,8 +7561,9 @@ func _build_effects_test() -> void:
 	hud.room_closeup.close()
 	await wait(0.3)
 	Features.set_override("features", "build_room_effects", null)
-	if made >= 0 and made == Game.s.rooms.size() - 1 and str(Game.s.rooms[made].type) == "empty":
-		Game.s.rooms.remove_at(made)
+	if made >= 0 and str(Game.s.rooms[made].type) == "empty":
+		Game.s.rooms[made] = kept
+		Game.rooms_changed.emit()
 	Game.s.res.scrap = keep_scrap
 	get_window().size = saved_size
 	await wait(0.3)
@@ -7460,6 +7583,8 @@ func _thumb_off(cb: ChoiceButton) -> String:
 
 
 func _vault_upgrade_test() -> void:
+	var keep_state: Dictionary = Game.s.duplicate(true)
+	Features.set_override("features", "five_floors", false)     # MV-563: this checks the per-vehicle bodies
 	var keep_tier := str(Game.s.get("tier", "van"))
 	var keep_lv := int(Game.s.vault_level)
 	var keep_scrap := float(Game.s.res.scrap)
@@ -7543,6 +7668,9 @@ func _vault_upgrade_test() -> void:
 	Game.s.tier = keep_tier
 	Game.s.vault_level = keep_lv
 	Game.s.res.scrap = keep_scrap
+	Features.set_override("features", "five_floors", null)
+	Game.s = keep_state
+	Game.rooms_changed.emit()
 	Game.s.hull = minf(keep_hull, Game.hull_max())
 	Game.rooms_changed.emit()
 	Game.travel_changed.emit()

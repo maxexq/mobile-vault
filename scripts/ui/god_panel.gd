@@ -290,6 +290,13 @@ func _tab_vehicle() -> void:
 		var lv: int = n
 		vb.append(_b(str(lv), func(): Dev.set_vault(lv), "yellow" if int(Game.s.vault_level) == lv else "gray"))
 	_row(vb, "Vault Lv")
+	var ff := Features.on("five_floors")
+	var gains := []
+	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
+		gains.append(Game.floors_at(lv))
+	_note("รถสูงขึ้นตาม Vault (MV-563) %s · ตอนนี้ %d ชั้น · ชั้นต่อ Vault Lv1-6 %s" % ["เปิด" if ff else "ปิด", Game.floors(), gains])
+	_row([_b("ปิด" if ff else "เปิด", func(): Dev.five_floors(not ff), "yellow" if ff else "gray"),
+		_b("ดูชั้นใหม่", func(): Dev.floor_preview(), "green" if Game.vault_adds_floor(int(Game.s.vault_level)) else "gray")], "รถสูงขึ้น")
 	var vv2 := Features.on("vault_upgrade_v2")
 	_note("โครงรถ (MV-545) %s · ห้อง %d/%d (รถ %s %d ชั้น) · ห้องที่รอรถคันใหญ่ %d · ตัวถัง +%d · การผลิต ×%.2f" % ["แบบใหม่" if vv2 else "แบบเดิม",
 		Game.vault_rooms_at(int(Game.s.vault_level)), Game.main_slots() - 1, Game.tier(), Game.floors(), Game.vault_banked_rooms(),

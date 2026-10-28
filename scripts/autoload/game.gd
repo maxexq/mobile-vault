@@ -39,6 +39,15 @@ var sim_offline := false           # MV-244: the current simulation step is offl
 func _ready() -> void:
 	rng.randomize()
 	Save.flush_requested.connect(save_game)
+	Features.changed.connect(_on_features_changed)
+
+
+## MV-563: the five_floors switch can flip with the remote config; the trailer rooms move with the body
+func _on_features_changed() -> void:
+	if s.is_empty() or not s.has("rooms"):
+		return
+	if fit_body():
+		rooms_changed.emit()
 
 
 func _notification(what: int) -> void:
@@ -91,6 +100,7 @@ func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = tru
 		s.meta = meta
 	for i in slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	s.body_slots = main_slots()
 	s.rooms[1].type = "kitchen"
 	s.rooms[2].type = "water"
 	if keep_meta:
@@ -219,6 +229,7 @@ func _migrate() -> void:
 	# MV-247: raw food (crops + meat) for the kitchen; old saves get the same starting stock as a new game
 	(s.res as Dictionary).merge(Data.START_RAW, false)
 	_migrate_v4()
+	fit_body()
 	while s.rooms.size() < slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for d in s.dwellers:
@@ -480,7 +491,72 @@ func vehicle_def() -> Dictionary:
 
 
 func floors() -> int:
+	if Features.on("five_floors") and not s.is_empty():
+		# MV-563: the body the rooms are laid out for (fit_body grows it with the Vault), so a Vault level written
+		# directly never shifts the rooms under their cells
+		if s.has("body_slots"):
+			return int(s.body_slots) / Data.ROOMS_PER_FLOOR
+		return floors_at(int(s.vault_level))
 	return int(vehicle_def().floors)
+
+
+## floors the body should have now: grown with the Vault (switch five_floors) or the vehicle's own
+func target_floors() -> int:
+	if Features.on("five_floors") and not s.is_empty():
+		return floors_at(int(s.vault_level))
+	return int(vehicle_def().floors)
+
+
+## MV-563 (switch five_floors): the body grows with the Vault level. Each vehicle starts with its own floors
+## (Data.START_FLOORS: van 2, bus 3, rig 4, train 5) and gains one at each of the vault.floor_gain_1..3 levels,
+## up to Data.BODY_FLOORS. Every cell of the body is open.
+func floors_at(lv: int) -> int:
+	var n := int(Data.START_FLOORS.get(tier(), vehicle_def().floors))
+	for i in Data.FLOOR_GAIN_LEVELS.size():
+		if lv >= int(Features.num("vault.floor_gain_%d" % (i + 1), float(Data.FLOOR_GAIN_LEVELS[i]))):
+			n += 1
+	return mini(n, Data.BODY_FLOORS)
+
+
+## does the next Vault level add a floor to this vehicle?
+func vault_adds_floor(lv: int) -> bool:
+	return Features.on("five_floors") and lv < Data.MAX_VAULT_LEVEL and floors_at(lv + 1) > floors_at(lv)
+
+
+## the rooms are stored for a body of s.body_slots cells (main_slots() of the save that wrote them). When the body
+## grows or shrinks (five_floors switch, Dev chassis swap) the trailer rooms and their crew move with it; rooms on
+## removed floors are lost and their crew goes idle. Returns true when anything moved.
+func fit_body() -> bool:
+	var old := int(s.get("body_slots", Data.ROOMS_PER_FLOOR * int(vehicle_def().floors)))
+	var new_main := Data.ROOMS_PER_FLOOR * target_floors()
+	s.body_slots = new_main
+	if old == new_main or s.rooms.size() < old:
+		return false
+	relayout_body(old, new_main)
+	return true
+
+
+func relayout_body(old_main: int, new_main: int) -> void:
+	var rooms: Array = s.rooms
+	var main_part := rooms.slice(0, old_main)
+	var trailer_part := rooms.slice(old_main)
+	while main_part.size() > new_main:
+		main_part.pop_back()
+		var idx := main_part.size()
+		for d in s.dwellers:
+			if int(d.room) == idx:
+				d.room = -1
+	while main_part.size() < new_main:
+		main_part.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	# dwellers working in trailers move with their rooms (the cab crew, slot Data.CAB_SLOT, stays put)
+	var shift := new_main - old_main
+	for d in s.dwellers:
+		if int(d.room) >= old_main and int(d.room) != Data.CAB_SLOT:
+			d.room = int(d.room) + shift
+	main_part.append_array(trailer_part)
+	s.rooms = main_part
+	s.body_slots = new_main
+	_unl_key = -1
 
 
 func trailers() -> int:
@@ -511,11 +587,15 @@ func slot_cell(slot: int) -> Vector2i:
 ## (floors x 3 minus the engine room), so on a small vehicle later levels used to promise a room and add none.
 ## rooms usable at Vault level lv on this vehicle
 func vault_rooms_at(lv: int) -> int:
+	if Features.on("five_floors"):
+		return Data.ROOMS_PER_FLOOR * floors_at(lv) - 1     # MV-563: the whole body is open, slot 0 not counted
 	return mini(int(Data.SLOTS_PER_LEVEL[clampi(lv, 0, Data.MAX_VAULT_LEVEL)]), main_slots() - 1)
 
 
 ## levels reached that would add a room but this vehicle has no space for (they open on a bigger one)
 func vault_banked_rooms() -> int:
+	if Features.on("five_floors"):
+		return 0
 	var n := 0
 	for k in range(2, int(s.vault_level) + 1):
 		if int(Data.SLOTS_PER_LEVEL[k]) > int(Data.SLOTS_PER_LEVEL[k - 1]) and vault_rooms_at(k) == vault_rooms_at(k - 1):
@@ -548,6 +628,8 @@ func bigger_vehicle() -> String:
 func unlocked_slots() -> Array:
 	var n: int = Data.SLOTS_PER_LEVEL[clampi(s.vault_level, 0, Data.MAX_VAULT_LEVEL)]
 	n = mini(n, main_slots() - 1)
+	if Features.on("five_floors"):
+		n = mini(vault_rooms_at(int(s.vault_level)), main_slots() - 1)
 	var arr: Array = [Data.ENGINE_SLOT]
 	for i in n:
 		arr.append(i + 1)
@@ -574,7 +656,7 @@ var _unl := {}
 func is_slot_unlocked(slot: int) -> bool:
 	if slot == Data.CAB_SLOT:
 		return true
-	var key := int(s.vault_level) * 1000000 + main_slots() * 1000 + slot_count()
+	var key := int(s.vault_level) * 1000000 + main_slots() * 1000 + slot_count() + (500 if Features.on("five_floors") else 0)
 	if key != _unl_key:
 		_unl_key = key
 		_unl.clear()
@@ -2144,12 +2226,17 @@ func upgrade_vault() -> bool:
 	if not pay({"scrap": vault_upgrade_cost()}):
 		return false
 	s.vault_level = int(s.vault_level) + 1
+	fit_body()          # MV-563: the body may have grown a floor; trailer rooms move behind it
 	s.hull = hull_max()
 	if Features.on("vault_upgrade_v2"):
 		# MV-545: say what it really gave on this vehicle
 		var gain := vault_rooms_at(int(s.vault_level)) - vault_rooms_at(int(s.vault_level) - 1)
-		toast.emit(("MOBILE VAULT Lv.%d! ห้อง +%d" % [s.vault_level, gain]) if gain > 0
-			else ("MOBILE VAULT Lv.%d! ห้องเต็มรถแล้ว การผลิตรวม +%d%%" % [s.vault_level, roundi((vault_prod_mult() - 1.0) * 100.0)]), "biome")
+		if Features.on("five_floors"):
+			toast.emit(("MOBILE VAULT Lv.%d! รถสูงขึ้นเป็น %d ชั้น ห้อง +%d" % [s.vault_level, floors(), gain]) if gain > 0
+				else ("MOBILE VAULT Lv.%d! การผลิตรวม +%d%%" % [s.vault_level, roundi((vault_prod_mult() - 1.0) * 100.0)]), "biome")
+		else:
+			toast.emit(("MOBILE VAULT Lv.%d! ห้อง +%d" % [s.vault_level, gain]) if gain > 0
+				else ("MOBILE VAULT Lv.%d! ห้องเต็มรถแล้ว การผลิตรวม +%d%%" % [s.vault_level, roundi((vault_prod_mult() - 1.0) * 100.0)]), "biome")
 	else:
 		toast.emit("MOBILE VAULT อัปเกรดเป็น Lv.%d! ปลดล็อกห้องใหม่" % s.vault_level, "biome")
 	vault_level_changed.emit(s.vault_level)

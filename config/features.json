@@ -33,6 +33,7 @@
     "hull_warning": true,
     "drive_help": true,
     "hull_repair_v2": true,
+    "five_floors": true,
     "vault_upgrade_v2": true,
     "build_room_effects": true,
     "morale_v2": true,

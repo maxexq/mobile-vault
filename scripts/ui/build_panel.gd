@@ -10,6 +10,7 @@ var _scrap_lbl: Label
 var _frame_btn: Button
 var _frame_info: Label
 var _frame_title: Label
+var _floor_btn: Button        # MV-563: shows the floor the next Vault level adds, on the vehicle
 var _repair_btn: Button
 var _repair_part_btn: Button   # MV-541: repair a chunk (repair.part of the max hull)
 var _repair_info: Label        # MV-541: free regen per minute and the crew discount
@@ -62,6 +63,13 @@ func _build() -> void:
 		Game.upgrade_vault()
 		refresh())
 	fh.add_child(_frame_btn)
+	_floor_btn = UIKit.button(Loc.t("ดูชั้นใหม่"), "green", "", 70)
+	_floor_btn.pressed.connect(func():
+		close()
+		var m = get_tree().current_scene
+		if m != null and m.get("vehicle") != null:
+			m.vehicle.preview_next_floor(5.0))
+	fh.add_child(_floor_btn)
 	v.add_child(fp)
 	v.move_child(fp, 0)
 	v.add_child(UIKit.wrap_label(Loc.t("แตะสร้าง แล้วเลือกห้องว่างในรถ · การก่อสร้างใช้เวลา ส่งช่างไปช่วยจะเสร็จเร็วขึ้น · แตะห้องเดิมเพื่ออัปเกรด")))
@@ -95,6 +103,7 @@ func refresh() -> void:
 	else:
 		_frame_info.text = Loc.t("โครงรถบ้านเลเวลสูงสุดแล้ว!") + (vault_bonus_line() if Features.on("vault_upgrade_v2") else "")
 		_frame_btn.text = "MAX"
+	_floor_btn.visible = Game.vault_adds_floor(lv)
 	_frame_title.text = Loc.t("อัปเกรดโครงรถ") if Features.on("vault_upgrade_v2") else Loc.t("อัปเกรดโครงรถ / เปิดชั้นใหม่")
 	_update_affordable()
 
@@ -103,8 +112,12 @@ func refresh() -> void:
 static func vault_card_text(lv: int, next_b: String, new_rooms: String) -> String:
 	var gain := Game.vault_rooms_at(lv + 1) - Game.vault_rooms_at(lv)
 	var rooms := ""
-	if gain > 0:
+	if gain > 0 and Features.on("five_floors"):
+		rooms = Loc.t("รถสูงขึ้นเป็น %d ชั้น (ห้อง +%d)") % [Game.floors_at(lv + 1), gain]
+	elif gain > 0:
 		rooms = Loc.t("ห้อง +%d") % gain
+	elif Features.on("five_floors"):
+		pass
 	elif int(Data.SLOTS_PER_LEVEL[lv + 1]) > int(Data.SLOTS_PER_LEVEL[lv]):
 		var big := Game.bigger_vehicle()
 		rooms = Loc.t("ห้องเต็มรถแล้ว (การผลิต +%d%% แทน)") % roundi(Features.num("vault.prod_per_banked_room", 0.10) * 100.0)
