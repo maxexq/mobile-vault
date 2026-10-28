@@ -14,7 +14,7 @@ Run:  python3 tools/generate_pixel_art.py      (needs Pillow)
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from art.common import pack_atlas, OUT_ATLAS
-from art import rooms, truck, engine_bay, chars, ui, bg, events, landmarks, extra, expedition, inspect, encounters, exterior_mods
+from art import rooms, truck, engine_bay, chars, ui, bg, events, landmarks, extra, expedition, inspect, encounters, exterior_mods, mod_detail
 
 
 def main():
@@ -37,6 +37,7 @@ def main():
     ui.gen_world_map()        # MV-500 / MV-501..513: seeded world map tiles, frames, markers
     bg.gen_env_micro()        # MV-388 phase 4: atlas sprites for the living backgrounds
     exterior_mods.gen_exterior_mods()  # MV-565: mod-only materials and bounded local strips
+    mod_detail.gen_mod_detail()  # MV-566: finer exterior mod sprites (*_fine, switch mod_detail_fine)
     pack_atlas()
     if '--atlas-only' not in sys.argv:
         bg.gen_backgrounds()
