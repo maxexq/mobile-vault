@@ -11,6 +11,8 @@
     "squad_auto_pick": true,
     "individual_auto_equip": true,
     "smooth_ui_text": true,
+    "activity_log": true,
+    "activity_cloud": false,
     "confirm_actions": true,
     "industrial_parallax": true,
     "road_events": true,

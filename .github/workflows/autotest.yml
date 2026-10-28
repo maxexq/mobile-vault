@@ -92,6 +92,9 @@ jobs:
       - name: Engine wasm matches the R2 upload record
         run: node tools/engine_wasm_check.mjs
 
+      - name: Sentry forwarding tests (offline)
+        run: python3 -m unittest discover -s tools/tests -p 'test_sentry_forward.py'
+
       - name: Cache Godot
         id: godot-cache
         if: steps.scope.outputs.godot == 'true'

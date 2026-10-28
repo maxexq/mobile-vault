@@ -3,7 +3,7 @@
 do $$
 declare r jsonb; u1 uuid := gen_random_uuid(); u2 uuid := gen_random_uuid(); u3 uuid := gen_random_uuid();
 begin
-  truncate public.logs, public.log_alerts;
+  truncate public.logs, public.log_alerts cascade;
   insert into auth.users (id) values (u1), (u2), (u3) on conflict do nothing;
 
   -- baseline: one old error per hour for the last day
@@ -62,6 +62,6 @@ begin
   assert has_function_privilege('service_role', 'public.log_alert_ack(boolean,text[],jsonb)', 'execute'), 'service_role cannot ack';
   assert not has_table_privilege('authenticated', 'public.log_alerts', 'select'), 'authenticated can read log_alerts';
 
-  truncate public.logs, public.log_alerts;
+  truncate public.logs, public.log_alerts cascade;
   null;  -- every assert passed
 end $$;

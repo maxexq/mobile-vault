@@ -2,25 +2,37 @@ class_name LogPanel
 extends ModalPanel
 ## Logbook terminal: world chapters, records found on the road (event choices), crew dossiers.
 
-var tab := "world"       # world | found | crew
+var tab := "activity"       # activity | world | found | crew
 var open_id := ""        # entry being read
 var _tabs: HBoxContainer
 var _list: VBoxContainer
 var _type_t := 0.0
 var _reader: Label
+var activity_feed: ActivityFeed
+var _tutorial_button: Button
 
 
 func _build() -> void:
 	set_title(Loc.t("LOGBOOK / สมุดบันทึก MAMMOTH-7"))
 	_tabs = UIKit.hbox(3)
 	body.add_child(_tabs)
+	activity_feed = ActivityFeed.new()
+	body.add_child(activity_feed)
 	_list = make_list(3)
 	var tb := UIKit.button(Loc.t("ดูบทแนะนำอีกครั้ง  TUTORIAL"), "blue", "book")
+	_tutorial_button = tb
 	tb.pressed.connect(func():
 		close()
 		Tutorial.restart())
 	body.add_child(tb)
 	Lore.unlocked.connect(func(_id): if is_open: refresh())
+	Features.changed.connect(func(): if is_open: refresh())
+
+
+func _layout() -> void:
+	var vp := get_viewport_rect().size
+	max_size.x = 600.0 if tab == "activity" and vp.x > vp.y else 420.0
+	super._layout()
 
 
 func close() -> void:
@@ -29,6 +41,13 @@ func close() -> void:
 
 
 func refresh() -> void:
+	if tab == "activity" and not Features.on("activity_log"):
+		tab = "world"
+	set_title("ACTIVITY LOG / บันทึกกิจกรรม" if tab == "activity" else Loc.t("LOGBOOK / สมุดบันทึก MAMMOTH-7"))
+	_layout()
+	activity_feed.visible = tab == "activity"
+	_tutorial_button.visible = tab != "activity"
+	_list.get_parent().visible = tab != "activity"
 	for c in _tabs.get_children():
 		_tabs.remove_child(c)
 		c.queue_free()
@@ -36,8 +55,11 @@ func refresh() -> void:
 		_list.remove_child(c)
 		c.queue_free()
 	_reader = null
-	for t in [["world", "โลก"], ["found", "สิ่งที่พบ"], ["crew", "ลูกเรือ"]]:
+	for t in [["activity", "กิจกรรม"], ["world", "โลก"], ["found", "สิ่งที่พบ"], ["crew", "ลูกเรือ"]]:
+		if t[0] == "activity" and not Features.on("activity_log"):
+			continue
 		var b := UIKit.button(t[1], "yellow" if tab == t[0] else "gray")
+		b.focus_mode = Control.FOCUS_ALL
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var key: String = t[0]
 		b.pressed.connect(func():
@@ -45,7 +67,9 @@ func refresh() -> void:
 			open_id = ""
 			refresh())
 		_tabs.add_child(b)
-	if open_id != "":
+	if tab == "activity":
+		activity_feed.refresh()
+	elif open_id != "":
 		_build_reader()
 	elif tab == "crew":
 		_build_crew()

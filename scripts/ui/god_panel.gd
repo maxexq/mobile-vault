@@ -931,6 +931,10 @@ func _open_nextgen() -> void:
 
 
 func _tab_log() -> void:
+	if Features.on("activity_log"):
+		_head("ACTIVITY", "บันทึกกิจกรรมผู้เล่น")
+		_row([_b("ทดสอบกิจกรรม: ของ / คนขึ้นรถ / เครียด", func(): Dev.activity_test(), "yellow")])
+		_row([_b("ทดสอบส่งกิจกรรมไป Sentry", func(): Dev.activity_remote_test(), "gray")])
 	var cats := ["", "error", "god", "build", "event", "combat", "crew", "expedition", "vehicle", "meta", "save", "toast", "sample", "session"]
 	var cb := []
 	for c in cats:

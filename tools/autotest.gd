@@ -20,6 +20,133 @@ var _font_checks_completed := false
 var _roaming_boss_checks_completed := false
 
 
+func _activity_test() -> void:
+	var original := Game.s.duplicate(true)
+	var old_dev: Dictionary = Features.layers.dev.duplicate(true)
+	var old_window := get_window().size
+	Features.set_override("features", "activity_log", true)
+	Tutorial.mark_tip("log")
+	Game.s["activity_log"] = []
+	Activity._start()
+	var newcomer := Game.recruit_random()
+	Activity._scan_crew()
+	_check("activity: arrival names the new crew member", Activity.entries("crew").any(func(e): return str(e.text).contains(newcomer.name)))
+	var item := Loot.roll_item("weapon", 6, 2, "hunting_rifle")
+	Game.s.combat.auto_salvage = -1
+	Loot.add_to_stash(item)
+	_check("activity: real gear acquisition includes rarity and level", Activity.entries("loot").any(func(e): return e.data.base == "hunting_rifle" and not e.data.salvaged and str(e.text).contains("Lv.6")))
+	Game.s.combat.auto_salvage = 5
+	Loot.add_to_stash(Loot.roll_item("armor", 2, 0, "leather_jacket"))
+	_check("activity: automatically salvaged gear is recorded", Activity.entries("loot").any(func(e): return e.data.get("salvaged", false)))
+	Game.s.combat.auto_salvage = -1
+	var d: Dictionary = Game.s.dwellers[0]
+	d.happy = 18.0
+	Activity.sample()
+	var count := Activity.entries("crew").size()
+	Activity.sample()
+	_check("activity: stress logs once per transition", Activity.entries("crew").size() == count and Activity.stressed().has(d))
+	d.happy = 75.0
+	Activity.sample()
+	_check("activity: recovery is recorded", Activity.entries("crew").size() == count + 1 and not Activity.stressed().has(d))
+	Game.s.res.food = 0.0
+	Activity.sample()
+	_check("activity: shortages appear in warnings", Activity.entries("resources", true).any(func(e): return str(e.text).contains("อาหาร")))
+	Activity._supplies = Activity.supplies()
+	Game.s.res.scrap = float(Game.s.res.scrap) + 17.0
+	Activity.flush_resources()
+	_check("activity: resource totals aggregate actual net changes", Activity.entries("resources").any(func(e): return int(e.data.get("scrap", 0)) == 17))
+	var json: Dictionary = JSON.parse_string(JSON.stringify(Game.s))
+	Game.s = json
+	_check("activity: history survives JSON save round-trip", Activity.entries().size() > 4 and Activity.entries("loot").size() == 2)
+	var was_telemetry := bool(Settings.get_value("telemetry"))
+	Settings.set_value("telemetry", true)
+	Features.set_override("features", "activity_cloud", true)
+	Features.set_override("features", "cloud_logs", true)
+	Activity.record("event", "ทดสอบคิวกิจกรรม", "info", {"test": true}, "monitoring.test")
+	var cloud_rows := Trace.filtered("activity")
+	_check("activity: remote events use the existing telemetry queue", not cloud_rows.is_empty() and cloud_rows[-1].msg == "monitoring.test" and cloud_rows[-1].data.detail.test)
+	var remote_count := cloud_rows.size()
+	Settings.set_value("telemetry", false)
+	Activity.record("event", "opted out")
+	_check("activity: player opt-out stops new remote activity", Trace.filtered("activity").size() == remote_count)
+	Settings.set_value("telemetry", true)
+	Features.set_override("features", "activity_cloud", false)
+	Activity.record("event", "remote disabled")
+	_check("activity: remote switch off still keeps local history", Trace.filtered("activity").size() == remote_count and Activity.entries()[-1].text == "remote disabled")
+	Settings.set_value("telemetry", was_telemetry)
+	Features.set_override("features", "activity_log", false)
+	var before := Activity.entries().size()
+	Activity.record("event", "disabled")
+	_check("activity: feature off preserves history and stops recording", Activity.entries().size() == before)
+	Features.set_override("features", "activity_log", true)
+	Features.set_override("tune", "activity.keep", 50)
+	for i in 60:
+		Activity.record("event", "ทดสอบลำดับ %d" % i)
+	_check("activity: history is bounded and keeps the newest entry", Activity.entries().size() == 50 and Activity.entries()[-1].text == "ทดสอบลำดับ 59")
+	Game.s = original.duplicate(true)
+	Features.layers.dev = old_dev.duplicate(true)
+	Features._save_dev()
+	Features.changed.emit()
+	Game.s["activity_log"] = []
+	# Keep random road events and first-use tips out of the activity preview.
+	Game.s.traveling = false
+	Game.s.event_t = 99999.0
+	for key in Tutorial.TIPS:
+		Tutorial.mark_tip(key)
+	main.hud.event_popup.close()
+	main.hud.tip_card.dismiss()
+	Activity._start()
+	Dev.activity_test()
+	main.hud.open_panel("log")
+	var panel: LogPanel = main.hud.panels.log
+	panel.tab = "activity"
+	panel.refresh()
+	get_window().size = Vector2i(405, 720)
+	await wait(0.5)
+	_check("activity: opens from Log with live resources and stress", panel.activity_feed.is_visible_in_tree() and panel.activity_feed._stress.text.contains(str(Game.s.dwellers[0].name)))
+	await shot("activity_portrait")
+	panel.activity_feed.select_filter("loot")
+	await wait(0.2)
+	_check("activity: category filter shows only gear", panel.activity_feed._rows.get_child_count() == Activity.entries("loot").size())
+	await shot("activity_loot")
+	panel.activity_feed.select_filter("")
+	for i in 45:
+		Activity.record("event", "รายการทดสอบการเลื่อน %d" % i)
+	await wait(0.3)
+	panel.activity_feed._scroll.scroll_vertical = 120
+	await wait(0.1)
+	var offset := panel.activity_feed._scroll.scroll_vertical
+	Activity.record("event", "รายการใหม่ระหว่างอ่านย้อนหลัง")
+	await wait(0.2)
+	_check("activity: new entries do not move older history", offset > 0 and panel.activity_feed._scroll.scroll_vertical == offset and panel.activity_feed._new.visible)
+	panel.activity_feed._new.pressed.emit()
+	await wait(0.2)
+	_check("activity: new-entry button returns to latest", panel.activity_feed._scroll.scroll_vertical == 0 and not panel.activity_feed._new.visible)
+	# Leave a small readable set of real outcomes for the requested interactive preview.
+	Game.s["activity_log"] = []
+	Activity._start()
+	Dev.activity_test()
+	panel.activity_feed.select_filter("")
+	get_window().size = Vector2i(1280, 720)
+	await wait(0.5)
+	_check("activity: landscape window stays inside viewport", panel.box.position.x >= 0 and panel.box.position.y >= 0 and panel.box.size.x <= panel.get_viewport_rect().size.x)
+	await shot("activity_landscape")
+	if "--activity-preview" in OS.get_cmdline_user_args():
+		Game.s.traveling = false
+		Dev.flags["no_events"] = true
+		Game.s.event_t = 99999.0
+		return
+	panel.close()
+	Game.s = original
+	Features.layers.dev = old_dev
+	Features._save_dev()
+	Features.changed.emit()
+	Activity._start()
+	Game._emit_all(true)
+	get_window().size = old_window
+	await wait(0.2)
+
+
 func _check(label: String, ok: bool) -> void:
 	print("[autotest] %s %s" % ["PASS" if ok else "FAIL", label])
 	if not ok:
@@ -127,6 +254,18 @@ func _run() -> void:
 	if "--only=settings" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _settings_test()
+	if "--only=activity" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _activity_test()
+		if "--activity-preview" in OS.get_cmdline_user_args():
+			DisplayServer.window_set_title("Apocarlypse — Activity Log Preview (test save)")
+			print("[autotest] ACTIVITY PREVIEW ready fails=%d" % _fails)
+			return
+		_finish()
+		return
+	if "--only=features" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _features_test()
 		_finish()
 		return
 	if "--only=confirm" in OS.get_cmdline_user_args():
@@ -520,9 +659,12 @@ func _run() -> void:
 	main.hud.panels.dwellers.close()
 	await wait(0.4)
 	# logbook + lore unlocks + idle chatter
+	await _activity_test()
 	Lore.unlock("signal")
 	Lore.unlock("khaotang")
 	main.hud.open_panel("log")
+	main.hud.panels.log.tab = "world"
+	main.hud.panels.log.refresh()
 	await wait(0.5)
 	await shot("panel_log")
 	main.hud.panels.log.open_id = "ember_fall"
@@ -3688,7 +3830,7 @@ func _features_test() -> void:
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
 	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
 	# (MV-546) rides on the world map, so it ships off with it
-	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches"]
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud"]
 	var all_on := true
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))

@@ -1,0 +1,53 @@
+# Server-side only. Nothing runs until SENTRY_FORWARD_ENABLED=true is explicitly set.
+# Migration 0007 must be applied and enabled independently in each Supabase project.
+name: Sentry forward
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: sentry-forward
+  cancel-in-progress: false
+jobs:
+  forward:
+    if: vars.SENTRY_FORWARD_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: production
+            enabled_key: SENTRY_FORWARD_PRODUCTION_ENABLED
+            url_key: SUPABASE_URL
+            service_key: SUPABASE_SERVICE_KEY
+          - environment: test
+            enabled_key: SENTRY_FORWARD_TEST_ENABLED
+            url_key: SUPABASE_TEST_URL
+            service_key: SUPABASE_TEST_SERVICE_KEY
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/sentry_forward.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Forward opted-in logs
+        env:
+          SENTRY_SOURCE_ENABLED: ${{ vars[matrix.enabled_key] }}
+          SUPABASE_URL: ${{ vars[matrix.url_key] || secrets[matrix.url_key] }}
+          SUPABASE_SERVICE_KEY: ${{ secrets[matrix.service_key] }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: ${{ matrix.environment }}
+        shell: bash
+        run: |
+          if [ "$SENTRY_SOURCE_ENABLED" != "true" ]; then
+            echo "Forwarding is disabled for this source; no database contacted."
+            exit 0
+          fi
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ] || [ -z "$SENTRY_DSN" ]; then
+            echo "Forwarding is not configured for this source; no data sent."
+            exit 0
+          fi
+          python3 tools/sentry_forward.py --max-batches 10

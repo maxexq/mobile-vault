@@ -458,6 +458,14 @@ Switches `audio_ambience` (beds, engine, weather, thunder), `audio_sfx` (effects
 
 ## 4f. Tester tools: GOD MODE + trace log
 
+**Sentry forwarding (MV-569):** `activity_cloud` (default off) mirrors opted-in activities into existing Telemetry. A server-only outbox/relay forwards activity and error records to Sentry Logs, searchable by Player ID/session/event/version; script errors also create Issues. GOD → LOG/เซฟ → `Dev.activity_remote_test()` tests this path. Deployment and limits: [Sentry setup](supabase/sentry-setup.md). No Sentry SDK or server credentials go into the game.
+
+**Activity log (MV-569, switch `activity_log`):** tap **Log → กิจกรรม** for timestamped gear received/salvaged, crew arrivals/departures, stress/recovery, strikes/infections, resource shortages and other gameplay messages (road events, construction, combat, expeditions). Current resources and stressed crew stay above the feed. Filter by category or warnings; newest entries come first, and new entries do not move the list while reading older history. Resource changes are net totals grouped every 30 real seconds, rather than every production tick. The latest 300 entries live in `Game.s.activity_log` and follow the normal cloud save. Tune `activity.keep`, `activity.stress` (happiness below 35 by default), and `activity.resource_interval`. GOD MODE → LOG/เซฟ → **ทดสอบกิจกรรม** calls `Dev.activity_test()` (real gear, recruit, resources and stress; marks the test run cheated). Focused verification: `--only=activity`; add `--activity-preview` to leave the real game window open after verification. Use an isolated APPDATA directory when running tests/previews because autotest clears its save.
+
+| GOD MODE tab | Activity testing |
+|---|---|
+| LOG/เซฟ | MV-569: `Dev.activity_test()` exercises gear, arrivals, resource changes and stress; `Dev.activity_remote_test()` queues a named Sentry test through the existing opt-in telemetry. |
+
 **Destructive-action confirmations (MV-422):** demolishing rooms, cancelling construction, splitting large rooms, single/bulk gear salvage, synthesis, enabling a stronger auto-salvage threshold, replacing/resetting saves, resetting settings, starting over, the final next-generation action, and turning away/shooting a stranger open a shared confirmation window. It names the target and explains losses/refunds; Cancel has initial keyboard focus. Cancel, X, Escape and backdrop taps discard the action. Repeated clicks cannot execute twice. Stale room/item/account targets are refused, and bulk salvage excludes drops received after the prompt opened. File import asks after validation, before replacing the save. Switch: `confirm_actions` (off restores the previous UI, including the reset double-tap). GOD → ระบบ → ตั้งค่า: `Dev.confirm_preview()` previews the real window without deleting data. Autotest: `--only=confirm`.
 
 **How to open (hidden from players)**
