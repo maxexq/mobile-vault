@@ -197,6 +197,11 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=settings_privacy" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _settings_privacy_test()
+		_finish()
+		return
 	if "--only=nextgen_crew" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _nextgen_crew_test()
@@ -1657,6 +1662,46 @@ func _construction_checks() -> void:
 
 
 ## keep random road events from popping over the v4 screenshots
+## MV-588: players see version, build and Player ID only; server, branch, GPU, save path and full e-mail are for testers
+func _settings_privacy_test() -> void:
+	var sp = main.hud.settings_panel
+	var keys := func() -> Array:
+		var out := []
+		for l in sp._list.find_children("*", "Label", true, false):
+			out.append((l as Label).text)
+		return out
+	var was_unlocked := Dev.unlocked
+	Dev.unlocked = true
+	Dev.settings_player_view(false)
+	main.hud.open_settings("about")
+	await wait(0.4)
+	var tester: Array = keys.call()
+	_check("settings privacy: testers see every technical row", tester.has("ENV") and tester.has("GPU") and tester.has("ENGINE"))
+	Dev.settings_player_view(true)
+	sp.open_tab("about")
+	await wait(0.4)
+	var player: Array = keys.call()
+	var hidden := ["ENV", "BRANCH", "BUILT", "ENGINE", "RENDER", "GPU", "SESSION", "SAVE FMT"].filter(func(k): return player.has(k))
+	_check("settings privacy: a player sees only GAME / CHANNEL / BUILD (%s)" % [hidden], hidden.is_empty() and player.has("GAME") and player.has("BUILD"))
+	var copy := BuildInfo.as_text(sp._extra_rows(), not sp.show_tech())
+	_check("settings privacy: the bug-report copy has no server or branch", copy.contains("ENV: " + BuildInfo.env().to_upper() + "\n")
+		and not copy.contains("server ") and not copy.contains("BRANCH:"))
+	await shot("settings_about_player")
+	sp.open_tab("data")
+	await wait(0.4)
+	_check("settings privacy: no save file path for a player", OS.has_feature("web") or not _find_text(sp, ProjectSettings.globalize_path(Save.FILE_PATH)))
+	_check("settings privacy: e-mail is masked", Cloud.mask_email("makku.soba@gmail.com") == "ma***@gmail.com" and Cloud.mask_email("a@b.co") == "a***@b.co")
+	Features.set_override("features", "settings_privacy", false)
+	sp.open_tab("about")
+	await wait(0.4)
+	_check("settings privacy: switch off shows every row again", (keys.call() as Array).has("GPU"))
+	Features.set_override("features", "settings_privacy", null)
+	Dev.settings_player_view(false)
+	sp.close()
+	Dev.unlocked = was_unlocked
+	await wait(0.2)
+
+
 func _find_text(n: Node, s: String) -> bool:
 	if n is Label and (n as Label).text.contains(s):
 		return true
@@ -2293,6 +2338,9 @@ func _settings_test() -> void:
 	main.hud.settings_panel.open_tab("about")
 	await wait(0.4)
 	await shot("settings_about")
+	await _settings_privacy_test()
+	main.hud.open_settings("about")
+	await wait(0.4)
 	# save tools
 	var path := Settings.export_save()
 	_check("save: exported", path != "" and FileAccess.file_exists(path))

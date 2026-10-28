@@ -227,10 +227,17 @@ static func rows() -> Array:
 	return out
 
 
-static func as_text(extra: Array = []) -> String:
+## MV-588: the only About rows a player sees (testers get all of rows()); PLAYER comes from Settings
+const PUBLIC_ROWS := ["GAME", "CHANNEL", "BUILD", "PLAYER"]
+
+
+## rows() + extra; public = without the server / host / branch (the player's bug-report copy)
+static func as_text(extra: Array = [], public: bool = false) -> String:
 	var lines := []
 	for r in rows() + extra:
-		lines.append("%s: %s" % [r[0], r[1]])
+		if public and str(r[0]) == "BRANCH":
+			continue
+		lines.append("%s: %s" % [r[0], env().to_upper() if public and str(r[0]) == "ENV" else r[1]])
 	var ua := user_agent()
 	if ua != "":
 		lines.append("UA: " + ua)

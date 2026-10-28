@@ -568,12 +568,21 @@ func play_as_guest() -> void:
 		await sync()
 
 
-func account_text() -> String:
+## masked (MV-588): "Guest" without the user id, and the e-mail as "ma***@gmail.com" (screenshots / streams)
+func account_text(masked: bool = false) -> String:
 	if user_id() == "":
 		return "-"
 	if is_guest():
-		return "Guest · " + user_id().left(8)
-	return "Google · " + str(session.get("email", ""))
+		return "Guest" if masked else "Guest · " + user_id().left(8)
+	var email := str(session.get("email", ""))
+	return "Google · " + (mask_email(email) if masked else email)
+
+
+static func mask_email(email: String) -> String:
+	var at := email.find("@")
+	if at < 0:
+		return "***"
+	return email.left(mini(2, at)) + "***" + email.substr(at)
 
 
 ## Google sign-in needs a top-level page (Google refuses to run inside a frame such as the artifact view)

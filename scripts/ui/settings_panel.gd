@@ -284,7 +284,8 @@ func _tab_data() -> void:
 		_info("SIZE", "%.1f KB" % (JSON.stringify(d).length() / 1024.0))
 		var veh := Account.vehicle_of(d)
 		_info("RUN", Loc.t("รุ่นที่ %d · Vault %d · %.1f กม.") % [int(Account.account_of(d).get("meta", {}).get("gen", 1)), int(veh.get("vault_level", 1)), float(veh.get("stats", {}).get("km_total", veh.get("km", 0.0)))])
-		_info("STORE", (Loc.t("localStorage ของเบราว์เซอร์") if OS.has_feature("web") else ProjectSettings.globalize_path(Save.FILE_PATH)) + (" + Supabase" if Cloud.enabled() else ""))
+		var where := Loc.t("localStorage ของเบราว์เซอร์") if OS.has_feature("web") else (ProjectSettings.globalize_path(Save.FILE_PATH) if show_tech() else Loc.t("ไฟล์ในเครื่องนี้"))
+		_info("STORE", where + ((" + Supabase" if show_tech() else " + " + Loc.t("คลาวด์")) if Cloud.enabled() else ""))
 	if Cloud.enabled():
 		_list.add_child(UIKit.wrap_label(Loc.t("เกมเซฟลงเครื่องทุก 15 วินาที และส่งขึ้นคลาวด์ทุกนาทีเมื่อออนไลน์ ถ้าออฟไลน์จะเก็บในเครื่องไว้ก่อนแล้วส่งตามทีหลัง"), UIKit.FS_SMALL, UIKit.C_DIM))
 	else:
@@ -319,7 +320,7 @@ func _cloud_rows() -> void:
 	var last := _info("SYNC", "")
 	_syncs.append(func():
 		(st.get_child(1) as Label).text = Cloud.status_text()
-		(acc.get_child(1) as Label).text = Cloud.account_text()
+		(acc.get_child(1) as Label).text = Cloud.account_text(not show_tech())
 		if pid_row:
 			(pid_row.get_child(1) as Label).text = Cloud.player_id() if Cloud.player_id() != "" else "-"
 		(last.get_child(1) as Label).text = "rev %d · %s" % [int(Cloud.meta.rev), _when(Cloud.last_sync_at) if Cloud.last_sync_at > 0 else Loc.t("ยังไม่ได้ซิงก์")])
@@ -420,6 +421,11 @@ func _process(delta: float) -> void:
 		_reset_btn.text = Loc.t("ยืนยันลบทั้งหมด (%d)") % int(ceilf(_reset_t))
 
 
+## MV-588: server, branch, GPU, save path and the full e-mail are for testers (GOD MODE) only
+func show_tech() -> bool:
+	return (Dev.unlocked and not Dev.player_view) or not Features.on("settings_privacy")
+
+
 func _extra_rows() -> Array:
 	var out := []
 	var d: Dictionary = Game.s if Game.started else Account.vehicle_of(Save.read())
@@ -437,9 +443,10 @@ func _tab_about() -> void:
 	_list.add_child(UIKit.env_tag())
 	_head("VERSION", Loc.t("ข้อมูลเวอร์ชัน"))
 	for r in BuildInfo.rows() + _extra_rows():
-		_info(str(r[0]), str(r[1]))
+		if show_tech() or str(r[0]) in BuildInfo.PUBLIC_ROWS:
+			_info(str(r[0]), str(r[1]))
 	_action(Loc.t("คัดลอกข้อมูลสำหรับแจ้งบั๊ก"), "blue", "book", func():
-		DisplayServer.clipboard_set(BuildInfo.as_text(_extra_rows()))
+		DisplayServer.clipboard_set(BuildInfo.as_text(_extra_rows(), not show_tech()))
 		_say(Loc.t("คัดลอกแล้ว วางในข้อความแจ้งบั๊กได้เลย")))
 	_action(Loc.t("ดาวน์โหลด log การเล่น"), "gray", "chest", func():
 		_say(Loc.t("บันทึก log แล้ว: ") + Trace.download()))

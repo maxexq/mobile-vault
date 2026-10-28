@@ -26,6 +26,7 @@
     "cloud_save": true,
     "google_login": true,
     "player_id": true,
+    "settings_privacy": true,
     "cloud_logs": true,
     "game_analytics": true,
     "server_outbox": true,
