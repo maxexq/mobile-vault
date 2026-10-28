@@ -88,7 +88,13 @@ func _activity_test() -> void:
 	Features._save_dev()
 	Features.changed.emit()
 	Game.s["activity_log"] = []
-	Tutorial.mark_tip("log")
+	# Keep random road events and first-use tips out of the activity preview.
+	Game.s.traveling = false
+	Game.s.event_t = 99999.0
+	for key in Tutorial.TIPS:
+		Tutorial.mark_tip(key)
+	main.hud.event_popup.close()
+	main.hud.tip_card.dismiss()
 	Activity._start()
 	Dev.activity_test()
 	main.hud.open_panel("log")
