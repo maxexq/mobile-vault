@@ -523,6 +523,11 @@ func _run() -> void:
 		await _boss_intro_test()
 		_finish()
 		return
+	if "--only=biome_boss" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _biome_boss_test()
+		_finish()
+		return
 	if "--only=enemy_size" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _enemy_size_test()
@@ -1217,6 +1222,7 @@ func _run() -> void:
 	await _pity_test()
 	await _boss_intro_test()
 	await _enemy_size_test()
+	await _biome_boss_test()
 	await _vehicle_detail_test()
 	await _cozy_roof_test()
 	await _mod_detail_fine_test()
@@ -5671,6 +5677,7 @@ func _wait_for(cond: Callable, max_s: float) -> void:
 ## spots (hp bar + crown included), tune steps down when too big, switch off = the old size
 func _enemy_size_test() -> void:
 	var cv: CombatView = main.combat_view
+	Features.set_override("features", "biome_bosses", false)     # the lineup measures the two-frame boss sprites
 	_no_events()
 	Dev.kill_enemies()
 	await wait(0.4)
@@ -5765,8 +5772,67 @@ func _enemy_size_test() -> void:
 		off_ok = off_ok and node.size == 1 and node.spr.scale == Vector2.ONE
 	_check("enemy size: switch off = original size", off_ok and CombatView.enemy_scale({"boss": true}, 48.0, 48.0) == 1)
 	Features.set_override("features", "enemy_size", null)
+	Features.set_override("features", "biome_bosses", null)
 	Dev.kill_enemies()
 	await wait(0.4)
+
+
+## MV-558: the animated 128px biome boss (Junk Colossus): its sheet, 1x size, feet on the road, chase loop,
+## attack on a swing then back to the chase, death that holds the body, switch off = the old golem, GOD preview
+func _biome_boss_test() -> void:
+	var cv: CombatView = main.combat_view
+	_no_events()
+	Dev.kill_enemies()
+	await wait(0.6)
+	Features.set_override("features", "boss_intro", false)
+	Features.set_override("features", "tutorial_tips", false)     # no Sgt. Mark tip over the screenshots
+	Dev.biome_boss_preview(true)
+	await _wait_for(func(): return not Combat.current_boss().is_empty(), 3.0)
+	var b := Combat.current_boss()
+	var n = cv.enemy_nodes.get(int(b.get("id", -1)))
+	var art := "industrial_junk_colossus"
+	_check("biome boss: GOD preview spawns the Junk Colossus sheet", n != null and n.art == art and str(b.get("boss_art", "")) == art)
+	if n == null:
+		Features.set_override("features", "boss_intro", null)
+		Features.set_override("features", "biome_bosses", null)
+		return
+	var sf: SpriteFrames = n.spr.sprite_frames
+	var cell: Vector2 = sf.get_frame_texture("walk", 0).get_size()
+	_check("biome boss: 30 chase / 30 attack / 30 death frames, %s cells" % cell, sf.get_frame_count("walk") == 30
+		and sf.get_frame_count("attack") == 30 and sf.get_frame_count("death") == 30 and sf.get_animation_loop("walk")
+		and not sf.get_animation_loop("attack") and not sf.get_animation_loop("death") and cell == Vector2(112, 104))
+	_check("biome boss: drawn 1x with its feet on the road (offset %s), behind the mobs" % n.spr.offset, n.size == 1
+		and n.spr.scale == Vector2.ONE and n.spr.offset == Vector2(-56, -104) and n.height() == 104.0 and n.z_index == 4)
+	_check("biome boss: chase animation plays", n.spr.animation == "walk" and n.spr.is_playing())
+	await wait(2.5)
+	await shot("biome_boss_chase")
+	Combat.enemy_struck.emit(int(b.id))
+	await wait(0.8)
+	_check("biome boss: a swing plays the attack", n.spr.animation == "attack")
+	await shot("biome_boss_attack")
+	await _wait_for(func(): return n.spr.animation == "walk", 3.0)
+	_check("biome boss: back to the chase after the attack", n.spr.animation == "walk")
+	Dev.kill_enemies()
+	await wait(1.6)
+	_check("biome boss: killed = death animation, body stays on the road", is_instance_valid(n) and n.spr.animation == "death"
+		and n.modulate.a > 0.9 and not cv.enemy_nodes.values().has(n))
+	await shot("biome_boss_death")
+	await _wait_for(func(): return not is_instance_valid(n), 6.0)
+	_check("biome boss: the body fades and frees after the hold", not is_instance_valid(n))
+	# switch off: the two-frame golem again
+	Dev.biome_boss_preview(false)
+	await _wait_for(func(): return not Combat.current_boss().is_empty(), 3.0)
+	b = Combat.current_boss()
+	n = cv.enemy_nodes.get(int(b.get("id", -1)))
+	_check("biome boss: switch off = the old golem sprite", n != null and n.art == "" and str(b.sprite) == "boss_golem"
+		and not b.has("boss_art"))
+	await wait(2.5)
+	await shot("biome_boss_old")
+	Dev.kill_enemies()
+	await wait(0.6)
+	Features.set_override("features", "boss_intro", null)
+	Features.set_override("features", "tutorial_tips", null)
+	Features.set_override("features", "biome_bosses", null)
 
 
 ## MV-387: boss / warlord / elite entrances: the HUD band with the name, drop-in + landing in the world, elites

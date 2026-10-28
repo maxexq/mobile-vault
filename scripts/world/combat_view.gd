@@ -116,6 +116,7 @@ func setup(v: Vehicle) -> void:
 	Combat.enemy_removed.connect(_on_removed)
 	Combat.hit.connect(_on_hit)
 	Combat.shot.connect(_on_shot)
+	Combat.enemy_struck.connect(_on_struck)
 	Combat.skill_cast.connect(_on_skill)
 	Combat.loot_dropped.connect(_on_loot)
 	Combat.heroes_changed.connect(_sync_heroes)
@@ -246,6 +247,12 @@ func _on_spawn(e: Dictionary) -> void:
 	add_child(n)
 	n.setup(e)
 	enemy_nodes[int(e.id)] = n
+
+
+func _on_struck(id: int) -> void:
+	var n: EnemyActor = enemy_nodes.get(id)
+	if n:
+		n.attack()
 
 
 func _on_removed(id: int, killed: bool) -> void:
@@ -741,6 +748,7 @@ class EnemyActor extends Node2D:
 	var size := 1             # MV-517: whole-number sprite scale (CombatView.enemy_scale)
 	var _grow := 0.0          # how far the centre moves back so the front edge stays put
 	var _right := 0.0         # sprite's right edge from the node (scaled)
+	var art := ""             # MV-558: animated biome boss sheet (BossArt), "" = the two-frame atlas sprite
 
 	func height() -> float:
 		return _h
@@ -770,7 +778,13 @@ class EnemyActor extends Node2D:
 		var sf: SpriteFrames
 		var sprite: String = e.sprite
 		spr.centered = false
-		if sprite.begins_with("dw_"):
+		art = str(e.get("boss_art", ""))
+		if art != "":
+			sf = BossArt.frames(art)
+			spr.offset = BossArt.offset(art)
+			_w = float(BossArt.meta(art).cell[0])
+			_h = -spr.offset.y
+		elif sprite.begins_with("dw_"):
 			sf = Atlas.dweller_frames(sprite)
 			spr.flip_h = true
 			spr.offset = Vector2(-Atlas.DW_W / 2, -Atlas.DW_H)
@@ -798,15 +812,16 @@ class EnemyActor extends Node2D:
 		target = position
 		spr.sprite_frames = sf
 		spr.play("walk")
-		spr.frame = randi() % 2
+		spr.frame = randi() % sf.get_frame_count("walk")
+		spr.animation_finished.connect(_on_anim_finished)
 		add_child(spr)
 		if str(e.tint) != "":
 			_base_mod = Color(str(e.tint))
 		spr.modulate = _base_mod
 		z_index = 5 if e.kind != "air" else 6
 		if is_boss:
-			# MV-517: a scaled-up boss stands behind the smaller mobs so they don't vanish inside it
-			z_index = 7 if size == 1 else 4
+			# MV-517: a scaled-up boss (or an MV-558 128px one) stands behind the smaller mobs so they don't vanish inside it
+			z_index = 7 if size == 1 and art == "" else 4
 
 	func flash() -> void:
 		_flash = 0.07
@@ -816,7 +831,7 @@ class EnemyActor extends Node2D:
 		var moving := position.distance_to(target) > 0.5
 		position = position.lerp(target, clampf(delta * 10.0, 0.0, 1.0))
 		spr.position = position.round() - position + Vector2(0, -roundf(drop))
-		spr.speed_scale = 1.0 if moving else 0.4
+		spr.speed_scale = 1.0 if moving or spr.animation != "walk" else 0.4
 		if stunned:
 			spr.speed_scale = 0.0
 		_flash -= delta
@@ -862,10 +877,29 @@ class EnemyActor extends Node2D:
 		tw.tween_property(self, "scale", Vector2(0.92, 1.14), 0.12).set_ease(Tween.EASE_OUT)
 		tw.tween_property(self, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 
+	## MV-558: an animated boss swings (the two-frame sprites have no attack pose)
+	func attack() -> void:
+		if art == "" or not spr.sprite_frames.has_animation("attack"):
+			return
+		spr.play("attack")
+
+	func _on_anim_finished() -> void:
+		if spr.animation == "attack":
+			spr.play("walk")
+
 	func die(killed: bool) -> void:
 		set_process(false)
 		var tw := create_tween()
-		if killed:
+		if killed and art != "" and spr.sprite_frames.has_animation("death"):
+			# MV-558: fall over, hold the body on the road, then fade
+			spr.modulate = _base_mod
+			spr.speed_scale = 1.0
+			spr.play("death")
+			is_boss = false          # no crown / bar over the body
+			queue_redraw()
+			tw.tween_interval(BossArt.death_time(art) + Features.num("biome_bosses.death_hold", 1.2))
+			tw.tween_property(self, "modulate:a", 0.0, 0.4)
+		elif killed:
 			spr.modulate = Color(4, 4, 4)
 			tw.tween_interval(0.06)
 			tw.tween_callback(func(): spr.modulate = Color(1, 0.3, 0.3))

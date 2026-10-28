@@ -19,6 +19,7 @@ signal supply_found(kind: String, amount: float, at: Vector2)
 signal boss_event(kind: String, e: Dictionary)   # enrage | armor_break | summon | burrow | erupt | explode | acid | solar
 signal tagged_in(slot: int, did: int, out_did: int)   # the roof-deck reserve jumped in for a fallen defender
 signal entrance(e: Dictionary)   # MV-387: a boss / warlord / elite just spawned (switch boss_intro)
+signal enemy_struck(id: int)     # MV-558: an enemy swung / fired (the view plays its attack animation)
 
 const STEP := 0.1
 ## enemies scale a little faster than gear (Loot.ILVL_GROWTH = 1.12) -> pushing hits a wall,
@@ -85,11 +86,12 @@ const BIOME_MOBS := {
 	"metro": ["gang_scav", "sentry_bot", "mutant_ape", "gang_scav"],
 }
 ## bosses have their own native-size sprites (no upscaling -> true pixel art)
+## art: MV-558 animated 128px sheet (BossArt) used instead of "sprite" while the biome_bosses switch is on
 ## mech: enrage (<30% hp faster & harder) | armor (-50% dmg taken above 60% hp) | summon (calls adds) |
 ##       acid (corrodes the hull & armour) | solar (dives at the solar panels) | burrow (dives underground,
 ##       erupts under the rear deck) | revive (raises the fallen) | explode (blows up when it dies)
 const BOSSES := {
-	"industrial": {"th": "โกเลมขยะ", "en": "JUNK GOLEM", "base": "yeti", "sprite": "boss_golem", "kind": "melee", "mech": ["armor"]},
+	"industrial": {"th": "โกเลมขยะ", "en": "JUNK GOLEM", "base": "yeti", "sprite": "boss_golem", "kind": "melee", "mech": ["armor"], "art": "industrial_junk_colossus"},
 	"desert": {"th": "ราชันแมงป่อง", "en": "SCORPION KING", "base": "scorpion", "sprite": "boss_scorpion", "kind": "melee", "mech": ["enrage", "acid"]},
 	"forest": {"th": "จ่าฝูงหมาป่ารังสี", "en": "ALPHA RAD-WOLF", "base": "rad_wolf", "sprite": "boss_wolf", "kind": "melee", "mech": ["summon", "enrage"]},
 	"swamp": {"th": "ราชินีหนองพิษ", "en": "BOG QUEEN", "base": "bog_walker", "sprite": "boss_bogqueen", "kind": "ranged", "mech": ["acid", "summon"]},
@@ -639,6 +641,8 @@ func _spawn(q: Dictionary) -> void:
 		e.name = ("บอสด่านตรวจ: " if e.warlord else "") + bd.th
 		e.mob = bd.base
 		e.boss_sprite = bd.sprite
+		if Features.on("biome_bosses") and BossArt.has(str(bd.get("art", ""))):
+			e.boss_art = bd.art
 		e.en = bd.en
 		e.mech = (bd.get("mech", []) as Array).duplicate()
 		e.mech_t = 4.0
@@ -745,6 +749,7 @@ func tick(dt: float) -> void:
 		if e.atk_t > 0.0:
 			continue
 		e.atk_t = float(e.cd)
+		enemy_struck.emit(int(e.id))
 		var mech: Array = e.get("mech", [])
 		if mech.has("solar") and rng.randf() < 0.55:
 			# skin-wings dive at the solar array on the roof

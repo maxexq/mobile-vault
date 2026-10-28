@@ -1185,6 +1185,12 @@ func warlord_preview(enabled: bool) -> void:
 	spawn_boss("warlord")
 
 
+## MV-558: the industrial boss (Junk Colossus) as a wave boss in any biome, new animated art on / off
+func biome_boss_preview(enabled: bool) -> void:
+	feature_set("biome_bosses", enabled)
+	spawn_boss("industrial")
+
+
 func roaming_boss_preview(enabled: bool) -> void:
 	feature_set("roaming_boss_balance", enabled)
 	spawn_boss("bloat_king")

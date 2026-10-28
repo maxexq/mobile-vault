@@ -73,6 +73,7 @@
     "vehicle_detail": true,
     "vehicle_ambience": true,
     "enemy_size": true,
+    "biome_bosses": true,
     "cozy_roof": true,
     "mod_detail_fine": true,
     "driver_cab": true,
@@ -85,6 +86,7 @@
   },
   "events": {},
   "tune": {
+    "biome_bosses.death_hold": 1.2,
     "desert_background.clouds_speed": 0.03,
     "desert_background.far_speed": 0.08,
     "desert_background.mid_speed": 0.25,

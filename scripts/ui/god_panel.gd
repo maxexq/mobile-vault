@@ -554,6 +554,7 @@ func _tab_fight() -> void:
 	_head("BOSSES", "เรียกบอส (ปิดแผงเพื่อดูศึก)")
 	_row([_b("บอสเวฟ: สมดุลใหม่", func(): Dev.roaming_boss_preview(true), "green", true), _b("บอสเวฟ: สมดุลเดิม", func(): Dev.roaming_boss_preview(false), "gray", true)])
 	_row([_b("บอสด่าน: ผ่านต่อเนื่อง", func(): Dev.warlord_preview(true), "green", true), _b("บอสด่าน: สมดุลเดิม", func(): Dev.warlord_preview(false), "gray", true)])
+	_row([_b("บอสใหม่: ยักษ์เศษเหล็ก", func(): Dev.biome_boss_preview(true), "green", true), _b("บอสใหม่: ภาพเดิม", func(): Dev.biome_boss_preview(false), "gray", true)])
 	_note("บอสด่าน MV-550: %s · HP ×%.1f โตตามอุปกรณ์ · ลูกเรือ ≤%.1f%% / รถ ≤%.1f%% ต่อครั้ง" % ["เปิด" if Features.on("warlord_progression") else "ปิด", Features.num("warlord.hp", 6.0), Features.num("warlord.hero_hit_cap", 0.02) * 100.0, Features.num("warlord.hull_hit_cap", 0.01) * 100.0])
 	var wave_balance := Features.on("roaming_boss_balance")
 	_note("สมดุลบอสเวฟ (MV-544) %s · HP ×%.1f / ดาเมจ ×%.1f · %s" % ["เปิด" if wave_balance else "ปิด", Features.num("boss.wave_hp", 8.0) if wave_balance else 12.0, Features.num("boss.wave_damage", 1.6) if wave_balance else 2.4, ("ความเสียหายรถต่อครั้ง ≤%d%% หลังคิดเกราะ" % int(round(Features.num("boss.hull_hit_cap", 0.12) * 100.0))) if wave_balance else "ความเสียหายพิเศษแบบเดิม"])
