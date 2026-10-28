@@ -1958,6 +1958,7 @@
   "portraits/gunslinger.png": "2c4f413215ecebf87db1369a69d596006a5669b5c060ec47166ae6a276e8830e",
   "portraits/hunter.png": "9886179cf354ddfa46dd24f7bce4ddf83ab557df2c85eb3340a20ec3450d9669",
   "portraits/lounge_singer.png": "493fd95d64807b6c0f0b091dcf693e0d6788762684d695c9bb4397fcd55606a1",
+  "portraits/medic.png": "ccaa53db79dbcd882b974874738bb86beecdc73252861258f0cedaae63e6dbad",
   "portraits/monk.png": "b71e7ebd55f96441dcc37fa1d10612f8dc857438bd624aabe2b4a65308387ce0",
   "portraits/motorbike_courier.png": "f4d7e4b3f8ca5cc7de4a99742a82aeb13c2035bf006ead770f7debc6e5b59f4b",
   "portraits/office_worker.png": "953a4ae63ece2d2527d04477b53e7af961982416ef1dd7ae7c4e0e41e64742ff",
@@ -1973,6 +1974,10 @@
   "portraits/teen_scrap_runner.png": "1685094a5805307eb3eb8aee310afe7604f9ecc7a16bdb3a3e56cc5e6e5e4367",
   "portraits/teen_tinkerer.png": "1c7f02031ba8719e035f3f85e24e60f7335a2ceb1fa4a63ebeec4d080d7e4fad",
   "portraits/truck_driver.png": "d61335acd8e237c6b16220744b51fcae770b23c95d577ba666a5b81f091765cd",
+  "portraits/tutorial/medic_clipboard.png": "a761eed13bf92a4442b3619b5e6591c2027093aad8a32d962171bed58b038b10",
+  "portraits/tutorial/medic_listen.png": "6d2452138ad559bd59190989e1f389c6c1ee2068952a3ff6abc045fadd507746",
+  "portraits/tutorial/medic_point.png": "730896782095ed949289d86beed8ece3d902c1e70c44c54c1d2fac5d33b06587",
+  "portraits/tutorial/medic_thumbs_up.png": "a92f61aa183ecc7c55b822dada360ccf14c989f3463b025f9813e1a529b972e4",
   "rotations/east.png": "748aa0440ee6d879ee64ce4f622b7fddc1fcc5193b6ace3827ba04cdc5cd611b",
   "rotations/north-east.png": "175db82adb2718b88faafc34c8e531c527c97534943045ed6ecc9ea5996f9c6f",
   "rotations/north-west.png": "93251109129abfaa5eced3f6b3d9cc38eaf353b9e110bcf9f023ab9f0782c18a",
@@ -2396,5 +2401,15 @@
    ],
    "how": "edit_image_pro_flash on the teen_scrap_runner portrait itself: \"Turn this portrait into a different person while keeping exactly the same art style, pixel size, head size, framing, three-quarter angle, shading and muted palette: <person>\", then snapped. Use this for every new portrait so head size and cartoon style match."
   }
+ },
+ "medic_portraits": {
+  "portrait": "portraits/medic.png",
+  "tutorial": {
+   "listen": "portraits/tutorial/medic_listen.png (index finger raised: listen up)",
+   "point": "portraits/tutorial/medic_point.png (open hand to the right: look over here)",
+   "thumbs_up": "portraits/tutorial/medic_thumbs_up.png (thumbs up: well done)",
+   "clipboard": "portraits/tutorial/medic_clipboard.png (shows a clipboard: here is how it works)"
+  },
+  "how": "portrait = edit of the teen_scrap_runner portrait into the medic; each tutorial pose = edit_image_pro_flash of the medic portrait (\"Same medic, same art style, pixel size, head size, framing and muted palette: <gesture>\"); all snapped to the master palette. Pointing pose points to the right, so put the tutorial text box on that side."
  }
 }
