@@ -194,6 +194,41 @@
     "gender": "male",
     "job": "retired school teacher turned radio operator",
     "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: an old man, retired school teacher, slightly hunched, bald top with messy white side hair, round glasses, white moustache, beige knitted cardigan over a grey shirt, grey trousers, worn shoes, holding a walking cane"
+   },
+   "soldier": {
+    "file": "cast/soldier.png",
+    "age": "young",
+    "gender": "male",
+    "job": "soldier",
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a young male soldier, dented olive army helmet, worn olive camouflage fatigues with a tactical vest, rifle slung on his back, combat boots, dog tags"
+   },
+   "police_officer": {
+    "file": "cast/police_officer.png",
+    "age": "middle-aged",
+    "gender": "female",
+    "job": "police officer",
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a middle-aged woman police officer, short dark hair under a navy police cap with a badge, faded navy uniform shirt with a dark bulletproof vest, baton and radio on her belt, dark trousers, boots"
+   },
+   "teen_tinkerer": {
+    "file": "cast/teen_tinkerer.png",
+    "age": "teen",
+    "gender": "male",
+    "job": "electronics tinkerer",
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a teenage boy electronics tinkerer, messy brown hair, magnifying goggles on his head, oversized grey t-shirt with a utility vest full of screwdrivers, coiled wires over his shoulder, shorts, sneakers"
+   },
+   "plant_grower": {
+    "file": "cast/plant_grower.png",
+    "age": "young",
+    "gender": "female",
+    "job": "plant grower",
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: a young woman plant grower, long braided hair, wide straw hat, green work apron with seed pouches over a rolled-sleeve shirt, rubber boots, holding a small watering can"
+   },
+   "old_seamstress": {
+    "file": "cast/old_seamstress.png",
+    "age": "old",
+    "gender": "female",
+    "job": "seamstress",
+    "prompt": "Turn this character into a different person while keeping exactly the same art style, pixel size, outline, shading, muted colours, chibi proportions, side-view pose and canvas: an old woman seamstress, grey hair in a bun, reading glasses on a chain, maroon knitted shawl over a long dark dress, measuring tape around her neck, small sewing bag in hand"
    }
   }
  },
@@ -292,9 +327,14 @@
   "animations/work/7.png": "c8144c5934ef7769c7d5c87bf6b4e8a0796cbfe8a70001b2de91b51ea33a265f",
   "animations/work/8.png": "2461560e8462d4004800e9ec0c5d42ed7a972efb58c95bffa9297dcbf6e78455",
   "cast/bus_mechanic.png": "06c3d13fca3323ba4c02c0b5a3157689ba06950a0758f407673ced42a258415b",
+  "cast/old_seamstress.png": "5dbd02c24694fc96c70400f7c56db08dd7ca3bd61c99b95a230ca34ded8185d2",
+  "cast/plant_grower.png": "625107b95a321c2e50ece26b43f03fcd7ce17ce88b995774209919c3cd57eda6",
+  "cast/police_officer.png": "4935b491f7752c792e2c196fe3c99196c97b6e6a5ee2e348ab223d42c1e62b8a",
   "cast/retired_teacher.png": "8442b01595e85922935722972fd3878ee18815d431a0d11a839e012633cfc464",
+  "cast/soldier.png": "28486f8f7413e5bb0af8bf83116bd9c76293468c74b26c7a4d4cbbc73c4d0ba0",
   "cast/street_cook.png": "9860bae4fbac11861eff6946e8bcd72be9d3a90b1f8fbf5048d83541e1eba26f",
   "cast/teen_scrap_runner.png": "7be3f8627944d47f736434e0c411f4d85bc9b41ff3827340b3cefbfc0b4889b7",
+  "cast/teen_tinkerer.png": "de1b4f1f5aacf6f17b173820bf6c177b8d441d3a8dc379776071ad56f93f1233",
   "concept_front.png": "6b79d72a573787cc7bbaeac906b11599815994edf9e3cdcd078442dfed22b521",
   "rotations/east.png": "748aa0440ee6d879ee64ce4f622b7fddc1fcc5193b6ace3827ba04cdc5cd611b",
   "rotations/north-east.png": "175db82adb2718b88faafc34c8e531c527c97534943045ed6ecc9ea5996f9c6f",

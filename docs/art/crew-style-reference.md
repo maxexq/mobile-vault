@@ -64,11 +64,12 @@ v3 over templates: the v3 clips keep the reference look, the templates drift.
 
 ## Approved cast designs
 
-Four more crew were designed from the medic and approved on 2026-10-29 as designs only (no
+Nine more crew were designed from the medic and approved on 2026-10-29 as designs only (no
 character rotations or animations yet). Files in
 [`approved/cast/`](crew-style-reference/approved/cast/), prompts in the manifest `cast`.
 
-![The medic and the four cast designs](crew-style-reference/previews/cast.png)
+![The medic and the first four cast designs](crew-style-reference/previews/cast.png)
+![The medic and the next five cast designs](crew-style-reference/previews/cast-2.png)
 
 | File | Who |
 |---|---|
@@ -76,9 +77,15 @@ character rotations or animations yet). Files in
 | `bus_mechanic.png` | Middle-aged woman, bus mechanic: headscarf, goggles, overalls, tool belt |
 | `street_cook.png` | Middle-aged man, former street food cook: moustache, apron, towel on the shoulder |
 | `retired_teacher.png` | Old man, retired teacher turned radio operator: glasses, cardigan, cane |
+| `soldier.png` | Young man, soldier: dented helmet, camouflage fatigues, tactical vest, slung rifle |
+| `police_officer.png` | Middle-aged woman, police officer: police cap with badge, vest, baton and radio |
+| `teen_tinkerer.png` | Teenage boy, electronics tinkerer: magnifying goggles, tool vest, coiled wires |
+| `plant_grower.png` | Young woman, plant grower: straw hat, braid, green apron, watering can |
+| `old_seamstress.png` | Old woman, seamstress: grey bun, glasses on a chain, maroon shawl, sewing bag |
 
-Palette correction made the hoodie and headscarf greyer than asked; if they are animated,
-keep these designs as they are and add accents only through a new approved edit.
+Palette correction made the hoodie and headscarf greyer than asked, and the soldier and
+police officer are dark overall (they can sink into dark rooms). If they are animated, keep
+these designs as they are and add accents only through a new approved edit.
 
 ## Making a new crew character
 
