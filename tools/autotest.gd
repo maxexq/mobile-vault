@@ -7478,10 +7478,19 @@ func _build_effects_test() -> void:
 	for t in Data.buildable():
 		want[Data.room_effect(t)] = true
 	_check("build effects: every buildable room has an effect line", not want.has("") and want.size() > 0)
+	# no empty cell left (earlier groups fill the body): empty the last open cell of the body for this check
+	# and put its room back afterwards (a room appended past the body has no view, MV-563)
 	var made := -1
+	var kept := {}
 	if not Dev.build_list_preview("slot"):
-		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}})
-		made = Game.s.rooms.size() - 1
+		for i in range(Game.main_slots() - 1, 0, -1):
+			if Game.is_slot_unlocked(i) and not Game.is_annex(i) and Game.room_cells(i).size() == 1:
+				made = i
+				break
+		if made >= 0:
+			kept = (Game.s.rooms[made] as Dictionary).duplicate(true)
+			Game.s.rooms[made] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+			Game.rooms_changed.emit()
 	hud.room_closeup.close()
 	await wait(0.3)
 	for size in [Vector2i(720, 1280), Vector2i(360, 640), Vector2i(1280, 640)]:
@@ -7552,8 +7561,9 @@ func _build_effects_test() -> void:
 	hud.room_closeup.close()
 	await wait(0.3)
 	Features.set_override("features", "build_room_effects", null)
-	if made >= 0 and made == Game.s.rooms.size() - 1 and str(Game.s.rooms[made].type) == "empty":
-		Game.s.rooms.remove_at(made)
+	if made >= 0 and str(Game.s.rooms[made].type) == "empty":
+		Game.s.rooms[made] = kept
+		Game.rooms_changed.emit()
 	Game.s.res.scrap = keep_scrap
 	get_window().size = saved_size
 	await wait(0.3)
