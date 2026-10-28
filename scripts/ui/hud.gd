@@ -78,6 +78,7 @@ var tutorial_overlay: TutorialOverlay
 var tip_card: TipCard
 var settings_panel: SettingsPanel
 var confirmation: ConfirmPanel
+var offline_summary: OfflineSummary
 var _settings_btn: Button
 signal zoom_pressed
 signal xray_toggled(on: bool)
@@ -205,6 +206,17 @@ func _ready() -> void:
 	add_child(tip_card)
 	confirmation = ConfirmPanel.new()
 	add_child(confirmation)
+	offline_summary = OfflineSummary.new()
+	add_child(offline_summary)
+	panels["offline"] = offline_summary
+	Game.offline_summary_ready.connect(_show_offline_summary)
+
+
+func _show_offline_summary(report: Dictionary) -> void:
+	if not Features.on("offline_summary") or not Game.started:
+		return
+	offline_summary.report = report.duplicate(true)
+	open_panel("offline")
 
 
 func _set_hud_visible(v: bool) -> void:

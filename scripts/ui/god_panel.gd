@@ -190,6 +190,7 @@ func _tab_main() -> void:
 		sp.append(_b("x%s" % str(v).trim_suffix(".0"), func(): Dev.set_speed(v), "yellow" if Dev.speed == v else "gray"))
 	_row(sp)
 	_head("FAST-FORWARD", "ข้ามเวลา (จำลองแบบออฟไลน์)")
+	_row([_b("สรุปตอนกลับเข้าเกม", Dev.offline_summary_preview)])
 	_row([_b("+10 นาที", func(): Dev.fast_forward(600.0)), _b("+1 ชม.", func(): Dev.fast_forward(3600.0)), _b("+4 ชม.", func(): Dev.fast_forward(14400.0))])
 	_head("TIME / WEATHER", "ช่วงเวลาและสภาพอากาศ")
 	_row([_b("เช้า", func(): Dev.set_tod(0.3)), _b("เที่ยง", func(): Dev.set_tod(0.5)), _b("เย็น", func(): Dev.set_tod(0.7)), _b("กลางคืน", func(): Dev.set_tod(0.95))])

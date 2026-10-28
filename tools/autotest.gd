@@ -147,6 +147,97 @@ func _activity_test() -> void:
 	await wait(0.2)
 
 
+## MV-587: actual credited balances, reload-once receipt and responsive/touch dismissal.
+func _offline_summary_test() -> void:
+	var original := Game.s.duplicate(true)
+	var account := Account.a.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var old_size := get_window().size
+	var panel: OfflineSummary = main.hud.offline_summary
+	Game.set_process(false)
+	Combat.set_process(false)
+	Features.set_override("features", "offline_summary", true)
+	Features.set_override("features", "anticheat", false)
+	Game.new_game()
+	_no_events()
+	var before := (Game.s.res as Dictionary).duplicate()
+	var life0 := float(Account.a.life.get("sim_sec", 0.0))
+	var receipt := Game._offline_progress(61.5)
+	_check("offline summary: fractional interval never over-simulates", is_equal_approx(float(Account.a.life.sim_sec) - life0, 61.5))
+	_check("offline summary: scrap includes combat after storage cap", is_equal_approx(float(receipt.resources.scrap), float(Game.s.res.scrap) - float(before.scrap)) and int(receipt.combat.get("kills", 0)) > 0)
+	_check("offline summary: every resource delta matches inventory", (Game.s.res as Dictionary).keys().all(func(k): return is_equal_approx(float(receipt.resources[k]), float(Game.s.res[k]) - float(before[k]))))
+	Game.s.res.scrap = Game.cap("scrap")
+	var full := Game._offline_progress(60.0)
+	_check("offline summary: full storage does not promise discarded scrap", is_zero_approx(float(full.resources.scrap)))
+	Game.s.squad = [-1, -1, -1]
+	var empty := Game._offline_progress(31.0)
+	_check("offline summary: no squad has no defence rewards", empty.combat.is_empty())
+	# Test the actual continue/load entry point and its persisted timestamp.
+	Game.new_game()
+	Game.s.saved_at = Cloud.now() - 120.0
+	Save.write(Account.envelope(Game.s))
+	_check("offline summary: saved game loads", Game.load_game())
+	_check("offline summary: welcome-back window opens automatically", panel.is_open and main.hud.any_modal_open() and float(panel.report.seconds) >= 119.0)
+	var saved := Account.unwrap(Save.read())
+	_check("offline summary: credited progress saved before receipt", Cloud.now() - float(saved.main.saved_at) < 2.0 and is_equal_approx(float(saved.main.res.scrap), float(Game.s.res.scrap)))
+	var res0 := JSON.stringify(Game.s.res)
+	panel.continue_button.pressed.emit()
+	_check("offline summary: continue only dismisses, never grants again", not panel.is_open and JSON.stringify(Game.s.res) == res0)
+	await wait(0.2)
+	Game.load_game()
+	_check("offline summary: immediate reload cannot repeat receipt or rewards", not panel.is_open and JSON.stringify(Game.s.res) == res0)
+	Game.s.saved_at = Cloud.now() - float(Data.OFFLINE_CAP_SEC) - 3600.0
+	Save.write(Account.envelope(Game.s))
+	Game.load_game()
+	_check("offline summary: long absence shows credited cap", panel.is_open and is_equal_approx(float(panel.report.seconds), float(Data.OFFLINE_CAP_SEC) * Modes.mul("offline")) and float(panel.report.away_seconds) > float(panel.report.seconds) and _find_text(panel, "คำนวณความคืบหน้าสูงสุด"))
+	panel.close()
+	await wait(0.2)
+	Features.set_override("features", "offline_summary", false)
+	Game.s.saved_at = Cloud.now() - 60.0
+	Save.write(Account.envelope(Game.s))
+	var life1 := float(Account.a.life.sim_sec)
+	Game.load_game()
+	_check("offline summary: switch off retains progress without window", not panel.is_open and float(Account.a.life.sim_sec) > life1 + 59.0)
+	Features.set_override("features", "offline_summary", true)
+	# GOD preview is display-only and demonstrates supplies, items, completed builds and cap.
+	Dev.offline_summary_preview()
+	panel.report.gear = [Loot.roll_item("weapon", 3, 2, "hunting_rifle")]
+	panel.refresh()
+	_check("offline summary: preview shows item, construction and gear", _find_text(panel, Data.item_name("stimpack")) and _find_text(panel, "ก่อสร้างเสร็จ") and _find_text(panel, "Lv.3"))
+	var snapshot := JSON.stringify(Game.s.res)
+	for viewport_size in [Vector2i(360, 640), Vector2i(640, 360), Vector2i(1280, 720)]:
+		get_window().size = viewport_size
+		await wait(0.4)
+		var bounds := Rect2(Vector2.ZERO, panel.get_viewport_rect().size)
+		_check("offline summary: window and sticky continue fit %s" % str(viewport_size), bounds.encloses(panel.box.get_global_rect()) and panel.box.get_global_rect().encloses(panel.continue_button.get_global_rect()))
+		await shot("offline_summary_%dx%d" % [viewport_size.x, viewport_size.y])
+	var pos := panel.continue_button.get_global_rect().get_center()
+	await _finger(0, pos, true)
+	await _finger(0, pos, false)
+	await wait(0.2)
+	_check("offline summary: real finger dismisses and releases gesture", not panel.is_open and main._touches.is_empty() and JSON.stringify(Game.s.res) == snapshot)
+	Dev.offline_summary_preview()
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	Input.parse_input_event(esc)
+	await wait(0.2)
+	_check("offline summary: keyboard dismisses", not panel.is_open)
+	await _offline_summary_touch_test()
+	Game.s = original
+	Account.a = account
+	Account.attach(Game.s)
+	Features.layers.dev = overrides
+	Features._save_dev()
+	Features.changed.emit()
+	get_window().size = old_size
+	Game.set_process(true)
+	Combat.set_process(true)
+	Game.save_game()
+	Game._emit_all(true)
+	await wait(0.2)
+
+
 func _check(label: String, ok: bool) -> void:
 	print("[autotest] %s %s" % ["PASS" if ok else "FAIL", label])
 	if not ok:
@@ -197,6 +288,11 @@ func _run() -> void:
 	main.hud.title_screen._go(true)
 	await wait(2.5)
 	_button_skin_contract_test()
+	if "--only=offline_summary" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _offline_summary_test()
+		_finish()
+		return
 	if "--only=nextgen_crew" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _nextgen_crew_test()
@@ -1194,6 +1290,7 @@ func _run() -> void:
 	await _outbox_test()
 	await _account_test()
 	await _resume_test()
+	await _offline_summary_test()
 	await _large_room_test()
 	await _ambience_test()
 	await _features_test()
@@ -5052,6 +5149,42 @@ func _touch_test() -> void:
 		bp.close()
 	Input.emulate_touch_from_mouse = touch_was
 	await wait(0.3)
+	await _offline_summary_touch_test()
+
+
+func _offline_summary_touch_test() -> void:
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var window_size := get_window().size
+	var touch_was := Input.emulate_touch_from_mouse
+	var panel: OfflineSummary = main.hud.offline_summary
+	Features.set_override("features", "offline_summary", true)
+	Input.emulate_touch_from_mouse = true
+	get_window().size = Vector2i(640, 360)
+	Game.offline_summary_ready.emit({"seconds": 600.0, "away_seconds": 600.0,
+		"built": range(30).map(func(i): return "ห้องทดสอบ %d" % i)})
+	await wait(0.5)
+	var scroll: ScrollContainer = _find_type(panel, "ScrollContainer")[0]
+	var start := scroll.get_global_rect().get_center()
+	await _finger(60, start, true)
+	await _fingers_drag([60], [start], [start - Vector2(0, 100)], 12)
+	await _finger(60, start - Vector2(0, 100), false)
+	await wait(0.3)
+	_check("touch: offline receipt scrolls without dismissing", scroll.scroll_vertical > 30 and panel.is_open)
+	var button_pos := panel.continue_button.get_global_rect().get_center()
+	await _finger(61, button_pos, true)
+	await _finger(61, button_pos, false)
+	await wait(0.2)
+	_check("touch: offline sticky continue works after scrolling", not panel.is_open and main._touches.is_empty())
+	Input.emulate_touch_from_mouse = touch_was
+	Features.layers.dev = overrides
+	Features._save_dev()
+	Features.changed.emit()
+	get_window().size = window_size
+	await wait(0.3)
+
+
+## MV-188: announcement strip: features.json "announce" list (clean, window, once per browser), loops then hides,
+## version.json newer build -> tappable update notice first in line, switch off hides it, GOD actions
 
 
 ## MV-188: announcement strip: features.json "announce" list (clean, window, once per browser), loops then hides,
@@ -9617,8 +9750,13 @@ func _bp_cache_test() -> void:
 		if str(msg).contains(Loc.t("เก็บกล่องพิมพ์เขียวระหว่างทาง")):
 			said[0] = str(msg)
 	Game.toast.connect(cb)
-	Game._offline_progress(3600.0)
+	var receipt := Game._offline_progress(3600.0)
 	Game.toast.disconnect(cb)
+	if Features.on("offline_summary"):
+		main.hud.offline_summary.report = receipt
+		main.hud.offline_summary.refresh()
+		said[0] = ", ".join(receipt.caches)
+		_check("bp cache: welcome-back window names the collected cache", said[0] != "" and _find_text(main.hud.offline_summary, said[0]))
 	_check("bp cache: offline arrival grants it and the away summary says so (%s)" % said[0], (Meta.m().blueprints as Array).size() == 3
 		and said[0] != "" and WorldMap.cache_at() == "" and WorldMap.offline_caches.is_empty())
 	# every eligible blueprint owned: a supply crate instead
