@@ -62,6 +62,24 @@ New clips for this or another character use PixelLab `animate_character` in `v3`
 only, with a short motion-only `action_description` (1 generation each at this size). Prefer
 v3 over templates: the v3 clips keep the reference look, the templates drift.
 
+## Approved cast designs
+
+Four more crew were designed from the medic and approved on 2026-10-29 as designs only (no
+character rotations or animations yet). Files in
+[`approved/cast/`](crew-style-reference/approved/cast/), prompts in the manifest `cast`.
+
+![The medic and the four cast designs](crew-style-reference/previews/cast.png)
+
+| File | Who |
+|---|---|
+| `teen_scrap_runner.png` | Teenage girl, scrap runner: red bandana, patched hoodie, slingshot |
+| `bus_mechanic.png` | Middle-aged woman, bus mechanic: headscarf, goggles, overalls, tool belt |
+| `street_cook.png` | Middle-aged man, former street food cook: moustache, apron, towel on the shoulder |
+| `retired_teacher.png` | Old man, retired teacher turned radio operator: glasses, cardigan, cane |
+
+Palette correction made the hoodie and headscarf greyer than asked; if they are animated,
+keep these designs as they are and add accents only through a new approved edit.
+
 ## Making a new crew character
 
 1. **Design** (5 generations per draft): `edit_image_pro_flash`, `method` text, `image` =
