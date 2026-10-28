@@ -492,6 +492,17 @@ func vehicle_def() -> Dictionary:
 
 func floors() -> int:
 	if Features.on("five_floors") and not s.is_empty():
+		# MV-563: the body the rooms are laid out for (fit_body grows it with the Vault), so a Vault level written
+		# directly never shifts the rooms under their cells
+		if s.has("body_slots"):
+			return int(s.body_slots) / Data.ROOMS_PER_FLOOR
+		return floors_at(int(s.vault_level))
+	return int(vehicle_def().floors)
+
+
+## floors the body should have now: grown with the Vault (switch five_floors) or the vehicle's own
+func target_floors() -> int:
+	if Features.on("five_floors") and not s.is_empty():
 		return floors_at(int(s.vault_level))
 	return int(vehicle_def().floors)
 
@@ -517,7 +528,7 @@ func vault_adds_floor(lv: int) -> bool:
 ## removed floors are lost and their crew goes idle. Returns true when anything moved.
 func fit_body() -> bool:
 	var old := int(s.get("body_slots", Data.ROOMS_PER_FLOOR * int(vehicle_def().floors)))
-	var new_main := main_slots()
+	var new_main := Data.ROOMS_PER_FLOOR * target_floors()
 	s.body_slots = new_main
 	if old == new_main or s.rooms.size() < old:
 		return false
@@ -618,7 +629,7 @@ func unlocked_slots() -> Array:
 	var n: int = Data.SLOTS_PER_LEVEL[clampi(s.vault_level, 0, Data.MAX_VAULT_LEVEL)]
 	n = mini(n, main_slots() - 1)
 	if Features.on("five_floors"):
-		n = vault_rooms_at(int(s.vault_level))
+		n = mini(vault_rooms_at(int(s.vault_level)), main_slots() - 1)
 	var arr: Array = [Data.ENGINE_SLOT]
 	for i in n:
 		arr.append(i + 1)

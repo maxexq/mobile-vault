@@ -299,7 +299,7 @@ func set_tier(t: String) -> void:
 		return
 	var old_main := Game.main_slots()
 	Game.s.tier = t
-	Game.relayout_body(old_main, Game.main_slots())
+	Game.relayout_body(old_main, Data.ROOMS_PER_FLOOR * Game.target_floors())
 	act("tier " + t)
 	_vehicle_changed()
 
