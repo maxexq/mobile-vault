@@ -46,7 +46,8 @@ def request(method, path, body=None, content_type="application/json", timeout=12
     cfg = config()
     if not cfg["url"]:
         sys.exit("asset log not configured: set ASSET_LOG_URL or write .asset-log.json (tools/asset-log/README.md)")
-    headers = {"Accept": "application/json"}
+    # Cloudflare's browser integrity check answers error 1010 to urllib's default "Python-urllib" agent
+    headers = {"Accept": "application/json", "User-Agent": "mobile-vault-asset-log/1 (+tools/asset_log.py)"}
     if body is not None:
         headers["Content-Type"] = content_type
     if cfg["client_id"]:

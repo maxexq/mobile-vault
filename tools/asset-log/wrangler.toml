@@ -18,5 +18,5 @@ bucket_name = "mobile-vault-asset-log"
 [vars]
 # Cloudflare Access: team domain (xxx.cloudflareaccess.com) and the application's AUD tag.
 # Every /api request must carry a valid Access JWT for them; empty = API refuses everything.
-ACCESS_TEAM_DOMAIN = ""
-ACCESS_AUD = ""
+ACCESS_TEAM_DOMAIN = "tomorrowismonday.cloudflareaccess.com"
+ACCESS_AUD = "1c5a6a5c66639f4103d7673e44c4a585fec917fa36f3f80e85e5c3d87468e369"
