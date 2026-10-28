@@ -4914,6 +4914,12 @@ func _announce_test() -> void:
 	_check("announce: the strip shows the first message", m.visible and str(m.msg.get("id", "")) == "t-hello" and m._label.text == "ทดสอบประกาศ hello")
 	_check("announce: shown id is remembered", Announce.seen.has("t-hello"))
 	_check("announce: info message lets taps through", m._strip.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	_check("announce: background matches NEWS height with a one-pixel bottom border",
+		m._strip.size.y == m._tag.size.y + 1.0 and m._clip.size.y == m._tag.size.y and m._label.size.y == m._tag.size.y)
+	_check("announce: Thai text fits inside the scrolling area", m._clip.size.y >= m._label.get_combined_minimum_size().y)
+	var strip_style := m._strip.get_theme_stylebox("panel") as StyleBoxFlat
+	_check("announce: resources show faintly through the background while text stays opaque",
+		is_equal_approx(strip_style.bg_color.a, 0.70) and m._strip.modulate.a == 1.0 and m._label.modulate.a == 1.0)
 	await wait(0.3)
 	await shot("announce_marquee")
 	_check("announce: text moves on whole pixels", m._label.position.x == roundf(m._label.position.x) and m._label.position.x < m._width())
