@@ -1,0 +1,22 @@
+# PixelLab asset log (MV-584): Cloudflare Pages project, deployed from this folder with
+#   npx wrangler@4.151.0 pages deploy
+# Setup, bindings and Cloudflare Access: README.md next to this file.
+name = "mobile-vault-asset-log"
+pages_build_output_dir = "public"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mobile-vault-asset-log"
+database_id = "df3cb7e6-a59d-49a2-a176-990a8b8bf0ca"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "mobile-vault-asset-log"
+
+[vars]
+# Cloudflare Access: team domain (xxx.cloudflareaccess.com) and the application's AUD tag.
+# Every /api request must carry a valid Access JWT for them; empty = API refuses everything.
+ACCESS_TEAM_DOMAIN = "tomorrowismonday.cloudflareaccess.com"
+ACCESS_AUD = "1c5a6a5c66639f4103d7673e44c4a585fec917fa36f3f80e85e5c3d87468e369"
