@@ -3298,6 +3298,10 @@ func _share_preview_test() -> void:
 		_check("boot: shell has " + key, shell.contains(key))
 	_check("boot: no patch notes on the loading page during the test phase", not shell.contains("ชื่อใหม่") and not shell.contains("class=\"tips\""))
 	_check("boot: random tips + driving scene", shell.contains("const TIPS = [") and shell.contains("id=\"scene\""))
+	# MV-571: the shell sizes the canvas to its safe-area box (Godot's adaptive policy ignored the insets and could lag a
+	# rotation on iOS, so touches landed away from the picture)
+	_check("boot: the shell fits the canvas itself (resize policy None + fitCanvas every frame)",
+		int(cfg.get_value("preset.0.options", "html/canvas_resize_policy", 2)) == 0 and shell.contains("function fitCanvas()") and shell.contains("requestAnimationFrame(fitLoop)"))
 	for sprite in ["sky", "sun", "far", "mid", "near", "road", "bus", "walker"]:
 		_check("boot: web/boot/%s.png exported" % sprite, FileAccess.file_exists("res://web/boot/%s.png" % sprite))
 	_check("boot: shell version matches BuildInfo", shell.contains(">v%s · GODOT 4.7.2<" % BuildInfo.GAME_VERSION))
@@ -8667,6 +8671,41 @@ func _window_fit_test() -> void:
 		not room.grow(-1.0).intersects(panel) and (not cu._portrait() or absf(room.get_center().y - cu.focus_rect().get_center().y) <= 4.0))
 	Features.set_override("features", "window_still", null)
 	cu.close()
+	await wait(0.6)
+	# MV-571: portrait screens where the world fills with the main body (world scale above the UI scale, view_k < 1:
+	# iPads, iPhone 12-15) drew the zoomed room too big, under the panel and off-centre
+	var keep_win := get_window().size
+	var filled := []           # whether the fill zoom is on depends on the truck's height, so at least one size must have it
+	for win in [Vector2i(1536, 2048), Vector2i(1640, 2360)]:
+		get_window().size = win
+		await wait(0.6)
+		main.open_closeup(slot)
+		await wait(1.0)
+		a = main.world_to_screen(r.position)
+		b = main.world_to_screen(r.end)
+		room = Rect2(a, b - a)
+		panel = Rect2(cu.box.position, cu.box.size)
+		var fr := cu.focus_rect()
+		var tb: float = hud._top.position.y + hud._top.size.y
+		_check("window fit: %s (view_k %.2f) the room fits its area above the panel, centred (room %s, area %s, panel %s)" % [win, main.view_k, room, fr, panel],
+			room.position.y >= tb - 1.0 and not room.grow(-1.0).intersects(panel)
+			and absf(room.get_center().x - fr.get_center().x) <= 2.0 and absf(room.get_center().y - fr.get_center().y) <= 4.0)
+		if main.view_k < 1.0:
+			filled.append(win)
+		await shot("window_fit_closeup_%dx%d" % [win.x, win.y])
+		cu.close()
+		await wait(0.6)
+	_check("window fit: those sizes covered a screen that fills with the main body %s" % [filled], not filled.is_empty())
+	# MV-571: rotating with a finger still down: the old touch would turn the next one-finger swipe into a pinch
+	get_window().size = Vector2i(720, 1280)
+	await wait(0.4)
+	main._touches[77] = Vector2(100, 300)
+	main._pressing = true
+	get_window().size = Vector2i(1280, 720)
+	await wait(0.4)
+	_check("window fit: rotating drops a gesture in flight (touches %s, pressing %s)" % [main._touches, main._pressing],
+		main._touches.is_empty() and not main._pressing)
+	get_window().size = keep_win
 	await wait(0.6)
 	Settings.set_value("tips", keep_tips)
 

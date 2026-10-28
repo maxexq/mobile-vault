@@ -35,6 +35,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Fixed
 - World map window scrolls again: the map, the destination and the notes below it now scroll together, by finger (also starting on the map) or mouse wheel (MV-568).
+- Phones and tablets: after rotating the screen, taps land where your finger is again (the web page sizes the game to the safe area and keeps it there through a rotation). The room close-up now shows the whole room centred above its window on iPads and on phones like the iPhone 12-15, instead of a too-big room off to one side and under the window (MV-571).
 - The vault turret on the rear wall no longer floats in the air above the roof on vehicles with fewer than 4 floors; it stays mounted below the roof at every height (MV-567).
 - The announcement background now matches the NEWS / UPDATE tag height and shows HUD resources faintly through its 70% opaque background while keeping text fully opaque (MV-564).
 - Web: no sound at all after the sound update; the game is audible again (MV-560).
