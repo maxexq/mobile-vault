@@ -162,3 +162,5 @@ python tools/micro_asset.py verify MV-<n>    # after generate_pixel_art.py: size
 
 Project agent skills are in `.claude/skills/`; `.claude/skills/README.md` lists them and the
 project rules that override them.
+Any visual work (UX/UI look, sprites, rooms, icons, backgrounds, art review, PixelLab) starts
+with the `pixellab-art` skill.
