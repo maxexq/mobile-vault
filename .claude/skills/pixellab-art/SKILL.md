@@ -75,6 +75,9 @@ python tools/pixellab.py reject <sprite>                       # undo: back to t
 - The candidate is already snapped to size and master palette by `tools/art/pixelize.py`;
   still review it at 1x and nearest 4x. Candidates and `usage.jsonl` (cost log) are
   git-ignored; only accepted overrides are committed.
+- **Asset log (MV-584):** when `.asset-log.json` is set up, `gen --yes` also uploads the batch to the private
+  web app (`tools/asset-log/README.md`). Point Parames at its Review tab instead of a local preview, then run
+  `python tools/asset_log.py pull` to turn approvals into overrides. Never commit `.asset-log.json`.
 - Key: env `PIXELLAB_API_KEY` or `.pixellab-api-key` (git-ignored). Never print or commit it.
   If neither exists on this PC, ask Parames to add one; do not paste it into chat.
 
