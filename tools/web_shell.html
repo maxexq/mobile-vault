@@ -358,6 +358,32 @@ body {
   const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
   if (missing.length) { fail(new Error("เบราว์เซอร์นี้ขาดฟีเจอร์ที่ Godot ต้องใช้:\n" + missing.join("\n"))); return; }
 
+  // MV-571: the shell sizes the canvas itself (Web preset canvas_resize_policy = 0; Godot adopts canvas.width/height
+  // as the window size every frame). Godot's own "adaptive" policy forced the canvas to window.innerWidth/innerHeight,
+  // which ignored the safe-area insets above (a notched phone in landscape pushed the canvas off the right edge) and,
+  // on iOS, could keep a stale size for a moment after rotating; the page then scrolled / zoomed and touches landed
+  // away from what was drawn. Here the canvas is exactly its CSS box (safe area) in device pixels, re-checked every
+  // frame, and the page is pinned at 0,0 so a fixed canvas can't drift from the touch coordinates.
+  const canvas = document.getElementById("canvas");
+  function fitCanvas() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * dpr));
+    const h = Math.max(1, Math.round(r.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+  }
+  (function fitLoop() {
+    fitCanvas();
+    window.requestAnimationFrame(fitLoop);
+  })();
+  window.addEventListener("resize", fitCanvas);
+  window.addEventListener("orientationchange", fitCanvas);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", fitCanvas);
+
   const engine = new Engine(GODOT_CONFIG);
   engine.startGame({
     onProgress: function (current, total) {
