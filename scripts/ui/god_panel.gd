@@ -877,9 +877,11 @@ func _tab_features() -> void:
 		var key: String = k
 		var on := Features.on(key)
 		var src := Features.source("features", key)
-		var b := _b(("[ON] " if on else "[OFF] ") + str(Features.FEATURES[k]) + " · " + str(SRC_TH.get(src, src)),
-			func(): Dev.feature_set(key, not Features.on(key)), "green" if on else "red")
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# MV-586: long feature names wrap (a plain Button is as wide as its text and pushed the window off screen)
+		var b := ChoiceButton.new(("[ON] " if on else "[OFF] ") + str(Features.FEATURES[k]), "", str(SRC_TH.get(src, src)), "green" if on else "red")
+		b.pressed.connect(func():
+			Dev.feature_set(key, not Features.on(key))
+			refresh())
 		_list.add_child(b)
 	_head("ROAD EVENTS", "อีเว้นต์บนถนนรายตัว (* = อยู่ในไบโอมนี้ · เขียว = เปิด)")
 	var here: Array = Data.biome(int(Game.s.biome)).events
