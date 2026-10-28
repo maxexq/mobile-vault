@@ -170,6 +170,71 @@ func slots_unlocked() -> int:
 	return n
 
 
+## MV-561: how well a survivor fits a squad role: that role's main stat first, level breaks ties
+## (same order as the pick list in the Squad window)
+func role_fit(d: Dictionary, role_idx: int) -> int:
+	return int(d.get(ROLES[role_idx].stat, 0)) * 10 + int(d.lvl)
+
+
+## who the auto pick may put in the squad: aboard, willing, not sick or badly hurt, not the roof reserve
+func can_auto_pick(d: Dictionary) -> bool:
+	if Game.is_away(d) or Crew.refuses(d) or Crew.is_infected(d) or Game.is_deck(d):
+		return false
+	return float(d.hp) >= float(d.max_hp) * Features.num("squad_auto_pick.min_hp", 0.25)
+
+
+## MV-561 "จัดคนอัตโนมัติ": fills every unlocked slot with the crew whose stats fit it best (highest total
+## fit, one slot each; on a tie whoever already holds the slot stays). Returns how many slots changed.
+func auto_pick_squad() -> int:
+	if Game.s.is_empty() or not Features.on("squad_auto_pick"):
+		return 0
+	var n := mini(slots_unlocked(), (Game.s.squad as Array).size())
+	var pool: Array = []
+	for d in Game.s.dwellers:
+		if can_auto_pick(d):
+			pool.append(d)
+	# the best mix only ever uses each slot's top n survivors, so trying every mix of those is enough
+	var tops: Array = []
+	for i in n:
+		var arr := pool.duplicate()
+		var r := i
+		arr.sort_custom(func(a, b): return _pick_score(a, r) > _pick_score(b, r))
+		tops.append(arr.slice(0, n))
+	var best := {"score": -1, "pick": []}
+	_best_pick(tops, 0, [], 0, best)
+	var changed := 0
+	for i in n:
+		var did: int = best.pick[i]
+		if int(Game.s.squad[i]) != did:
+			changed += 1
+			Game.set_squad(i, did)
+	Trace.rec("squad", "auto pick: %d changed" % changed, {"squad": Game.s.squad})
+	return changed
+
+
+## role fit x4, +1 for whoever already holds the slot: never outweighs a real difference, only stops swaps on ties
+func _pick_score(d: Dictionary, role_idx: int) -> int:
+	return role_fit(d, role_idx) * 4 + (1 if int(Game.s.squad[role_idx]) == int(d.id) else 0)
+
+
+func _best_pick(tops: Array, i: int, used: Array, score: int, best: Dictionary) -> void:
+	if i == tops.size():
+		if score > int(best.score):
+			best.score = score
+			best.pick = used.duplicate()
+		return
+	for d in tops[i]:
+		var did := int(d.id)
+		if not used.has(did):
+			used.append(did)
+			_best_pick(tops, i + 1, used, score + _pick_score(d, i), best)
+			used.pop_back()
+	# leaving a slot empty can free its survivor for a slot they fit better (fewer crew than slots)
+	used.append(-1)
+	_best_pick(tops, i + 1, used, score, best)
+	used.pop_back()
+
+
 func biome_id() -> String:
 	return Data.biome(Game.s.biome).id
 

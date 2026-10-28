@@ -12,6 +12,7 @@ var _warlord_checks_completed := false
 var _nextgen_crew_checks_completed := false
 
 var _individual_auto_equip_checks_completed := false
+var _squad_auto_pick_checks_completed := false
 var _multi_salvage_checks_completed := false
 var _gear_detail_checks_completed := false
 var _event_progression_checks_completed := false
@@ -97,6 +98,12 @@ func _run() -> void:
 		Tutorial.skip()
 		await _multi_salvage_test()
 		_check("multi salvage: all checks completed", _multi_salvage_checks_completed)
+		_finish()
+		return
+	if "--only=squad_auto_pick" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _squad_auto_pick_test()
+		_check("squad auto pick: all checks completed", _squad_auto_pick_checks_completed)
 		_finish()
 		return
 	if "--only=individual_auto_equip" in OS.get_cmdline_user_args():
@@ -1092,6 +1099,8 @@ func _run() -> void:
 
 	await _individual_auto_equip_test()
 	_check("individual gear: all checks completed", _individual_auto_equip_checks_completed)
+	await _squad_auto_pick_test()
+	_check("squad auto pick: all checks completed", _squad_auto_pick_checks_completed)
 	await _multi_salvage_test()
 	_check("multi salvage: all checks completed", _multi_salvage_checks_completed)
 	await _gear_detail_test()
@@ -9869,6 +9878,160 @@ func _individual_auto_equip_test() -> void:
 	Combat.rng.state = saved_combat[5]
 	Combat.heroes_changed.emit()
 	_individual_auto_equip_checks_completed = true
+
+
+## MV-561: "จัดคนอัตโนมัติ" puts the best role stat in each unlocked slot and skips crew who can't join
+func _squad_auto_pick_test() -> void:
+	var saved_state := Game.s
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_settings := Settings.v.duplicate(true)
+	var saved_size := get_window().size
+	var saved_combat := [Combat.heroes, Combat.sub, Combat.sub_out, Combat.tag_t]
+	var saved_processing := [Game.is_processing(), Combat.is_processing()]
+	Game.set_process(false)
+	Combat.set_process(false)
+	Combat.sub = {}
+	Combat.sub_out = {}
+	Settings.v.tips = false
+	main.hud.tip_card.hide()
+	Game.s = saved_state.duplicate(true)
+	Features.layers.dev = {"features": {"squad_auto_pick": true, "roof_deck": true, "morale_v2": true, "english": true}, "tune": {}}
+	Features.layers.remote = {}
+	Features.layers.mode = {}
+	var base: Dictionary = Game.s.dwellers[0].duplicate(true)
+	# id, str, agi, int, what keeps them out
+	var spec := [[9101, 9, 2, 2, ""], [9102, 3, 9, 2, ""], [9103, 2, 3, 9, ""], [9104, 15, 15, 15, "away"],
+		[9105, 14, 1, 1, "sick"], [9106, 1, 14, 1, "hurt"], [9107, 1, 1, 14, "deck"], [9108, 13, 13, 1, "broken"], [9109, 4, 4, 4, ""]]
+	var crew := []
+	for c in spec:
+		var d := base.duplicate(true)
+		d.id = c[0]
+		d.name = "T%d" % c[0]
+		d.str = c[1]
+		d.agi = c[2]
+		d.int = c[3]
+		d.lvl = 1
+		d.room = -1
+		d.away_until = 1.0e12 if c[4] == "away" else 0.0
+		d.infection = 40.0 if c[4] == "sick" else 0.0
+		d.max_hp = 100.0
+		d.hp = 5.0 if c[4] == "hurt" else 100.0
+		d.mood = Crew.MOOD_BROKEN if c[4] == "broken" else ""
+		d.gear = {}
+		crew.append(d)
+	Game.s.dwellers = crew
+	Game.s.mods.roof_deck = 1
+	Game.s.deck = 9107
+	Game.s.squad = [-1, -1, -1]
+	Game.s.vault_level = 1
+	var ids := func() -> Array: return [int(Game.s.squad[0]), int(Game.s.squad[1]), int(Game.s.squad[2])]
+	_check("squad auto pick: vault Lv1 has two slots", Combat.slots_unlocked() == 2)
+	_check("squad auto pick: fills only the unlocked slots", Combat.auto_pick_squad() == 2 and ids.call() == [9102, 9101, -1])
+	Game.s.vault_level = 10
+	_check("squad auto pick: medic slot gets the best INT", Combat.auto_pick_squad() == 1 and ids.call() == [9102, 9101, 9103])
+	for skip in [9104, 9105, 9106, 9107, 9108]:
+		_check("squad auto pick: busy %d skipped" % skip, not ids.call().has(skip))
+	_check("squad auto pick: roof reserve kept", int(Game.s.deck) == 9107)
+	_check("squad auto pick: a second press changes nothing", Combat.auto_pick_squad() == 0)
+	# the weakest fit sitting in a slot is swapped out, ex-members go back to idle
+	Game.set_squad(1, 9109)
+	_check("squad auto pick: weaker member replaced", Combat.auto_pick_squad() == 1 and ids.call() == [9102, 9101, 9103] and int(Game.dweller_by_id(9109).room) == -1)
+	# one survivor good at two roles: the mix with the highest total wins, not slot order
+	Game.dweller_by_id(9109).agi = 10
+	Game.dweller_by_id(9109).str = 20
+	Combat.auto_pick_squad()
+	_check("squad auto pick: best total over slot order", ids.call() == [9102, 9109, 9103])
+	Game.dweller_by_id(9109).str = 4
+	Game.dweller_by_id(9109).agi = 4
+	# fewer free survivors than slots: the free ones still get the slot they fit best
+	Game.s.squad = [-1, -1, -1]
+	Game.s.dwellers = [Game.dweller_by_id(9101), Game.dweller_by_id(9105)]
+	Combat.auto_pick_squad()
+	_check("squad auto pick: one free survivor takes one slot", ids.call() == [-1, 9101, -1])
+	# the UI part waits real frames, where a broken survivor can recover: leave them out
+	Game.s.dwellers = crew.filter(func(d): return int(d.id) != 9108)
+	var squad: SquadPanel = main.hud.panels.squad
+	for language in ["th", "en"]:
+		Settings.v.lang = language
+		Loc.apply()
+		for window_size in [Vector2i(360, 780), Vector2i(1280, 720)]:
+			get_window().size = window_size
+			Game.s.squad = [-1, 9109, -1]
+			main.hud.open_panel("squad")
+			squad.tab = "squad"
+			squad.choosing = -1
+			squad.refresh()
+			await wait(0.3)
+			var tag := "%s/%dx%d" % [language, window_size.x, window_size.y]
+			var button := squad.find_child("AutoPickSquad", true, false) as Button
+			_check("squad auto pick: button shown %s" % tag, button != null)
+			_check("squad auto pick: old AUTO hidden %s" % tag, _visible_button(squad, "AUTO") == null)
+			if button:
+				_check("squad auto pick: label %s" % tag, button.text == ("จัดคนอัตโนมัติ" if language == "th" else "Auto-assign crew"))
+				var vp: Rect2 = main.hud.get_viewport_rect()
+				_check("squad auto pick: button fits %s" % tag, button.size.x >= button.get_minimum_size().x and button.get_global_rect().end.x <= vp.size.x and squad.box.size.x <= vp.size.x)
+				var scroll := button.get_parent()
+				while scroll and not scroll is ScrollContainer:
+					scroll = scroll.get_parent()
+				(scroll as ScrollContainer).ensure_control_visible(button)
+				await wait(0.2)
+				var ev := InputEventMouseButton.new()
+				ev.button_index = MOUSE_BUTTON_LEFT
+				ev.position = button.get_global_rect().get_center()
+				ev.global_position = ev.position
+				ev.pressed = true
+				get_viewport().push_input(ev, true)
+				await wait(0.1)
+				ev.pressed = false
+				get_viewport().push_input(ev, true)
+				await wait(0.3)
+				_check("squad auto pick: tap fills the squad %s" % tag, ids.call() == [9102, 9101, 9103])
+			await shot("squad_auto_pick_%s_%dx%d" % [language, window_size.x, window_size.y])
+			squad.close()
+	Settings.v.lang = "th"
+	Loc.apply()
+	get_window().size = Vector2i(360, 780)
+	# switch off: the model does nothing and the window shows the old whole-team gear AUTO again
+	Features.layers.dev.features.squad_auto_pick = false
+	Features.changed.emit()
+	Game.s.squad = [-1, 9109, -1]
+	_check("squad auto pick: switch off is a no-op", Combat.auto_pick_squad() == 0 and ids.call() == [-1, 9109, -1])
+	main.hud.open_panel("squad")
+	squad.tab = "squad"
+	squad.refresh()
+	await wait(0.3)
+	_check("squad auto pick: switch off hides the new button", squad.find_child("AutoPickSquad", true, false) == null)
+	var old_auto := _visible_button(squad, "AUTO")
+	_check("squad auto pick: switch off brings back AUTO", old_auto != null)
+	if old_auto:
+		Game.dweller_by_id(9109).gear = {}
+		Game.s.gear = [_auto_item("pipe_pistol", 961, 20)]
+		old_auto.pressed.emit()
+		_check("squad auto pick: old AUTO still equips gear", int(Game.dweller_by_id(9109).get("gear", {}).get("weapon", {}).get("uid", -1)) == 961 and ids.call() == [-1, 9109, -1])
+	await shot("squad_auto_pick_off")
+	squad.close()
+	Game.s = saved_state
+	Features.layers = saved_layers
+	Settings.v = saved_settings
+	Loc.apply()
+	get_window().size = saved_size
+	Game.set_process(saved_processing[0])
+	Combat.set_process(saved_processing[1])
+	Features.changed.emit()
+	Combat.heroes = saved_combat[0]
+	Combat.sub = saved_combat[1]
+	Combat.sub_out = saved_combat[2]
+	Combat.tag_t = saved_combat[3]
+	Game.dwellers_changed.emit()
+	Game.squad_changed.emit()
+	_squad_auto_pick_checks_completed = true
+
+
+func _visible_button(root: Node, text: String) -> Button:
+	for b in root.find_children("*", "Button", true, false):
+		if (b as Button).text == text and (b as Button).is_visible_in_tree():
+			return b
+	return null
 
 
 

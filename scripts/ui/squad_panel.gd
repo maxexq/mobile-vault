@@ -42,12 +42,14 @@ func refresh() -> void:
 			refresh())
 		_tabs.add_child(b)
 	_tabs.add_child(UIKit.spacer())
-	var auto := UIKit.button("AUTO", "green", "up")
-	auto.tooltip_text = Loc.t("สวมของดีที่สุดให้ทั้งทีมอัตโนมัติ")
-	auto.pressed.connect(func():
-		var n := Loot.auto_equip_squad()
-		Game.toast.emit(Loc.t("เปลี่ยนอุปกรณ์ %d ชิ้น") % n if n > 0 else Loc.t("ใส่ของดีที่สุดอยู่แล้ว"), "good"))
-	_tabs.add_child(auto)
+	# MV-561: the crew pick replaces the whole-team gear AUTO; each card keeps its own Auto Equip
+	if not Features.on("squad_auto_pick"):
+		var auto := UIKit.button("AUTO", "green", "up")
+		auto.tooltip_text = Loc.t("สวมของดีที่สุดให้ทั้งทีมอัตโนมัติ")
+		auto.pressed.connect(func():
+			var n := Loot.auto_equip_squad()
+			Game.toast.emit(Loc.t("เปลี่ยนอุปกรณ์ %d ชิ้น") % n if n > 0 else Loc.t("ใส่ของดีที่สุดอยู่แล้ว"), "good"))
+		_tabs.add_child(auto)
 	if tab == "vault":
 		_build_vault()
 	elif choosing >= 0:
@@ -58,10 +60,30 @@ func refresh() -> void:
 
 func _build_squad() -> void:
 	set_title(Loc.t("SQUAD W%d DPS%d / ทีมป้องกันรถบ้าน") % [Combat.wave(), int(Combat.squad_dps())])
+	if Features.on("squad_auto_pick"):
+		_list.add_child(_auto_pick_button())
 	for i in Combat.ROLES.size():
 		_list.add_child(_role_card(i))
 	_list.add_child(_deck_card())
 	_list.add_child(UIKit.wrap_label(Loc.t("ศัตรูไล่ตามจากท้ายรถเป็นเวฟ · ทุก 10 เวฟมีบอส · ท้ายแต่ละพื้นที่มีบอสด่านตรวจ · ของดรอปเข้าคลังอัตโนมัติ · กระเป๋าดี = ศัตรูดรอปเสบียง"), UIKit.FS_SMALL))
+
+
+## MV-561: full-width so the Thai label never squeezes the tabs on a narrow phone
+func _auto_pick_button() -> Button:
+	var b := UIKit.button(Loc.t("จัดคนอัตโนมัติ"), "green", "people")
+	b.name = "AutoPickSquad"
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.tooltip_text = Loc.t("เลือกลูกเรือที่ค่าสถานะเหมาะกับแต่ละตำแหน่งที่สุด (ข้ามคนที่ออกสำรวจ ป่วย หรือบาดเจ็บหนัก)")
+	b.pressed.connect(func():
+		var n := Combat.auto_pick_squad()
+		if n > 0:
+			Game.toast.emit(Loc.t("จัดทีมใหม่ เปลี่ยนคน %d ตำแหน่ง") % n, "good")
+		elif int(Game.s.squad[0]) < 0:
+			Game.toast.emit(Loc.t("ไม่มีลูกเรือที่พร้อมลงทีม"), "warn")
+		else:
+			Game.toast.emit(Loc.t("ทีมนี้เหมาะที่สุดแล้ว"), "info"))
+	return b
 
 
 func _role_card(i: int) -> Control:

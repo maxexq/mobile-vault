@@ -535,7 +535,7 @@ func _tab_fight() -> void:
 		var sd := Game.dweller_by_id(int(Game.s.squad[i]))
 		names.append("-" if sd.is_empty() else str(sd.name))
 	_head("SQUAD", "ทีมป้องกัน %s (ปลดล็อก %d ช่อง · DPS %d)" % [" / ".join(names), Combat.slots_unlocked(), int(Combat.squad_dps())])
-	_row([_b("จัดทีมอัตโนมัติ", func(): Dev.squad_auto(), "green"), _b("ใส่อุปกรณ์ดีสุด", func(): Dev.squad_gear()), _b("ถอดทั้งทีม", func(): Dev.squad_clear(), "red")])
+	_row([_b("จัดคนอัตโนมัติ (stat เหมาะสุด)", func(): Dev.squad_auto_pick(), "green"), _b("เติมช่องว่าง (เดิม)", func(): Dev.squad_auto()), _b("ใส่อุปกรณ์ดีสุด", func(): Dev.squad_gear()), _b("ถอดทั้งทีม", func(): Dev.squad_clear(), "red")])
 	_head("BOSSES", "เรียกบอส (ปิดแผงเพื่อดูศึก)")
 	_row([_b("บอสเวฟ: สมดุลใหม่", func(): Dev.roaming_boss_preview(true), "green", true), _b("บอสเวฟ: สมดุลเดิม", func(): Dev.roaming_boss_preview(false), "gray", true)])
 	_row([_b("บอสด่าน: ผ่านต่อเนื่อง", func(): Dev.warlord_preview(true), "green", true), _b("บอสด่าน: สมดุลเดิม", func(): Dev.warlord_preview(false), "gray", true)])
