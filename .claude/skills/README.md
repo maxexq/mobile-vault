@@ -31,6 +31,12 @@ They were copied by hand; the upstream `npx skills add` installer was not used.
 | `create-game-assets` | Art direction, pixel-art pipeline, asset manifest and provenance |
 | `survival-crafting` | Needs, resources, crafting loops |
 
+## Project-owned skills
+
+| Skill | Why it is here |
+|-------|----------------|
+| `pixellab-art` | Written for this repo (MV-583), not upstream: the default for every visual task (UX/UI look, sprites, rooms, icons, backgrounds, art review). House style, PixelLab dry-run -> OK -> gen -> accept loop, review checklist. Wins over `create-game-assets` / `game-ui-ux` where they differ. |
+
 Left out: 3D, C#, multiplayer, physics/movement, other engines, Steam/itch publishing,
 genres that do not fit, and the upstream `router` (its paths assume the full catalog).
 
