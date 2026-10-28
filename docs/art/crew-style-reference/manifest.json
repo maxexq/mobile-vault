@@ -1954,7 +1954,7 @@
   "portraits/bus_mechanic.png": "0f40660ac5233be5958ef011518a202fc5cd2e98223c1cfe8b99530957e25e87",
   "portraits/construction_worker.png": "b3c9ede93a889754ab5682c9eeab32d3b31fe73cda99820f1a72a64d11814f42",
   "portraits/firefighter.png": "4e39f6594810c60bff1b1443ed43eed686482a3f6f34f16dd7de6c1ee6515637",
-  "portraits/fortune_teller.png": "377b42cae887509d75dcf8547c9836926a272397fb3c2ddfd03cca3c478ae1fe",
+  "portraits/fortune_teller.png": "1651a511ed0e66a27eb7340896fdc18a7d8a1840c0cb610220dc60cb58967759",
   "portraits/gunslinger.png": "2c4f413215ecebf87db1369a69d596006a5669b5c060ec47166ae6a276e8830e",
   "portraits/hunter.png": "9886179cf354ddfa46dd24f7bce4ddf83ab557df2c85eb3340a20ec3450d9669",
   "portraits/lounge_singer.png": "493fd95d64807b6c0f0b091dcf693e0d6788762684d695c9bb4397fcd55606a1",
@@ -2391,7 +2391,8 @@
     "police_officer",
     "hunter",
     "construction_worker",
-    "office_worker"
+    "office_worker",
+    "fortune_teller"
    ],
    "how": "edit_image_pro_flash on the teen_scrap_runner portrait itself: \"Turn this portrait into a different person while keeping exactly the same art style, pixel size, head size, framing, three-quarter angle, shading and muted palette: <person>\", then snapped. Use this for every new portrait so head size and cartoon style match."
   }
