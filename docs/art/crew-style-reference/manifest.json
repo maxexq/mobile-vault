@@ -1952,7 +1952,7 @@
   "portraits/aviator_pilot.png": "62239e6ed7293350981460efb52207d123390ddf120f99423f9b77fd5d4691ca",
   "portraits/biker.png": "9d2b1674684f32b1aafd4322c5fd3925ad3c949ea39753d48fd1094acb92eef7",
   "portraits/bus_mechanic.png": "0f40660ac5233be5958ef011518a202fc5cd2e98223c1cfe8b99530957e25e87",
-  "portraits/construction_worker.png": "fbff7b28229e1d860ca12a593c6ac781d3a4a7d9fe2b8796110134001b0b8136",
+  "portraits/construction_worker.png": "b3c9ede93a889754ab5682c9eeab32d3b31fe73cda99820f1a72a64d11814f42",
   "portraits/firefighter.png": "4e39f6594810c60bff1b1443ed43eed686482a3f6f34f16dd7de6c1ee6515637",
   "portraits/fortune_teller.png": "377b42cae887509d75dcf8547c9836926a272397fb3c2ddfd03cca3c478ae1fe",
   "portraits/gunslinger.png": "2c4f413215ecebf87db1369a69d596006a5669b5c060ec47166ae6a276e8830e",
@@ -1960,7 +1960,7 @@
   "portraits/lounge_singer.png": "493fd95d64807b6c0f0b091dcf693e0d6788762684d695c9bb4397fcd55606a1",
   "portraits/monk.png": "b71e7ebd55f96441dcc37fa1d10612f8dc857438bd624aabe2b4a65308387ce0",
   "portraits/motorbike_courier.png": "f4d7e4b3f8ca5cc7de4a99742a82aeb13c2035bf006ead770f7debc6e5b59f4b",
-  "portraits/office_worker.png": "7d19c50ab729149e9f102bfb2804e2024c6995afe05cf308dd7c34f661154deb",
+  "portraits/office_worker.png": "953a4ae63ece2d2527d04477b53e7af961982416ef1dd7ae7c4e0e41e64742ff",
   "portraits/old_fisherman.png": "26ea20c18ea2921a46e4ef65c76a59cf849ab3d51ea493e0f1028c35b9212c65",
   "portraits/old_seamstress.png": "a875db93d4a98efa82221c72a71f35dfbb6dd8e7788ab6d8121527810adfd6d6",
   "portraits/plant_grower.png": "a75318d8b8ca01ba3604f2fa6fb523893ad7335308d6c21a461f248216a137d0",
@@ -2389,7 +2389,9 @@
     "aviator_pilot",
     "soldier",
     "police_officer",
-    "hunter"
+    "hunter",
+    "construction_worker",
+    "office_worker"
    ],
    "how": "edit_image_pro_flash on the teen_scrap_runner portrait itself: \"Turn this portrait into a different person while keeping exactly the same art style, pixel size, head size, framing, three-quarter angle, shading and muted palette: <person>\", then snapped. Use this for every new portrait so head size and cartoon style match."
   }
