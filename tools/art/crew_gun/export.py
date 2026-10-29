@@ -30,6 +30,8 @@ CLIPS = [
  ('gunslinger', 'dual_revolvers', 'gunslinger/fx_B', 'revolver', [1, '4b'], 10, 'level', 'two revolvers, alternating'),
  ('hunter', 'bolt_rifle', 'hunter/fx_A', 'boltrifle_smoke', [1], 10, 'level', 'scoped bolt-action rifle, bolt cycle ejects a brass casing, muzzle smoke'),
  ('hunter', 'over_under', 'hunter/fx_B', 'sawnoff_smoke', [2], 10, 'level', 'over-and-under hunting shotgun, big smoke puff'),
+ ('lounge_singer', 'pearl_revolver', 'lounge_singer/fx_A', 'revolver', [1, 4], 10, 'level', 'small pearl-handled snub-nose revolver, one gloved hand'),
+ ('lounge_singer', 'tommy_gun', 'lounge_singer/fx_B', 'smg', [2, 3, 4], 12, 'level', '1920s tommy gun from the hip, burst (flash spans the 2 px barrel)'),
 ]
 man = json.load(open(REPO + 'manifest.json'))
 entry = {'how': 'MV-594. 1) edit_image_pro_flash on the character work/0 frame (60x60) -> holding-the-gun pose (5 gens). '

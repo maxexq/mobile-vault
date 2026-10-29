@@ -23,3 +23,5 @@ HOLD=gunslinger/hold_A.png f gunslinger/shoot_A revolver 1,3,5 gunslinger/fx_A l
 HOLD=gunslinger/hold_B.png f gunslinger/shoot_B revolver 1,4b gunslinger/fx_B level; python3 erase.py gunslinger/fx_B 0 0 21 22
 HOLD=hunter/hold_A.png f hunter/shoot_A boltrifle_smoke 1 hunter/fx_A level
 HOLD=hunter/hold_B.png f hunter/shoot_B sawnoff_smoke 2 hunter/fx_B level; python3 erase.py hunter/fx_B 0 0 17 30
+f lounge_singer/shoot_A revolver 1,4 lounge_singer/fx_A level
+BORE2=1 f lounge_singer/shoot_B smg 2,3,4 lounge_singer/fx_B level

@@ -2196,7 +2196,25 @@
   "gun_animations/hunter/over_under/5.png": "9a186c17467a9b8ddab73ec4d47405819b1fc283bde139ba48ff86a811ae5665",
   "gun_animations/hunter/over_under/6.png": "b070b7b7e0d2d34078c89efb5a9eba1d5ea3da6df2aa52e9cb15bded16b899a4",
   "gun_animations/hunter/over_under/7.png": "2543fe779e6d938c627acc697c98fa291eaa44ab7b7bac1c18e81aab119bf55a",
-  "gun_animations/hunter/over_under/8.png": "c5c1e390b6bb703d10591bfa1d46f7daccf09b584f6794267cfe1eeea625e0fe"
+  "gun_animations/hunter/over_under/8.png": "c5c1e390b6bb703d10591bfa1d46f7daccf09b584f6794267cfe1eeea625e0fe",
+  "gun_animations/lounge_singer/pearl_revolver/0.png": "d28c79faf8a106dfae29de42ef8913038b70eeb831b5f5290acd89c7127efc41",
+  "gun_animations/lounge_singer/pearl_revolver/1.png": "4c2575e48c4d6383f728a79a974fba1e3645b801e13b92b50737c51426aa2ea9",
+  "gun_animations/lounge_singer/pearl_revolver/2.png": "838fc86d21faa3bfe4fb41830e107ee84f901843c77e79a05047940c3ac57a5a",
+  "gun_animations/lounge_singer/pearl_revolver/3.png": "43da017a76ffa57a0b64aa9a03d0dcf35edb17bb4ba56c8a5ed949747d0df078",
+  "gun_animations/lounge_singer/pearl_revolver/4.png": "dfc2d356ef1aeb94db0e886bd96ab04e58f1fee8f30afa94cbb1555826ac841e",
+  "gun_animations/lounge_singer/pearl_revolver/5.png": "bc41bfa2c002281d1915eb4bf069ee0fec6b2b7e49dd8be61bc40f9c9e0234d6",
+  "gun_animations/lounge_singer/pearl_revolver/6.png": "73a76aa31203d6d0e32615922b32a0f4b19b13736b5f071bc69ee52ed26e0470",
+  "gun_animations/lounge_singer/pearl_revolver/7.png": "91a91590093c627067a6ab624891424db09379d8aaf3d1dc6193979dc2d16935",
+  "gun_animations/lounge_singer/pearl_revolver/8.png": "ef0512458449c27a6a205af78add393637955e715146d836914ab74e4d4ceedd",
+  "gun_animations/lounge_singer/tommy_gun/0.png": "1261329f3f7b4814ca5576bc9e4a96e2e9698a431aef3dbb9f38d117f239a3db",
+  "gun_animations/lounge_singer/tommy_gun/1.png": "1fa076302c1afe1b157e5d2f3910b10715a83b76f5a5ad2dbd15f3998b8af210",
+  "gun_animations/lounge_singer/tommy_gun/2.png": "afb219b7598f91a631297429ea5a042da41c9b764087beeb21a007858c4ce06d",
+  "gun_animations/lounge_singer/tommy_gun/3.png": "cb5bae34b16dfccce582bf947a9f3cc456ce3b9bde34711fc46e78ab7c168b0d",
+  "gun_animations/lounge_singer/tommy_gun/4.png": "dbf793e49de208ba58e2622cba1edcabf4808a24840bdb60283a506dbdcc8e5d",
+  "gun_animations/lounge_singer/tommy_gun/5.png": "3eef762e09a087445b9500452910436fb7837a10ff0669e19facd9090731f8a3",
+  "gun_animations/lounge_singer/tommy_gun/6.png": "a3af9f248909ad141824d735cce8d161f1a191d039cea520575fdf020ab00630",
+  "gun_animations/lounge_singer/tommy_gun/7.png": "32abd42823e499142011d79096d0b115aa54117b11784cfd800bd65fa89db5f1",
+  "gun_animations/lounge_singer/tommy_gun/8.png": "147f87e6839370cb9876b123781315521b608c34760c390cc91d2b93decf01c5"
  },
  "cast_animations": {
   "how": "create_character mode pro, concept_image_url = approved/cast/<name>.png, size 48 (10 generations each); then animate_character mode v3, directions [east], frame_count 8 (1 generation each). Frame 0 is the reference pose; canvases 52-60 px.",
@@ -3866,6 +3884,109 @@
       [
        51,
        25
+      ]
+     ]
+    }
+   },
+   "lounge_singer": {
+    "pearl_revolver": {
+     "dir": "gun_animations/lounge_singer/pearl_revolver/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "small pearl-handled snub-nose revolver, one gloved hand",
+     "fx_preset": "revolver",
+     "shot_frames": [
+      1,
+      4
+     ],
+     "muzzle": [
+      [
+       46,
+       24
+      ],
+      [
+       43,
+       25
+      ],
+      [
+       46,
+       26
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       24
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       25
+      ]
+     ]
+    },
+    "tommy_gun": {
+     "dir": "gun_animations/lounge_singer/tommy_gun/",
+     "frames": 9,
+     "fps": 12,
+     "aim": "level",
+     "gun": "1920s tommy gun from the hip, burst (flash spans the 2 px barrel)",
+     "fx_preset": "smg",
+     "shot_frames": [
+      2,
+      3,
+      4
+     ],
+     "muzzle": [
+      [
+       47,
+       29
+      ],
+      [
+       47,
+       28
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       48,
+       27
+      ],
+      [
+       48,
+       27
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       48,
+       27
+      ],
+      [
+       47,
+       28
       ]
      ]
     }

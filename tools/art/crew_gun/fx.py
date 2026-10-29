@@ -169,6 +169,8 @@ GUNS = {
 GUNS['boltrifle_smoke'] = smoky('boltrifle')
 GUNS['sawnoff_smoke'] = smoky('sawnoff')
 
+BORE2 = os.environ.get('BORE2') == '1'
+
 def render(frames, gun, shots, aim, floor):
     g = GUNS[gun]; n = len(frames); d = AIM[aim]
     frames = [clean(f, aim) for f in frames]
@@ -180,7 +182,10 @@ def render(frames, gun, shots, aim, floor):
         for k, st in enumerate(g['flash']):
             fi = (s + k) % n; m = muzzle(frames[fi], aim, two)
             if not m: continue
-            for dx, dy, col in st:
+            pts = st
+            if BORE2 and aim == 'level':   # 2-px barrel: stretch the flash core over both rows (muzzle = lower row)
+                pts = [(dx, dy - (dy < 0), c) for dx, dy, c in st] + [(dx, -1, c) for dx, dy, c in st if dy == 0]
+            for dx, dy, col in pts:
                 rx, ry = rot(dx + 1, dy, aim)
                 x, y = m[0] + rx, m[1] + ry
                 if 0 <= x < CW and 0 <= y < CH: out[fi].putpixel((x, y), col)
