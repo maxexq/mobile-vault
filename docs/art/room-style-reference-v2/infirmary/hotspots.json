@@ -1,0 +1,727 @@
+{
+  "room": "infirmary",
+  "format": 1,
+  "note": "rect = [x, y, w, h] in native pixels of the image, origin top-left. Later entries win where rects overlap. See room-style-reference-v2.md, Tap hotspots.",
+  "images": {
+    "L1": {
+      "file": "infirmary_L1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "cross",
+          "label": "Painted red cross",
+          "rect": [
+            30,
+            18,
+            32,
+            24
+          ],
+          "kind": "info",
+          "action": "show_info"
+        },
+        {
+          "id": "bed",
+          "label": "Stained cot",
+          "rect": [
+            3,
+            44,
+            68,
+            36
+          ],
+          "kind": "station",
+          "action": "treat_patient"
+        },
+        {
+          "id": "iv_stand",
+          "label": "IV drip stand",
+          "rect": [
+            70,
+            23,
+            18,
+            57
+          ],
+          "kind": "device",
+          "action": "use_device"
+        },
+        {
+          "id": "med_cabinet",
+          "label": "Medicine cabinet",
+          "rect": [
+            104,
+            16,
+            32,
+            29
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "side_table",
+          "label": "Supply crate",
+          "rect": [
+            99,
+            52,
+            27,
+            25
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "oxygen",
+          "label": "Oxygen tank",
+          "rect": [
+            126,
+            45,
+            13,
+            32
+          ],
+          "kind": "device",
+          "action": "use_device"
+        },
+        {
+          "id": "lamp",
+          "label": "Caged bulb",
+          "rect": [
+            61,
+            3,
+            10,
+            14
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L2": {
+      "file": "infirmary_L2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "cross",
+          "label": "Painted red cross",
+          "rect": [
+            30,
+            18,
+            32,
+            24
+          ],
+          "kind": "info",
+          "action": "show_info"
+        },
+        {
+          "id": "screen",
+          "label": "Privacy screen",
+          "rect": [
+            0,
+            28,
+            12,
+            52
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "chart",
+          "label": "Patient chart",
+          "rect": [
+            15,
+            32,
+            10,
+            13
+          ],
+          "kind": "info",
+          "action": "show_info"
+        },
+        {
+          "id": "bed",
+          "label": "Patched hospital bed",
+          "rect": [
+            3,
+            46,
+            70,
+            34
+          ],
+          "kind": "station",
+          "action": "treat_patient"
+        },
+        {
+          "id": "iv_stand",
+          "label": "IV drip stand",
+          "rect": [
+            70,
+            23,
+            18,
+            57
+          ],
+          "kind": "device",
+          "action": "use_device"
+        },
+        {
+          "id": "med_cabinet",
+          "label": "Medicine cabinet",
+          "rect": [
+            104,
+            14,
+            32,
+            29
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "side_table",
+          "label": "Bedside table",
+          "rect": [
+            99,
+            50,
+            27,
+            27
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "desk_lamp",
+          "label": "Desk lamp",
+          "rect": [
+            111,
+            42,
+            11,
+            10
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "oxygen",
+          "label": "Oxygen tank",
+          "rect": [
+            126,
+            43,
+            14,
+            35
+          ],
+          "kind": "device",
+          "action": "use_device"
+        },
+        {
+          "id": "lamp",
+          "label": "Caged bulb",
+          "rect": [
+            61,
+            3,
+            10,
+            14
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3": {
+      "file": "infirmary_L3.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "cross",
+          "label": "Red cross",
+          "rect": [
+            30,
+            20,
+            32,
+            26
+          ],
+          "kind": "info",
+          "action": "show_info"
+        },
+        {
+          "id": "bed",
+          "label": "Hospital bed",
+          "rect": [
+            3,
+            48,
+            70,
+            32
+          ],
+          "kind": "station",
+          "action": "treat_patient"
+        },
+        {
+          "id": "iv_stand",
+          "label": "IV pump stand",
+          "rect": [
+            70,
+            20,
+            18,
+            58
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "monitor",
+          "label": "Heart monitor",
+          "rect": [
+            86,
+            40,
+            14,
+            38
+          ],
+          "kind": "screen",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "med_cabinet",
+          "label": "Medicine cabinet",
+          "rect": [
+            104,
+            13,
+            32,
+            30
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "side_table",
+          "label": "Supply cart",
+          "rect": [
+            100,
+            46,
+            26,
+            32
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "oxygen",
+          "label": "Oxygen tank",
+          "rect": [
+            126,
+            40,
+            14,
+            38
+          ],
+          "kind": "device",
+          "action": "use_device"
+        },
+        {
+          "id": "lamp",
+          "label": "Ceiling lamp",
+          "rect": [
+            56,
+            1,
+            16,
+            17
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_x2": {
+      "file": "infirmary_L3_x2.png",
+      "size": [
+        288,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "cross",
+          "label": "Red cross",
+          "rect": [
+            30,
+            16,
+            32,
+            26
+          ],
+          "kind": "info",
+          "action": "show_info"
+        },
+        {
+          "id": "bed",
+          "label": "Hospital bed",
+          "rect": [
+            0,
+            48,
+            70,
+            32
+          ],
+          "kind": "station",
+          "action": "treat_patient"
+        },
+        {
+          "id": "iv_stand",
+          "label": "IV pump stand",
+          "rect": [
+            70,
+            17,
+            18,
+            60
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "monitor",
+          "label": "Heart monitor",
+          "rect": [
+            86,
+            40,
+            14,
+            38
+          ],
+          "kind": "screen",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "med_cabinet",
+          "label": "Medicine cabinet",
+          "rect": [
+            104,
+            13,
+            32,
+            30
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "side_table",
+          "label": "Supply cart",
+          "rect": [
+            100,
+            46,
+            26,
+            32
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "oxygen",
+          "label": "Oxygen tank",
+          "rect": [
+            126,
+            40,
+            14,
+            38
+          ],
+          "kind": "device",
+          "action": "use_device"
+        },
+        {
+          "id": "lamp",
+          "label": "Ceiling lamp",
+          "rect": [
+            56,
+            0,
+            16,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "supply_shelf",
+          "label": "Medical supply shelf",
+          "rect": [
+            150,
+            10,
+            34,
+            66
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "op_table",
+          "label": "Operating table",
+          "rect": [
+            186,
+            48,
+            52,
+            30
+          ],
+          "kind": "station",
+          "action": "treat_patient"
+        },
+        {
+          "id": "instrument_cart",
+          "label": "Instrument trolley",
+          "rect": [
+            238,
+            48,
+            26,
+            30
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "stretcher",
+          "label": "Stretcher + curtain",
+          "rect": [
+            262,
+            4,
+            26,
+            74
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "surgery_lamp",
+          "label": "Surgery lamp",
+          "rect": [
+            208,
+            4,
+            28,
+            26
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_x3": {
+      "file": "infirmary_L3_x3.png",
+      "size": [
+        432,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "cross",
+          "label": "Red cross",
+          "rect": [
+            30,
+            16,
+            32,
+            26
+          ],
+          "kind": "info",
+          "action": "show_info"
+        },
+        {
+          "id": "bed",
+          "label": "Hospital bed",
+          "rect": [
+            0,
+            48,
+            70,
+            32
+          ],
+          "kind": "station",
+          "action": "treat_patient"
+        },
+        {
+          "id": "iv_stand",
+          "label": "IV pump stand",
+          "rect": [
+            70,
+            17,
+            18,
+            60
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "monitor",
+          "label": "Heart monitor",
+          "rect": [
+            86,
+            40,
+            14,
+            38
+          ],
+          "kind": "screen",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "med_cabinet",
+          "label": "Medicine cabinet",
+          "rect": [
+            104,
+            13,
+            32,
+            30
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "side_table",
+          "label": "Supply cart",
+          "rect": [
+            100,
+            46,
+            26,
+            32
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "oxygen",
+          "label": "Oxygen tank",
+          "rect": [
+            126,
+            40,
+            14,
+            38
+          ],
+          "kind": "device",
+          "action": "use_device"
+        },
+        {
+          "id": "lamp",
+          "label": "Ceiling lamp",
+          "rect": [
+            56,
+            0,
+            16,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "supply_shelf",
+          "label": "Medical supply shelf",
+          "rect": [
+            150,
+            10,
+            34,
+            66
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "scrub_sink",
+          "label": "Scrub sink",
+          "rect": [
+            190,
+            44,
+            36,
+            26
+          ],
+          "kind": "device",
+          "action": "use_device"
+        },
+        {
+          "id": "instrument_cart",
+          "label": "Instrument trolley",
+          "rect": [
+            232,
+            54,
+            30,
+            34
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "op_table",
+          "label": "Operating table",
+          "rect": [
+            244,
+            58,
+            72,
+            32
+          ],
+          "kind": "station",
+          "action": "treat_patient"
+        },
+        {
+          "id": "anaesthesia",
+          "label": "Anaesthesia machine",
+          "rect": [
+            318,
+            30,
+            22,
+            54
+          ],
+          "kind": "screen",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "surgery_lamp",
+          "label": "Surgery lamp",
+          "rect": [
+            254,
+            0,
+            56,
+            18
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "curtain",
+          "label": "Privacy curtain",
+          "rect": [
+            350,
+            0,
+            14,
+            92
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "stretcher",
+          "label": "Stretcher",
+          "rect": [
+            374,
+            16,
+            52,
+            24
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "recovery_bed",
+          "label": "Recovery bed",
+          "rect": [
+            378,
+            52,
+            54,
+            42
+          ],
+          "kind": "station",
+          "action": "treat_patient"
+        }
+      ]
+    }
+  }
+}

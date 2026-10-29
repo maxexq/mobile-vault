@@ -6,7 +6,7 @@ from PIL import Image,ImageDraw
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KINDS={"station","storage","device","screen","seat","game","light","info","decor"}
 ACTIONS={"open_cook_menu","open_bar_menu","open_storage","use_device","watch_tv","play_game","play_music",
-         "play_pool","play_darts","read_book","water_plant","sit","toggle_light","show_info","inspect"}
+         "play_pool","play_darts","read_book","water_plant","treat_patient","sit","toggle_light","show_info","inspect"}
 MIN=6  # smallest side in native px; the game pads tap areas, but the art box must be findable
 def rooms():
     for d in sorted(os.listdir(ROOT)):
