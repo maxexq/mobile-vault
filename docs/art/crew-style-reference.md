@@ -121,9 +121,11 @@ approved edit.
 
 ## Cast animations
 
-All 24 cast designs are PixelLab characters (ids in the manifest `cast_animations`) with five
-east clips each: `walk`, `eat`, `drink` (one-shot), `work` (hammer) and `talk`, 9 frames with
-frame 0 as the reference pose. Files in
+All 24 cast designs are PixelLab characters (ids in the manifest `cast_animations`) with seven
+east clips each: `walk`, `eat`, `drink` (one-shot), `work` (hammer), `talk`, `idle` (5 frames)
+and a personal `signature` move that fits the character (one-shot; per-character prompt in the
+manifest, e.g. the hunter draws her bow, the monk gives a wai). Clips have 9 frames with frame 0
+as the reference pose; left-facing is a mirror of each clip. Files in
 [`approved/cast_animations/<name>/<clip>/`](crew-style-reference/approved/cast_animations/),
 plus each character's `east.png`.
 
@@ -134,6 +136,32 @@ The characters were rebuilt from the designs, so their side view can differ slig
 animation frames together; do not mix them with the design PNG. In `work`, some characters
 gained a small anvil or bench at their feet (pilot, gunslinger, hunter, lounge singer,
 fortune teller) and a few wind up behind the head.
+
+## Cast portraits
+
+Every cast character has a 64x64 bust portrait in
+[`approved/portraits/`](crew-style-reference/approved/portraits/): three-quarter view facing
+right, an expression that fits the character, snapped to the master palette so it keeps the
+game's muted tone. Recipe in the manifest `cast_portraits`.
+
+Portraits must share one cartoon style and head size: the punk musician, courier, monk and
+teen scrap runner are the style references. Make a new portrait by editing the teen scrap
+runner portrait into the new person (manifest `cast_portraits.restyled_from_reference`); the
+truck driver, firefighter, fisherman, tinkerer, cook, pilot, soldier, police officer, hunter, construction worker, office worker and fortune teller were redone that way after drifting
+towards a realistic look with smaller heads.
+
+![The 24 cast portraits](crew-style-reference/previews/portraits.png)
+
+### Medic portrait and tutorial poses
+
+The reference medic has its own portrait (`approved/portraits/medic.png`) and four tutorial
+poses for the guide who explains the game, in `approved/portraits/tutorial/`:
+`medic_listen` (index finger raised), `medic_point` (open hand to the right: put the
+tutorial text or highlighted UI on that side), `medic_thumbs_up` (well done) and
+`medic_clipboard` (shows a clipboard: how something works). Same face, framing and palette
+as the cast portraits.
+
+![Medic sprite, portrait and the four tutorial poses](crew-style-reference/previews/medic-portraits.png)
 
 ## Making a new crew character
 
