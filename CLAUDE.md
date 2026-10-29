@@ -44,6 +44,11 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
   It is ~2x the current 14x20 `dw_*` scale; moving the game to it is a separate decision.
 - **PixelLab API costs money:** `tools/pixellab.py gen ... --yes` spends Parames's credits. Show the
   `--dry-run` cost estimate and get an OK before every paid batch (README "Redrawing sprites with PixelLab").
+- **Every PixelLab image goes to the asset log** (https://mobile-vault-asset-log.pages.dev, MV-584/MV-606).
+  `pixellab.py gen --yes` syncs by itself. Any other script that calls PixelLab (rooms, pets, animations,
+  vehicles, inpaint ...) must end with `python tools/asset_log.py backfill <its output folder>`; it is
+  idempotent, so re-run it after every batch. Needs `.asset-log.json` or env `ASSET_LOG_URL` +
+  `CF_ACCESS_CLIENT_ID` + `CF_ACCESS_CLIENT_SECRET`, and on claude.ai cloud the domain in Allowed domains.
 - **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served by Vercel
   from `web/`, and by Cloudflare Pages in parallel while it is being verified (MV-499,
   `docs/hosting-cloudflare.md`: the engine wasm comes from R2; a Godot upgrade needs a new R2 upload).
