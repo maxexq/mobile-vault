@@ -1,0 +1,80 @@
+{
+  "room": "living",
+  "format": 1,
+  "note": "rect = [x, y, w, h] in native pixels of the image, origin top-left. Later entries win where rects overlap. See room-style-reference-v2.md, Tap hotspots.",
+  "images": {
+    "L1": {"file": "living_L1.png", "size": [144, 96], "hotspots": [
+      {"id": "sofa", "label": "Torn sofa", "rect": [16, 35, 60, 37], "kind": "seat", "action": "sit"},
+      {"id": "coffee_table", "label": "Crate coffee table", "rect": [71, 53, 34, 23], "kind": "decor", "action": "inspect"},
+      {"id": "tv", "label": "Broken CRT TV", "rect": [111, 38, 25, 34], "kind": "screen", "action": "inspect"},
+      {"id": "shelf", "label": "Back shelf", "rect": [104, 12, 21, 23], "kind": "storage", "action": "open_storage"},
+      {"id": "lamp", "label": "Bare bulb", "rect": [61, 5, 9, 10], "kind": "light", "action": "toggle_light", "needs_power": true}
+    ]},
+    "L2": {"file": "living_L2.png", "size": [144, 96], "hotspots": [
+      {"id": "photo", "label": "Framed photo", "rect": [42, 18, 10, 11], "kind": "decor", "action": "inspect"},
+      {"id": "clock", "label": "Wall clock", "rect": [87, 10, 10, 12], "kind": "decor", "action": "inspect"},
+      {"id": "sofa", "label": "Repaired sofa", "rect": [16, 35, 60, 37], "kind": "seat", "action": "sit"},
+      {"id": "coffee_table", "label": "Coffee table", "rect": [71, 57, 34, 19], "kind": "decor", "action": "inspect"},
+      {"id": "table_lamp", "label": "Table lamp", "rect": [90, 44, 10, 13], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "bookshelf", "label": "Small bookshelf", "rect": [105, 12, 20, 23], "kind": "storage", "action": "read_book"},
+      {"id": "tv", "label": "CRT TV on a stand", "rect": [110, 37, 26, 38], "kind": "screen", "action": "watch_tv", "needs_power": true},
+      {"id": "lamp", "label": "Ceiling lamp", "rect": [60, 5, 12, 10], "kind": "light", "action": "toggle_light", "needs_power": true}
+    ]},
+    "L3": {"file": "living_L3.png", "size": [144, 96], "hotspots": [
+      {"id": "photos", "label": "Framed photos", "rect": [41, 16, 14, 16], "kind": "decor", "action": "inspect"},
+      {"id": "sofa", "label": "Leather sofa", "rect": [13, 34, 64, 37], "kind": "seat", "action": "sit"},
+      {"id": "coffee_table", "label": "Coffee table", "rect": [71, 54, 34, 22], "kind": "decor", "action": "inspect"},
+      {"id": "picture", "label": "Picture", "rect": [86, 28, 12, 14], "kind": "decor", "action": "inspect"},
+      {"id": "wall_lamp", "label": "Wall lamp", "rect": [87, 12, 10, 12], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "lamp", "label": "Ceiling lamp", "rect": [60, 7, 13, 8], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "plant", "label": "House plant", "rect": [97, 35, 16, 21], "kind": "decor", "action": "water_plant"},
+      {"id": "bookshelf", "label": "Bookshelf", "rect": [104, 10, 23, 26], "kind": "storage", "action": "read_book"},
+      {"id": "tv_cabinet", "label": "TV cabinet", "rect": [110, 51, 31, 29], "kind": "storage", "action": "open_storage"},
+      {"id": "tv", "label": "Flat-screen TV", "rect": [113, 36, 19, 22], "kind": "screen", "action": "watch_tv", "needs_power": true},
+      {"id": "console", "label": "Game console", "rect": [127, 53, 13, 10], "kind": "device", "action": "play_game", "needs_power": true}
+    ]},
+    "L3_x2": {"file": "living_L3_x2.png", "size": [288, 96], "hotspots": [
+      {"id": "photos", "label": "Framed photos", "rect": [41, 16, 14, 16], "kind": "decor", "action": "inspect"},
+      {"id": "sofa", "label": "Leather sofa", "rect": [10, 34, 66, 32], "kind": "seat", "action": "sit"},
+      {"id": "coffee_table", "label": "Coffee table", "rect": [70, 53, 35, 23], "kind": "decor", "action": "inspect"},
+      {"id": "picture", "label": "Picture", "rect": [85, 28, 12, 14], "kind": "decor", "action": "inspect"},
+      {"id": "wall_lamp", "label": "Wall lamp", "rect": [86, 10, 10, 12], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "lamp", "label": "Ceiling lamp", "rect": [59, 9, 13, 7], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "plant", "label": "House plant", "rect": [96, 35, 15, 23], "kind": "decor", "action": "water_plant"},
+      {"id": "tv_cabinet", "label": "TV cabinet", "rect": [111, 51, 27, 30], "kind": "storage", "action": "open_storage"},
+      {"id": "tv", "label": "Flat-screen TV", "rect": [113, 35, 19, 22], "kind": "screen", "action": "watch_tv", "needs_power": true},
+      {"id": "console", "label": "Game console", "rect": [128, 53, 10, 9], "kind": "device", "action": "play_game", "needs_power": true},
+      {"id": "record_desk", "label": "Record desk", "rect": [159, 40, 48, 23], "kind": "storage", "action": "open_storage"},
+      {"id": "record_player", "label": "Record player", "rect": [165, 33, 20, 14], "kind": "device", "action": "play_music", "needs_power": true},
+      {"id": "dartboard", "label": "Dartboard", "rect": [214, 21, 18, 17], "kind": "game", "action": "play_darts"},
+      {"id": "poster", "label": "Poster", "rect": [239, 16, 16, 17], "kind": "decor", "action": "inspect"},
+      {"id": "pool_table", "label": "Pool table", "rect": [193, 52, 64, 29], "kind": "game", "action": "play_pool"},
+      {"id": "bookshelf", "label": "Bookshelf", "rect": [258, 15, 18, 51], "kind": "storage", "action": "read_book"},
+      {"id": "wall_lamp_2", "label": "Wall lamp", "rect": [192, 10, 10, 12], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "lamp_2", "label": "Ceiling lamp", "rect": [219, 9, 13, 7], "kind": "light", "action": "toggle_light", "needs_power": true}
+    ]},
+    "L3_x3": {"file": "living_L3_x3.png", "size": [432, 96], "hotspots": [
+      {"id": "photos", "label": "Framed photos", "rect": [41, 16, 14, 16], "kind": "decor", "action": "inspect"},
+      {"id": "sofa", "label": "Leather sofa", "rect": [10, 34, 66, 32], "kind": "seat", "action": "sit"},
+      {"id": "coffee_table", "label": "Coffee table", "rect": [70, 53, 35, 23], "kind": "decor", "action": "inspect"},
+      {"id": "picture", "label": "Picture", "rect": [85, 28, 12, 14], "kind": "decor", "action": "inspect"},
+      {"id": "wall_lamp", "label": "Wall lamp", "rect": [86, 10, 10, 12], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "lamp", "label": "Ceiling lamp", "rect": [59, 9, 13, 7], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "plant", "label": "House plant", "rect": [96, 35, 15, 23], "kind": "decor", "action": "water_plant"},
+      {"id": "tv_cabinet", "label": "TV cabinet", "rect": [111, 51, 27, 30], "kind": "storage", "action": "open_storage"},
+      {"id": "tv", "label": "Flat-screen TV", "rect": [113, 35, 19, 22], "kind": "screen", "action": "watch_tv", "needs_power": true},
+      {"id": "console", "label": "Game console", "rect": [128, 53, 10, 9], "kind": "device", "action": "play_game", "needs_power": true},
+      {"id": "record_desk", "label": "Record desk", "rect": [159, 40, 48, 23], "kind": "storage", "action": "open_storage"},
+      {"id": "record_player", "label": "Record player", "rect": [165, 33, 20, 14], "kind": "device", "action": "play_music", "needs_power": true},
+      {"id": "dartboard", "label": "Dartboard", "rect": [198, 9, 18, 17], "kind": "game", "action": "play_darts"},
+      {"id": "cue_rack", "label": "Cue rack", "rect": [221, 8, 16, 35], "kind": "game", "action": "play_pool"},
+      {"id": "score_board", "label": "Score board", "rect": [245, 14, 15, 21], "kind": "info", "action": "show_info"},
+      {"id": "pool_lamp", "label": "Pool table lamp", "rect": [247, 0, 28, 14], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "pool_table", "label": "Large pool table", "rect": [230, 46, 108, 40], "kind": "game", "action": "play_pool"},
+      {"id": "bookshelf", "label": "Long book and game shelf", "rect": [266, 8, 72, 33], "kind": "storage", "action": "read_book"},
+      {"id": "floor_lamp", "label": "Floor lamp", "rect": [344, 19, 17, 47], "kind": "light", "action": "toggle_light", "needs_power": true},
+      {"id": "armchair", "label": "Reading armchair", "rect": [352, 35, 39, 36], "kind": "seat", "action": "read_book"},
+      {"id": "plant_2", "label": "Big plant", "rect": [408, 45, 24, 48], "kind": "decor", "action": "water_plant"}
+    ]}
+  }
+}
