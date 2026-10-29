@@ -44,7 +44,7 @@ static func accepted() -> bool:
 		and float(r.get("accepted_at", 0.0)) > 0.0
 
 static func needs_acceptance() -> bool:
-	return Features.on("legal_notice") and publication_ready() and not accepted()
+	return BuildInfo.env() in ["uat", "prod"] and Features.on("legal_notice") and publication_ready() and not accepted()
 
 static func allows(purpose: String) -> bool:
 	return purpose in ["diagnostics", "analytics"] and accepted() \

@@ -171,6 +171,7 @@ func _legal_notice_test() -> void:
 	var override := LegalPolicy.document_override.duplicate(true)
 	var features: Dictionary = Features.layers.dev.duplicate(true)
 	var old_size := get_window().size
+	var original_environment := BuildInfo._env
 	var old_state := Cloud.state
 	var old_meta := Cloud.meta.duplicate(true)
 	var old_transport: Callable = Analytics.transport
@@ -213,6 +214,13 @@ func _legal_notice_test() -> void:
 	var document := LegalPolicy.document_override.duplicate(true)
 	Settings.set_value("legal_consent", {})
 	Settings.set_value("telemetry", false)
+	for environment in ["dev", "staging"]:
+		BuildInfo._env = environment
+		_check("legal: %s never automatically prompts" % environment, not LegalPolicy.needs_acceptance())
+	for environment in ["uat", "prod"]:
+		BuildInfo._env = environment
+		_check("legal: %s requires acceptance for a complete published notice" % environment, LegalPolicy.needs_acceptance())
+	BuildInfo._env = "uat"
 	_check("legal: published fixture requires first acceptance", LegalPolicy.publication_ready() and LegalPolicy.needs_acceptance())
 	# Earlier cloud tests may have left the title open with no local save.
 	if not Game.s.has("rooms"):
@@ -318,6 +326,7 @@ func _legal_notice_test() -> void:
 	Cloud.meta = old_meta
 	Game.started = was_started
 	main.hud.title_screen.visible = title_visible
+	BuildInfo._env = original_environment
 	get_window().size = old_size
 	await wait(0.2)
 
