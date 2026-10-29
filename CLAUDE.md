@@ -20,6 +20,9 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
 - **Future rooms:** follow the approved [room style reference](docs/art/room-style-reference.md).
   Use an actual existing room sprite as the visual input, keep its coarse 64x52 pixel style,
   and include a distinctive small micro-animation for each new furnished room.
+- **Crew characters:** the chibi field medic in the [crew style reference](docs/art/crew-style-reference.md)
+  is the approved model for every new crew character's art style and animation (2D side view).
+  It is ~2x the current 14x20 `dw_*` scale; moving the game to it is a separate decision.
 - **PixelLab API costs money:** `tools/pixellab.py gen ... --yes` spends Parames's credits. Show the
   `--dry-run` cost estimate and get an OK before every paid batch (README "Redrawing sprites with PixelLab").
 - **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served by Vercel

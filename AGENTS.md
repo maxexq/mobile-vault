@@ -51,3 +51,6 @@ For every future room, read `docs/art/room-style-reference.md` and use the actua
 room sprites and approved examples there as visual inputs. Keep the coarse 64x52 style;
 include a separate micro-animation spec for each new furnished room. The old detailed,
 thick-framed concept paintings are superseded by the approved in-game-style references.
+
+For every new crew character, read `docs/art/crew-style-reference.md`: the chibi field medic
+there is the approved model for crew art style and animation (2D side view, 11 clips).
