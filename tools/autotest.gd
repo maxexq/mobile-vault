@@ -680,6 +680,11 @@ func _run() -> void:
 		await _perf_test()
 		_finish()
 		return
+	if "--only=web_perf" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _web_perf_test()
+		_finish()
+		return
 	if "--only=responsive" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _responsive_test()
@@ -1566,6 +1571,7 @@ func _run() -> void:
 	await _morale_test()
 	await _responsive_test()
 	await _perf_test()
+	await _web_perf_test()
 	await _window_fit_test()
 	await _gear_slots_test()
 	await _trait_cards_test()
@@ -8956,6 +8962,114 @@ func _perf_test() -> void:
 	Game.rooms_changed.emit()
 	Game.dwellers_changed.emit()
 	await wait(0.5)
+
+
+## MV-562: smoother web build. Room production reads the crew-wide factors once per economy step and gives exactly
+## the old numbers; the hull warning frame / HUD repair rate / background speed skip repeated per-frame work; the
+## web canvas draws at most perf.dpr_cap screen pixels per CSS pixel (setting "render_res", switch dpr_cap)
+func _web_perf_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep_s: Dictionary = Game.s.duplicate(true)
+	Dev.set_tier("rig")
+	Dev.set_trailers(2)
+	Dev.rooms_fill()
+	Dev.spawn_roster_all()
+	Dev.recruit(10)
+	await wait(0.5)
+	var slots := []
+	for i in Game.s.rooms.size():
+		if Game.s.rooms[i].type != "empty" and Game.is_slot_unlocked(i):
+			slots.append(i)
+	# --- the same production / craft numbers outside a step (fresh) and inside one (cached)
+	var fresh := []
+	for i in slots:
+		fresh.append([Game.room_rate_pm(i), Game.craft_speed(i)])
+	Game._prod_begin()
+	var cached := []
+	for i in slots:
+		cached.append([Game.room_rate_pm(i), Game.craft_speed(i)])
+	var filled: bool = not Game._prod_g.is_empty()
+	Game._prod_end()
+	var diff := []
+	for n in slots.size():
+		if JSON.stringify(fresh[n]) != JSON.stringify(cached[n]):
+			diff.append(slots[n])
+	_check("web perf: cached room production / craft speed match a fresh calculation (%d rooms, %d crew) %s" % [slots.size(),
+		Game.s.dwellers.size(), diff], diff.is_empty() and filled and Game._prod_g.is_empty())
+	Features.set_override("features", "perf_cache", false)
+	Game._prod_begin()
+	Game.room_rate_pm(int(slots[0]))
+	_check("web perf: switch off = nothing kept between rooms", Game._prod_g.is_empty())
+	Game._prod_end()
+	# --- a whole world step on vs off from the same state and dice: the same resources
+	var base: Dictionary = Game.s.duplicate(true)
+	var out := {}
+	var ms := {}
+	for on in [true, false]:
+		Features.set_override("features", "perf_cache", on)
+		Game.s = base.duplicate(true)
+		seed(562)
+		var t0 := Time.get_ticks_usec()
+		for k in 10:
+			Game._sim_world(0.1, true)
+		ms[on] = float(Time.get_ticks_usec() - t0) / 10000.0
+		out[on] = JSON.stringify(Game.s.res)
+	Features.set_override("features", "perf_cache", null)
+	print("[perf] world step %d rooms %d crew: cache on %.2f ms, off %.2f ms" % [slots.size(), Game.s.dwellers.size(), ms[true], ms[false]])
+	_check("web perf: a world step gives the same resources with the cache on and off", out[true] == out[false])
+	# (timings are printed, not checked: CI machines are too noisy for a speed test)
+	Game._prod_begin()
+	var busy := -1
+	for i in slots:
+		if not Game.room_workers(i).is_empty():
+			busy = i
+			break
+	var same_list := busy >= 0 and is_same(Game.room_workers(busy), Game.room_workers(busy))
+	var same_span: bool = busy >= 0 and Game.room_span(busy) == Game.room_cells(busy).size() and Game._span_ix.has(busy)
+	Game._prod_end()
+	_check("web perf: inside a step who works where is sorted once and spans are kept (room %d)" % busy,
+		same_list and same_span and Game._workers_ix.is_empty() and Game._span_ix.is_empty())
+	Game.s = keep_s
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	await wait(0.5)
+	# --- hull warning: the red frame redraws only while it pulses
+	var ha: HullAlert = main.hud.hull_alert
+	var hull0 := float(Game.s.hull)
+	Game.s.hull = Game.hull_max()
+	await wait(0.2)
+	_check("web perf: no red frame redraw at full hull", not ha._edge_on and ha.pulse_alpha() == 0.0)
+	Game.s.hull = Game.hull_max() * 0.08
+	await wait(0.2)
+	_check("web perf: the red frame pulses at a critical hull", ha._edge_on and ha.pulse_alpha() > 0.0)
+	Game.s.hull = hull0
+	await wait(0.2)
+	# --- background speed follows the vehicle within a tenth of a second
+	var bg = main.background
+	_check("web perf: background reads the vehicle speed 10x a second", bg != null and bg.TARGET_SEC <= 0.1 and bg._target_t <= bg.TARGET_SEC)
+	# --- web screen-pixel cap
+	var rr0 = Settings.get_value("render_res")
+	_check("web perf: screen cap 2 by default", rr0 == "saver" and is_equal_approx(Settings.dpr_cap(), 2.0))
+	Settings.set_value("render_res", "full")
+	var full_cap := Settings.dpr_cap()
+	Settings.set_value("render_res", "saver")
+	Dev.dpr_cap_set(1.5)
+	var tuned := Settings.dpr_cap()
+	Dev.dpr_cap_set(0.0)
+	var off := Settings.dpr_cap()
+	Dev.dpr_cap_set(-1.0)
+	_check("web perf: setting full / tune 1.5 / switch off -> cap 0 / 1.5 / 0 (%s %s %s)" % [full_cap, tuned, off],
+		full_cap == 0.0 and is_equal_approx(tuned, 1.5) and off == 0.0 and is_equal_approx(Settings.dpr_cap(), 2.0))
+	Settings._merge({"render_res": "huge"})
+	_check("web perf: an unknown render_res falls back to saver", Settings.get_value("render_res") == "saver")
+	var shell := FileAccess.get_file_as_string("res://tools/web_shell.html")
+	_check("web perf: the shell caps devicePixelRatio before the engine loads and reads the saved setting",
+		shell.contains("window.mvSetDprCap = function") and shell.contains("saved.render_res === \"full\"")
+		and shell.find("window.mvSetDprCap") < shell.find("<!--BOOT_SHIM-->"))
+	Settings.set_value("render_res", rr0)
 
 
 ## MV-482: windows are as tall as their content (no empty space, up to the screen), a later change of content height

@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Smoother web play: the economy works out room production with far less repeated work (no more small hitches on busy vehicles), the hull warning and HUD skip repeated per-frame work, and phones with very sharp screens draw at 2x by default (Settings → ความละเอียดจอ: ประหยัด / เต็ม) (MV-562)
 - Draft terms/privacy window with intentionally blank provider details, separate optional diagnostics/analytics choices, versioned local consent and withdrawal controls (MV-589). Draft documents cannot authorize collection or bind players.
 - Welcome-back window summarizing actual offline supplies, gear, defence XP, distance and completed construction, with a credited-time cap notice (MV-587).
 - Optional Sentry forwarding of opted-in activity/error logs through a server outbox, with Player ID search, retry handling and a GOD MODE test action (MV-569; disabled until configured).

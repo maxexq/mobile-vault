@@ -25,6 +25,9 @@ var groups: Dictionary = {}      # biome id -> {root, layers:[Parallax2D]}
 var rails: Parallax2D            # railway laid over the road when the convoy is an armoured train
 var current := ""
 var _speed := 0.0
+var _target := 0.0
+var _target_t := 0.0
+const TARGET_SEC := 0.1
 
 
 func _ready() -> void:
@@ -135,8 +138,13 @@ func _on_biome_changed(index: int, instant: bool) -> void:
 
 
 func _process(delta: float) -> void:
-	var target := ROAD_PX_PER_SEC * Game.speed_factor() if Game.started else ROAD_PX_PER_SEC * 0.35
-	_speed = move_toward(_speed, target, ROAD_PX_PER_SEC * delta * 0.8)   # smooth accelerate/brake
+	# MV-562 (perf_cache): the vehicle speed (weather, gear, engine, haul...) is read 10 times a second; the scroll
+	# eases toward it anyway, so the road looks the same
+	_target_t -= delta
+	if _target_t <= 0.0 or not Features.on("perf_cache"):
+		_target_t = TARGET_SEC
+		_target = ROAD_PX_PER_SEC * Game.speed_factor() if Game.started else ROAD_PX_PER_SEC * 0.35
+	_speed = move_toward(_speed, _target, ROAD_PX_PER_SEC * delta * 0.8)   # smooth accelerate/brake
 	for k in groups:
 		var g: Dictionary = groups[k]
 		if not g.root.visible:
