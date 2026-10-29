@@ -194,7 +194,10 @@ Anchors for every image are in `anim_lv.py` (`ROOMS`).
 | living/living_L3_x2.png | 99828d8caccd5a0a |
 | living/living_L3_x3.png | 136834e9e8300ec8 |
 
-## Third reference: grow room, level 1 (MV-598)
+## Third reference: grow room, level 1 + merged 2 (MV-598)
+
+**Approved by Parames on 2026-10-29: keep both A and B** (L1 single slot and L3 merged 2 slots, all three growth
+stages). Either can be used as the game's grow room, or both as two room variants.
 
 Parames kept **two** grow room designs at level 1, one slot (144x96), on 2026-10-29, then asked for the
 merged 2-slot size of both (below). L2, L3 single and 3-slot are not made yet. Use these as the reference for plant, farm and greenhouse rooms, and
