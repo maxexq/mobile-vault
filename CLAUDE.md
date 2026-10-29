@@ -25,6 +25,15 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
   drawn at the new crew scale: 144x96 per slot, deep-floor camera, 3 visibly different levels (L3 cleaner
   with more equipment), merging only at L3, an open walkway in front, and idle / working / power-out
   animation states. The game still runs 64x52 rooms until the move to the new scale is decided.
+  The living room in the same doc (MV-597) is the second reference, for rest/lounge-type rooms; any TV or
+  screen in a room animates when on and goes dark at power-out.
+  The grow room (MV-598, options A and B both approved, L1-L3 + merged 2 and 3) is the reference for plant/farm rooms: anything that grows
+  ships stage images (planted / half / full) with an identical layout, made by inpainting only the plant area.
+  The infirmary (MV-600, option A ward + option B surgery corner in the merged rooms, L1-L3 + merged 2/3) is the
+  reference for medical, lab and care rooms.
+  Every v2 room image (each level and merged size) ships tap hotspots in `<room>/hotspots.json` in the
+  same commit (rect per tappable object, stable ids across levels); check with
+  `docs/art/room-style-reference-v2/tools/hotspots.py check` (see "Tap hotspots" in the doc, MV-599).
 - **Crew characters:** the chibi field medic in the [crew style reference](docs/art/crew-style-reference.md)
   is the approved model for every new crew character's art style and animation (2D side view).
   It is ~2x the current 14x20 `dw_*` scale; moving the game to it is a separate decision.
