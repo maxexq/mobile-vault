@@ -1985,7 +1985,253 @@
   "rotations/south-east.png": "ba5b672d75651caf984d03bb864bf765dd60cf8d7b2c15a9f0f13e0adba30ada",
   "rotations/south-west.png": "5878963aeac7000ea07655560721d5364b59c7660151101e056d6763b2a373ad",
   "rotations/south.png": "74a5fad6c05a4dd23f13bb7ceb23d5d5e1b078a59ded6dfbbef550731293a7ac",
-  "rotations/west.png": "1212d2373987255c539314633ca0c51649817b038fa7e1039b69bc4651c98e53"
+  "rotations/west.png": "1212d2373987255c539314633ca0c51649817b038fa7e1039b69bc4651c98e53",
+  "gun_animations/medic/pistol/0.png": "7248a6cebf5b5693e49b0992cee3f10f1390f41939d91b7db7c1d85d5895eeb8",
+  "gun_animations/medic/pistol/1.png": "35000039eaa31df6f6d5738ab38db147f0a1ae5989731115c6da90ef52bfa421",
+  "gun_animations/medic/pistol/2.png": "c00835d571e6311441004f617ad512001ceba338fbb7b466485f56b22cb8acf7",
+  "gun_animations/medic/pistol/3.png": "d628d26bef36d43548e1c0ac43a10941ba41c511492276791d1aab9b74ed2eb8",
+  "gun_animations/medic/pistol/4.png": "a77aa21c99251c17ba4bc39d1b79abbe45eac845226fe86500ab710b18a468d3",
+  "gun_animations/medic/pistol/5.png": "057accbddff9d3986ba121b4e4771f149b742e4fd1a231003d0808b94877a5dd",
+  "gun_animations/medic/pistol/6.png": "18413467c8edd3343b01d863fa2cfe0e076f961c57acb3713cf8660334fbc391",
+  "gun_animations/medic/pistol/7.png": "caaafe269a1bbcee5039b055d3bf82cb5222badcfd626896a15329fd8dea4ba3",
+  "gun_animations/medic/pistol/8.png": "c850ace71fcafa52a45d2b5578044c837e91bc701954e395ecef5c87438e4005",
+  "gun_animations/medic/pistol_up/0.png": "0ab601740e26da58cf22495316f975b24b807668b0d3d6c62cfd7b14398883e6",
+  "gun_animations/medic/pistol_up/1.png": "42fa1735efe9ede2aa3d5ae03df5eff704b2d2f1939edc6c5c21e840b7db5219",
+  "gun_animations/medic/pistol_up/2.png": "727ecd760243bca75a1caa75b976a91c4ffdf12817e90e2ce66b61b3e251ab3f",
+  "gun_animations/medic/pistol_up/3.png": "92bd8a1a777bd2414515c0a7ee26ce87f4c22150f51d6ad0edf9642582c214ab",
+  "gun_animations/medic/pistol_up/4.png": "0ab601740e26da58cf22495316f975b24b807668b0d3d6c62cfd7b14398883e6",
+  "gun_animations/medic/pistol_up/5.png": "42fa1735efe9ede2aa3d5ae03df5eff704b2d2f1939edc6c5c21e840b7db5219",
+  "gun_animations/medic/pistol_up/6.png": "727ecd760243bca75a1caa75b976a91c4ffdf12817e90e2ce66b61b3e251ab3f",
+  "gun_animations/medic/pistol_up/7.png": "92bd8a1a777bd2414515c0a7ee26ce87f4c22150f51d6ad0edf9642582c214ab",
+  "gun_animations/medic/pistol_down/0.png": "85d92f43e2dc6b05882abc6a0633265485f8ef07f91c90c15f60bc3b7f589920",
+  "gun_animations/medic/pistol_down/1.png": "421ac5f871d3f84e6b3d3658f300ffeb5edb8a95389e832190b02ca159c5d11a",
+  "gun_animations/medic/pistol_down/2.png": "48c9c5b9928c58f34d853c1fc20dc3d4b197929fa0a4c9c3bdafed591028f6b9",
+  "gun_animations/medic/pistol_down/3.png": "f84b55ef87edc10701ea031d305f23b4ba3a9b3419d13136db508ea1213db204",
+  "gun_animations/medic/pistol_down/4.png": "85d92f43e2dc6b05882abc6a0633265485f8ef07f91c90c15f60bc3b7f589920",
+  "gun_animations/medic/pistol_down/5.png": "421ac5f871d3f84e6b3d3658f300ffeb5edb8a95389e832190b02ca159c5d11a",
+  "gun_animations/medic/pistol_down/6.png": "48c9c5b9928c58f34d853c1fc20dc3d4b197929fa0a4c9c3bdafed591028f6b9",
+  "gun_animations/medic/pistol_down/7.png": "f84b55ef87edc10701ea031d305f23b4ba3a9b3419d13136db508ea1213db204",
+  "gun_animations/medic/smg/0.png": "bff98f953aef0aa5626b848fe17359a2a9b93d25464e0a3aa3073187842a4885",
+  "gun_animations/medic/smg/1.png": "9dd43f0aade14692c049df344083fca1806402072d59a056f85a2c0f1d35affb",
+  "gun_animations/medic/smg/2.png": "d5f8d1ba23257de1f3368f5163fd934af3c91c90d20b9910f15f928e8103a581",
+  "gun_animations/medic/smg/3.png": "7249e373037f4754fbf859c0beceebbd346fb1eeec1d9afbb0999b2c0cc80141",
+  "gun_animations/medic/smg/4.png": "7f1772614d33bc4fd179f2b21986aaa380326df1d18712bb4c3538e611e3c0b6",
+  "gun_animations/medic/smg/5.png": "83d586cf75f23a52221654d752d097b41b65ea9c1857e9f90fda014dc7a17e4c",
+  "gun_animations/medic/smg/6.png": "aa3b892c72fecc53950f40ac8ed9d4f277557458804fb904ad41bd2728d4b5b4",
+  "gun_animations/medic/smg/7.png": "a7866e2956ab79c07cf5ae6a53fb48b9907a1359ed551d22480beed5ef233882",
+  "gun_animations/medic/smg_up/0.png": "1a896f2c94ad7bbd9b09aa7e6c38e496a3cdaff3e27ed60aadfac903fc4702b7",
+  "gun_animations/medic/smg_up/1.png": "2ad2ec6a3a6258462dd50c2fdac7c9945be4b6a37ce5e2048860e6183c6a57b6",
+  "gun_animations/medic/smg_up/2.png": "af1ac90a1cce8120ee2573209bdbb66b55e42a0fba1bdde652feae3e6779c2f9",
+  "gun_animations/medic/smg_up/3.png": "16b92c279e4cafcb51dae3a0c8b75e257a5ffdb4c72a69fb0763760476d40828",
+  "gun_animations/medic/smg_up/4.png": "b3db603e5b683e7269b96985058f3234e88d4904d8ed561e78f58e2b62e47bbf",
+  "gun_animations/medic/smg_up/5.png": "16b92c279e4cafcb51dae3a0c8b75e257a5ffdb4c72a69fb0763760476d40828",
+  "gun_animations/medic/smg_up/6.png": "b3db603e5b683e7269b96985058f3234e88d4904d8ed561e78f58e2b62e47bbf",
+  "gun_animations/medic/smg_up/7.png": "6c86c3e356236c03ba9a5f1bcbfd48af20fca4f95749d61b10715fef27ffb8cb",
+  "gun_animations/medic/smg_up/8.png": "1a896f2c94ad7bbd9b09aa7e6c38e496a3cdaff3e27ed60aadfac903fc4702b7",
+  "gun_animations/medic/smg_down/0.png": "0f76f1ec836d1f4042a0f2798dd101267221485e797a226ae742ef1e3cb3c236",
+  "gun_animations/medic/smg_down/1.png": "3bdf1da366b2a3985b48a070235f001329247c68352d0767275c1d4a9639f64f",
+  "gun_animations/medic/smg_down/2.png": "e76ef29aaee52903dd3fc65d30b0607521866a6ab792a909f8785b1449a0588f",
+  "gun_animations/medic/smg_down/3.png": "3bdf1da366b2a3985b48a070235f001329247c68352d0767275c1d4a9639f64f",
+  "gun_animations/medic/smg_down/4.png": "e76ef29aaee52903dd3fc65d30b0607521866a6ab792a909f8785b1449a0588f",
+  "gun_animations/medic/smg_down/5.png": "3bdf1da366b2a3985b48a070235f001329247c68352d0767275c1d4a9639f64f",
+  "gun_animations/medic/smg_down/6.png": "e76ef29aaee52903dd3fc65d30b0607521866a6ab792a909f8785b1449a0588f",
+  "gun_animations/medic/smg_down/7.png": "0f76f1ec836d1f4042a0f2798dd101267221485e797a226ae742ef1e3cb3c236",
+  "gun_animations/medic/smg_down/8.png": "0f76f1ec836d1f4042a0f2798dd101267221485e797a226ae742ef1e3cb3c236",
+  "gun_animations/aviator_pilot/flare_pistol/0.png": "d9cbedce02780beebeee6ab1b64c9aa144f716202b5da3068496c7a6cb652ea9",
+  "gun_animations/aviator_pilot/flare_pistol/1.png": "e015f93822892f30f389e34ef5d0a76b20732587fb3508780127571b7910247d",
+  "gun_animations/aviator_pilot/flare_pistol/2.png": "b125cf7df99a332f2f2289beedacbb28409c92f40e00476a878fb78d84f92c60",
+  "gun_animations/aviator_pilot/flare_pistol/3.png": "d9496eb9482e4c9c9e2a49d5787114b5a3a0078ee42c9921e210e5f616fff558",
+  "gun_animations/aviator_pilot/flare_pistol/4.png": "21903c2a94851cda55f342f25684628096156e7741ee2937f90c6eebde0f63d6",
+  "gun_animations/aviator_pilot/flare_pistol/5.png": "cadf027b03d961fecb019fe6e9a2566a2554ce025d6316ea4e16551aaa9aa03b",
+  "gun_animations/aviator_pilot/flare_pistol/6.png": "4d008323f7b9729fb6a007896bfa426de06dae3e9b41204050d30398737be555",
+  "gun_animations/aviator_pilot/flare_pistol/7.png": "db9cb435e2c45ff9fb9604f1813f3254c41aa3fb2c5971c19110e81ea7e20ad3",
+  "gun_animations/aviator_pilot/mauser/0.png": "d55e74c7d7382dc7a1a044509a7b8364b8a4a85fc0b6f4c78294ecdb30e1e506",
+  "gun_animations/aviator_pilot/mauser/1.png": "553903a280df1403b7a2baccf9b522eea58f94a97c6d60938df0a1cb47e831bc",
+  "gun_animations/aviator_pilot/mauser/2.png": "2d33f0395412594d4e9b5e579a6a5c8fd37d8489c0bad2607775ed92896f4ba2",
+  "gun_animations/aviator_pilot/mauser/3.png": "6a2f93714910cd333510684c80bbf7e603516ede17b09615a4c551b179f2a7d5",
+  "gun_animations/aviator_pilot/mauser/4.png": "42f09a32009b9bad54cbabba60c1a7bb1ead0155f8c593aeb1dc565fc75f6388",
+  "gun_animations/aviator_pilot/mauser/5.png": "d1393e645b29d50f452f485a117c6e91b38c7ff67544efc0958d1747dc2fb775",
+  "gun_animations/aviator_pilot/mauser/6.png": "60bc48fba875f55550d41e3d860581bbe566b2795c51833e9ceb866f222ee966",
+  "gun_animations/aviator_pilot/mauser/7.png": "fcd9d358e055b555207dcc170e6dc6b47881bdc3686bb8e1497881b4f5bcb78b",
+  "gun_animations/biker/sawed_off/0.png": "7c811f9d9eb239a90d53339934332fa6abd0be3fb4450424a814edc37a2940b5",
+  "gun_animations/biker/sawed_off/1.png": "d979a66f54811a99ba86fd468b37f192f241e6c4110fbe268431a40ef5aef972",
+  "gun_animations/biker/sawed_off/2.png": "38a74d5a513b419ca7bf9ccd9c57e263e46b10c4a1ee9c6267935cf246409a23",
+  "gun_animations/biker/sawed_off/3.png": "9888aed004933994c3247ad9fb00b164c28bb8654aeb4462763311f2e99fc04e",
+  "gun_animations/biker/sawed_off/4.png": "648075f85327445282b43abe126436b50d493b79e8652ef7acdf8ffb917f49a6",
+  "gun_animations/biker/sawed_off/5.png": "543dc4fcab43604c16bfb51d8631646fe1d0d499e10997a02bd6d4393960e61a",
+  "gun_animations/biker/sawed_off/6.png": "735865c3d2ceb3757ecde2c9055567ebfca0362377534f91a0647eaba9ac68ab",
+  "gun_animations/biker/sawed_off/7.png": "005aca7370eca551673bc2fa081fe4d973c2084ecb996e468cad4eea865774b3",
+  "gun_animations/biker/sawed_off/8.png": "62e0fd2668f3552c50cb11c23720dd671559cfe2d2aefe6bc4407ed47160ff0f",
+  "gun_animations/biker/revolver/0.png": "4954360921f708987c28be9cd8705918820af0e44cf1f0ecb09019d0f6b81db4",
+  "gun_animations/biker/revolver/1.png": "98819f51e0ca790ebf0f0dbfe3da43ddf22a7d41f895243925813975fba439d8",
+  "gun_animations/biker/revolver/2.png": "507bc931335ef6ca16b7975cdce11cd6c1522fc7a5deff7e8a2d665c812c9aa1",
+  "gun_animations/biker/revolver/3.png": "42f341e74f841abbdd97a243ca81ae6ec3dd61af45f4dacfee3ce7e93a1f4307",
+  "gun_animations/biker/revolver/4.png": "7c60c427439b5ff1ef7e05f373c9f2498b96abe05ddfec5218251316e878015c",
+  "gun_animations/biker/revolver/5.png": "197dcf52fd064a9dcf21c2c3932f420147a8d7853022ec2839961c5c40a3a037",
+  "gun_animations/biker/revolver/6.png": "5259b3006141198dce1a05a6b2d261f0be32cd7900da05e2efd4006be740ee2d",
+  "gun_animations/biker/revolver/7.png": "081e05df41b0c529c94ae645ae92b4aad998e964bc68558ea0bc7c3943afb0f0",
+  "gun_animations/biker/revolver/8.png": "0e017917f9abb09f03cf77846bd7d02315199b70759146d2e287ae6a11b577df",
+  "gun_animations/biker/revolver_b/0.png": "4954360921f708987c28be9cd8705918820af0e44cf1f0ecb09019d0f6b81db4",
+  "gun_animations/biker/revolver_b/1.png": "5a25b72f51c5f211007efe701adb0dc0613aa68bc8fc3c621303447b6f875554",
+  "gun_animations/biker/revolver_b/2.png": "cce334c4dc3f4dda73740ad014ebcd3805f1620c425c454b9baf17949d5104cd",
+  "gun_animations/biker/revolver_b/3.png": "b58bbb0ea1625c8ad0e9a44c8902b83a7a5e33b9a9bfc1c88404eb244bb9b724",
+  "gun_animations/biker/revolver_b/4.png": "650a89c6035744097c13c89b96ea63aaabbe84e9c2524f7e8fae8e2628f34853",
+  "gun_animations/biker/revolver_b/5.png": "47ec1c42aa05de56df97683d52d46b06721de55659dcf819148d547c1eec1c0f",
+  "gun_animations/biker/revolver_b/6.png": "42ae620252cbd725506d79c68db02e2882d3c8f6e62db36ed2c48e1c90dd0a1e",
+  "gun_animations/biker/revolver_b/7.png": "9c08a4676dc4bf68a2fe11c7a050ad7f34720f9dc75f2c0d9d2452877748a9f6",
+  "gun_animations/biker/revolver_b/8.png": "d566b75848402f77299909b9759584f6c974c608005acf8712613192674773dc",
+  "gun_animations/bus_mechanic/pump_shotgun/0.png": "9e6ff04079401f6bc46c7443ae6a966911dadb721e530440555b9cf7a92d550d",
+  "gun_animations/bus_mechanic/pump_shotgun/1.png": "5d881a3d20794be11174ec88bd85b7ca259b14393c907ae73afa31aeaa25c166",
+  "gun_animations/bus_mechanic/pump_shotgun/2.png": "8e9b1a5541b0ccb35ffff357f6f465db886b4b0c20181b4d1d8ec82f7a4eb5e4",
+  "gun_animations/bus_mechanic/pump_shotgun/3.png": "4694d2811ca6a87971837e486e09e15c3ef469f8106b31986e81780ca1e2a57f",
+  "gun_animations/bus_mechanic/pump_shotgun/4.png": "fe5703d6018c2f16735fc5ca182f32324fe97a0dd41bb197701b7306ec7cf670",
+  "gun_animations/bus_mechanic/pump_shotgun/5.png": "643a134a00be1e61bfb5cfabb0dd5041e2d058281aa646aa0089d65a4146da2e",
+  "gun_animations/bus_mechanic/pump_shotgun/6.png": "410f63a27ffba811fb6f28ba650ddb70bdb3f9b09a5007247a53ee18ed8e76b4",
+  "gun_animations/bus_mechanic/pump_shotgun/7.png": "0470db418858ad5b3001fdb6401a355224cd9efbe6da432de9ada179c0fce956",
+  "gun_animations/bus_mechanic/pump_shotgun/8.png": "3b3fbc3e1e14f8feaf1706a3f54d7fb0f34227cd6b187f49dc0ff0d7bae684a6",
+  "gun_animations/bus_mechanic/nail_gun/0.png": "aea407d04efda96b797cef4c058d71ac931713ca1474fd4695e5e142e34ae007",
+  "gun_animations/bus_mechanic/nail_gun/1.png": "b14e9e1b2e18ab8cc89e511f0c5ac680a72fab28f47b2a251f33628148aeb79f",
+  "gun_animations/bus_mechanic/nail_gun/2.png": "84da102a5050acd761312fdc6ce6e620db4e970fe08d3190ff200dcf1dee184f",
+  "gun_animations/bus_mechanic/nail_gun/3.png": "24ce620e4be17e0703ad069cb204a0cec97ec487cce39437319bf3536b2b0033",
+  "gun_animations/bus_mechanic/nail_gun/4.png": "ef0017ee9e7bfd3163ea0f215cd593c2dd6e135d9df620c1e41d15362178f4ba",
+  "gun_animations/bus_mechanic/nail_gun/5.png": "ee7055c3d5c508a696b955c1f7a0e8c8b7254671732067ee7328d4b3698ec3b5",
+  "gun_animations/bus_mechanic/nail_gun/6.png": "434571368d6f9e96506afa2c9f5092987babe3d424f0b5bab2a8fb7dff677b50",
+  "gun_animations/bus_mechanic/nail_gun/7.png": "d80d1febb4d925bf9d20dc0a7891055a66d8da8c98a239c0fa5e6b6ad2c9a025",
+  "gun_animations/bus_mechanic/nail_gun/8.png": "69703b573273d1d8de012dbfdfa4f61e6ad4a58187baa7926852ae340460a889",
+  "gun_animations/construction_worker/ak_rifle/0.png": "349a053d496c18a3b1566975a65e1a7a1c7d1beb6dc9a5067a1e6444d3db32f3",
+  "gun_animations/construction_worker/ak_rifle/1.png": "9bf8318896b6de4e4ba225ba1784bfb19382be8470b199667d19570492363019",
+  "gun_animations/construction_worker/ak_rifle/2.png": "a725b44aa3909dca66295104e211cba252492a7a8277243832a3fa255d083d0c",
+  "gun_animations/construction_worker/ak_rifle/3.png": "2993d0781879b147e3ba84ce4eb2fd4b50826bd2ff3ca231a5bcbb9951a2c941",
+  "gun_animations/construction_worker/ak_rifle/4.png": "db98be382846289ba50a722ba56ed51bbd75b92ed9f16062a23863eb9865fb53",
+  "gun_animations/construction_worker/ak_rifle/5.png": "f99f6eb5c0b242208114b5b2decc6b3b1a50e4b7c3a31528100605efb83fdcfa",
+  "gun_animations/construction_worker/ak_rifle/6.png": "c57333b6402916f4591fea378002df4749ac6d2b59a35fb157a9d179b19431d4",
+  "gun_animations/construction_worker/ak_rifle/7.png": "2c6b0953e770dccb56a851f5a575b07e2e9985348e5b03bfa075f562978e2795",
+  "gun_animations/construction_worker/ak_rifle/8.png": "77cc325593e0a22d961f0b18c5a077b78d36e4281cbd8289095e60d6c5719fc0",
+  "gun_animations/construction_worker/pipe_shotgun/0.png": "daf1c4f473a51d4bbc2dee4db4a23c4cea281027dd4068d113c909cff5d8f8e9",
+  "gun_animations/construction_worker/pipe_shotgun/1.png": "774c7f96f863fd5acff922a0b7f90e27b892216199874f57ca96de163f301cd3",
+  "gun_animations/construction_worker/pipe_shotgun/2.png": "d471c83b7d17ebbea66f951cf8d007f81ffb23725e09bcb843277de14c55ac75",
+  "gun_animations/construction_worker/pipe_shotgun/3.png": "cec5b9a3b22624df01dd3b9f61f213d762edb90537f30f30a4b330f6cb24516b",
+  "gun_animations/construction_worker/pipe_shotgun/4.png": "9fecc9e193dac7cd17f284b4bafd89529c8a6d5976f0f3ee1607f5a67ef73c1b",
+  "gun_animations/construction_worker/pipe_shotgun/5.png": "3bb30472effbc9e03d377d8c34105811fe9570cc7fc3edf519f5d8bace498f37",
+  "gun_animations/construction_worker/pipe_shotgun/6.png": "a1203f3430591fb94e2c816098edaf36939ce6001fc6a9d17a394a5d0831e2a2",
+  "gun_animations/construction_worker/pipe_shotgun/7.png": "805f9965784fd729f14af72361f9de571aaa4d96b3cf1b77256dee49b6654b24",
+  "gun_animations/construction_worker/pipe_shotgun/8.png": "a9224ab20ba3a18722de18ab9d9df13c28797b4660227d69d532384347079122",
+  "gun_animations/construction_worker/pipe_shotgun_b/0.png": "daf1c4f473a51d4bbc2dee4db4a23c4cea281027dd4068d113c909cff5d8f8e9",
+  "gun_animations/construction_worker/pipe_shotgun_b/1.png": "051a6b2a53862e1f07f4249f16bcf867e98cf71625238b7018678bdb5df3e764",
+  "gun_animations/construction_worker/pipe_shotgun_b/2.png": "98eea652497a39a4f5fe2070311b02c4404f7357f8edff360ed0066872a6367a",
+  "gun_animations/construction_worker/pipe_shotgun_b/3.png": "bdc1b04b9a08e98982997fdf78dac192051df1ed70aa81a5ec46b6bc3ca90e31",
+  "gun_animations/construction_worker/pipe_shotgun_b/4.png": "fec4689ebfdd78b2e63b44185fd15784a71fec25cf2495f634e7663c3c2e185d",
+  "gun_animations/construction_worker/pipe_shotgun_b/5.png": "697f3f0f9751d8ad5f312879cd70fd160a1c2828ce1b44488116e82bd5531da5",
+  "gun_animations/construction_worker/pipe_shotgun_b/6.png": "36dabd697f11947e26a8457c157a79ab6b45b3ae2a896422219d845fa1eaac81",
+  "gun_animations/construction_worker/pipe_shotgun_b/7.png": "4c6df729d93e51a48c97ad3bff88471fe1dd049ca892e2dce3185f077cc1eb17",
+  "gun_animations/construction_worker/pipe_shotgun_b/8.png": "d820105a1e400f1386e33bb179758dc4fbfdc900a72e3be08eb4f87e02a06f13",
+  "gun_animations/firefighter/lever_rifle/0.png": "161c6b1e614bb3643a2dd55590ccb97dfac539a5974e4d13869cc998be176b19",
+  "gun_animations/firefighter/lever_rifle/1.png": "200cfd4f02031adecac7cb06fb10beaf7897faed0fbb75675c9314fbea812160",
+  "gun_animations/firefighter/lever_rifle/2.png": "5d9326e467bdaa54845e9029e3d273f71c1657ac2d16fdc57779acf48ce1749c",
+  "gun_animations/firefighter/lever_rifle/3.png": "200f0b80347c7e6031fa9b351115ed015e23a99f6e80868e5a64a11394720b9a",
+  "gun_animations/firefighter/lever_rifle/4.png": "796544134076dc670cccddf09669db7fafed7082b1f41eb3ef64413141256608",
+  "gun_animations/firefighter/lever_rifle/5.png": "8cc01f9d5a5d58a6957465bbcc488c8a6fa5bb59b6eb9d94d5b025df2db8733c",
+  "gun_animations/firefighter/lever_rifle/6.png": "3128b5a50ee35ad7ab533ace4c04f228097c5799f38c43b37a69a932e3d4d884",
+  "gun_animations/firefighter/lever_rifle/7.png": "985ac2e1a86c897e07c1a8d02ecbc2a176969690674bc22e39d6878345dd9e2a",
+  "gun_animations/firefighter/lever_rifle/8.png": "8f1793266e0ef4e2ce0d514a622c07ff56d37914e998b8f30a7c47f207a88320",
+  "gun_animations/firefighter/flamethrower/0.png": "bbf5d36980bb1873b4f77ef077b2323d8be111f3370218764d437bbb058c2027",
+  "gun_animations/firefighter/flamethrower/1.png": "c634f51a8474c56c924580bf6310d5f19bbf2a2e1672590f237b2d41d09741a3",
+  "gun_animations/firefighter/flamethrower/2.png": "222dfcede84e43fb2bda3a0f335b9acda730f7b693632872deb9d69f86b242f8",
+  "gun_animations/firefighter/flamethrower/3.png": "e6eae803f128e619122265b5201b28a1fb652574be63e121db4b8208fff26ddc",
+  "gun_animations/firefighter/flamethrower/4.png": "a39d43e37e4e92e545a9533cd4cb9af5de2a52ad7d5adbce2a7e196763940fe7",
+  "gun_animations/firefighter/flamethrower/5.png": "8fe49c27c8a14b6e399ad54e62ec392356e4c96298dba3d846d2fdd046ceec52",
+  "gun_animations/firefighter/flamethrower/6.png": "df4a0e05b11f201299f6d5a0ce5b23d67c35768f05769d2beff1ac154d998179",
+  "gun_animations/firefighter/flamethrower/7.png": "ac93c15f75d075024a119cd3d216a3bf20de90721b85ca9ef1b5988f454346b8",
+  "gun_animations/firefighter/flamethrower/8.png": "75fc4e573d9fd9c2aa5889966f6fc5fa9499d4c8f618a2a05c0f42de9d4da542",
+  "gun_animations/fortune_teller/derringer/0.png": "b87536405e6d5ce4ae5a8da33d45e09958dafd354ecedae90429c228b10bd4f0",
+  "gun_animations/fortune_teller/derringer/1.png": "72cee3b3fd03bc91189a6cf0102c23074afd6335447e589559243145d36dc7b3",
+  "gun_animations/fortune_teller/derringer/2.png": "2fc34212349ff89c66c1093951dd02f323879d110149e9db1514207299eb78dc",
+  "gun_animations/fortune_teller/derringer/3.png": "d9ac896f00a0002b1be022361365a35fa55f199128f4c8a8c07894853d49317c",
+  "gun_animations/fortune_teller/derringer/4.png": "d374828d07e79e83500ac56c2366733b08a39b7d86780c11a30ea72dc8a9d57a",
+  "gun_animations/fortune_teller/derringer/5.png": "fa5d195ffd517af872fc716874cff1ab7602f6f2915108ef0317c98268838158",
+  "gun_animations/fortune_teller/derringer/6.png": "d80608642252778f026ad132b1ffc7589249ede186f947d4f189033d38b7eac3",
+  "gun_animations/fortune_teller/derringer/7.png": "752accaeece70c08ee27bcb99c58d03ae35aca9cb982e5374bdfeef4f767c90c",
+  "gun_animations/fortune_teller/derringer/8.png": "8be001d6db7eb55cace043b8d7976713925d6db323a914853444aff3701c42eb",
+  "gun_animations/fortune_teller/flintlock/0.png": "940de43a9f7a977343d805a50cd4fbb92259ebf2185d4209f4db1643baf04fc6",
+  "gun_animations/fortune_teller/flintlock/1.png": "d87eaca87ec9068cd5910b09a1d99de3598835bf8c4ef0562d374586bf0052ef",
+  "gun_animations/fortune_teller/flintlock/2.png": "bd45e577117ae639ec3f03697e7c1c6faadc006d873d9febc9921596f6a4ad1c",
+  "gun_animations/fortune_teller/flintlock/3.png": "673514b9523fc1a9470d8b21b6ff3f0249b96b9b3b80858541f4825e982b1794",
+  "gun_animations/fortune_teller/flintlock/4.png": "ab04bcd36a162122995a668d3770c100087fa58a7e3ccba079162806dfee52f2",
+  "gun_animations/fortune_teller/flintlock/5.png": "4f0262868b57f528848380d442a1c45972af39d5eee18ecef38fd60d54c1c968",
+  "gun_animations/fortune_teller/flintlock/6.png": "bc6a2498482441d370eb9315df86481bd4d0159e6d005db95c6475544aea100a",
+  "gun_animations/fortune_teller/flintlock/7.png": "012a30aafec10eef7abcbf83ff959a627b0830084c5b8551597edc2e6a69397f",
+  "gun_animations/fortune_teller/flintlock/8.png": "9f4219a5446e403f3f2597e2ed76989f5e3baeb17b0b4baf62ce6ceea46187e6",
+  "gun_animations/gunslinger/fan_revolver/0.png": "d27903336e5fa8fa098cb66dbe701196b79328f1c8937666cc7b7ddef8fa945c",
+  "gun_animations/gunslinger/fan_revolver/1.png": "a90280b032a99dcb951f771932e41180ede27b995bc89ef194589ac8a6ee81b3",
+  "gun_animations/gunslinger/fan_revolver/2.png": "718716abeb62cd595d6f832f5935971dc29f764f310cf0821140c544c2ab8032",
+  "gun_animations/gunslinger/fan_revolver/3.png": "2f0104a46538a70f3e3896da625e4c2b7f36bffbd999a740eae4466dd266c617",
+  "gun_animations/gunslinger/fan_revolver/4.png": "782fd65b27e5011957c18658ae2a28c956e207edd2e465b66b02f7d8b7a5df41",
+  "gun_animations/gunslinger/fan_revolver/5.png": "df61e9be39467a435bb600e573a5c391572295c2f40cc5c3da9501272a4c782a",
+  "gun_animations/gunslinger/fan_revolver/6.png": "88ce6ebd00d10591989fadf307b6be8b8518fc9474bf59343cd6ad76b9ea8145",
+  "gun_animations/gunslinger/fan_revolver/7.png": "babcad8162584288ab2d77c59ce5d35b643bfa9e4185585d1f90d55b4fbb04f4",
+  "gun_animations/gunslinger/fan_revolver/8.png": "3339cc0e802ec90e8bf39c1426537ae985299f971ee3f41d53fe1ce1dda50f6c",
+  "gun_animations/gunslinger/dual_revolvers/0.png": "2a3a7f570d66dd757d91724186d0473a334a51b44342d451b65e18f68b9508ef",
+  "gun_animations/gunslinger/dual_revolvers/1.png": "ffd566ac4354682a59258a187eda83092370309fdf9b262027244895c7d51d9e",
+  "gun_animations/gunslinger/dual_revolvers/2.png": "265be22de868321fa0c2d64fc12f9c4c05e057b1d3d7134a2ca4aedffcd03893",
+  "gun_animations/gunslinger/dual_revolvers/3.png": "6045350b40d9d00e933844558198480f49aa6611ac54ec325718548044be4fb2",
+  "gun_animations/gunslinger/dual_revolvers/4.png": "e509ab2559b22ac93ed7ae578a17f5651aa8f9489d739b53dc9a4d2d61eb25d2",
+  "gun_animations/gunslinger/dual_revolvers/5.png": "7fd9b6e3ac57bb6f29474bb69c4083518eba5b91d3259cc4e8b9871b8fea1a7c",
+  "gun_animations/gunslinger/dual_revolvers/6.png": "60976c6dcb4895384b9498003b5534d3cd06b75fd004455fe6a9b2834dff1355",
+  "gun_animations/gunslinger/dual_revolvers/7.png": "fc137680d1ab1e7072c4b8b6538ad19010916da662e271befb410c7cd5913b8a",
+  "gun_animations/gunslinger/dual_revolvers/8.png": "2bdcab8a49dd5f0525cb0d64ca0e6e538f57e25c7163032093c98bc5aa1e9187",
+  "gun_animations/hunter/bolt_rifle/0.png": "8785b591162032e11d67b0dd378c4e9b02bc5b52da92bd5350a4446df72fe886",
+  "gun_animations/hunter/bolt_rifle/1.png": "e1e8f854ed4aac1ecab86f3d5e3ac918865bc2a8d5283af1438ae942525d969d",
+  "gun_animations/hunter/bolt_rifle/2.png": "1817f43cd0b76df123ee8762ab721224b349a1cad637d7a372987af5c2bd6b9a",
+  "gun_animations/hunter/bolt_rifle/3.png": "e8a1b50c68bf619fe38e48510d8c721af09e55c43f52584e41abcf6d85f7cb1f",
+  "gun_animations/hunter/bolt_rifle/4.png": "303dec22126354cf40dc3c0d2bbcdf383b5ee1ab07c389951d2e93ec4eb11f2c",
+  "gun_animations/hunter/bolt_rifle/5.png": "986c3b5e4bc462c15e60276659e24af62943ce008711dc9b969104e325677116",
+  "gun_animations/hunter/bolt_rifle/6.png": "bca3adbde488215843454a0d24067c222b0bfb1e69e96e938acd461c793abedd",
+  "gun_animations/hunter/bolt_rifle/7.png": "063bb2c7e87d40d6ca5537063dc9954d453ef5ec14605853b0a96bc479810812",
+  "gun_animations/hunter/bolt_rifle/8.png": "cf857b4687f39193359f45b4fffc9713ad176fed876d85e00401d5f4f1d536f4",
+  "gun_animations/hunter/over_under/0.png": "945f2188f85450a76662657635ba9402bfea859c28907ec34f8c21820bd76544",
+  "gun_animations/hunter/over_under/1.png": "d0a8f6a5f534cac28cf52b647947f03958017992676dca4d820da99d2258030c",
+  "gun_animations/hunter/over_under/2.png": "f3e16b76b64addbb9dc69de5f95de176072b4a14713646bad18f48c158668ebf",
+  "gun_animations/hunter/over_under/3.png": "e635e305e5e36180532a13e07b8b78781ff513c4817991ce61b193bcdf6ff872",
+  "gun_animations/hunter/over_under/4.png": "e68517dda5dea00a7c0d06c6128ed168d91325aa1955af9003a3127ec2dac55a",
+  "gun_animations/hunter/over_under/5.png": "9a186c17467a9b8ddab73ec4d47405819b1fc283bde139ba48ff86a811ae5665",
+  "gun_animations/hunter/over_under/6.png": "b070b7b7e0d2d34078c89efb5a9eba1d5ea3da6df2aa52e9cb15bded16b899a4",
+  "gun_animations/hunter/over_under/7.png": "2543fe779e6d938c627acc697c98fa291eaa44ab7b7bac1c18e81aab119bf55a",
+  "gun_animations/hunter/over_under/8.png": "c5c1e390b6bb703d10591bfa1d46f7daccf09b584f6794267cfe1eeea625e0fe",
+  "gun_animations/lounge_singer/pearl_revolver/0.png": "d28c79faf8a106dfae29de42ef8913038b70eeb831b5f5290acd89c7127efc41",
+  "gun_animations/lounge_singer/pearl_revolver/1.png": "4c2575e48c4d6383f728a79a974fba1e3645b801e13b92b50737c51426aa2ea9",
+  "gun_animations/lounge_singer/pearl_revolver/2.png": "838fc86d21faa3bfe4fb41830e107ee84f901843c77e79a05047940c3ac57a5a",
+  "gun_animations/lounge_singer/pearl_revolver/3.png": "43da017a76ffa57a0b64aa9a03d0dcf35edb17bb4ba56c8a5ed949747d0df078",
+  "gun_animations/lounge_singer/pearl_revolver/4.png": "dfc2d356ef1aeb94db0e886bd96ab04e58f1fee8f30afa94cbb1555826ac841e",
+  "gun_animations/lounge_singer/pearl_revolver/5.png": "bc41bfa2c002281d1915eb4bf069ee0fec6b2b7e49dd8be61bc40f9c9e0234d6",
+  "gun_animations/lounge_singer/pearl_revolver/6.png": "73a76aa31203d6d0e32615922b32a0f4b19b13736b5f071bc69ee52ed26e0470",
+  "gun_animations/lounge_singer/pearl_revolver/7.png": "91a91590093c627067a6ab624891424db09379d8aaf3d1dc6193979dc2d16935",
+  "gun_animations/lounge_singer/pearl_revolver/8.png": "ef0512458449c27a6a205af78add393637955e715146d836914ab74e4d4ceedd",
+  "gun_animations/lounge_singer/tommy_gun/0.png": "1261329f3f7b4814ca5576bc9e4a96e2e9698a431aef3dbb9f38d117f239a3db",
+  "gun_animations/lounge_singer/tommy_gun/1.png": "1fa076302c1afe1b157e5d2f3910b10715a83b76f5a5ad2dbd15f3998b8af210",
+  "gun_animations/lounge_singer/tommy_gun/2.png": "afb219b7598f91a631297429ea5a042da41c9b764087beeb21a007858c4ce06d",
+  "gun_animations/lounge_singer/tommy_gun/3.png": "cb5bae34b16dfccce582bf947a9f3cc456ce3b9bde34711fc46e78ab7c168b0d",
+  "gun_animations/lounge_singer/tommy_gun/4.png": "dbf793e49de208ba58e2622cba1edcabf4808a24840bdb60283a506dbdcc8e5d",
+  "gun_animations/lounge_singer/tommy_gun/5.png": "3eef762e09a087445b9500452910436fb7837a10ff0669e19facd9090731f8a3",
+  "gun_animations/lounge_singer/tommy_gun/6.png": "a3af9f248909ad141824d735cce8d161f1a191d039cea520575fdf020ab00630",
+  "gun_animations/lounge_singer/tommy_gun/7.png": "32abd42823e499142011d79096d0b115aa54117b11784cfd800bd65fa89db5f1",
+  "gun_animations/lounge_singer/tommy_gun/8.png": "147f87e6839370cb9876b123781315521b608c34760c390cc91d2b93decf01c5",
+  "gun_animations/monk/net_launcher/0.png": "87859593bb671cb6ed304d4a98c5cb73ed213d66227c8c6648726d0cedf49c1d",
+  "gun_animations/monk/net_launcher/1.png": "cafd72a543e8e1412ef295084a03e236d3b2ff41a91d35f6a6d1640ff0b33407",
+  "gun_animations/monk/net_launcher/2.png": "6df5754eed895b6e1e5e50d90fa08c46eaad809f0796483e146d4172bf89a749",
+  "gun_animations/monk/net_launcher/3.png": "2bd095edf1fd79e094c23ca32edd3d292a0cb9d9c924f2da42ec9aaf1fe4d6ae",
+  "gun_animations/monk/net_launcher/4.png": "3f69b9370a1bd1da14d942bdcaa95bf499204ae828d1bd7523d07b5b93854eac",
+  "gun_animations/monk/net_launcher/5.png": "92f228b15f90cc04c619a93543be3b18485de14df8e2e52f1bb35f59b6d1fa3e",
+  "gun_animations/monk/net_launcher/6.png": "76c786790656e88c3572ece97e12b451aa614f8dda46fcb76ea808a2db12fd3c",
+  "gun_animations/monk/net_launcher/7.png": "9ef3be3c1e3093c92ad97bdf8f184681aeccccede8f17b0ca1f93787ce48d4eb",
+  "gun_animations/monk/net_launcher/8.png": "1f50a9b210ce206e7f3ba9203a6f6d674206153104e9d331310a905491de0ad5",
+  "gun_animations/monk/dart_pistol/0.png": "37dee1cc99b54ae4bd784879659d3448670ce64af38bade68300123d3f8ae26a",
+  "gun_animations/monk/dart_pistol/1.png": "b94c5f496a19ff268b67ca50942fb821f1c84f313fecc7c4f315a09a43352ddf",
+  "gun_animations/monk/dart_pistol/2.png": "3a7795af84582c2f0256a19456effc8ac6b74f644dcd43b82873081508b9a610",
+  "gun_animations/monk/dart_pistol/3.png": "43e14bf13162e7511e3202b3c880bb95da5e7499342b34b59f0ea2c1fa8a1ef8",
+  "gun_animations/monk/dart_pistol/4.png": "37dee1cc99b54ae4bd784879659d3448670ce64af38bade68300123d3f8ae26a",
+  "gun_animations/monk/dart_pistol/5.png": "b94c5f496a19ff268b67ca50942fb821f1c84f313fecc7c4f315a09a43352ddf",
+  "gun_animations/monk/dart_pistol/6.png": "3a7795af84582c2f0256a19456effc8ac6b74f644dcd43b82873081508b9a610",
+  "gun_animations/monk/dart_pistol/7.png": "43e14bf13162e7511e3202b3c880bb95da5e7499342b34b59f0ea2c1fa8a1ef8"
  },
  "cast_animations": {
   "how": "create_character mode pro, concept_image_url = approved/cast/<name>.png, size 48 (10 generations each); then animate_character mode v3, directions [east], frame_count 8 (1 generation each). Frame 0 is the reference pose; canvases 52-60 px.",
@@ -2415,5 +2661,1452 @@
    "clipboard": "portraits/tutorial/medic_clipboard.png (shows a clipboard: here is how it works)"
   },
   "how": "portrait = edit of the teen_scrap_runner portrait into the medic; each tutorial pose = edit_image_pro_flash of the medic portrait (\"Same medic, same art style, pixel size, head size, framing and muted palette: <gesture>\"); all snapped to the master palette. Pointing pose points to the right, so put the tutorial text box on that side."
+ },
+ "gun_animations": {
+  "how": "MV-594. 1) edit_image_pro_flash on the character work/0 frame (60x60) -> holding-the-gun pose (5 gens). 2) animate_character v3 east, frame_count 8, custom_start_frame = that pose (1 gen). 3) designs/crew-gun-anim/fx.py: PixelLab flashes removed, muzzle flash + casings drawn in code from master-palette colours per gun preset. Up/down aims: one more edit per aim + code recoil (recoil.py). Raw PixelLab colours like the other cast clips (medic snapped).",
+  "canvas": [
+   72,
+   60
+  ],
+  "feet_row": 48,
+  "direction": "east (west = horizontal mirror)",
+  "playback": "loop",
+  "muzzle": "per frame [x, y] of the barrel end in the 72x60 frame, for bullets and hit lines",
+  "clips": {
+   "medic": {
+    "pistol": {
+     "dir": "gun_animations/medic/pistol/",
+     "frames": 9,
+     "fps": 9,
+     "aim": "level",
+     "gun": "9mm semi-automatic pistol, two hands",
+     "fx_preset": "pistol",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       45,
+       25
+      ],
+      [
+       44,
+       26
+      ],
+      [
+       43,
+       28
+      ],
+      [
+       45,
+       26
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       45,
+       29
+      ],
+      [
+       44,
+       32
+      ],
+      [
+       45,
+       29
+      ],
+      [
+       46,
+       26
+      ]
+     ]
+    },
+    "pistol_up": {
+     "dir": "gun_animations/medic/pistol_up/",
+     "frames": 8,
+     "fps": 12,
+     "aim": "up",
+     "gun": "9mm pistol aimed 45 degrees up (code recoil)",
+     "fx_preset": "pistol",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       42,
+       14
+      ],
+      [
+       40,
+       14
+      ],
+      [
+       41,
+       14
+      ],
+      [
+       42,
+       14
+      ],
+      [
+       42,
+       14
+      ],
+      [
+       40,
+       14
+      ],
+      [
+       41,
+       14
+      ],
+      [
+       42,
+       14
+      ]
+     ]
+    },
+    "pistol_down": {
+     "dir": "gun_animations/medic/pistol_down/",
+     "frames": 8,
+     "fps": 12,
+     "aim": "down",
+     "gun": "9mm pistol aimed 45 degrees down (code recoil)",
+     "fx_preset": "pistol",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       43,
+       38
+      ],
+      [
+       42,
+       38
+      ],
+      [
+       43,
+       38
+      ],
+      [
+       43,
+       38
+      ],
+      [
+       43,
+       38
+      ],
+      [
+       42,
+       38
+      ],
+      [
+       43,
+       38
+      ],
+      [
+       43,
+       38
+      ]
+     ]
+    },
+    "smg": {
+     "dir": "gun_animations/medic/smg/",
+     "frames": 8,
+     "fps": 12,
+     "aim": "level",
+     "gun": "compact Uzi-style SMG, burst",
+     "fx_preset": "smg",
+     "shot_frames": [
+      2,
+      3,
+      4
+     ],
+     "muzzle": [
+      [
+       43,
+       28
+      ],
+      [
+       42,
+       26
+      ],
+      [
+       43,
+       27
+      ],
+      [
+       44,
+       27
+      ],
+      [
+       44,
+       27
+      ],
+      [
+       43,
+       28
+      ],
+      [
+       41,
+       27
+      ],
+      [
+       43,
+       27
+      ]
+     ]
+    },
+    "smg_up": {
+     "dir": "gun_animations/medic/smg_up/",
+     "frames": 9,
+     "fps": 12,
+     "aim": "up",
+     "gun": "SMG aimed 45 degrees up (code recoil)",
+     "fx_preset": "smg",
+     "shot_frames": [
+      1,
+      3,
+      5
+     ],
+     "muzzle": [
+      [
+       44,
+       16
+      ],
+      [
+       42,
+       16
+      ],
+      [
+       43,
+       16
+      ],
+      [
+       42,
+       16
+      ],
+      [
+       43,
+       16
+      ],
+      [
+       42,
+       16
+      ],
+      [
+       43,
+       16
+      ],
+      [
+       44,
+       16
+      ],
+      [
+       44,
+       16
+      ]
+     ]
+    },
+    "smg_down": {
+     "dir": "gun_animations/medic/smg_down/",
+     "frames": 9,
+     "fps": 12,
+     "aim": "down",
+     "gun": "SMG aimed 45 degrees down (code recoil)",
+     "fx_preset": "smg",
+     "shot_frames": [
+      1,
+      3,
+      5
+     ],
+     "muzzle": [
+      [
+       40,
+       39
+      ],
+      [
+       39,
+       39
+      ],
+      [
+       40,
+       39
+      ],
+      [
+       39,
+       39
+      ],
+      [
+       40,
+       39
+      ],
+      [
+       39,
+       39
+      ],
+      [
+       40,
+       39
+      ],
+      [
+       40,
+       39
+      ],
+      [
+       40,
+       39
+      ]
+     ]
+    }
+   },
+   "aviator_pilot": {
+    "flare_pistol": {
+     "dir": "gun_animations/aviator_pilot/flare_pistol/",
+     "frames": 8,
+     "fps": 10,
+     "aim": "level",
+     "gun": "orange flare pistol",
+     "fx_preset": "flare",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       50,
+       24
+      ],
+      [
+       45,
+       26
+      ],
+      [
+       45,
+       28
+      ],
+      [
+       45,
+       29
+      ],
+      [
+       45,
+       28
+      ],
+      [
+       44,
+       27
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       50,
+       25
+      ]
+     ]
+    },
+    "mauser": {
+     "dir": "gun_animations/aviator_pilot/mauser/",
+     "frames": 8,
+     "fps": 10,
+     "aim": "level",
+     "gun": "broomhandle Mauser C96, one hand",
+     "fx_preset": "pistol",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       54,
+       23
+      ],
+      [
+       53,
+       23
+      ],
+      [
+       45,
+       26
+      ],
+      [
+       54,
+       23
+      ],
+      [
+       54,
+       23
+      ],
+      [
+       47,
+       23
+      ],
+      [
+       53,
+       24
+      ],
+      [
+       54,
+       25
+      ]
+     ]
+    }
+   },
+   "biker": {
+    "sawed_off": {
+     "dir": "gun_animations/biker/sawed_off/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "sawed-off double-barrel shotgun",
+     "fx_preset": "sawnoff",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       45,
+       28
+      ],
+      [
+       45,
+       27
+      ],
+      [
+       45,
+       26
+      ],
+      [
+       45,
+       25
+      ],
+      [
+       45,
+       25
+      ],
+      [
+       45,
+       25
+      ],
+      [
+       45,
+       25
+      ],
+      [
+       45,
+       25
+      ],
+      [
+       46,
+       26
+      ]
+     ]
+    },
+    "revolver": {
+     "dir": "gun_animations/biker/revolver/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "chrome revolver, two-hand grip (take 1, big hair flip)",
+     "fx_preset": "revolver",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       51,
+       24
+      ],
+      [
+       50,
+       25
+      ],
+      [
+       49,
+       25
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       46,
+       28
+      ],
+      [
+       45,
+       28
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       49,
+       27
+      ],
+      [
+       51,
+       25
+      ]
+     ]
+    },
+    "revolver_b": {
+     "dir": "gun_animations/biker/revolver_b/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "chrome revolver, two-hand grip (take 2, calmer)",
+     "fx_preset": "revolver",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       51,
+       24
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       50,
+       28
+      ],
+      [
+       49,
+       28
+      ],
+      [
+       48,
+       30
+      ],
+      [
+       48,
+       30
+      ],
+      [
+       48,
+       28
+      ],
+      [
+       50,
+       27
+      ],
+      [
+       51,
+       25
+      ]
+     ]
+    }
+   },
+   "bus_mechanic": {
+    "pump_shotgun": {
+     "dir": "gun_animations/bus_mechanic/pump_shotgun/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "pump-action shotgun, shell ejects on the pump",
+     "fx_preset": "shotgun",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       52,
+       26
+      ],
+      [
+       52,
+       27
+      ],
+      [
+       52,
+       26
+      ],
+      [
+       54,
+       27
+      ],
+      [
+       53,
+       26
+      ],
+      [
+       52,
+       27
+      ],
+      [
+       52,
+       26
+      ],
+      [
+       53,
+       27
+      ],
+      [
+       52,
+       27
+      ]
+     ]
+    },
+    "nail_gun": {
+     "dir": "gun_animations/bus_mechanic/nail_gun/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "industrial nail gun",
+     "fx_preset": "nailgun",
+     "shot_frames": [
+      1,
+      3,
+      5
+     ],
+     "muzzle": [
+      [
+       51,
+       26
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       51,
+       27
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       52,
+       27
+      ]
+     ]
+    }
+   },
+   "construction_worker": {
+    "ak_rifle": {
+     "dir": "gun_animations/construction_worker/ak_rifle/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "AK-style rifle, 3-round burst",
+     "fx_preset": "rifle",
+     "shot_frames": [
+      1,
+      3,
+      5
+     ],
+     "muzzle": [
+      [
+       52,
+       26
+      ],
+      [
+       52,
+       26
+      ],
+      [
+       50,
+       26
+      ],
+      [
+       54,
+       25
+      ],
+      [
+       52,
+       26
+      ],
+      [
+       52,
+       26
+      ],
+      [
+       50,
+       26
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       52,
+       26
+      ]
+     ]
+    },
+    "pipe_shotgun": {
+     "dir": "gun_animations/construction_worker/pipe_shotgun/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "homemade pipe shotgun (take 1)",
+     "fx_preset": "sawnoff",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       50,
+       26
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       51,
+       26
+      ],
+      [
+       50,
+       27
+      ],
+      [
+       50,
+       29
+      ],
+      [
+       48,
+       31
+      ],
+      [
+       48,
+       30
+      ],
+      [
+       49,
+       31
+      ],
+      [
+       50,
+       28
+      ]
+     ]
+    },
+    "pipe_shotgun_b": {
+     "dir": "gun_animations/construction_worker/pipe_shotgun_b/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "homemade pipe shotgun (take 2)",
+     "fx_preset": "sawnoff",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       50,
+       26
+      ],
+      [
+       50,
+       25
+      ],
+      [
+       50,
+       25
+      ],
+      [
+       50,
+       26
+      ],
+      [
+       48,
+       28
+      ],
+      [
+       46,
+       27
+      ],
+      [
+       47,
+       28
+      ],
+      [
+       48,
+       28
+      ],
+      [
+       49,
+       27
+      ]
+     ]
+    }
+   },
+   "firefighter": {
+    "lever_rifle": {
+     "dir": "gun_animations/firefighter/lever_rifle/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "lever-action rifle",
+     "fx_preset": "rifle",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       56,
+       25
+      ],
+      [
+       56,
+       25
+      ],
+      [
+       55,
+       24
+      ],
+      [
+       55,
+       25
+      ],
+      [
+       54,
+       25
+      ],
+      [
+       54,
+       25
+      ],
+      [
+       55,
+       24
+      ],
+      [
+       55,
+       24
+      ],
+      [
+       55,
+       25
+      ]
+     ]
+    },
+    "flamethrower": {
+     "dir": "gun_animations/firefighter/flamethrower/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "tank flamethrower (flame drawn in code)",
+     "fx_preset": "flamer",
+     "shot_frames": [
+      1,
+      4
+     ],
+     "muzzle": [
+      [
+       55,
+       33
+      ],
+      [
+       56,
+       32
+      ],
+      [
+       57,
+       31
+      ],
+      [
+       57,
+       30
+      ],
+      [
+       57,
+       29
+      ],
+      [
+       57,
+       30
+      ],
+      [
+       57,
+       30
+      ],
+      [
+       57,
+       32
+      ],
+      [
+       55,
+       33
+      ]
+     ]
+    }
+   },
+   "fortune_teller": {
+    "derringer": {
+     "dir": "gun_animations/fortune_teller/derringer/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "gold derringer, one hand (legs pinned from frame 0)",
+     "fx_preset": "revolver",
+     "shot_frames": [
+      1,
+      4
+     ],
+     "muzzle": [
+      [
+       49,
+       25
+      ],
+      [
+       48,
+       24
+      ],
+      [
+       48,
+       23
+      ],
+      [
+       49,
+       23
+      ],
+      [
+       49,
+       25
+      ],
+      [
+       49,
+       25
+      ],
+      [
+       48,
+       23
+      ],
+      [
+       49,
+       23
+      ],
+      [
+       49,
+       24
+      ]
+     ]
+    },
+    "flintlock": {
+     "dir": "gun_animations/fortune_teller/flintlock/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "antique flintlock pistol, smoke",
+     "fx_preset": "flintlock",
+     "shot_frames": [
+      1
+     ],
+     "muzzle": [
+      [
+       55,
+       26
+      ],
+      [
+       54,
+       26
+      ],
+      [
+       52,
+       27
+      ],
+      [
+       55,
+       25
+      ],
+      [
+       54,
+       26
+      ],
+      [
+       54,
+       26
+      ],
+      [
+       52,
+       27
+      ],
+      [
+       56,
+       25
+      ],
+      [
+       54,
+       26
+      ]
+     ]
+    }
+   },
+   "gunslinger": {
+    "fan_revolver": {
+     "dir": "gun_animations/gunslinger/fan_revolver/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "cowboy revolver fired from the hip, fanning the hammer",
+     "fx_preset": "revolver",
+     "shot_frames": [
+      1,
+      3,
+      5
+     ],
+     "muzzle": [
+      [
+       49,
+       31
+      ],
+      [
+       49,
+       30
+      ],
+      [
+       49,
+       30
+      ],
+      [
+       49,
+       31
+      ],
+      [
+       49,
+       31
+      ],
+      [
+       49,
+       30
+      ],
+      [
+       49,
+       30
+      ],
+      [
+       49,
+       31
+      ],
+      [
+       49,
+       30
+      ]
+     ]
+    },
+    "dual_revolvers": {
+     "dir": "gun_animations/gunslinger/dual_revolvers/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "two revolvers, alternating",
+     "fx_preset": "revolver",
+     "shot_frames": [
+      1,
+      "4b"
+     ],
+     "muzzle": [
+      [
+       50,
+       29
+      ],
+      [
+       49,
+       29
+      ],
+      [
+       50,
+       30
+      ],
+      [
+       48,
+       23
+      ],
+      [
+       49,
+       29
+      ],
+      [
+       50,
+       29
+      ],
+      [
+       48,
+       29
+      ],
+      [
+       48,
+       24
+      ],
+      [
+       49,
+       29
+      ]
+     ],
+     "muzzle_second_gun": [
+      [
+       48,
+       24
+      ],
+      [
+       47,
+       24
+      ],
+      [
+       48,
+       28
+      ],
+      [
+       47,
+       30
+      ],
+      [
+       48,
+       24
+      ],
+      [
+       47,
+       24
+      ],
+      [
+       48,
+       24
+      ],
+      [
+       47,
+       30
+      ],
+      [
+       48,
+       24
+      ]
+     ]
+    }
+   },
+   "hunter": {
+    "bolt_rifle": {
+     "dir": "gun_animations/hunter/bolt_rifle/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "scoped bolt-action rifle, bolt cycle ejects a brass casing, muzzle smoke",
+     "fx_preset": "boltrifle_smoke",
+     "shot_frames": [
+      1
+     ],
+     "muzzle": [
+      [
+       54,
+       25
+      ],
+      [
+       54,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       49,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       50,
+       25
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       52,
+       25
+      ]
+     ]
+    },
+    "over_under": {
+     "dir": "gun_animations/hunter/over_under/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "over-and-under hunting shotgun, big smoke puff",
+     "fx_preset": "sawnoff_smoke",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       53,
+       25
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       52,
+       24
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       51,
+       25
+      ]
+     ]
+    }
+   },
+   "lounge_singer": {
+    "pearl_revolver": {
+     "dir": "gun_animations/lounge_singer/pearl_revolver/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "small pearl-handled snub-nose revolver, one gloved hand",
+     "fx_preset": "revolver",
+     "shot_frames": [
+      1,
+      4
+     ],
+     "muzzle": [
+      [
+       46,
+       24
+      ],
+      [
+       43,
+       25
+      ],
+      [
+       46,
+       26
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       24
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       25
+      ]
+     ]
+    },
+    "tommy_gun": {
+     "dir": "gun_animations/lounge_singer/tommy_gun/",
+     "frames": 9,
+     "fps": 12,
+     "aim": "level",
+     "gun": "1920s tommy gun from the hip, burst (flash spans the 2 px barrel)",
+     "fx_preset": "smg",
+     "shot_frames": [
+      2,
+      3,
+      4
+     ],
+     "muzzle": [
+      [
+       47,
+       29
+      ],
+      [
+       47,
+       28
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       48,
+       27
+      ],
+      [
+       48,
+       27
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       48,
+       27
+      ],
+      [
+       47,
+       28
+      ]
+     ]
+    }
+   },
+   "monk": {
+    "net_launcher": {
+     "dir": "gun_animations/monk/net_launcher/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "compressed-air net launcher, two hands (non-lethal: monks keep the precept against killing)",
+     "fx_preset": "airpuff",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       43,
+       27
+      ],
+      [
+       47,
+       26
+      ],
+      [
+       43,
+       26
+      ],
+      [
+       44,
+       27
+      ],
+      [
+       44,
+       26
+      ],
+      [
+       44,
+       27
+      ],
+      [
+       45,
+       26
+      ],
+      [
+       45,
+       28
+      ],
+      [
+       45,
+       27
+      ]
+     ]
+    },
+    "dart_pistol": {
+     "dir": "gun_animations/monk/dart_pistol/",
+     "frames": 8,
+     "fps": 10,
+     "aim": "level",
+     "gun": "wooden tranquiliser dart pistol, two-hand grip (PixelLab hold pose + code recoil)",
+     "fx_preset": "airpuff",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       43,
+       27
+      ],
+      [
+       41,
+       27
+      ],
+      [
+       42,
+       27
+      ],
+      [
+       43,
+       27
+      ],
+      [
+       43,
+       27
+      ],
+      [
+       41,
+       27
+      ],
+      [
+       42,
+       27
+      ],
+      [
+       43,
+       27
+      ]
+     ]
+    }
+   }
+  }
  }
 }
