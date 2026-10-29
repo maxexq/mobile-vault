@@ -2178,7 +2178,25 @@
   "gun_animations/gunslinger/dual_revolvers/5.png": "7fd9b6e3ac57bb6f29474bb69c4083518eba5b91d3259cc4e8b9871b8fea1a7c",
   "gun_animations/gunslinger/dual_revolvers/6.png": "60976c6dcb4895384b9498003b5534d3cd06b75fd004455fe6a9b2834dff1355",
   "gun_animations/gunslinger/dual_revolvers/7.png": "fc137680d1ab1e7072c4b8b6538ad19010916da662e271befb410c7cd5913b8a",
-  "gun_animations/gunslinger/dual_revolvers/8.png": "2bdcab8a49dd5f0525cb0d64ca0e6e538f57e25c7163032093c98bc5aa1e9187"
+  "gun_animations/gunslinger/dual_revolvers/8.png": "2bdcab8a49dd5f0525cb0d64ca0e6e538f57e25c7163032093c98bc5aa1e9187",
+  "gun_animations/hunter/bolt_rifle/0.png": "8785b591162032e11d67b0dd378c4e9b02bc5b52da92bd5350a4446df72fe886",
+  "gun_animations/hunter/bolt_rifle/1.png": "e1e8f854ed4aac1ecab86f3d5e3ac918865bc2a8d5283af1438ae942525d969d",
+  "gun_animations/hunter/bolt_rifle/2.png": "1817f43cd0b76df123ee8762ab721224b349a1cad637d7a372987af5c2bd6b9a",
+  "gun_animations/hunter/bolt_rifle/3.png": "e8a1b50c68bf619fe38e48510d8c721af09e55c43f52584e41abcf6d85f7cb1f",
+  "gun_animations/hunter/bolt_rifle/4.png": "303dec22126354cf40dc3c0d2bbcdf383b5ee1ab07c389951d2e93ec4eb11f2c",
+  "gun_animations/hunter/bolt_rifle/5.png": "986c3b5e4bc462c15e60276659e24af62943ce008711dc9b969104e325677116",
+  "gun_animations/hunter/bolt_rifle/6.png": "bca3adbde488215843454a0d24067c222b0bfb1e69e96e938acd461c793abedd",
+  "gun_animations/hunter/bolt_rifle/7.png": "063bb2c7e87d40d6ca5537063dc9954d453ef5ec14605853b0a96bc479810812",
+  "gun_animations/hunter/bolt_rifle/8.png": "cf857b4687f39193359f45b4fffc9713ad176fed876d85e00401d5f4f1d536f4",
+  "gun_animations/hunter/over_under/0.png": "945f2188f85450a76662657635ba9402bfea859c28907ec34f8c21820bd76544",
+  "gun_animations/hunter/over_under/1.png": "d0a8f6a5f534cac28cf52b647947f03958017992676dca4d820da99d2258030c",
+  "gun_animations/hunter/over_under/2.png": "f3e16b76b64addbb9dc69de5f95de176072b4a14713646bad18f48c158668ebf",
+  "gun_animations/hunter/over_under/3.png": "e635e305e5e36180532a13e07b8b78781ff513c4817991ce61b193bcdf6ff872",
+  "gun_animations/hunter/over_under/4.png": "e68517dda5dea00a7c0d06c6128ed168d91325aa1955af9003a3127ec2dac55a",
+  "gun_animations/hunter/over_under/5.png": "9a186c17467a9b8ddab73ec4d47405819b1fc283bde139ba48ff86a811ae5665",
+  "gun_animations/hunter/over_under/6.png": "b070b7b7e0d2d34078c89efb5a9eba1d5ea3da6df2aa52e9cb15bded16b899a4",
+  "gun_animations/hunter/over_under/7.png": "2543fe779e6d938c627acc697c98fa291eaa44ab7b7bac1c18e81aab119bf55a",
+  "gun_animations/hunter/over_under/8.png": "c5c1e390b6bb703d10591bfa1d46f7daccf09b584f6794267cfe1eeea625e0fe"
  },
  "cast_animations": {
   "how": "create_character mode pro, concept_image_url = approved/cast/<name>.png, size 48 (10 generations each); then animate_character mode v3, directions [east], frame_count 8 (1 generation each). Frame 0 is the reference pose; canvases 52-60 px.",
@@ -3748,6 +3766,106 @@
       [
        48,
        24
+      ]
+     ]
+    }
+   },
+   "hunter": {
+    "bolt_rifle": {
+     "dir": "gun_animations/hunter/bolt_rifle/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "scoped bolt-action rifle, bolt cycle ejects a brass casing, muzzle smoke",
+     "fx_preset": "boltrifle_smoke",
+     "shot_frames": [
+      1
+     ],
+     "muzzle": [
+      [
+       54,
+       25
+      ],
+      [
+       54,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       49,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       50,
+       25
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       52,
+       25
+      ]
+     ]
+    },
+    "over_under": {
+     "dir": "gun_animations/hunter/over_under/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "over-and-under hunting shotgun, big smoke puff",
+     "fx_preset": "sawnoff_smoke",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       53,
+       25
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       53,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       52,
+       24
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       52,
+       25
+      ],
+      [
+       51,
+       25
       ]
      ]
     }

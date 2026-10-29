@@ -117,6 +117,22 @@ def stamp(rows, key):
     return out
 K = {'w': 'lamp2', 'y': 'lamp1', 'o': 'lamp0', 'r': 'dusk3', 'g': 'gray4'}
 FK = {'w': 'lamp2', 'o': 'red4', 'r': 'red3', 'g': 'gray4'}
+SK = {'g': 'gray4', 'h': 'gray5', 'l': 'gray6'}
+# rising smoke after a shot: puffs grow, lift and thin out (offsets are from the muzzle, drawn level-relative)
+SMOKE = [stamp(['.hh.', 'hllh', '.hh.'], SK),
+         stamp(['..h.h..', '.hlllh.', 'hllhllh', '.hhghh.', '..g.g..'], SK),
+         stamp(['...h.h...', '..hlhlh..', '.hlh.hlh.', 'h.hg.gh.h', '.g.g.g.g.', '..g...g..'], SK),
+         stamp(['...g...g..', '.g..h.h..g', 'g.h.g.g.h.', '.g..g..g..', '...g...g..'], SK)]
+
+def smoky(preset, lift=2):
+    """same gun with a lingering smoke cloud added after the flash"""
+    g = dict(GUNS[preset]); fl = list(g['flash'])
+    while len(fl) < 1 + len(SMOKE): fl.append([])
+    for k, st in enumerate(SMOKE):
+        fl[1 + k] = fl[1 + k] + [(dx + 1, dy - lift * (k + 1), c) for dx, dy, c in st]
+    g['flash'] = fl
+    return g
+
 GUNS = {
   'pistol': dict(flash=[stamp(['.y..', 'wwyo', '.y..'], K), stamp(['wo'], K)],
                  casing=[('yellow3', 'yellow2')], eject_back=4, vx=-1.0, vy=-3.0, size=(2, 1)),
@@ -149,6 +165,9 @@ GUNS = {
                        stamp(['.g.......', 'g.g....ro', '.g......'], FK)],
                 casing=[], eject_back=0, vx=0, vy=0, size=(2, 1)),
 }
+
+GUNS['boltrifle_smoke'] = smoky('boltrifle')
+GUNS['sawnoff_smoke'] = smoky('sawnoff')
 
 def render(frames, gun, shots, aim, floor):
     g = GUNS[gun]; n = len(frames); d = AIM[aim]

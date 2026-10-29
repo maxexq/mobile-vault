@@ -173,6 +173,7 @@ gun, fps, shot frames and a muzzle point per frame in the manifest `gun_animatio
 | firefighter | `lever_rifle`, `flamethrower` |
 | fortune_teller | `derringer`, `flintlock` |
 | gunslinger | `fan_revolver`, `dual_revolvers` |
+| hunter | `bolt_rifle`, `over_under` |
 
 ## Cast portraits
 

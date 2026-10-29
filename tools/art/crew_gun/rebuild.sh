@@ -21,3 +21,5 @@ HOLD=fortune_teller/hold_A.png f fortune_teller/shoot_A3L40 revolver 1,4 fortune
 HOLD=fortune_teller/hold_B.png f fortune_teller/shoot_B2 flintlock 1 fortune_teller/fx_B level
 HOLD=gunslinger/hold_A.png f gunslinger/shoot_A revolver 1,3,5 gunslinger/fx_A level
 HOLD=gunslinger/hold_B.png f gunslinger/shoot_B revolver 1,4b gunslinger/fx_B level; python3 erase.py gunslinger/fx_B 0 0 21 22
+HOLD=hunter/hold_A.png f hunter/shoot_A boltrifle_smoke 1 hunter/fx_A level
+HOLD=hunter/hold_B.png f hunter/shoot_B sawnoff_smoke 2 hunter/fx_B level; python3 erase.py hunter/fx_B 0 0 17 30

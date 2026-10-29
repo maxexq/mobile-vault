@@ -28,6 +28,8 @@ CLIPS = [
  ('fortune_teller', 'flintlock', 'fortune_teller/fx_B', 'flintlock', [1], 10, 'level', 'antique flintlock pistol, smoke'),
  ('gunslinger', 'fan_revolver', 'gunslinger/fx_A', 'revolver', [1, 3, 5], 10, 'level', 'cowboy revolver fired from the hip, fanning the hammer'),
  ('gunslinger', 'dual_revolvers', 'gunslinger/fx_B', 'revolver', [1, '4b'], 10, 'level', 'two revolvers, alternating'),
+ ('hunter', 'bolt_rifle', 'hunter/fx_A', 'boltrifle_smoke', [1], 10, 'level', 'scoped bolt-action rifle, bolt cycle ejects a brass casing, muzzle smoke'),
+ ('hunter', 'over_under', 'hunter/fx_B', 'sawnoff_smoke', [2], 10, 'level', 'over-and-under hunting shotgun, big smoke puff'),
 ]
 man = json.load(open(REPO + 'manifest.json'))
 entry = {'how': 'MV-594. 1) edit_image_pro_flash on the character work/0 frame (60x60) -> holding-the-gun pose (5 gens). '
