@@ -235,7 +235,9 @@ with the plant-area inpaint (`tools/stages_grow.py`, keys `A_M2` / `B_M2`).
   shelf rack, each tier with its own LED strip, plus a water tank with pump and a seed cabinet.
 - **B** keeps the rain barrel and seedling box; the rest is raised wooden beds (tomatoes, peppers, herbs),
   a trellis planter, a tyre planter, a tool rack and a harvest crate under two warm bulbs. The steel rib
-  in the middle is part of the vehicle frame, not a dividing wall.
+  the edit left in the middle was removed on Parames's request (merged rooms must read as one room):
+  `inpaint-v3` on the gap between the beds only, then a per-row brightness ramp so the patch matches the
+  lamp-lit wall on both sides (`tools/wall_grow_m2.py`); the same patch is pasted onto all three stages.
 
 ![grow merged stages](room-style-reference-v2/grow-merged-preview.png)
 ![grow merged hotspots](room-style-reference-v2/grow-merged-hotspots-preview.png)
@@ -254,6 +256,6 @@ B = image 1), then the scripts above. They read and write a scratch `out/` folde
 | `room-style-reference-v2/grow_a/grow_a_L3_x2.png` | 9ddd1d837f762963 |
 | `room-style-reference-v2/grow_a/grow_a_L3_x2_stage1.png` | 9e6ec27f18f1f1ab |
 | `room-style-reference-v2/grow_a/grow_a_L3_x2_stage2.png` | 3f871cf8e8f45440 |
-| `room-style-reference-v2/grow_b/grow_b_L3_x2.png` | c0640bac0bf80f28 |
-| `room-style-reference-v2/grow_b/grow_b_L3_x2_stage1.png` | c10ad83749db7562 |
-| `room-style-reference-v2/grow_b/grow_b_L3_x2_stage2.png` | 7b3860746732d4af |
+| `room-style-reference-v2/grow_b/grow_b_L3_x2.png` | 7fd728ff90aced95 |
+| `room-style-reference-v2/grow_b/grow_b_L3_x2_stage1.png` | 6b40ab0f54afd81f |
+| `room-style-reference-v2/grow_b/grow_b_L3_x2_stage2.png` | 488c968abe3a2f82 |
