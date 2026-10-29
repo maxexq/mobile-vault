@@ -196,8 +196,8 @@ Anchors for every image are in `anim_lv.py` (`ROOMS`).
 
 ## Third reference: grow room, level 1 (MV-598)
 
-Parames kept **two** grow room designs at level 1, one slot (144x96), on 2026-10-29. Levels 2/3 and
-merged sizes are not made yet. Use these as the reference for plant, farm and greenhouse rooms, and
+Parames kept **two** grow room designs at level 1, one slot (144x96), on 2026-10-29, then asked for the
+merged 2-slot size of both (below). L2, L3 single and 3-slot are not made yet. Use these as the reference for plant, farm and greenhouse rooms, and
 for any room whose contents change over time.
 
 ![grow stages](room-style-reference-v2/grow-stages-preview.png)
@@ -235,3 +235,9 @@ B = image 1), then the scripts above. They read and write a scratch `out/` folde
 | `room-style-reference-v2/grow_b/grow_b_L1.png` | cefa8d98468ab0cc |
 | `room-style-reference-v2/grow_b/grow_b_L1_stage1.png` | ddcefcf4f7f3e9d2 |
 | `room-style-reference-v2/grow_b/grow_b_L1_stage2.png` | c7120677a7cb9574 |
+| `room-style-reference-v2/grow_a/grow_a_L3_x2.png` | 9ddd1d837f762963 |
+| `room-style-reference-v2/grow_a/grow_a_L3_x2_stage1.png` | 9e6ec27f18f1f1ab |
+| `room-style-reference-v2/grow_a/grow_a_L3_x2_stage2.png` | 3f871cf8e8f45440 |
+| `room-style-reference-v2/grow_b/grow_b_L3_x2.png` | c0640bac0bf80f28 |
+| `room-style-reference-v2/grow_b/grow_b_L3_x2_stage1.png` | c10ad83749db7562 |
+| `room-style-reference-v2/grow_b/grow_b_L3_x2_stage2.png` | 7b3860746732d4af |
