@@ -38,8 +38,9 @@ h3 { font-size: 13px; margin: 16px 0 6px; color: var(--muted); text-transform: u
 .card { background: var(--panel); border: 1px solid var(--line); padding: 8px; display: flex; flex-direction: column; gap: 6px;
   text-align: left; min-width: 0; }
 .card:hover { border-color: var(--amber); }
-.card .pix { background: var(--pix-bg); display: flex; align-items: center; justify-content: center; min-height: 120px; overflow: hidden; }
-.card img { image-rendering: pixelated; max-width: 100%; }
+.card .pix { background: var(--pix-bg); display: flex; align-items: center; justify-content: center; height: 180px; overflow: hidden; }
+/* width/height attrs give the scaled size; height:auto + object-fit keep the native ratio when the box clamps it */
+.card img { image-rendering: pixelated; max-width: 100%; max-height: 100%; height: auto; object-fit: contain; }
 .card .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .sub { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; gap: 6px; }
 .chip { font-size: 11px; padding: 1px 6px; border: 1px solid var(--line); text-transform: uppercase; }
