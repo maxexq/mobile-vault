@@ -1,7 +1,7 @@
 {
   "room": "grow_a",
   "format": 1,
-  "note": "Grow room option A (LED grow rack). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. Each level key (L1, L2, L3, L3_x2) = mature plants; <key>_stage1/<key>_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same. L3_x2 = merged 2 slots (rooms merge only at level 3); its stages follow the same rule.",
+  "note": "Grow room option A (LED grow rack). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. Each level key (L1, L2, L3, L3_x2, L3_x3) = mature plants; <key>_stage1/<key>_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same. L3_x2 / L3_x3 = merged 2 / 3 slots (rooms merge only at level 3); its stages follow the same rule.",
   "images": {
     "L1": {
       "file": "grow_a_L1.png",
@@ -957,6 +957,291 @@
             50,
             20,
             32
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        }
+      ]
+    },
+    "L3_x3": {
+      "file": "grow_a_L3_x3.png",
+      "size": [
+        432,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "rack",
+          "label": "LED shelf rack",
+          "rect": [
+            181,
+            10,
+            33,
+            73
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "rack_2",
+          "label": "LED shelf rack",
+          "rect": [
+            222,
+            10,
+            56,
+            73
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            8,
+            30,
+            100,
+            26
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "seedlings",
+          "label": "Seedling trays",
+          "rect": [
+            292,
+            42,
+            60,
+            28
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            34,
+            13,
+            48,
+            7
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "water_pump",
+          "label": "Water tank and pump",
+          "rect": [
+            357,
+            38,
+            38,
+            50
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "seed_cabinet",
+          "label": "Seed cabinet",
+          "rect": [
+            395,
+            28,
+            37,
+            60
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        }
+      ]
+    },
+    "L3_x3_stage1": {
+      "file": "grow_a_L3_x3_stage1.png",
+      "size": [
+        432,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "rack",
+          "label": "LED shelf rack",
+          "rect": [
+            181,
+            10,
+            33,
+            73
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "rack_2",
+          "label": "LED shelf rack",
+          "rect": [
+            222,
+            10,
+            56,
+            73
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            8,
+            30,
+            100,
+            26
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "seedlings",
+          "label": "Seedling trays",
+          "rect": [
+            292,
+            42,
+            60,
+            28
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            34,
+            13,
+            48,
+            7
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "water_pump",
+          "label": "Water tank and pump",
+          "rect": [
+            357,
+            38,
+            38,
+            50
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "seed_cabinet",
+          "label": "Seed cabinet",
+          "rect": [
+            395,
+            28,
+            37,
+            60
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        }
+      ]
+    },
+    "L3_x3_stage2": {
+      "file": "grow_a_L3_x3_stage2.png",
+      "size": [
+        432,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "rack",
+          "label": "LED shelf rack",
+          "rect": [
+            181,
+            10,
+            33,
+            73
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "rack_2",
+          "label": "LED shelf rack",
+          "rect": [
+            222,
+            10,
+            56,
+            73
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            8,
+            30,
+            100,
+            26
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "seedlings",
+          "label": "Seedling trays",
+          "rect": [
+            292,
+            42,
+            60,
+            28
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            34,
+            13,
+            48,
+            7
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "water_pump",
+          "label": "Water tank and pump",
+          "rect": [
+            357,
+            38,
+            38,
+            50
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "seed_cabinet",
+          "label": "Seed cabinet",
+          "rect": [
+            395,
+            28,
+            37,
+            60
           ],
           "kind": "storage",
           "action": "open_storage"

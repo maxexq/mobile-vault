@@ -194,13 +194,13 @@ Anchors for every image are in `anim_lv.py` (`ROOMS`).
 | living/living_L3_x2.png | 99828d8caccd5a0a |
 | living/living_L3_x3.png | 136834e9e8300ec8 |
 
-## Third reference: grow room, level 1 + merged 2 (MV-598)
+## Third reference: grow room, level 1 + merged 2 and 3 (MV-598)
 
 **Approved by Parames on 2026-10-29: keep both A and B** (L1 single slot and L3 merged 2 slots, all three growth
 stages; L2 and L3 single slot added later the same day). Either can be used as the game's grow room, or both as two room variants.
 
 Parames kept **two** grow room designs at level 1, one slot (144x96), on 2026-10-29, then asked for the
-merged 2-slot size and levels 2 and 3 of both (below). The 3-slot merge is not made yet. Use these as the reference for plant, farm and greenhouse rooms, and
+merged 2-slot size, levels 2 and 3 and the merged 3-slot size of both (below). Use these as the reference for plant, farm and greenhouse rooms, and
 for any room whose contents change over time.
 
 ![grow stages](room-style-reference-v2/grow-stages-preview.png)
@@ -260,6 +260,27 @@ with the plant-area inpaint (`tools/stages_grow.py`, keys `A_M2` / `B_M2`).
 ![grow merged stages](room-style-reference-v2/grow-merged-preview.png)
 ![grow merged hotspots](room-style-reference-v2/grow-merged-hotspots-preview.png)
 
+### Grow room merged 3 slots (level 3)
+
+Made like the kitchen and living room 3-slot merge: `inpaint-v3` on a 432x96 canvas that keeps the left 200 px
+of the 2-slot room (stage 3), with the mask at x 186-431 (`tools/merge3_grow.py`; A seed 1, B seed 3). The
+prompt asks for the same continuous back wall with no pillar, dividing wall or door, and an open floor strip.
+B seeds 1 and 2 left a visible wall seam and beds out on the floor, so B got a "single row of beds against the
+back wall, lit evenly like the left side" prompt.
+
+- **A** `grow_a_L3_x3*.png`: the pot table from the 2-slot room, two LED shelf racks (three lit tiers each),
+  a seedling station under a white lamp, water tank with pump, and a seed cabinet.
+- **B** `grow_b_L3_x3*.png`: rain barrel and seedling box, five raised beds in one row (tomatoes, peppers,
+  lettuce), two bean trellises, a tool rack, a harvest crate and a compost bin, five warm bulbs.
+- Stages 1 and 2 use the plant-area inpaint (`tools/stages_grow.py`, keys `A_M3` / `B_M3`). For B the
+  inpaint left the right trellis fully grown, so `tools/fix_trellis_grow.py` copies the left trellis bed of
+  the same stage over it and puts the bulb back.
+- Hotspots key `L3_x3` (+ `_stage1` / `_stage2`) in both `hotspots.json`; animation keys `A_M3` / `B_M3` in
+  `tools/anim_grow.py`.
+
+![grow merged 3 stages](room-style-reference-v2/grow-merged3-preview.png)
+![grow merged 3 hotspots](room-style-reference-v2/grow-merged3-hotspots-preview.png)
+
 Sources: `tools/gen_grow.py` (generate-image-v2 with the kitchen L1 as `style_image`, seed 7; A = image 0,
 B = image 1), then the scripts above. They read and write a scratch `out/` folder.
 
@@ -289,3 +310,9 @@ B = image 1), then the scripts above. They read and write a scratch `out/` folde
 | `room-style-reference-v2/grow_b/grow_b_L3.png` | d864b87e7e908bf6 |
 | `room-style-reference-v2/grow_b/grow_b_L3_stage1.png` | 689a0d8a70e90697 |
 | `room-style-reference-v2/grow_b/grow_b_L3_stage2.png` | c1ba26b7be2060ec |
+| `room-style-reference-v2/grow_a/grow_a_L3_x3.png` | 6aa32b9276855070 |
+| `room-style-reference-v2/grow_a/grow_a_L3_x3_stage1.png` | f9da03385861188f |
+| `room-style-reference-v2/grow_a/grow_a_L3_x3_stage2.png` | d5bf80aa697a88a8 |
+| `room-style-reference-v2/grow_b/grow_b_L3_x3.png` | 5926e5c37d530973 |
+| `room-style-reference-v2/grow_b/grow_b_L3_x3_stage1.png` | 2462f91414ece381 |
+| `room-style-reference-v2/grow_b/grow_b_L3_x3_stage2.png` | 22a4b00f58345137 |

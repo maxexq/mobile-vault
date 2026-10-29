@@ -1,7 +1,7 @@
 {
   "room": "grow_b",
   "format": 1,
-  "note": "Grow room option B (tyre and pallet garden). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. Each level key (L1, L2, L3, L3_x2) = mature plants; <key>_stage1/<key>_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same. L3_x2 = merged 2 slots (rooms merge only at level 3); its stages follow the same rule.",
+  "note": "Grow room option B (tyre and pallet garden). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. Each level key (L1, L2, L3, L3_x2, L3_x3) = mature plants; <key>_stage1/<key>_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same. L3_x2 / L3_x3 = merged 2 / 3 slots (rooms merge only at level 3); its stages follow the same rule.",
   "images": {
     "L1": {
       "file": "grow_b_L1.png",
@@ -1232,6 +1232,660 @@
           "label": "Bare bulb",
           "rect": [
             201,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_x3": {
+      "file": "grow_b_L3_x3.png",
+      "size": [
+        432,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            16,
+            22,
+            24,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            10,
+            56,
+            40,
+            18
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Raised bed",
+          "rect": [
+            54,
+            28,
+            44,
+            50
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Raised bed",
+          "rect": [
+            100,
+            36,
+            34,
+            42
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_3",
+          "label": "Raised bed",
+          "rect": [
+            154,
+            30,
+            38,
+            48
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_4",
+          "label": "Raised bed",
+          "rect": [
+            194,
+            30,
+            43,
+            48
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_5",
+          "label": "Raised bed",
+          "rect": [
+            240,
+            46,
+            37,
+            32
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "trellis",
+          "label": "Trellis planter",
+          "rect": [
+            279,
+            14,
+            43,
+            64
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "trellis_2",
+          "label": "Trellis planter",
+          "rect": [
+            322,
+            14,
+            44,
+            64
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_rack",
+          "label": "Tool rack",
+          "rect": [
+            371,
+            20,
+            44,
+            40
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "crate",
+          "label": "Harvest crate",
+          "rect": [
+            371,
+            62,
+            33,
+            21
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "compost",
+          "label": "Compost bin",
+          "rect": [
+            406,
+            50,
+            24,
+            33
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_2",
+          "label": "Bare bulb",
+          "rect": [
+            207,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_3",
+          "label": "Bare bulb",
+          "rect": [
+            265,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_4",
+          "label": "Bare bulb",
+          "rect": [
+            337,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_5",
+          "label": "Bare bulb",
+          "rect": [
+            420,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_x3_stage1": {
+      "file": "grow_b_L3_x3_stage1.png",
+      "size": [
+        432,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            16,
+            22,
+            24,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            10,
+            56,
+            40,
+            18
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Raised bed",
+          "rect": [
+            54,
+            28,
+            44,
+            50
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Raised bed",
+          "rect": [
+            100,
+            36,
+            34,
+            42
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_3",
+          "label": "Raised bed",
+          "rect": [
+            154,
+            30,
+            38,
+            48
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_4",
+          "label": "Raised bed",
+          "rect": [
+            194,
+            30,
+            43,
+            48
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_5",
+          "label": "Raised bed",
+          "rect": [
+            240,
+            46,
+            37,
+            32
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "trellis",
+          "label": "Trellis planter",
+          "rect": [
+            279,
+            14,
+            43,
+            64
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "trellis_2",
+          "label": "Trellis planter",
+          "rect": [
+            322,
+            14,
+            44,
+            64
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_rack",
+          "label": "Tool rack",
+          "rect": [
+            371,
+            20,
+            44,
+            40
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "crate",
+          "label": "Harvest crate",
+          "rect": [
+            371,
+            62,
+            33,
+            21
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "compost",
+          "label": "Compost bin",
+          "rect": [
+            406,
+            50,
+            24,
+            33
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_2",
+          "label": "Bare bulb",
+          "rect": [
+            207,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_3",
+          "label": "Bare bulb",
+          "rect": [
+            265,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_4",
+          "label": "Bare bulb",
+          "rect": [
+            337,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_5",
+          "label": "Bare bulb",
+          "rect": [
+            420,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_x3_stage2": {
+      "file": "grow_b_L3_x3_stage2.png",
+      "size": [
+        432,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            16,
+            22,
+            24,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            10,
+            56,
+            40,
+            18
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Raised bed",
+          "rect": [
+            54,
+            28,
+            44,
+            50
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Raised bed",
+          "rect": [
+            100,
+            36,
+            34,
+            42
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_3",
+          "label": "Raised bed",
+          "rect": [
+            154,
+            30,
+            38,
+            48
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_4",
+          "label": "Raised bed",
+          "rect": [
+            194,
+            30,
+            43,
+            48
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_5",
+          "label": "Raised bed",
+          "rect": [
+            240,
+            46,
+            37,
+            32
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "trellis",
+          "label": "Trellis planter",
+          "rect": [
+            279,
+            14,
+            43,
+            64
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "trellis_2",
+          "label": "Trellis planter",
+          "rect": [
+            322,
+            14,
+            44,
+            64
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_rack",
+          "label": "Tool rack",
+          "rect": [
+            371,
+            20,
+            44,
+            40
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "crate",
+          "label": "Harvest crate",
+          "rect": [
+            371,
+            62,
+            33,
+            21
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "compost",
+          "label": "Compost bin",
+          "rect": [
+            406,
+            50,
+            24,
+            33
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_2",
+          "label": "Bare bulb",
+          "rect": [
+            207,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_3",
+          "label": "Bare bulb",
+          "rect": [
+            265,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_4",
+          "label": "Bare bulb",
+          "rect": [
+            337,
+            16,
+            9,
+            16
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_5",
+          "label": "Bare bulb",
+          "rect": [
+            420,
             16,
             9,
             16
