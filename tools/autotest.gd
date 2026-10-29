@@ -467,7 +467,7 @@ func _run() -> void:
 	Settings.set_value("event_timer", "off")
 	# MV-604: the idle frame cap would halve the frames of every quiet test and move Engine.max_fps under the settings
 	# checks; _battery_test turns it on for itself
-	Features.set_override("features", "idle_fps", false)
+	main.idle_cap_allowed = false
 	await wait(1.2)
 	await shot("title")
 	_check("audio: the lo-fi title music plays on the title screen", Sound.is_playing("title_lofi") or not Sound.bgm_on())
@@ -8974,6 +8974,7 @@ func _battery_test() -> void:
 	var fps0 = Settings.get_value("fps")
 	var keep_travel: bool = Game.s.traveling
 	Settings.set_value("fps", 60)
+	main.idle_cap_allowed = true
 	Features.set_override("features", "idle_fps", true)
 	Game.s.traveling = false
 	Threat.reset()
@@ -9033,11 +9034,12 @@ func _battery_test() -> void:
 			same = false
 	_check("battery: the cached blur draws 1:1, not flipped (%s vs %s)" % [frame.get_size(), cache.get_size()], same and frame.get_size() == cache.get_size())
 	await shot("closeup_blur_still")
-	main._shake = 2.0
+	var cam0: Vector2 = main.camera.position
+	main.camera.position += Vector2(1, 0)
+	await get_tree().process_frame           # resumes before Main._process: give it one whole frame
 	await get_tree().process_frame
-	await get_tree().process_frame
-	_check("battery: a camera shake goes back to the live blur", not main.blur_still and main.blur_rect.material == main.blur_mat)
-	main._shake = 0.0
+	_check("battery: a camera move goes back to the live blur", not main.blur_still and main.blur_rect.material == main.blur_mat)
+	main.camera.position = cam0
 	Features.set_override("features", "blur_still", false)
 	await wait(1.0)
 	_check("battery: switch off = the live blur all the time", not main.blur_still)
@@ -9046,7 +9048,8 @@ func _battery_test() -> void:
 	await wait(0.6)
 	_check("battery: closing the close-up leaves the live material", not main.blur_still and main.blur_rect.material == main.blur_mat
 		and not main.blur_rect.visible)
-	Features.set_override("features", "idle_fps", false)
+	Features.set_override("features", "idle_fps", null)
+	main.idle_cap_allowed = false
 	Settings.set_value("fps", fps0)
 	Game.s.traveling = keep_travel
 

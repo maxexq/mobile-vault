@@ -63,6 +63,8 @@ var world_scale := 1.0           # physical px per art pixel used by the world (
 var view_k := 1.0                # world viewport px per UI/design px (S / world_scale)
 var pan_right := PAN_LIMIT       # how far right a swipe may move the camera (world px), set by _fit_camera
 var _touches := {}
+var idle_cap_allowed := true     # MV-604: the autotest turns the idle cap off outside its own group (a feature override
+                                 # would be wiped by the many clear_overrides() calls in the run)
 var blur_still := false          # MV-604: the close-up shows the cached blur right now (autotest, GOD overlay)
 var _blur_key: Array = []        # camera + focus the cached blur was taken with
 var _blur_t := 0.0
@@ -438,7 +440,7 @@ func _process(delta: float) -> void:
 ## glide / shake / pan drift. The crew and room loops run at 3-12 fps, so they look the same.
 func target_fps() -> int:
 	var fps := int(Settings.get_value("fps"))
-	if Features.on("idle_fps") and is_calm():
+	if idle_cap_allowed and Features.on("idle_fps") and is_calm():
 		fps = mini(fps, int(Features.num("perf.idle_fps", IDLE_FPS)))
 	return fps
 
