@@ -5,6 +5,8 @@
   python tools/asset_log.py sync --dry-run     show what would be uploaded
   python tools/asset_log.py pull [--dry-run]   approved on the web -> override PNG (like `pixellab.py accept`), marks it accepted
   python tools/asset_log.py status             counts by status from the server
+  python tools/asset_log.py backfill DIR [--group pet] [--dry-run]
+                                               upload images made by one-off PixelLab scripts (rooms, pets, anims ...)
 
 `pixellab.py gen --yes` runs `sync` for its sprite by itself when the log is configured.
 The web app (tools/asset-log, Cloudflare Pages + R2 + D1, behind Cloudflare Access) and its setup: tools/asset-log/README.md.
@@ -287,6 +289,114 @@ def cmd_pull(a):
         print("now: python tools/generate_pixel_art.py, check in game, commit the overrides")
 
 
+BACKFILL_SKIP = ("compare", "contact", "sheet", "hotspot", "mask", "sketch", "grid", "preview_board")
+
+
+def frames_gif(ims):
+    """Lossless GIF when all frames share <= 255 opaque colours (pixel art), index 255 = transparent."""
+    cols = sorted({p[:3] for im in ims for p in im.getdata() if p[3]})
+    buf = io.BytesIO()
+    if len(cols) > 255:
+        ims[0].save(buf, "GIF", save_all=True, append_images=ims[1:], duration=100, loop=0, disposal=2)
+        return buf.getvalue()
+    idx = {c: i for i, c in enumerate(cols)}
+    pal = [v for c in cols for v in c] + [0, 0, 0] * (256 - len(cols))
+    out = []
+    for im in ims:
+        q = Image.new("P", im.size)
+        q.putpalette(pal)
+        q.putdata([idx[p[:3]] if p[3] else 255 for p in im.getdata()])
+        out.append(q)
+    out[0].save(buf, "GIF", save_all=True, append_images=out[1:], duration=100, loop=0, disposal=2,
+                transparency=255, optimize=False)
+    return buf.getvalue()
+
+
+def backfill_items(root, group):
+    """Images under root that PixelLab scripts wrote. A folder of numbered frames (0.png, 1.png ...) becomes one GIF."""
+    import re
+    root = os.path.abspath(root)
+    out = []
+    for d, dirs, fns in os.walk(root):
+        dirs[:] = sorted(x for x in dirs if not x.startswith(".") and x not in ("site", "__pycache__"))
+        rel = os.path.relpath(d, root).replace(os.sep, "/")
+        imgs = sorted(f for f in fns if f.lower().endswith((".png", ".gif")))
+        frames = [f for f in imgs if re.fullmatch(r"\d+\.png", f)]
+        if frames and len(frames) == len(imgs):
+            out.append((rel, [os.path.join(d, f) for f in sorted(frames, key=lambda f: int(f[:-4]))]))
+            continue
+        for f in imgs:
+            if any(k in f.lower() for k in BACKFILL_SKIP) or any(k in rel.lower() for k in ("hotspot",)):
+                continue
+            out.append((f"{rel}/{f}" if rel != "." else f, [os.path.join(d, f)]))
+    rows = []
+    for rel, paths in out:
+        name = re.sub(r"[^A-Za-z0-9_.-]+", ".", os.path.splitext(rel)[0].strip("./")) or "root"
+        if len(paths) > 1:  # frame folder -> animated GIF, 10 fps, nearest only
+            data, typ, ext = frames_gif([Image.open(p).convert("RGBA") for p in paths]), "image/gif", ".gif"
+        else:
+            data = read(paths[0])
+            typ, ext = ("image/gif", ".gif") if paths[0].lower().endswith(".gif") else ("image/png", ".png")
+        with Image.open(io.BytesIO(data)) as im:
+            w, h = im.size
+        m = re.search(r"(?:seed|_s)(\d+)", rel)
+        rows.append({"rel": rel, "name": name, "data": data, "type": typ, "ext": ext, "w": w, "h": h,
+                     "seed": int(m.group(1)) if m else 0, "t": int(max(os.path.getmtime(p) for p in paths)),
+                     "frames": len(paths)})
+    return rows
+
+
+def backfill(root, group, dry=False):
+    """Idempotent: state per folder in <root>/.asset_log_backfill.json (relative path -> sha256)."""
+    state_p = os.path.join(root, ".asset_log_backfill.json")
+    st = json.load(open(state_p, encoding="utf-8")) if os.path.exists(state_p) else {}
+    group = group or os.path.basename(os.path.abspath(root)).split("-")[0]
+    todo = []
+    for it in backfill_items(root, group):
+        h = sha(it["data"])
+        if st.get(it["rel"]) != h:
+            todo.append((it, h))
+    print(f"{root}: {len(todo)} new or changed image(s), {sum(len(i['data']) for i, _ in todo) / 1e6:.1f} MB")
+    if dry:
+        for it, _ in todo[:15]:
+            print(f"  {group}_{it['name']}  {it['w']}x{it['h']}{' ' + str(it['frames']) + ' frames' if it['frames'] > 1 else ''}")
+        return
+    batch, files, size = [], {}, 0
+
+    def flush():
+        nonlocal batch, files, size
+        if batch:
+            body, ct = multipart({"meta": json.dumps([r for r, _, _ in batch])},
+                                 {k: (os.path.basename(k), v, t) for k, (v, t) in files.items()})
+            request("POST", "ingest", body, ct)
+            for _, rel, h in batch:
+                st[rel] = h
+            with open(state_p, "w", encoding="utf-8") as f:
+                json.dump(st, f, indent=1)
+        batch, files, size = [], {}, 0
+
+    for it, h in todo:
+        sprite = f"{group}_{it['name']}"
+        key = f"gen/{group}/{it['name']}/{h[:16]}{it['ext']}"
+        row = {"id": f"{sprite}~{it['seed']}~{h[:12]}", "sprite": sprite, "prefix": group + "_",
+               "endpoint": "script (backfill)", "seed": it["seed"], "t": it["t"], "usd": 0,
+               "w": it["w"], "h": it["h"], "gen_w": it["w"], "gen_h": it["h"], "prompt": "", "negative": "",
+               "prompt_guess": 0, "params": {"source": f"{os.path.basename(os.path.abspath(root))}/{it['rel']}",
+                                              "frames": it["frames"]}, "key_snapped": key}
+        batch.append((row, it["rel"], h))
+        files[key] = (it["data"], it["type"])
+        size += len(it["data"])
+        if len(batch) >= 20 or size > 20 * 1024 * 1024:
+            flush()
+    flush()
+    print(f"backfilled {len(todo)} image(s) to {config()['url']} (group {group}_)")
+
+
+def cmd_backfill(a):
+    for d in a.dirs:
+        backfill(d, a.group, a.dry_run)
+
+
 def cmd_status(a):
     s = request("GET", "stats")
     print(f"{s['total']['n']} generation(s), ${s['total']['usd'] or 0:.4f} spent")
@@ -306,6 +416,11 @@ def main():
     p.add_argument("--force", action="store_true", help="accept images with off-palette pixels")
     p.set_defaults(fn=cmd_pull)
     sub.add_parser("status").set_defaults(fn=cmd_status)
+    p = sub.add_parser("backfill", help="upload images from one-off PixelLab script folders")
+    p.add_argument("dirs", nargs="+")
+    p.add_argument("--group", help="gallery group (prefix), default: first word of the folder name")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(fn=cmd_backfill)
     a = ap.parse_args()
     a.fn(a)
 
