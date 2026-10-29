@@ -274,8 +274,8 @@
           "rect": [
             8,
             30,
-            96,
-            18
+            100,
+            26
           ],
           "kind": "station",
           "action": "water_plant"
