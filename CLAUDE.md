@@ -29,6 +29,8 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
   screen in a room animates when on and goes dark at power-out.
   The grow room (MV-598, options A and B both approved, L1-L3 + merged 2 and 3) is the reference for plant/farm rooms: anything that grows
   ships stage images (planted / half / full) with an identical layout, made by inpainting only the plant area.
+  The infirmary (MV-600, option A ward + option B surgery corner in the merged rooms, L1-L3 + merged 2/3) is the
+  reference for medical, lab and care rooms.
   Every v2 room image (each level and merged size) ships tap hotspots in `<room>/hotspots.json` in the
   same commit (rect per tappable object, stable ids across levels); check with
   `docs/art/room-style-reference-v2/tools/hotspots.py check` (see "Tap hotspots" in the doc, MV-599).
