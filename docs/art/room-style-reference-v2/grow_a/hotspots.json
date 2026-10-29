@@ -1,7 +1,7 @@
 {
   "room": "grow_a",
   "format": 1,
-  "note": "Grow room option A (LED grow rack). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. L1 = mature plants; L1_stage1/L1_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same. L3_x2 = merged 2 slots (rooms merge only at level 3); its stages follow the same rule.",
+  "note": "Grow room option A (LED grow rack). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. Each level key (L1, L2, L3, L3_x2) = mature plants; <key>_stage1/<key>_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same. L3_x2 = merged 2 slots (rooms merge only at level 3); its stages follow the same rule.",
   "images": {
     "L1": {
       "file": "grow_a_L1.png",
@@ -242,6 +242,507 @@
             16,
             44,
             9
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L2": {
+      "file": "grow_a_L2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "soil_sacks",
+          "label": "Soil sacks",
+          "rect": [
+            24,
+            62,
+            40,
+            17
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "seed_shelf",
+          "label": "Seed jar shelf",
+          "rect": [
+            16,
+            26,
+            22,
+            10
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "hose",
+          "label": "Water hose",
+          "rect": [
+            106,
+            42,
+            18,
+            28
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "jerrycan",
+          "label": "Water jerrycan",
+          "rect": [
+            122,
+            59,
+            15,
+            20
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planters",
+          "label": "Planter tubs",
+          "rect": [
+            16,
+            37,
+            90,
+            20
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            43,
+            16,
+            44,
+            6
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_2",
+          "label": "Second LED strip",
+          "rect": [
+            61,
+            24,
+            35,
+            6
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L2_stage1": {
+      "file": "grow_a_L2_stage1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "soil_sacks",
+          "label": "Soil sacks",
+          "rect": [
+            24,
+            62,
+            40,
+            17
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "seed_shelf",
+          "label": "Seed jar shelf",
+          "rect": [
+            16,
+            26,
+            22,
+            10
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "hose",
+          "label": "Water hose",
+          "rect": [
+            106,
+            42,
+            18,
+            28
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "jerrycan",
+          "label": "Water jerrycan",
+          "rect": [
+            122,
+            59,
+            15,
+            20
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planters",
+          "label": "Planter tubs",
+          "rect": [
+            16,
+            37,
+            90,
+            20
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            43,
+            16,
+            44,
+            6
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_2",
+          "label": "Second LED strip",
+          "rect": [
+            61,
+            24,
+            35,
+            6
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L2_stage2": {
+      "file": "grow_a_L2_stage2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "soil_sacks",
+          "label": "Soil sacks",
+          "rect": [
+            24,
+            62,
+            40,
+            17
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "seed_shelf",
+          "label": "Seed jar shelf",
+          "rect": [
+            16,
+            26,
+            22,
+            10
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "hose",
+          "label": "Water hose",
+          "rect": [
+            106,
+            42,
+            18,
+            28
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "jerrycan",
+          "label": "Water jerrycan",
+          "rect": [
+            122,
+            59,
+            15,
+            20
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planters",
+          "label": "Planter tubs",
+          "rect": [
+            16,
+            37,
+            90,
+            20
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            43,
+            16,
+            44,
+            6
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        },
+        {
+          "id": "grow_light_2",
+          "label": "Second LED strip",
+          "rect": [
+            61,
+            24,
+            35,
+            6
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3": {
+      "file": "grow_a_L3.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "seed_cabinet",
+          "label": "Seed cabinet",
+          "rect": [
+            0,
+            52,
+            13,
+            26
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "water_pump",
+          "label": "Water tank and pump",
+          "rect": [
+            116,
+            54,
+            20,
+            22
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "timer",
+          "label": "Grow light timer",
+          "rect": [
+            111,
+            29,
+            9,
+            10
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            16,
+            35,
+            90,
+            20
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light hood",
+          "rect": [
+            42,
+            16,
+            52,
+            8
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_stage1": {
+      "file": "grow_a_L3_stage1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "seed_cabinet",
+          "label": "Seed cabinet",
+          "rect": [
+            0,
+            52,
+            13,
+            26
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "water_pump",
+          "label": "Water tank and pump",
+          "rect": [
+            116,
+            54,
+            20,
+            22
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "timer",
+          "label": "Grow light timer",
+          "rect": [
+            111,
+            29,
+            9,
+            10
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            16,
+            35,
+            90,
+            20
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light hood",
+          "rect": [
+            42,
+            16,
+            52,
+            8
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_stage2": {
+      "file": "grow_a_L3_stage2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "seed_cabinet",
+          "label": "Seed cabinet",
+          "rect": [
+            0,
+            52,
+            13,
+            26
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "water_pump",
+          "label": "Water tank and pump",
+          "rect": [
+            116,
+            54,
+            20,
+            22
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "timer",
+          "label": "Grow light timer",
+          "rect": [
+            111,
+            29,
+            9,
+            10
+          ],
+          "kind": "device",
+          "action": "use_device",
+          "needs_power": true
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            16,
+            35,
+            90,
+            20
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light hood",
+          "rect": [
+            42,
+            16,
+            52,
+            8
           ],
           "kind": "light",
           "action": "toggle_light",

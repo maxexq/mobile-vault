@@ -4,11 +4,19 @@ import sys,os,time,base64,io
 sys.path.insert(0,"/mnt/project-files/designs/room-redesign-preview")
 from gen_deep import api,b64
 from PIL import Image,ImageDraw
-MASK={"A_M2":{"add":[(8,30,104,47),(184,21,232,32),(184,41,232,52),(184,61,232,73)],"cut":[]},
+MASK={"A_L2":{"add":[(16,37,104,48)],"cut":[]},
+      "A_L3":{"add":[(16,35,104,48)],"cut":[]},
+      "B_L2":{"add":[(56,22,126,62),(14,58,50,66)],"cut":[(78,12,88,32)]},
+      "B_L3":{"add":[(56,24,128,64),(14,58,50,66)],"cut":[(72,14,96,34)]},
+      "A_M2":{"add":[(8,30,104,47),(184,21,232,32),(184,41,232,52),(184,61,232,73)],"cut":[]},
       "B_M2":{"add":[(10,58,48,66),(54,28,96,66),(100,36,132,68),(156,26,234,70)],"cut":[(78,10,86,34),(200,10,210,34)]},
       "A":{"add":[(14,33,104,45)],"cut":[]},
       "B":{"add":[(54,22,128,62),(14,57,48,65)],"cut":[(76,10,88,34)]}}
-CROP={"A_M2":"leafy green vegetables (lettuce, herbs) growing in neat planter pots on a table and in trays on a lit metal shelving rack",
+CROP={"A_L2":"leafy green vegetables growing in matching planter tubs on a wooden workbench",
+      "A_L3":"leafy green vegetables growing in neat matching planter pots on a clean metal grow table",
+      "B_L2":"tomato plants tied to wooden stakes and vegetables growing in repaired planter boxes and painted tyres",
+      "B_L3":"tomato and pepper plants on a wooden trellis growing in neat raised wooden beds and a tyre planter",
+      "A_M2":"leafy green vegetables (lettuce, herbs) growing in neat planter pots on a table and in trays on a lit metal shelving rack",
       "B_M2":"tomato, pepper and herb plants growing in raised wooden planter beds and on a trellis",
       "A":"leafy green vegetables (lettuce, herbs) growing in cut plastic barrels and pots on a wooden table",
       "B":"tomato plants and vegetables growing in pallet planter boxes and stacked tyres"}
@@ -21,7 +29,7 @@ def mask(k):
     for r in MASK[k]["cut"]: d.rectangle(r,fill=(0,0,0))
     return m
 def run(k,st,seed):
-    src=Image.open(f"out/gr{k}_s3.png" if k.endswith("_M2") else f"out/gr{k}_L1.png").convert("RGBA"); W,H=SIZE(k)
+    src=Image.open(f"out/gr{k}_s3.png" if "_" in k else f"out/gr{k}_L1.png").convert("RGBA"); W,H=SIZE(k)
     desc=(f"{CROP[k]}, {STAGE[st]} Same planters, same room, same lighting, 16-bit dark post-apocalyptic pixel art, crisp dark outlines.")
     body={"description":desc,"inpainting_image":{"image":b64(src),"size":{"width":W,"height":H}},"mask_image":{"image":b64(mask(k)),"size":{"width":W,"height":H}},"seed":seed}
     jid=api("POST","/inpaint-v3",body)["background_job_id"]

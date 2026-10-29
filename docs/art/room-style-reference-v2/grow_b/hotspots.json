@@ -1,7 +1,7 @@
 {
   "room": "grow_b",
   "format": 1,
-  "note": "Grow room option B (tyre and pallet garden). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. L1 = mature plants; L1_stage1/L1_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same. L3_x2 = merged 2 slots (rooms merge only at level 3); its stages follow the same rule.",
+  "note": "Grow room option B (tyre and pallet garden). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. Each level key (L1, L2, L3, L3_x2) = mature plants; <key>_stage1/<key>_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same. L3_x2 = merged 2 slots (rooms merge only at level 3); its stages follow the same rule.",
   "images": {
     "L1": {
       "file": "grow_b_L1.png",
@@ -241,6 +241,570 @@
             78,
             16,
             9,
+            15
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L2": {
+      "file": "grow_b_L2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            18,
+            16,
+            22,
+            28
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            57,
+            40,
+            15
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "watering_can",
+          "label": "Watering can",
+          "rect": [
+            8,
+            70,
+            18,
+            13
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planter_1",
+          "label": "Staked planter",
+          "rect": [
+            56,
+            26,
+            40,
+            50
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Painted tyre planter",
+          "rect": [
+            100,
+            26,
+            26,
+            52
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_hooks",
+          "label": "Tool hooks",
+          "rect": [
+            130,
+            32,
+            12,
+            14
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            14
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L2_stage1": {
+      "file": "grow_b_L2_stage1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            18,
+            16,
+            22,
+            28
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            57,
+            40,
+            15
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "watering_can",
+          "label": "Watering can",
+          "rect": [
+            8,
+            70,
+            18,
+            13
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planter_1",
+          "label": "Staked planter",
+          "rect": [
+            56,
+            26,
+            40,
+            50
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Painted tyre planter",
+          "rect": [
+            100,
+            26,
+            26,
+            52
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_hooks",
+          "label": "Tool hooks",
+          "rect": [
+            130,
+            32,
+            12,
+            14
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            14
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L2_stage2": {
+      "file": "grow_b_L2_stage2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            18,
+            16,
+            22,
+            28
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            57,
+            40,
+            15
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "watering_can",
+          "label": "Watering can",
+          "rect": [
+            8,
+            70,
+            18,
+            13
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planter_1",
+          "label": "Staked planter",
+          "rect": [
+            56,
+            26,
+            40,
+            50
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Painted tyre planter",
+          "rect": [
+            100,
+            26,
+            26,
+            52
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_hooks",
+          "label": "Tool hooks",
+          "rect": [
+            130,
+            32,
+            12,
+            14
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            14
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3": {
+      "file": "grow_b_L3.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Water tank with tap",
+          "rect": [
+            18,
+            16,
+            22,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            57,
+            40,
+            17
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Trellis bed",
+          "rect": [
+            56,
+            26,
+            40,
+            52
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Tyre planter",
+          "rect": [
+            100,
+            30,
+            28,
+            46
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_rack",
+          "label": "Tool rack",
+          "rect": [
+            128,
+            34,
+            16,
+            42
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "crate",
+          "label": "Harvest crate",
+          "rect": [
+            126,
+            76,
+            18,
+            16
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Shaded lamp",
+          "rect": [
+            75,
+            17,
+            18,
+            15
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_stage1": {
+      "file": "grow_b_L3_stage1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Water tank with tap",
+          "rect": [
+            18,
+            16,
+            22,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            57,
+            40,
+            17
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Trellis bed",
+          "rect": [
+            56,
+            26,
+            40,
+            52
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Tyre planter",
+          "rect": [
+            100,
+            30,
+            28,
+            46
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_rack",
+          "label": "Tool rack",
+          "rect": [
+            128,
+            34,
+            16,
+            42
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "crate",
+          "label": "Harvest crate",
+          "rect": [
+            126,
+            76,
+            18,
+            16
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Shaded lamp",
+          "rect": [
+            75,
+            17,
+            18,
+            15
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L3_stage2": {
+      "file": "grow_b_L3_stage2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Water tank with tap",
+          "rect": [
+            18,
+            16,
+            22,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            57,
+            40,
+            17
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Trellis bed",
+          "rect": [
+            56,
+            26,
+            40,
+            52
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Tyre planter",
+          "rect": [
+            100,
+            30,
+            28,
+            46
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "tool_rack",
+          "label": "Tool rack",
+          "rect": [
+            128,
+            34,
+            16,
+            42
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "crate",
+          "label": "Harvest crate",
+          "rect": [
+            126,
+            76,
+            18,
+            16
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "grow_light",
+          "label": "Shaded lamp",
+          "rect": [
+            75,
+            17,
+            18,
             15
           ],
           "kind": "light",

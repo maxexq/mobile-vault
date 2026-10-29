@@ -7,6 +7,10 @@ from anim import add_glow,clip,darken,FPS
 ROOMS={
  "A":{"lamps":[(65,20,34)],"col":(220,110,255),"plants":[(14,33,104,45)],"floor":90,"grower_x":58,"drip":None},
  "B":{"lamps":[(82,28,34)],"col":(255,180,90),"plants":[(54,22,128,62)],"floor":90,"grower_x":78,"drip":(38,50,61)},
+ "A_L2":{"lamps":[(65,20,34),(80,28,26)],"col":(220,110,255),"plants":[(16,37,104,48)],"floor":90,"grower_x":58,"drip":None},
+ "A_L3":{"lamps":[(66,22,38)],"col":(220,110,255),"plants":[(16,35,104,48)],"floor":90,"grower_x":58,"drip":None},
+ "B_L2":{"lamps":[(82,18,34)],"col":(255,180,90),"plants":[(56,22,126,62)],"floor":90,"grower_x":78,"drip":(30,52,62)},
+ "B_L3":{"lamps":[(83,28,36)],"col":(255,190,110),"plants":[(56,24,128,64)],"floor":90,"grower_x":78,"drip":(30,52,62)},
  # merged 2-slot (level 3): table + LED rack / raised beds with two bulbs
  "A_M2":{"lamps":[(56,14,34),(208,20,18),(208,40,18),(208,60,18)],"col":(220,110,255),"plants":[(8,30,104,47),(184,21,232,32),(184,41,232,52),(184,61,232,73)],"floor":92,"grower_x":200,"drip":None},
  "B_M2":{"lamps":[(82,24,34),(206,24,34)],"col":(255,180,90),"plants":[(54,28,96,66),(100,36,132,68),(156,26,234,70)],"floor":92,"grower_x":120,"drip":(27,50,60)},

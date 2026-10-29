@@ -197,10 +197,10 @@ Anchors for every image are in `anim_lv.py` (`ROOMS`).
 ## Third reference: grow room, level 1 + merged 2 (MV-598)
 
 **Approved by Parames on 2026-10-29: keep both A and B** (L1 single slot and L3 merged 2 slots, all three growth
-stages). Either can be used as the game's grow room, or both as two room variants.
+stages; L2 and L3 single slot added later the same day). Either can be used as the game's grow room, or both as two room variants.
 
 Parames kept **two** grow room designs at level 1, one slot (144x96), on 2026-10-29, then asked for the
-merged 2-slot size of both (below). L2, L3 single and 3-slot are not made yet. Use these as the reference for plant, farm and greenhouse rooms, and
+merged 2-slot size and levels 2 and 3 of both (below). The 3-slot merge is not made yet. Use these as the reference for plant, farm and greenhouse rooms, and
 for any room whose contents change over time.
 
 ![grow stages](room-style-reference-v2/grow-stages-preview.png)
@@ -226,6 +226,21 @@ Columns: stage 1 just planted, stage 2 half grown, stage 3 fully grown (`grow_<k
   (planters are `station` + `water_plant`, the grow light needs power).
 
 ![grow hotspots](room-style-reference-v2/grow-hotspots-preview.png)
+
+### Grow room levels 2 and 3 (single slot)
+
+Made from each room's L1 (stage 3) with `edit-images-v2` so the layout stays (`tools/levels_grow.py`, seed 1 for
+all four), then stages 1 and 2 with the plant-area inpaint (`tools/stages_grow.py`, keys `A_L2`, `A_L3`, `B_L2`,
+`B_L3`). Rows below: A L2, A L3, B L2, B L3; columns: stage 1, 2, 3.
+
+- **A L2:** sturdy wooden workbench, matching planter tubs, a second short LED strip, a seed-jar shelf.
+  **A L3:** clean metal grow table, LED bar with a reflector hood, light timer (green LED), water tank + pump,
+  seed cabinet, painted walls.
+- **B L2:** repaired planter boxes, tomatoes tied to stakes, painted tyres, drip hose, tool hooks, watering can.
+  **B L3:** trellis bed, water tank with tap, shaded lamp, tool rack, harvest crate.
+
+![grow levels](room-style-reference-v2/grow-levels-preview.png)
+![grow levels hotspots](room-style-reference-v2/grow-levels-hotspots-preview.png)
 
 ### Grow room merged 2 slots (level 3)
 
@@ -262,3 +277,15 @@ B = image 1), then the scripts above. They read and write a scratch `out/` folde
 | `room-style-reference-v2/grow_b/grow_b_L3_x2.png` | 7fd728ff90aced95 |
 | `room-style-reference-v2/grow_b/grow_b_L3_x2_stage1.png` | 6b40ab0f54afd81f |
 | `room-style-reference-v2/grow_b/grow_b_L3_x2_stage2.png` | 488c968abe3a2f82 |
+| `room-style-reference-v2/grow_a/grow_a_L2.png` | d776af5c26148b64 |
+| `room-style-reference-v2/grow_a/grow_a_L2_stage1.png` | c378ab13167d54f4 |
+| `room-style-reference-v2/grow_a/grow_a_L2_stage2.png` | 35937fe61148f517 |
+| `room-style-reference-v2/grow_a/grow_a_L3.png` | 5fbd258075c425f2 |
+| `room-style-reference-v2/grow_a/grow_a_L3_stage1.png` | b85ef19bb25baa65 |
+| `room-style-reference-v2/grow_a/grow_a_L3_stage2.png` | 689a63282a913d97 |
+| `room-style-reference-v2/grow_b/grow_b_L2.png` | fc1c83e0c6aefcf6 |
+| `room-style-reference-v2/grow_b/grow_b_L2_stage1.png` | 48b0850e8677d986 |
+| `room-style-reference-v2/grow_b/grow_b_L2_stage2.png` | c556d5177fbb68a8 |
+| `room-style-reference-v2/grow_b/grow_b_L3.png` | d864b87e7e908bf6 |
+| `room-style-reference-v2/grow_b/grow_b_L3_stage1.png` | 689a0d8a70e90697 |
+| `room-style-reference-v2/grow_b/grow_b_L3_stage2.png` | c1ba26b7be2060ec |
