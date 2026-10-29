@@ -2128,5 +2128,8 @@
  "เลือกลูกเรือที่ค่าสถานะเหมาะกับแต่ละตำแหน่งที่สุด (ข้ามคนที่ออกสำรวจ ป่วย หรือบาดเจ็บหนัก)": "Puts the crew whose stats best fit each slot (skips anyone on an expedition, sick or badly hurt)",
  "จัดทีมใหม่ เปลี่ยนคน %d ตำแหน่ง": "Squad reassigned: %d slots changed",
  "ไม่มีลูกเรือที่พร้อมลงทีม": "No crew ready to join the squad",
- "ทีมนี้เหมาะที่สุดแล้ว": "This squad is already the best fit"
+ "ทีมนี้เหมาะที่สุดแล้ว": "This squad is already the best fit",
+ "ข้อกำหนดและความเป็นส่วนตัว": "Terms and privacy",
+ "ปิดการส่งข้อมูลเสริมทั้งหมด": "Stop all optional data sharing",
+ "ข้อมูลเสริม: บันทึกแก้ปัญหา %s · สถิติการเล่น %s": "Optional data: diagnostics %s \u00b7 play statistics %s"
 }

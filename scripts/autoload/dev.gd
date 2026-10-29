@@ -238,10 +238,26 @@ func _update_overlay() -> void:
 
 
 # ================================================================== actions (used by GodPanel + tests)
+func legal_notice_preview() -> void:
+	var hud := get_tree().get_first_node_in_group("legal_notice_hud") as HUD
+	if hud != null:
+		hud.open_legal(true)
+
+
 func fast_forward(sec: float) -> void:
 	act("fast forward %ds" % int(sec))
-	Game._offline_progress(sec)
+	var report := Game._offline_progress(sec)
 	Game._emit_all(false)
+	if Features.on("offline_summary"):
+		Game.offline_summary_ready.emit(report)
+
+
+func offline_summary_preview() -> void:
+	act("offline summary preview")
+	Game.offline_summary_ready.emit({"seconds": 14400.0, "away_seconds": 21600.0,
+		"resources": {"scrap": 84.0, "food": -12.5, "water": -8.0, "power": 20.0, "fuel": -4.0, "crops": 16.0, "meat": 6.0},
+		"items": {"stimpack": 2, "ammo": 5}, "gear": [], "km": 3.4,
+		"built": ["ห้องครัว Lv.2"], "combat": {"kills": 42, "xp": 126}})
 
 
 func set_tod(v: float) -> void:
@@ -850,9 +866,11 @@ func world_arrive_offline() -> String:
 	if best == "" or not WorldMap.drive_to(best):
 		return "no destination"
 	Game.s.traveling = true
-	Game._offline_progress(1800.0)
+	var report := Game._offline_progress(1800.0)
 	act("world arrive offline at %s (%.1f km)" % [best, best_km])
 	Game.travel_changed.emit()
+	if Features.on("offline_summary"):
+		Game.offline_summary_ready.emit(report)
 	return best
 
 
