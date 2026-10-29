@@ -860,14 +860,14 @@
   "cast_animations/fortune_teller/walk/7.png": "d47f5851926544f460399e5ad163e248bb28933914c4728ab2915c7cc7d6f71a",
   "cast_animations/fortune_teller/walk/8.png": "29fab5e733d6ea8d658c53131bc25378a22937ec1f1738abda4f9d4347a2a498",
   "cast_animations/fortune_teller/work/0.png": "79378ed7bcf713541c7a35fa5e1fa1f8464ff1c2c7dc28eb22f5322f60b57518",
-  "cast_animations/fortune_teller/work/1.png": "1de935eb45ac2d594ef1a5483710cde4ea77c9441ecb0998fa3cdbffe1cdb068",
-  "cast_animations/fortune_teller/work/2.png": "7de0a20cad02a5e38a8d01e28a740511fb80dee5dd844ab31a4b1a63cd2de47f",
-  "cast_animations/fortune_teller/work/3.png": "7a6b1286c5c88b61232c1a60f299f28387a7fdf7be42c2161065859233a85ea8",
-  "cast_animations/fortune_teller/work/4.png": "ebc070b2405a581cd56ea649bb0048246c9d52ed8aa1c7a6ad7217dbc420ca4d",
-  "cast_animations/fortune_teller/work/5.png": "3ba5518d75e5601914e527da80891cd49f531bb492ab28a41f7fcb0a29937180",
-  "cast_animations/fortune_teller/work/6.png": "c0936ea3d89389fb7b023d32d0621917eef3c1894bea9ed50f7112a49f881966",
-  "cast_animations/fortune_teller/work/7.png": "2e96038336eddf2939b8859f8b5d5792dbfc2d1c954ec12387d0ab3034a7ce5d",
-  "cast_animations/fortune_teller/work/8.png": "6b12dc8410c5eda04991f2de4f14278edcc0e483ab5b503dc612402ce54a4e9f",
+  "cast_animations/fortune_teller/work/1.png": "24fe998a85d61016f09303ab5b435272914f1420da55f6a1379a942d7a876ce7",
+  "cast_animations/fortune_teller/work/2.png": "86d1fb0869fa10f5d5b468ba020d62eb79637dded23f5adb29c998006c1077fe",
+  "cast_animations/fortune_teller/work/3.png": "49fae7fa54093d788e912d322aea5c459b2005af20774446800354f90b70fa26",
+  "cast_animations/fortune_teller/work/4.png": "fbbbba1aa59122ed7f3b6e51bc63b47cd6bf822592b941e5c6faa00c0c3da8e8",
+  "cast_animations/fortune_teller/work/5.png": "257823690a39a327468d1c740c434048c16cdfe83f9f5ba6806c98ade740f849",
+  "cast_animations/fortune_teller/work/6.png": "0817a82d994999975b92765ebff78256270f09fa41b142bd20c601f778191890",
+  "cast_animations/fortune_teller/work/7.png": "386f21cb92d143e4a8d814dea8186b06d1a426fe11a29135bc9be260ff2bf79a",
+  "cast_animations/fortune_teller/work/8.png": "16fd60cc1e30bf1593253eb05048020897401808de1c1d9270537c57990c3600",
   "cast_animations/gunslinger/drink/0.png": "eb58ac2424a6c8dc6133f4b9b0863b9e9b9260c989ee94c5f2b4a35493715af0",
   "cast_animations/gunslinger/drink/1.png": "4e1e68b40086dfab523acf441c57fd17d0abd330d79461f84a453a8ab856f6c4",
   "cast_animations/gunslinger/drink/2.png": "5f8703556961be097fbe5447309991466210e2cc5e8bf036c720d8786124dc42",
@@ -2118,7 +2118,8 @@
      "signature": "cast_animations/fortune_teller/signature/",
      "idle": "cast_animations/fortune_teller/idle/"
     },
-    "signature": "shuffling a deck of tarot cards, then fanning them out mysteriously with a sly look"
+    "signature": "shuffling a deck of tarot cards, then fanning them out mysteriously with a sly look",
+    "work_rebuilt": "2026-10-29 (MV-591): the first work clip had the hammer head pointing away from the arm and a stray stake (frames 5-8). Regenerated with animate_character v3 east, frame_count 8, seed 2, action: \"working: firmly gripping the end of a hammer handle in the front hand, the hammer head always fixed to the hand and swinging along the same arc as the arm; raising the hammer up and striking down in front of the body onto a small anvil on the floor, hammer head facing down at the moment of impact, repeating loop\". Picked by Parames from 3 seeds."
    },
    "gunslinger": {
     "pixellab_character_id": "66b37420-c0ed-453d-aaaa-b7eccfc882eb",
