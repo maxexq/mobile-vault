@@ -7956,7 +7956,12 @@ func _audio_test() -> void:
 	var thunder := int(Sound.played.get("thunder_1", 0)) + int(Sound.played.get("thunder_2", 0))
 	await wait(0.3)
 	_check("audio: a storm rolls thunder", int(Sound.played.get("thunder_1", 0)) + int(Sound.played.get("thunder_2", 0)) > thunder)
-	# effects from game signals and buttons
+	# effects from game signals and buttons. The game keeps running under the test: a live raid can have 3 van hits
+	# already playing (PER_SOUND_MAX) or one inside the sfx gap, so start these four from quiet voices
+	for p in Sound._sfx_pool + Sound._ui_pool:
+		p.stop()
+	for id in ["hit_metal", "build_done", "toast_good", "tap"]:
+		Sound._last_at.erase(id)
 	var before := Sound.played.duplicate()
 	Combat.hit.emit("van", 0, 5.0, false)
 	Game.construction_finished.emit(0, "build")
