@@ -78,6 +78,9 @@ var tutorial_overlay: TutorialOverlay
 var tip_card: TipCard
 var settings_panel: SettingsPanel
 var confirmation: ConfirmPanel
+var legal_panel: LegalPanel
+var _legal_start := -1
+var offline_summary: OfflineSummary
 var _settings_btn: Button
 signal zoom_pressed
 signal xray_toggled(on: bool)
@@ -205,6 +208,47 @@ func _ready() -> void:
 	add_child(tip_card)
 	confirmation = ConfirmPanel.new()
 	add_child(confirmation)
+	add_to_group("legal_notice_hud")
+	legal_panel = LegalPanel.new()
+	add_child(legal_panel)
+	panels["legal"] = legal_panel
+	title_screen.legal_requested.connect(_request_legal)
+	legal_panel.closed.connect(func(): _legal_start = -1)
+	legal_panel.approved.connect(func():
+		var pending := _legal_start
+		_legal_start = -1
+		if pending >= 0:
+			title_screen._go(pending == 1))
+	_prompt_legal.call_deferred()
+	offline_summary = OfflineSummary.new()
+	add_child(offline_summary)
+	panels["offline"] = offline_summary
+	Game.offline_summary_ready.connect(_show_offline_summary)
+
+
+func _prompt_legal() -> void:
+	if LegalPolicy.needs_acceptance() and title_screen.visible:
+		open_legal()
+
+func _request_legal(new_game: bool) -> void:
+	_legal_start = 1 if new_game else 0
+	legal_panel.open_notice()
+
+func open_legal(preview: bool = false) -> void:
+	_legal_start = -1
+	if room_closeup.is_open:
+		room_closeup.close()
+	for key in panels:
+		if panels[key].is_open and key != "legal":
+			panels[key].close()
+	legal_panel.open_notice(preview)
+
+
+func _show_offline_summary(report: Dictionary) -> void:
+	if not Features.on("offline_summary") or not Game.started:
+		return
+	offline_summary.report = report.duplicate(true)
+	open_panel("offline")
 
 
 func _set_hud_visible(v: bool) -> void:

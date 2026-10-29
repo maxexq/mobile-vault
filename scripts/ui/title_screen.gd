@@ -9,6 +9,7 @@ extends Control
 
 signal start_requested(new_game: bool)
 signal settings_requested(tab: String)
+signal legal_requested(new_game: bool)
 
 const BOOT := [
 	"MAMMOTH-7 OS v%s ........ OK",
@@ -202,6 +203,9 @@ func _new_run() -> void:
 
 func _go(new_game: bool) -> void:
 	auto_continue = false
+	if LegalPolicy.needs_acceptance():
+		legal_requested.emit(new_game)
+		return
 	var tw := create_tween()
 	tw.tween_property(self, "modulate:a", 0.0, 0.3)
 	tw.tween_callback(func():

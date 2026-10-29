@@ -56,7 +56,7 @@ var _inflight: Array = []
 
 func _ready() -> void:
 	_load_keys()
-	_load_meta()
+	# Optional identifiers are created only after an explicit analytics choice.
 	_load_queue()
 	_http = HTTPRequest.new()
 	_http.timeout = 15.0
@@ -74,6 +74,11 @@ func _ready() -> void:
 	Meta.generation_started.connect(func(g): design("Meta:Generation", float(g)))
 	Tutorial.finished.connect(func(skipped): design("Tutorial:" + ("Skipped" if skipped else "Completed")))
 	Trace.recorded.connect(_on_trace)
+	Settings.changed.connect(_privacy_changed)
+	if not LegalPolicy.allows("analytics"):
+		if not queue.is_empty():
+			clear_queue()
+		Save.write_key(META_KEY, META_PATH, "{}")
 
 
 # =================================================================== state
@@ -88,7 +93,7 @@ func mode() -> String:
 
 ## the build, the keys, the server and the player allow it (the privacy notice may still be due)
 func allowed() -> bool:
-	return Features.on("game_analytics") and configured() and enabled and bool(Settings.get_value("telemetry")) \
+	return Features.on("game_analytics") and configured() and enabled and LegalPolicy.allows("analytics") \
 		and (transport.is_valid() or not _is_test_run())
 
 
@@ -105,6 +110,8 @@ func status() -> String:
 		return "disabled by server"
 	if not bool(Settings.get_value("telemetry")):
 		return "player opted out"
+	if not LegalPolicy.allows("analytics"):
+		return "waiting for an explicit analytics choice"
 	if not bool(Cloud.meta.get("log_notice", false)):
 		return "waiting for the privacy notice"
 	return "on"
@@ -160,6 +167,8 @@ func uuid() -> String:
 func start_session() -> void:
 	if not active() or _session_id != "":
 		return
+	if str(_meta.uid) == "":
+		_load_meta()
 	_session_id = uuid()
 	_session_start = Time.get_unix_time_from_system()
 	_meta.sessions = int(_meta.sessions) + 1
@@ -294,9 +303,23 @@ func clear_queue() -> void:
 
 
 # =================================================================== transport
+func _privacy_changed(key: String) -> void:
+	if key not in ["telemetry", "legal_consent"]:
+		return
+	if _http != null:
+		_http.cancel_request()
+	_busy = false
+	_inflight = []
+	_session_id = ""
+	clear_queue()
+	if not LegalPolicy.allows("analytics"):
+		_meta = {"uid": "", "sessions": 0}
+		Save.write_key(META_KEY, META_PATH, "{}")
+
+
 func _process(delta: float) -> void:
 	if not allowed():
-		if not queue.is_empty() and not bool(Settings.get_value("telemetry")):
+		if not queue.is_empty() and not LegalPolicy.allows("analytics"):
 			clear_queue()        # the player opted out: nothing waiting to go up either
 		return
 	if not bool(Cloud.meta.get("log_notice", false)):
