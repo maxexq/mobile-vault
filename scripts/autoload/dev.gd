@@ -238,6 +238,12 @@ func _update_overlay() -> void:
 
 
 # ================================================================== actions (used by GodPanel + tests)
+func legal_notice_preview() -> void:
+	var hud := get_tree().get_first_node_in_group("legal_notice_hud") as HUD
+	if hud != null:
+		hud.open_legal(true)
+
+
 func fast_forward(sec: float) -> void:
 	act("fast forward %ds" % int(sec))
 	var report := Game._offline_progress(sec)
