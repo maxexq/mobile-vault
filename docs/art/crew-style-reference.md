@@ -137,6 +137,43 @@ animation frames together; do not mix them with the design PNG. In `work`, some 
 gained a small anvil or bench at their feet (pilot, gunslinger, hunter, lounge singer,
 fortune teller) and a few wind up behind the head.
 
+## Gun animations
+
+MV-594: a hold-the-gun + shoot clip per crew character, the gun matched to the personality.
+Parames reviews one character at a time (two options each) and keeps the ones he approves; this
+list grows as characters are approved. Frames are in
+[`approved/gun_animations/<character>/<clip>/`](crew-style-reference/approved/gun_animations/), the
+gun, fps, shot frames and a muzzle point per frame in the manifest `gun_animations`. Tools:
+[`tools/art/crew_gun/`](../../tools/art/crew_gun/README.md).
+
+![Every approved gun clip](crew-style-reference/previews/gun-animations.png)
+
+- **Canvas 72x60**, east only (mirror for west), feet on row 48, loop. The 12 px in front of the
+  60 px body canvas hold the muzzle flash.
+- **Effects are drawn in code**, not by PixelLab: PixelLab's own flashes and casings are removed,
+  then each gun preset (`fx.py` `GUNS`) draws its muzzle flash, smoke and ejected casings in
+  master-palette colours. Revolvers, break-action shotguns, the flare pistol, flintlock, nail gun
+  and flamethrower throw no casing; the pump shotgun and bolt rifle throw it when cycled.
+- **Muzzle points** (`muzzle`, plus `muzzle_second_gun` for two guns) are measured on the clean
+  frames, so the game can spawn bullets or hit lines from the barrel.
+- **Aim up / level / down:** the medic has all three. PixelLab v3 always drifts back to a level
+  aim, so up and down are one extra edit per aim plus code recoil (`recoil.py`); the level clip is
+  the PixelLab clip. Other characters are level only for now.
+- **Colours are raw PixelLab colours** like the other cast clips (a palette snap greyed the skin
+  and hid the eyes); only the medic's clips are snapped, as approved.
+- Legs must not step: when PixelLab moves the feet, `lockfeet.py` pins them to frame 0.
+
+| Character | Clips |
+|---|---|
+| medic | `pistol`, `pistol_up`, `pistol_down`, `smg`, `smg_up`, `smg_down` |
+| aviator_pilot | `flare_pistol`, `mauser` |
+| biker | `sawed_off`, `revolver`, `revolver_b` |
+| bus_mechanic | `pump_shotgun`, `nail_gun` |
+| construction_worker | `ak_rifle`, `pipe_shotgun`, `pipe_shotgun_b` |
+| firefighter | `lever_rifle`, `flamethrower` |
+| fortune_teller | `derringer`, `flintlock` |
+| gunslinger | `fan_revolver`, `dual_revolvers` |
+
 ## Cast portraits
 
 Every cast character has a 64x64 bust portrait in
