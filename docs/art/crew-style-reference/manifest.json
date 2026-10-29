@@ -2214,7 +2214,24 @@
   "gun_animations/lounge_singer/tommy_gun/5.png": "3eef762e09a087445b9500452910436fb7837a10ff0669e19facd9090731f8a3",
   "gun_animations/lounge_singer/tommy_gun/6.png": "a3af9f248909ad141824d735cce8d161f1a191d039cea520575fdf020ab00630",
   "gun_animations/lounge_singer/tommy_gun/7.png": "32abd42823e499142011d79096d0b115aa54117b11784cfd800bd65fa89db5f1",
-  "gun_animations/lounge_singer/tommy_gun/8.png": "147f87e6839370cb9876b123781315521b608c34760c390cc91d2b93decf01c5"
+  "gun_animations/lounge_singer/tommy_gun/8.png": "147f87e6839370cb9876b123781315521b608c34760c390cc91d2b93decf01c5",
+  "gun_animations/monk/net_launcher/0.png": "87859593bb671cb6ed304d4a98c5cb73ed213d66227c8c6648726d0cedf49c1d",
+  "gun_animations/monk/net_launcher/1.png": "cafd72a543e8e1412ef295084a03e236d3b2ff41a91d35f6a6d1640ff0b33407",
+  "gun_animations/monk/net_launcher/2.png": "6df5754eed895b6e1e5e50d90fa08c46eaad809f0796483e146d4172bf89a749",
+  "gun_animations/monk/net_launcher/3.png": "2bd095edf1fd79e094c23ca32edd3d292a0cb9d9c924f2da42ec9aaf1fe4d6ae",
+  "gun_animations/monk/net_launcher/4.png": "3f69b9370a1bd1da14d942bdcaa95bf499204ae828d1bd7523d07b5b93854eac",
+  "gun_animations/monk/net_launcher/5.png": "92f228b15f90cc04c619a93543be3b18485de14df8e2e52f1bb35f59b6d1fa3e",
+  "gun_animations/monk/net_launcher/6.png": "76c786790656e88c3572ece97e12b451aa614f8dda46fcb76ea808a2db12fd3c",
+  "gun_animations/monk/net_launcher/7.png": "9ef3be3c1e3093c92ad97bdf8f184681aeccccede8f17b0ca1f93787ce48d4eb",
+  "gun_animations/monk/net_launcher/8.png": "1f50a9b210ce206e7f3ba9203a6f6d674206153104e9d331310a905491de0ad5",
+  "gun_animations/monk/dart_pistol/0.png": "37dee1cc99b54ae4bd784879659d3448670ce64af38bade68300123d3f8ae26a",
+  "gun_animations/monk/dart_pistol/1.png": "b94c5f496a19ff268b67ca50942fb821f1c84f313fecc7c4f315a09a43352ddf",
+  "gun_animations/monk/dart_pistol/2.png": "3a7795af84582c2f0256a19456effc8ac6b74f644dcd43b82873081508b9a610",
+  "gun_animations/monk/dart_pistol/3.png": "43e14bf13162e7511e3202b3c880bb95da5e7499342b34b59f0ea2c1fa8a1ef8",
+  "gun_animations/monk/dart_pistol/4.png": "37dee1cc99b54ae4bd784879659d3448670ce64af38bade68300123d3f8ae26a",
+  "gun_animations/monk/dart_pistol/5.png": "b94c5f496a19ff268b67ca50942fb821f1c84f313fecc7c4f315a09a43352ddf",
+  "gun_animations/monk/dart_pistol/6.png": "3a7795af84582c2f0256a19456effc8ac6b74f644dcd43b82873081508b9a610",
+  "gun_animations/monk/dart_pistol/7.png": "43e14bf13162e7511e3202b3c880bb95da5e7499342b34b59f0ea2c1fa8a1ef8"
  },
  "cast_animations": {
   "how": "create_character mode pro, concept_image_url = approved/cast/<name>.png, size 48 (10 generations each); then animate_character mode v3, directions [east], frame_count 8 (1 generation each). Frame 0 is the reference pose; canvases 52-60 px.",
@@ -3987,6 +4004,103 @@
       [
        47,
        28
+      ]
+     ]
+    }
+   },
+   "monk": {
+    "net_launcher": {
+     "dir": "gun_animations/monk/net_launcher/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "compressed-air net launcher, two hands (non-lethal: monks keep the precept against killing)",
+     "fx_preset": "airpuff",
+     "shot_frames": [
+      2
+     ],
+     "muzzle": [
+      [
+       43,
+       27
+      ],
+      [
+       47,
+       26
+      ],
+      [
+       43,
+       26
+      ],
+      [
+       44,
+       27
+      ],
+      [
+       44,
+       26
+      ],
+      [
+       44,
+       27
+      ],
+      [
+       45,
+       26
+      ],
+      [
+       45,
+       28
+      ],
+      [
+       45,
+       27
+      ]
+     ]
+    },
+    "dart_pistol": {
+     "dir": "gun_animations/monk/dart_pistol/",
+     "frames": 8,
+     "fps": 10,
+     "aim": "level",
+     "gun": "wooden tranquiliser dart pistol, two-hand grip (PixelLab hold pose + code recoil)",
+     "fx_preset": "airpuff",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       43,
+       27
+      ],
+      [
+       41,
+       27
+      ],
+      [
+       42,
+       27
+      ],
+      [
+       43,
+       27
+      ],
+      [
+       43,
+       27
+      ],
+      [
+       41,
+       27
+      ],
+      [
+       42,
+       27
+      ],
+      [
+       43,
+       27
       ]
      ]
     }

@@ -175,6 +175,7 @@ gun, fps, shot frames and a muzzle point per frame in the manifest `gun_animatio
 | gunslinger | `fan_revolver`, `dual_revolvers` |
 | hunter | `bolt_rifle`, `over_under` |
 | lounge_singer | `pearl_revolver`, `tommy_gun` |
+| monk | `net_launcher`, `dart_pistol` (non-lethal) |
 
 ## Cast portraits
 

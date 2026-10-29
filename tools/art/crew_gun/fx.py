@@ -168,6 +168,9 @@ GUNS = {
 
 GUNS['boltrifle_smoke'] = smoky('boltrifle')
 GUNS['sawnoff_smoke'] = smoky('sawnoff')
+# compressed-air guns (net launcher, dart pistol): pale air puff, no fire, no casing
+GUNS['airpuff'] = dict(flash=[stamp(['.l.h.', 'llhlh', '.l.h.'], SK), stamp(['h.h', '.h.', 'h.h'], SK), stamp(['g..g', '.g..'], SK)],
+                       casing=[], eject_back=0, vx=0, vy=0, size=(2, 1))
 
 BORE2 = os.environ.get('BORE2') == '1'
 

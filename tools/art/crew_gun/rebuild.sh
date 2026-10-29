@@ -25,3 +25,5 @@ HOLD=hunter/hold_A.png f hunter/shoot_A boltrifle_smoke 1 hunter/fx_A level
 HOLD=hunter/hold_B.png f hunter/shoot_B sawnoff_smoke 2 hunter/fx_B level; python3 erase.py hunter/fx_B 0 0 17 30
 f lounge_singer/shoot_A revolver 1,4 lounge_singer/fx_A level
 BORE2=1 f lounge_singer/shoot_B smg 2,3,4 lounge_singer/fx_B level
+f monk/shoot_A airpuff 2 monk/fx_A level
+rm -rf monk/shoot_B; python3 recoil.py monk/hold_B.png monk/shoot_B 02100210; f monk/shoot_B airpuff 1,5 monk/fx_B level
