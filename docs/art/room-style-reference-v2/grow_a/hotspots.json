@@ -1,0 +1,253 @@
+{
+  "room": "grow_a",
+  "format": 1,
+  "note": "Grow room option A (LED grow rack). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. L1 = mature plants; L1_stage1/L1_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same.",
+  "images": {
+    "L1": {
+      "file": "grow_a_L1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "soil_sacks",
+          "label": "Soil sacks",
+          "rect": [
+            26,
+            62,
+            36,
+            17
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "hose",
+          "label": "Water hose",
+          "rect": [
+            107,
+            44,
+            16,
+            38
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "jerrycan",
+          "label": "Water jerrycan",
+          "rect": [
+            122,
+            59,
+            15,
+            20
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planter_1",
+          "label": "Barrel planter",
+          "rect": [
+            14,
+            31,
+            16,
+            26
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            30,
+            35,
+            74,
+            22
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            43,
+            16,
+            44,
+            9
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L1_stage1": {
+      "file": "grow_a_L1_stage1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "soil_sacks",
+          "label": "Soil sacks",
+          "rect": [
+            26,
+            62,
+            36,
+            17
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "hose",
+          "label": "Water hose",
+          "rect": [
+            107,
+            44,
+            16,
+            38
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "jerrycan",
+          "label": "Water jerrycan",
+          "rect": [
+            122,
+            59,
+            15,
+            20
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planter_1",
+          "label": "Barrel planter",
+          "rect": [
+            14,
+            31,
+            16,
+            26
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            30,
+            35,
+            74,
+            22
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            43,
+            16,
+            44,
+            9
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L1_stage2": {
+      "file": "grow_a_L1_stage2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "soil_sacks",
+          "label": "Soil sacks",
+          "rect": [
+            26,
+            62,
+            36,
+            17
+          ],
+          "kind": "storage",
+          "action": "open_storage"
+        },
+        {
+          "id": "hose",
+          "label": "Water hose",
+          "rect": [
+            107,
+            44,
+            16,
+            38
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "jerrycan",
+          "label": "Water jerrycan",
+          "rect": [
+            122,
+            59,
+            15,
+            20
+          ],
+          "kind": "storage",
+          "action": "inspect"
+        },
+        {
+          "id": "planter_1",
+          "label": "Barrel planter",
+          "rect": [
+            14,
+            31,
+            16,
+            26
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planters",
+          "label": "Pot row",
+          "rect": [
+            30,
+            35,
+            74,
+            22
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "grow_light",
+          "label": "LED grow light",
+          "rect": [
+            43,
+            16,
+            44,
+            9
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    }
+  }
+}

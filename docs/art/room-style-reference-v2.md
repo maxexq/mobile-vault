@@ -193,3 +193,45 @@ Anchors for every image are in `anim_lv.py` (`ROOMS`).
 | living/living_L3.png | f95da710fce68dde |
 | living/living_L3_x2.png | 99828d8caccd5a0a |
 | living/living_L3_x3.png | 136834e9e8300ec8 |
+
+## Third reference: grow room, level 1 (MV-598)
+
+Parames kept **two** grow room designs at level 1, one slot (144x96), on 2026-10-29. Levels 2/3 and
+merged sizes are not made yet. Use these as the reference for plant, farm and greenhouse rooms, and
+for any room whose contents change over time.
+
+![grow stages](room-style-reference-v2/grow-stages-preview.png)
+
+Rows: **A** `grow_a/` (LED grow rack: cut barrels and pots on a table under a purple LED strip) and
+**B** `grow_b/` (pallet planters, stacked tyres, rain barrel with drip hoses, warm bare bulb).
+Columns: stage 1 just planted, stage 2 half grown, stage 3 fully grown (`grow_<k>_L1.png`).
+
+- **Growth stages are part of the art contract for growing rooms.** Each stage is a full image with the
+  same layout: stage 3 is the generated room; stages 1 and 2 are `POST /v2/inpaint-v3` with the mask
+  covering only the plant area and the result pasted back through the same mask, so walls, pots and
+  furniture stay pixel-identical and the game can swap stages without anything else moving
+  (`tools/stages_grow.py`, masks in `MASK`). About 5-10 generations per stage image.
+- Each room has a signature light colour (A purple LED, B warm bulb) used for its glow layer.
+- Animation (`tools/anim_grow.py`): idle / working (plant grower at the planters + one walker) /
+  power-out as in the kitchen, plus leaves brightening slowly under the grow light, spores drifting in
+  the light, water dripping from B's barrel hose, and a growth loop where a stage change plays a short
+  green sparkle over the plant area. The sparkle is the cue the game should play when a crop advances.
+- B's back wall first came out as bus windows with plastic sheeting; Parames asked for the same closed
+  riveted steel bus body as A, made with `edit-images-v2` on the original (`tools/edit_grow_wall.py`,
+  seed 2). Keep every room's back wall reading as the inside of the vehicle.
+- Hotspots: `grow_a/hotspots.json`, `grow_b/hotspots.json`, one entry per stage image with the same rects
+  (planters are `station` + `water_plant`, the grow light needs power).
+
+![grow hotspots](room-style-reference-v2/grow-hotspots-preview.png)
+
+Sources: `tools/gen_grow.py` (generate-image-v2 with the kitchen L1 as `style_image`, seed 7; A = image 0,
+B = image 1), then the scripts above. They read and write a scratch `out/` folder.
+
+| File | SHA-256 (first 16) |
+|---|---|
+| `room-style-reference-v2/grow_a/grow_a_L1.png` | aba5f044d660ad0c |
+| `room-style-reference-v2/grow_a/grow_a_L1_stage1.png` | 25d15061dd87b84b |
+| `room-style-reference-v2/grow_a/grow_a_L1_stage2.png` | 1a3cffbd547092fc |
+| `room-style-reference-v2/grow_b/grow_b_L1.png` | cefa8d98468ab0cc |
+| `room-style-reference-v2/grow_b/grow_b_L1_stage1.png` | ddcefcf4f7f3e9d2 |
+| `room-style-reference-v2/grow_b/grow_b_L1_stage2.png` | c7120677a7cb9574 |

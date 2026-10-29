@@ -1,0 +1,253 @@
+{
+  "room": "grow_b",
+  "format": 1,
+  "note": "Grow room option B (tyre and pallet garden). rect = [x, y, w, h] in native pixels, origin top-left. Later entries win where rects overlap. L1 = mature plants; L1_stage1/L1_stage2 = just planted / half grown, same layout (only the plant area was inpainted), so the hotspots are the same.",
+  "images": {
+    "L1": {
+      "file": "grow_b_L1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            17,
+            16,
+            23,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            56,
+            38,
+            17
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Pallet planter",
+          "rect": [
+            54,
+            22,
+            46,
+            55
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Tyre planter",
+          "rect": [
+            100,
+            26,
+            28,
+            46
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "spare_tyre",
+          "label": "Spare tyre",
+          "rect": [
+            118,
+            62,
+            19,
+            19
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            15
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L1_stage1": {
+      "file": "grow_b_L1_stage1.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            17,
+            16,
+            23,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            56,
+            38,
+            17
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Pallet planter",
+          "rect": [
+            54,
+            22,
+            46,
+            55
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Tyre planter",
+          "rect": [
+            100,
+            26,
+            28,
+            46
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "spare_tyre",
+          "label": "Spare tyre",
+          "rect": [
+            118,
+            62,
+            19,
+            19
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            15
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    },
+    "L1_stage2": {
+      "file": "grow_b_L1_stage2.png",
+      "size": [
+        144,
+        96
+      ],
+      "hotspots": [
+        {
+          "id": "water_tank",
+          "label": "Rain barrel",
+          "rect": [
+            17,
+            16,
+            23,
+            30
+          ],
+          "kind": "device",
+          "action": "water_plant"
+        },
+        {
+          "id": "seed_tray",
+          "label": "Seedling box",
+          "rect": [
+            12,
+            56,
+            38,
+            17
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_1",
+          "label": "Pallet planter",
+          "rect": [
+            54,
+            22,
+            46,
+            55
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "planter_2",
+          "label": "Tyre planter",
+          "rect": [
+            100,
+            26,
+            28,
+            46
+          ],
+          "kind": "station",
+          "action": "water_plant"
+        },
+        {
+          "id": "spare_tyre",
+          "label": "Spare tyre",
+          "rect": [
+            118,
+            62,
+            19,
+            19
+          ],
+          "kind": "decor",
+          "action": "inspect"
+        },
+        {
+          "id": "grow_light",
+          "label": "Bare bulb",
+          "rect": [
+            78,
+            16,
+            9,
+            15
+          ],
+          "kind": "light",
+          "action": "toggle_light",
+          "needs_power": true
+        }
+      ]
+    }
+  }
+}
