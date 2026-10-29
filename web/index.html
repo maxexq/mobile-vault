@@ -332,11 +332,38 @@ body {
   };
 })();
 </script>
+<script>
+// MV-562: screen-pixel cap. fitCanvas() below sizes the canvas from window.devicePixelRatio on every frame (and
+// Godot reads it for the screen size / DPI), so phones with 3x screens draw at most 2 device pixels per CSS pixel:
+// about half the pixels for the same pixel art. Touches map by canvas size / CSS size, so they still land right.
+// The game sets the cap with window.mvSetDprCap (Settings "render_res", switch dpr_cap, tune perf.dpr_cap;
+// 0 = the screen's own ratio). Before the game has loaded, the saved setting decides (default: cap 2).
+(function () {
+  const own = Object.getOwnPropertyDescriptor(window, "devicePixelRatio")
+    || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window), "devicePixelRatio")
+    || Object.getOwnPropertyDescriptor(Window.prototype, "devicePixelRatio");
+  if (!own || !own.get) return;
+  const screenRatio = function () { return own.get.call(window) || 1; };
+  let cap = 2;
+  try {
+    const saved = JSON.parse(localStorage.getItem("mobile_vault_settings_v1") || "{}");
+    if (saved.render_res === "full") cap = 0;
+  } catch (e) { /* storage blocked: keep the default */ }
+  try {
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      get: function () { const r = screenRatio(); return cap > 0 ? Math.min(r, cap) : r; },
+    });
+  } catch (e) { return; }
+  window.mvScreenRatio = screenRatio;
+  window.mvSetDprCap = function (c) { cap = Number(c) || 0; return window.devicePixelRatio; };
+})();
+</script>
 <!--BOOT_SHIM-->
 <script src="index.js"></script>
 <script>
 (function () {
-  const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":9198612,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+  const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":9192932,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
   const GODOT_THREADS_ENABLED = false;
   const boot = document.getElementById("boot");
   const stage = document.getElementById("stage");
