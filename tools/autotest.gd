@@ -293,6 +293,18 @@ func _run() -> void:
 		await _offline_summary_test()
 		_finish()
 		return
+	if "--only=god_fit" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		Dev.unlocked = true
+		await _god_fit_test()
+		main.hud.panels.god.close()
+		_finish()
+		return
+	if "--only=settings_privacy" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _settings_privacy_test()
+		_finish()
+		return
 	if "--only=nextgen_crew" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _nextgen_crew_test()
@@ -1229,6 +1241,7 @@ func _run() -> void:
 	main.hud.panels.god.refresh()
 	await wait(0.4)
 	await shot("god_panel_vehicle")
+	await _god_fit_test()
 	main.hud.panels.god.close()
 	Dev.set_overlay(false)
 	await _god_update_test()
@@ -1464,6 +1477,35 @@ func _button_skin_menu_test() -> void:
 	Settings.set_value("lang", previous_lang)
 	Settings.set_value("tips", previous_tips)
 	DisplayServer.window_set_size(previous_size)
+
+
+## MV-586: no GOD MODE tab may be wider than the window (long feature names pushed the Features tab off screen)
+func _god_fit_test() -> void:
+	if not main.hud.panels.god.is_open:
+		main.hud.open_panel("god")
+		await wait(0.6)
+	var god_wide := []
+	var god_vp: Rect2 = main.get_viewport().get_visible_rect()
+	for t in GodPanel.TABS:
+		main.hud.panels.god.tab = t[0]
+		main.hud.panels.god.refresh()
+		await wait(0.2)
+		var gl: VBoxContainer = main.hud.panels.god._list
+		var box: Control = main.hud.panels.god.box
+		var gw := gl.get_combined_minimum_size().x
+		var sw := (gl.get_parent() as Control).size.x
+		if gw > sw + 0.5 or not god_vp.grow(0.5).encloses(box.get_global_rect()):
+			god_wide.append("%s (list %.0f / %.0f, box %s)" % [t[0], gw, sw, box.get_global_rect()])
+		if t[0] == "feat":
+			await shot("god_panel_features")
+			var fk: String = Features.FEATURES.keys()[0]
+			var was := Features.on(fk)
+			var fb: Array = gl.get_children().filter(func(c): return c is ChoiceButton)
+			if not fb.is_empty():
+				(fb[0] as ChoiceButton).button.pressed.emit()
+			_check("god: a wrapped feature button still toggles its switch", not fb.is_empty() and Features.on(fk) != was)
+			Dev.feature_set(fk, was)
+	_check("god: every tab fits the window (MV-586) %s" % [god_wide], god_wide.is_empty())
 
 
 func _god_update_test() -> void:
@@ -1754,6 +1796,46 @@ func _construction_checks() -> void:
 
 
 ## keep random road events from popping over the v4 screenshots
+## MV-588: players see version, build and Player ID only; server, branch, GPU, save path and full e-mail are for testers
+func _settings_privacy_test() -> void:
+	var sp = main.hud.settings_panel
+	var keys := func() -> Array:
+		var out := []
+		for l in sp._list.find_children("*", "Label", true, false):
+			out.append((l as Label).text)
+		return out
+	var was_unlocked := Dev.unlocked
+	Dev.unlocked = true
+	Dev.settings_player_view(false)
+	main.hud.open_settings("about")
+	await wait(0.4)
+	var tester: Array = keys.call()
+	_check("settings privacy: testers see every technical row", tester.has("ENV") and tester.has("GPU") and tester.has("ENGINE"))
+	Dev.settings_player_view(true)
+	sp.open_tab("about")
+	await wait(0.4)
+	var player: Array = keys.call()
+	var hidden := ["ENV", "BRANCH", "BUILT", "ENGINE", "RENDER", "GPU", "SESSION", "SAVE FMT"].filter(func(k): return player.has(k))
+	_check("settings privacy: a player sees only GAME / CHANNEL / BUILD (%s)" % [hidden], hidden.is_empty() and player.has("GAME") and player.has("BUILD"))
+	var copy := BuildInfo.as_text(sp._extra_rows(), not sp.show_tech())
+	_check("settings privacy: the bug-report copy has no server or branch", copy.contains("ENV: " + BuildInfo.env().to_upper() + "\n")
+		and not copy.contains("server ") and not copy.contains("BRANCH:"))
+	await shot("settings_about_player")
+	sp.open_tab("data")
+	await wait(0.4)
+	_check("settings privacy: no save file path for a player", OS.has_feature("web") or not _find_text(sp, ProjectSettings.globalize_path(Save.FILE_PATH)))
+	_check("settings privacy: e-mail is masked", Cloud.mask_email("makku.soba@gmail.com") == "ma***@gmail.com" and Cloud.mask_email("a@b.co") == "a***@b.co")
+	Features.set_override("features", "settings_privacy", false)
+	sp.open_tab("about")
+	await wait(0.4)
+	_check("settings privacy: switch off shows every row again", (keys.call() as Array).has("GPU"))
+	Features.set_override("features", "settings_privacy", null)
+	Dev.settings_player_view(false)
+	sp.close()
+	Dev.unlocked = was_unlocked
+	await wait(0.2)
+
+
 func _find_text(n: Node, s: String) -> bool:
 	if n is Label and (n as Label).text.contains(s):
 		return true
@@ -2390,6 +2472,9 @@ func _settings_test() -> void:
 	main.hud.settings_panel.open_tab("about")
 	await wait(0.4)
 	await shot("settings_about")
+	await _settings_privacy_test()
+	main.hud.open_settings("about")
+	await wait(0.4)
 	# save tools
 	var path := Settings.export_save()
 	_check("save: exported", path != "" and FileAccess.file_exists(path))

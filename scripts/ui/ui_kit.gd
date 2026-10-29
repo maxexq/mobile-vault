@@ -285,7 +285,8 @@ static func header(en: String, th: String = "", color: Color = C_GOLD) -> HBoxCo
 	h.add_child(label(">" + en, FP, color, true))
 	# in English the second label would repeat the tag (">AUDIO Sound" stays, ">DIFFICULTY Difficulty" doesn't)
 	if th != "" and Loc.t(th).to_upper() != en.to_upper():
-		h.add_child(label(th, FS_SMALL, Color(color, 0.8)))
+		# MV-586: wraps, so a long description never makes its window wider than the screen
+		h.add_child(wrap_label(th, FS_SMALL, Color(color, 0.8)))
 	return h
 
 

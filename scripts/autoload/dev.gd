@@ -20,6 +20,7 @@ const FLAGS := {
 const SPEEDS := [1.0, 2.0, 5.0, 10.0, 20.0]
 
 var unlocked := false
+var player_view := false     # MV-588: Settings shows what a player sees (no server / branch / GPU / full e-mail)
 var flags := {}
 var speed := 1.0
 var overlay := false
@@ -1867,6 +1868,13 @@ func icon_preview(scale: int) -> void:
 func channel_preview(ch: String) -> void:
 	act("channel preview %s" % (ch if ch != "" else "off"))
 	BuildInfo.channel_preview = ch if BuildInfo.CHANNELS.has(ch) else ""
+	Features.changed.emit()
+
+
+## MV-588: preview Settings > Save / About as a player sees them (testers normally get every technical row)
+func settings_player_view(on: bool) -> void:
+	act("settings player view %s" % ("on" if on else "off"))
+	player_view = on
 	Features.changed.emit()
 
 
