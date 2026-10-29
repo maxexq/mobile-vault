@@ -2,6 +2,7 @@
   "tz_hours": 7,
   "features": {
     "legal_notice": true,
+    "offline_summary": true,
     "exterior_mod_ambience": true,
     "nextgen_all_crew": true,
     "event_progression": true,

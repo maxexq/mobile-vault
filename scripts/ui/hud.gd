@@ -80,6 +80,7 @@ var settings_panel: SettingsPanel
 var confirmation: ConfirmPanel
 var legal_panel: LegalPanel
 var _legal_start := -1
+var offline_summary: OfflineSummary
 var _settings_btn: Button
 signal zoom_pressed
 signal xray_toggled(on: bool)
@@ -219,6 +220,10 @@ func _ready() -> void:
 		if pending >= 0:
 			title_screen._go(pending == 1))
 	_prompt_legal.call_deferred()
+	offline_summary = OfflineSummary.new()
+	add_child(offline_summary)
+	panels["offline"] = offline_summary
+	Game.offline_summary_ready.connect(_show_offline_summary)
 
 
 func _prompt_legal() -> void:
@@ -237,6 +242,13 @@ func open_legal(preview: bool = false) -> void:
 		if panels[key].is_open and key != "legal":
 			panels[key].close()
 	legal_panel.open_notice(preview)
+
+
+func _show_offline_summary(report: Dictionary) -> void:
+	if not Features.on("offline_summary") or not Game.started:
+		return
+	offline_summary.report = report.duplicate(true)
+	open_panel("offline")
 
 
 func _set_hud_visible(v: bool) -> void:
