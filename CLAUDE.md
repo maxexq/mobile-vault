@@ -25,6 +25,8 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
   drawn at the new crew scale: 144x96 per slot, deep-floor camera, 3 visibly different levels (L3 cleaner
   with more equipment), merging only at L3, an open walkway in front, and idle / working / power-out
   animation states. The game still runs 64x52 rooms until the move to the new scale is decided.
+  The living room in the same doc (MV-597) is the second reference, for rest/lounge-type rooms; any TV or
+  screen in a room animates when on and goes dark at power-out.
 - **Crew characters:** the chibi field medic in the [crew style reference](docs/art/crew-style-reference.md)
   is the approved model for every new crew character's art style and animation (2D side view).
   It is ~2x the current 14x20 `dw_*` scale; moving the game to it is a separate decision.

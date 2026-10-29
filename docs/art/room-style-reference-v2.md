@@ -88,3 +88,53 @@ inpaint call.
 | kitchen/kitchen_L3.png | 7820237e2221babf |
 | kitchen/kitchen_L3_x2.png | e98d7050343d5fff |
 | kitchen/kitchen_L3_x3.png | d1621d4495b3b696 |
+
+## Second reference: living room (MV-597)
+
+Parames approved a living room made to the same contract on 2026-10-29. Use it as the starting
+point for rooms people rest or hang out in (living quarters, lounge, recreation or common rooms),
+the same way the kitchen is the starting point for work rooms.
+
+![living levels](room-style-reference-v2/living-levels-preview.png)
+![living merged](room-style-reference-v2/living-merged-preview.png)
+
+| Level | Living room | |
+|---|---|---|
+| 1 | torn sofa patched with tape, crate coffee table, broken CRT TV on a crate, bare bulb, scrap rug | makeshift |
+| 2 | repaired sofa with cushions, wooden coffee table with a table lamp, working CRT TV on a stand, clock, framed photo, small bookshelf | cosier, still worn |
+| 3 | clean leather sofa, flat-screen TV on a cabinet with a game console (green LED), wall lamp, plant, full bookshelf | clean, more equipment |
+| L3 x2 | L3 living room on the left, game corner on the right: pool table, record player, dartboard, second bookshelf | second purpose |
+| L3 x3 | the game corner made bigger: large pool table under a hanging lamp, cue rack, score board, long shelf of books and board games, reading armchair with floor lamp at the far right | bigger and better |
+
+Rules this room added:
+
+- **Screens are animated.** A TV or monitor that is on shows a moving picture: a few colour
+  "channels" with a moving shape or scrolling lines, scanlines, a short burst of static on each
+  channel change (about every 3 s), and a cold blue glow on the room. In the living room the
+  flat-screen TV (L3, x2, x3) is on in the empty and working states and **goes dark when the power
+  is out**. `anim_lv.py`: `screen_mask()` finds the screen (dark pixels connected to a seed point,
+  eroded 2 px so the bezel stays) and `tv_frame()` draws the picture.
+- The working state shows two crew walking the front strip; the power-out state shows one crew
+  idle in the dark.
+
+How it was made (all scripts in `room-style-reference-v2/tools/`):
+
+1. **L1:** `generate-image-v2` 144x96, seed 7, `style_image` = the approved **kitchen L1**
+   (144x96) with `style_options.color_palette` true (`gen_living.py`, option A). Using an approved
+   room as the style image keeps the camera, floor and palette closer than the medic frame did.
+2. **L2 / L3:** `edit-images-v2` on L1 (`edit_lv.py`), seed 1, so the sofa, table and TV stay put.
+3. **L3 x2:** L3 + mirror on 288x96, `edit-images-v2`, seed 2 (`merge_lv.py m2`). Seed 1 left a
+   pillar in the middle and was rejected.
+4. **L3 x3:** `inpaint-v3` on 432x96 from the x2 room, mask x 186-431, seed 1 (`merge_lv.py m3`).
+5. PixelLab outputs end with a white bottom row (y=95); the scripts copy row 94 over it.
+
+Cost: 30 generations for the 12 L1 candidates (3 calls), about 109 for L2, L3, x2 and x3.
+Anchors for every image are in `anim_lv.py` (`ROOMS`).
+
+| File | SHA-256 (first 16) |
+|---|---|
+| living/living_L1.png | 7a346a4b44722f05 |
+| living/living_L2.png | b774d5561d163aeb |
+| living/living_L3.png | f95da710fce68dde |
+| living/living_L3_x2.png | 99828d8caccd5a0a |
+| living/living_L3_x3.png | 136834e9e8300ec8 |
