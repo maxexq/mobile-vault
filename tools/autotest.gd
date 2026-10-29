@@ -21,6 +21,7 @@ var _roaming_boss_checks_completed := false
 
 
 func _activity_test() -> void:
+	_legal_test_fixture()
 	var original := Game.s.duplicate(true)
 	var old_dev: Dictionary = Features.layers.dev.duplicate(true)
 	var old_window := get_window().size
@@ -147,6 +148,189 @@ func _activity_test() -> void:
 	await wait(0.2)
 
 
+## MV-589: explicit non-binding consent fixture for the existing fake-network test groups.
+func _legal_test_fixture() -> void:
+	var d: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(LegalPolicy.PATH))
+	d.status = "published"
+	d.reviewed_for_publication = true
+	d.effective_date = "2026-10-29"
+	d.terms_version = "TEST-ONLY-terms-1"
+	d.privacy_version = "TEST-ONLY-privacy-1"
+	d.controller = {"name": "TEST ONLY — no actual operator", "email": "test@example.invalid", "contact_address": "TEST ONLY"}
+	d.retention = {"account": "TEST ONLY", "diagnostics": "TEST ONLY", "analytics": "TEST ONLY", "backups": "TEST ONLY"}
+	d.transfer_safeguards = "TEST ONLY — no real data transmission"
+	LegalPolicy.document_override = d
+	LegalPolicy.record_choices(true, true)
+
+
+func _legal_notice_test() -> void:
+	var original_game := Game.s.duplicate(true)
+	var original_account := Account.a.duplicate(true)
+	var original_save := Save.read()
+	var prefs := Settings.v.duplicate(true)
+	var override := LegalPolicy.document_override.duplicate(true)
+	var features: Dictionary = Features.layers.dev.duplicate(true)
+	var old_size := get_window().size
+	var original_environment := BuildInfo._env
+	var old_state := Cloud.state
+	var old_meta := Cloud.meta.duplicate(true)
+	var old_transport: Callable = Analytics.transport
+	var old_keys := [Analytics.game_key, Analytics.secret_key, Analytics.proxy]
+	var old_queue := Analytics.queue.duplicate(true)
+	var was_started := Game.started
+	var title_visible: bool = main.hud.title_screen.visible
+	var panel: LegalPanel = main.hud.legal_panel
+	var calls := []
+	Analytics.transport = func(route, _body, _auth): calls.append(route); return 200
+	Analytics.set_keys("legal-test", "", "/api/ga")
+	Features.set_override("features", "legal_notice", true)
+	LegalPolicy.document_override = {}
+	Settings.set_value("legal_consent", {})
+	Settings.set_value("telemetry", true) # simulate the old default opt-out preference
+	Cloud.meta.log_notice = true
+	Cloud.state = Cloud.State.OK
+	_check("legal: provider fields intentionally blank and draft cannot bind", LegalPolicy.document().status == "draft" and LegalPolicy.document().controller.values().all(func(v): return str(v) == "") and not LegalPolicy.publication_ready())
+	_check("legal: old telemetry flag and shown toast are not consent", not Telemetry.active() and not Analytics.allowed())
+	Analytics.design("Test:BeforeConsent")
+	Analytics.flush()
+	_check("legal: no analytics queued or transmitted before choice", Analytics.queue.is_empty() and calls.is_empty())
+	var receipt0 := JSON.stringify(LegalPolicy.receipt())
+	main.hud.open_settings()
+	main.hud.open_legal()
+	await wait(0.4)
+	_check("legal: reachable from title/settings as a draft", panel.is_open and panel.is_draft() and _find_text(panel, "ฉบับร่าง"))
+	_check("legal: optional choices start unchecked", not panel.diagnostics_checked and not panel.analytics_checked)
+	panel.section = "privacy"
+	panel.refresh()
+	_check("legal: complete privacy copy includes blank identity and retention", _find_text(panel, "[ชื่อผู้ให้บริการ") and _find_text(panel, "ระยะเวลาเก็บข้อมูล"))
+	panel.section = "summary"
+	panel.refresh()
+	(panel._choices.analytics.control as ChoiceButton).pressed.emit()
+	panel.accept_button.pressed.emit()
+	await wait(0.2)
+	_check("legal: draft interaction never saves consent or enables upload", not panel.is_open and JSON.stringify(LegalPolicy.receipt()) == receipt0 and calls.is_empty() and not Analytics.allowed())
+	# A published fixture is strictly isolated and cannot contact a real service.
+	_legal_test_fixture()
+	var document := LegalPolicy.document_override.duplicate(true)
+	Settings.set_value("legal_consent", {})
+	Settings.set_value("telemetry", false)
+	for environment in ["dev", "staging"]:
+		BuildInfo._env = environment
+		_check("legal: %s never automatically prompts" % environment, not LegalPolicy.needs_acceptance())
+	for environment in ["uat", "prod"]:
+		BuildInfo._env = environment
+		_check("legal: %s requires acceptance for a complete published notice" % environment, LegalPolicy.needs_acceptance())
+	BuildInfo._env = "uat"
+	_check("legal: published fixture requires first acceptance", LegalPolicy.publication_ready() and LegalPolicy.needs_acceptance())
+	# Earlier cloud tests may have left the title open with no local save.
+	if not Game.s.has("rooms"):
+		Game.setup_default_state()
+	Game.s.saved_at = Cloud.now()
+	Save.write(Account.envelope(Game.s))
+	Game.started = false
+	main.hud.title_screen.visible = true
+	main.hud.title_screen.modulate = Color.WHITE
+	main.hud.title_screen._go(false)
+	await wait(0.3)
+	_check("legal: first start is gated without destroying the save", panel.is_open and main.hud.title_screen.visible and not Game.started and Save.has_save())
+	_check("legal: terms start unchecked and primary action disabled", not panel.terms_checked and panel.accept_button.disabled)
+	panel.decline_button.pressed.emit()
+	await wait(0.2)
+	_check("legal: declining keeps title and grants no sharing", main.hud.title_screen.visible and not Game.started and not LegalPolicy.accepted())
+	main.hud.title_screen._go(false)
+	await wait(0.2)
+	(panel._choices.terms.control as ChoiceButton).pressed.emit()
+	_check("legal: accepting terms does not select optional purposes", not panel.accept_button.disabled and not panel.diagnostics_checked and not panel.analytics_checked)
+	panel.accept_button.pressed.emit()
+	await wait(0.7)
+	_check("legal: mandatory terms can be accepted while both optional purposes stay off", LegalPolicy.accepted() and Game.started and not Telemetry.active() and not Analytics.allowed())
+	var saved: Dictionary = JSON.parse_string(Save.read_key(Settings.KEY, Settings.FILE_PATH))
+	_check("legal: receipt persists versions, time and explicit false choices", saved.legal_consent.terms_version == document.terms_version and float(saved.legal_consent.accepted_at) > 0.0 and saved.legal_consent.diagnostics == false and saved.legal_consent.analytics == false)
+	Settings.apply_remote({"telemetry": true, "legal_consent": {"diagnostics": true, "analytics": true}})
+	_check("legal: a remote/imported settings object cannot grant consent", not LegalPolicy.allows("diagnostics") and not LegalPolicy.allows("analytics"))
+	Trace.rec("session", "legal test entry before granting diagnostics")
+	LegalPolicy.record_choices(true, false)
+	Cloud.state = Cloud.State.OK
+	_check("legal: diagnostics choice is independent of analytics", Telemetry.active() and not Analytics.allowed())
+	_check("legal: logs before grant are excluded from the upload cursor", not Telemetry.pending().any(func(e): return str(e.msg) == "legal test entry before granting diagnostics"))
+	LegalPolicy.record_choices(false, true)
+	Cloud.meta.log_notice = true
+	Analytics.start_session()
+	Analytics.design("Test:AfterConsent")
+	_check("legal: analytics choice is independent of diagnostics", Analytics.allowed() and not Telemetry.active() and not Analytics.queue.is_empty() and calls.has("init"))
+	var call_count := calls.size()
+	LegalPolicy.withdraw_all()
+	Analytics.flush()
+	_check("legal: withdrawal immediately clears unsent queue and optional identifier", Analytics.queue.is_empty() and str(Analytics._meta.uid) == "" and calls.size() == call_count and not Telemetry.active())
+	_check("legal: withdrawal preserves accepted service terms", LegalPolicy.accepted())
+	LegalPolicy.record_choices(true, true)
+	Settings.reset_defaults()
+	_check("legal: resetting preferences withdraws sharing without erasing terms", LegalPolicy.accepted() and not LegalPolicy.allows("diagnostics") and not LegalPolicy.allows("analytics"))
+	LegalPolicy.document_override.privacy_version = "TEST-ONLY-privacy-2"
+	_check("legal: a new policy version cannot silently reuse old choices", LegalPolicy.needs_acceptance() and not Analytics.allowed() and not Telemetry.active())
+	LegalPolicy.document_override = document
+	LegalPolicy.withdraw_all()
+	# Preview is non-binding, including keyboard/finger dismissal and scroll behaviour.
+	Dev.legal_notice_preview()
+	panel.section = "privacy"
+	panel.refresh()
+	for window_size in [Vector2i(405, 720), Vector2i(640, 360), Vector2i(1280, 720)]:
+		get_window().size = window_size
+		await wait(0.4)
+		var bounds := Rect2(Vector2.ZERO, panel.get_viewport_rect().size)
+		_check("legal: frame and sticky actions fit %s" % str(window_size), bounds.encloses(panel.box.get_global_rect()) and panel.box.get_global_rect().encloses(panel.accept_button.get_global_rect()))
+		await shot("legal_privacy_%dx%d" % [window_size.x, window_size.y])
+	var touch := Input.emulate_touch_from_mouse
+	Input.emulate_touch_from_mouse = true
+	var start := panel._scroll.get_global_rect().get_center()
+	await _finger(70, start, true)
+	await _fingers_drag([70], [start], [start - Vector2(0, 100)], 12)
+	await _finger(70, start - Vector2(0, 100), false)
+	await wait(0.3)
+	_check("touch: long legal text scrolls and does not dismiss", panel._scroll.scroll_vertical > 30 and panel.is_open)
+	var pos := (panel.accept_button if panel.is_draft() else panel.decline_button).get_global_rect().get_center()
+	await _finger(71, pos, true)
+	await _finger(71, pos, false)
+	await wait(0.2)
+	_check("touch: legal sticky action dismisses without a ghost finger", not panel.is_open and main._touches.is_empty())
+	Input.emulate_touch_from_mouse = touch
+	LegalPolicy.document_override = {}
+	Dev.legal_notice_preview()
+	get_window().size = Vector2i(405, 720)
+	await wait(0.3)
+	await shot("legal_summary_draft")
+	var key := InputEventKey.new()
+	key.keycode = KEY_ESCAPE
+	key.pressed = true
+	Input.parse_input_event(key)
+	await wait(0.2)
+	_check("legal: Escape only closes a draft", not panel.is_open and not LegalPolicy.accepted())
+	Settings.v = prefs
+	Settings.persist()
+	LegalPolicy.document_override = override
+	Features.layers.dev = features
+	Features._save_dev()
+	Features.changed.emit()
+	Analytics.transport = old_transport
+	Analytics.set_keys(old_keys[0], old_keys[1], old_keys[2])
+	Analytics.queue = old_queue
+	if original_save.is_empty():
+		Save.wipe()
+	else:
+		Save.write(original_save)
+	Game.s = original_game
+	Account.a = original_account
+	if not original_game.is_empty():
+		Account.attach(Game.s)
+	Cloud.state = old_state
+	Cloud.meta = old_meta
+	Game.started = was_started
+	main.hud.title_screen.visible = title_visible
+	BuildInfo._env = original_environment
+	get_window().size = old_size
+	await wait(0.2)
+
+
 ## MV-587: actual credited balances, reload-once receipt and responsive/touch dismissal.
 func _offline_summary_test() -> void:
 	var original := Game.s.duplicate(true)
@@ -270,8 +454,14 @@ func wait(t: float) -> void:
 	await get_tree().create_timer(t).timeout
 
 
+var _trace_start_env := false
+
 func _run() -> void:
+	# read at boot: the trace keeps only the last Trace.MAX entries, and a full run pushes "start" out before the env check
+	_trace_start_env = Trace.entries.any(func(e): return str(e.msg) == "start" and str(e.get("data", {}).get("env", "")) == "dev")
 	Save.wipe()
+	if "--only=legal" not in OS.get_cmdline_user_args():
+		_legal_test_fixture()
 	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
 	# event could time out in the middle of another test); _qte_test turns the clock on for itself (MV-134)
 	Settings.set_value("event_timer", "off")
@@ -303,6 +493,22 @@ func _run() -> void:
 	if "--only=settings_privacy" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _settings_privacy_test()
+		_finish()
+		return
+	if "--only=privacy_backends" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _logs_test()
+		await _analytics_test()
+		await _outbox_test()
+		await _activity_test()
+		_finish()
+		return
+	if "--only=legal" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		if "--legal-empty-save" in OS.get_cmdline_user_args():
+			Game.started = false
+			Save.wipe()
+		await _legal_notice_test()
 		_finish()
 		return
 	if "--only=nextgen_crew" in OS.get_cmdline_user_args():
@@ -1299,6 +1505,7 @@ func _run() -> void:
 	_event_variety_test()
 	await _cloud_test()
 	await _cloud_account_test()
+	await _legal_notice_test()
 	await _logs_test()
 	await _outbox_test()
 	await _account_test()
@@ -3842,6 +4049,7 @@ func _drain_logs() -> bool:
 ## MV-116: player logs go up in batches after the privacy notice, wait while offline, respect the opt-out and the
 ## switch, and a server without rpc_log never breaks the save sync
 func _logs_test() -> void:
+	_legal_test_fixture()
 	var fake = load("res://tools/cloud_fake.gd").new()
 	Cloud.session = {}
 	Cloud.meta = {"rev": 0, "dirty": false, "wiped": false, "device_id": "", "oauth": {}, "chose": "guest"}
@@ -3913,9 +4121,17 @@ func _logs_test() -> void:
 	# Settings > ตั้งค่า: the privacy toggle with its notice
 	main.hud.settings_panel.open_tab("game")
 	await wait(0.2)
-	var priv: Array = main.hud.settings_panel._list.find_children("*", "Label", true, false)
-	_check("logs: Settings has the privacy toggle and notice", priv.any(func(l): return l.text.contains("ส่งบันทึกการเล่น"))
-		and priv.any(func(l): return l.text.contains("ไอดีผู้เล่น")))
+	var privacy_buttons: Array = _find_type(main.hud.settings_panel, "Button")
+	var notice_buttons := privacy_buttons.filter(func(b): return str(b.text) == "ข้อกำหนดและความเป็นส่วนตัว")
+	_check("logs: Settings has notice and immediate withdrawal controls", not notice_buttons.is_empty() and privacy_buttons.any(func(b): return str(b.text) == "ปิดการส่งข้อมูลเสริมทั้งหมด"))
+	if not notice_buttons.is_empty():
+		notice_buttons[0].pressed.emit()
+		await wait(0.2)
+		main.hud.legal_panel.section = "privacy"
+		main.hud.legal_panel.refresh()
+		_check("logs: Settings opens the full notice about player identifiers", main.hud.legal_panel.is_open and _find_text(main.hud.legal_panel, "รหัสผู้เล่น"))
+		main.hud.legal_panel.close()
+		await wait(0.2)
 	await shot("logs_privacy_settings")
 	main.hud.settings_panel.close()
 	Save.wipe()
@@ -4579,7 +4795,7 @@ func _env_test() -> void:
 	_check("env: switch env_badge hides it", not tag.visible)
 	Features.set_override("features", "env_badge", null)
 	tag.free()
-	_check("env: trace session start records it", Trace.entries.any(func(e): return str(e.msg) == "start" and str(e.get("data", {}).get("env", "")) == "dev"))
+	_check("env: trace session start records it", _trace_start_env)
 
 
 func _version_test() -> void:
@@ -5234,7 +5450,19 @@ func _touch_test() -> void:
 		bp.close()
 	Input.emulate_touch_from_mouse = touch_was
 	await wait(0.3)
+	await _legal_touch_smoke()
 	await _offline_summary_touch_test()
+
+
+func _legal_touch_smoke() -> void:
+	Dev.legal_notice_preview()
+	await wait(0.3)
+	var panel: LegalPanel = main.hud.legal_panel
+	var pos := (panel.accept_button if panel.is_draft() else panel.decline_button).get_global_rect().get_center()
+	await _finger(72, pos, true)
+	await _finger(72, pos, false)
+	await wait(0.2)
+	_check("touch: legal dialog close releases every finger", not panel.is_open and main._touches.is_empty())
 
 
 func _offline_summary_touch_test() -> void:
@@ -6703,6 +6931,7 @@ func _quarters_guard_test() -> void:
 ## signing (the API's own test vector), consent + switches, the session, cleaned event ids, map progression, the
 ## error cap, batching and the resend rules
 func _analytics_test() -> void:
+	_legal_test_fixture()
 	const SANDBOX_GK := "5c6bcb5402204249437fb5a7a80a4959"
 	const SANDBOX_SK := "16813a12f718bc5c620f56944e1abc3ea13ccbac"
 	_check("analytics: HMAC matches GameAnalytics' test vector",
@@ -6822,6 +7051,7 @@ func _analytics_test() -> void:
 ## MV-424: the server outbox: backoff with jitter and its cap, Retry-After, one request at a time by priority, and a
 ## held lane pausing Cloud's automatic retry / upload / last try on hide and the log batches (tools/cloud_fake.gd)
 func _outbox_test() -> void:
+	_legal_test_fixture()
 	const L := "outbox-test"
 	var SB := Outbox.SUPABASE
 	Outbox.rng = func() -> float: return 0.0

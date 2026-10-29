@@ -135,7 +135,11 @@ The characters were rebuilt from the designs, so their side view can differ slig
 `approved/cast/` (the construction worker gained a clearer hard hat and vest). Use the
 animation frames together; do not mix them with the design PNG. In `work`, some characters
 gained a small anvil or bench at their feet (pilot, gunslinger, hunter, lounge singer,
-fortune teller) and a few wind up behind the head.
+fortune teller) and a few wind up behind the head. The fortune teller's `work` was regenerated
+(MV-591, seed 2) because the hammer head pointed away from her arm; check that the hammer and
+the hand move together in every new `work` clip. The scientist's `work` was rebuilt (MV-592, seed 1)
+from a start frame with the flask erased: she puts the flask away and swings a hammer, so frame 0 of
+that clip has empty hands and differs from her other clips.
 
 ## Cast portraits
 
