@@ -94,7 +94,7 @@ Data lives next to the art, one file per room: `room-style-reference-v2/<room>/h
 - `kind` is one of `station` (where crew work), `storage`, `device`, `screen`, `seat`, `game`,
   `light`, `info`, `decor`. `action` is a suggested handler name: `open_cook_menu`, `open_bar_menu`,
   `open_storage`, `use_device`, `watch_tv`, `play_game`, `play_music`, `play_pool`, `play_darts`,
-  `read_book`, `water_plant`, `sit`, `toggle_light`, `show_info`, `inspect`. Add a new one to
+  `read_book`, `water_plant`, `treat_patient`, `sit`, `toggle_light`, `show_info`, `inspect`. Add a new one to
   `tools/hotspots.py` when a room needs it.
 - `needs_power: true` marks objects that stop working at power-out (lamps, fridge, TV, microwave);
   tapping them in the dark should say so instead of opening the action.
@@ -289,3 +289,54 @@ B = image 1), then the scripts above. They read and write a scratch `out/` folde
 | `room-style-reference-v2/grow_b/grow_b_L3.png` | d864b87e7e908bf6 |
 | `room-style-reference-v2/grow_b/grow_b_L3_stage1.png` | 689a0d8a70e90697 |
 | `room-style-reference-v2/grow_b/grow_b_L3_stage2.png` | c1ba26b7be2060ec |
+
+## Fourth reference: infirmary (MV-600)
+
+**Approved by Parames on 2026-10-29** (L1-L3 single slot, merged 2 and merged 3 at level 3).
+Use it as the reference for medical, lab and other care rooms.
+
+Two level 1 options were made first: **A** a sick bay (cot, IV stand, wall medicine cabinet, oxygen tank,
+painted red cross, caged bulb) and **B** a field surgery (door-on-trestles operating table, hanging surgery
+lamp, supply shelves, instrument cart, stretcher, curtain). Parames picked **A as the room** and asked for
+**B's surgery corner in the merged rooms**. B's L1 is kept as `infirmary/infirmary_option_b_L1.png` because
+the merged-2 base is built from it.
+
+![infirmary levels](room-style-reference-v2/infirmary-levels-preview.png)
+
+- **L1:** stained cot, bent IV stand, dented medicine cabinet, supply crate, oxygen tank, caged bulb.
+- **L2:** repaired bed with pillow and blanket, privacy screen, patient chart on the wall, fixed and
+  stocked cabinet, bedside table with desk lamp and first aid kit, oxygen tank on a cart.
+- **L3:** clean bed with white sheets, IV pump stand, heart monitor (ECG), white medicine cabinet,
+  supply cart, bright caged ceiling lamp, painted wall panels. The darker of two candidates was kept so
+  it sits with the other rooms; the brighter "hospital" version was not used.
+
+![infirmary merged](room-style-reference-v2/infirmary-merged-preview.png)
+
+- **Merged 2 (L3, 288x96):** A's L3 ward on the left and B's surgery corner on the right, redone clean:
+  supply shelf with red-cross boxes, steel operating table under a round surgery lamp, instrument trolley,
+  stretcher and curtain. Made from a crude L3 + B L1 composite with `edit-images-v2` and a prompt that
+  insists on the same wall panels with no seam (`tools/merge_infirmary.py`, seed 2; seed 3 cropped the bed).
+- **Merged 3 (L3, 432x96):** keeps the ward and the supply shelf (left 200 px of merged 2), the rest is
+  `inpaint-v3` with mask x186-431 like the kitchen and living room (`tools/merge3_infirmary.py`, seed 2):
+  scrub sink, instrument trolley, operating table under a big surgery lamp, anaesthesia machine with a
+  monitor, and a recovery corner with a second bed behind a ceiling-rail curtain and a stretcher on the wall.
+- Animation (`tools/anim_infirmary.py`): idle / working (medic + scientist walking) / power-out as in the
+  kitchen, plus an IV drip, and from L3 up the heart monitor (and merged 3's anaesthesia monitor) draws a
+  moving ECG trace that goes dark at power-out, following the screen rule from the living room.
+- Hotspots: `infirmary/hotspots.json`. The bed, operating table and recovery bed are `station` +
+  `treat_patient` (new action); lamps, the IV pump, the heart monitor and the anaesthesia machine need power.
+
+![infirmary hotspots](room-style-reference-v2/infirmary-hotspots-preview.png)
+
+Sources: `tools/gen_infirmary.py` (generate-image-v2 with the kitchen L1 as `style_image`, seed 7; A = image 0,
+B = image 2), `tools/edit_infirmary.py` (L2 seed 1, L3 seed 1), then the merge scripts above. They read and
+write a scratch `out/` folder.
+
+| File | SHA-256 (first 16) |
+|---|---|
+| `room-style-reference-v2/infirmary/infirmary_L1.png` | 17aa8a0ab9c9134a |
+| `room-style-reference-v2/infirmary/infirmary_L2.png` | 08c7d342a57498cb |
+| `room-style-reference-v2/infirmary/infirmary_L3.png` | 7ec6251eec7db85c |
+| `room-style-reference-v2/infirmary/infirmary_L3_x2.png` | 7b52bdc43ff1cd00 |
+| `room-style-reference-v2/infirmary/infirmary_L3_x3.png` | 80543a1480845985 |
+| `room-style-reference-v2/infirmary/infirmary_option_b_L1.png` | 3df6a13de8626611 |
