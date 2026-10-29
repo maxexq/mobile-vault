@@ -52,5 +52,13 @@ room sprites and approved examples there as visual inputs. Keep the coarse 64x52
 include a separate micro-animation spec for each new furnished room. The old detailed,
 thick-framed concept paintings are superseded by the approved in-game-style references.
 
+Rooms at the new crew scale follow `docs/art/room-style-reference-v2.md`. When a ticket asks
+for a PixelLab room, above all a merged (multi-slot) room, its spec must follow the "PixelLab
+generation rules for rooms" there (MV-605): existing image as style and equipment reference
+but furniture may move anywhere; no walls, pillars, doors or gaps left from old room edges;
+use zones listed left to right before generating; a 3-slot room adds real working area and
+support equipment with only the gaps it needs; a 6 px front walkway along the full width and
+every furniture base intact.
+
 For every new crew character, read `docs/art/crew-style-reference.md`: the chibi field medic
 there is the approved model for crew art style and animation (2D side view, 11 clips).

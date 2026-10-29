@@ -34,6 +34,11 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
   Every v2 room image (each level and merged size) ships tap hotspots in `<room>/hotspots.json` in the
   same commit (rect per tappable object, stable ids across levels); check with
   `docs/art/room-style-reference-v2/tools/hotspots.py check` (see "Tap hotspots" in the doc, MV-599).
+  **PixelLab room generation (MV-605), above all merged rooms:** use the existing image as the style and
+  equipment reference but move furniture anywhere in the room; remove walls, pillars, doors and gaps left by
+  the old room edges; decide the use zones (left to right) before generating; a 3-slot room adds real
+  working area plus support equipment with only the gaps it needs; keep the 6 px front walkway along the
+  full width and every furniture base intact. Details in "PixelLab generation rules for rooms" in the doc.
 - **Crew characters:** the chibi field medic in the [crew style reference](docs/art/crew-style-reference.md)
   is the approved model for every new crew character's art style and animation (2D side view).
   It is ~2x the current 14x20 `dw_*` scale; moving the game to it is a separate decision.
