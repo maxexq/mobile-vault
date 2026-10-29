@@ -699,6 +699,8 @@ func _tab_world() -> void:
 
 
 func _tab_sys() -> void:
+	_head("TERMS & PRIVACY", "ข้อกำหนดและตัวเลือกข้อมูล (MV-589)")
+	_row([_b("ดูหน้าต่างข้อกำหนด", Dev.legal_notice_preview)])
 	var smooth := Features.on("smooth_ui_text")
 	_head("UI TEXT", "ตัวอักษร (MV-540)")
 	_row([_b("ขอบเรียบ", func(): Dev.ui_text_preview(true), "yellow" if smooth else "gray"),

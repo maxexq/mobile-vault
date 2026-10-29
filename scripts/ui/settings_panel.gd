@@ -249,9 +249,15 @@ func _tab_game() -> void:
 	if Features.on("event_timer"):
 		_choice(Loc.t("เวลาตัดสินใจอีเว้นต์"), "event_timer", [["normal", Loc.t("ปกติ")], ["long", Loc.t("นานขึ้น x2")], ["off", Loc.t("ไม่จับเวลา")]], Loc.t("อีเว้นต์บนถนนมีเวลาจำกัด หมดเวลาลูกเรือจะเลือกทางที่ปลอดภัยเอง เวลาหยุดเดินถ้าไม่ได้แตะจอเกิน 20 วินาที"))
 
-	if Features.on("cloud_logs"):
-		_head("PRIVACY", Loc.t("ความเป็นส่วนตัว"))
-		_toggle(Loc.t("ส่งบันทึกการเล่นเพื่อพัฒนาเกม"), "telemetry", Loc.t("ส่งเหตุการณ์ในเกม ข้อผิดพลาด ทรัพยากร เวอร์ชันเกม และขนาดจอ พร้อมไอดีผู้เล่น ไปเก็บที่เซิร์ฟเวอร์ของเกม และสถิติการเล่นแบบไม่ระบุตัวตน (แผนที่ ห้อง อีเว้นต์ ระยะเวลาเล่น) ไปที่ GameAnalytics เพื่อแก้บั๊กและปรับสมดุล ไม่ส่งอีเมลหรือข้อมูลอื่นในเครื่อง ปิดแล้วไม่ส่งทั้งสองอย่าง"))
+	_head("PRIVACY", Loc.t("ความเป็นส่วนตัว"))
+	if Features.on("legal_notice"):
+		_action("ข้อกำหนดและความเป็นส่วนตัว", "blue", "book", func():
+			var hud := get_parent() as HUD
+			hud.open_legal())
+		_list.add_child(UIKit.wrap_label("ข้อมูลเสริม: บันทึกแก้ปัญหา %s · สถิติการเล่น %s" % ["เปิด" if LegalPolicy.allows("diagnostics") else "ปิด", "เปิด" if LegalPolicy.allows("analytics") else "ปิด"], UIKit.FS_SMALL, UIKit.C_DIM))
+	_action("ปิดการส่งข้อมูลเสริมทั้งหมด", "gray", "close", func():
+		LegalPolicy.withdraw_all()
+		refresh())
 
 	_head("TUTORIAL", Loc.t("บทแนะนำ"))
 	var tb := _action(Loc.t("ดูบทแนะนำอีกครั้ง"), "blue", "book", func():

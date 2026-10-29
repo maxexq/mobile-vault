@@ -30,7 +30,8 @@ const DEFAULTS := {
 	"pacing": "threat",      # threat (enemies come in raids drawn by noise / light) | classic (back-to-back waves)
 	"tips": true,            # Sgt. Mark explains each system the first time its window opens (MV-150)
 	"event_timer": "normal",  # road events: normal | long (x2 time) | off (no timer) (MV-134)
-	"telemetry": true,       # send play logs with the player id to the game's server (Telemetry, MV-116); opt-out
+	"telemetry": false,      # MV-589: master switch; each optional purpose also requires a versioned receipt
+	"legal_consent": {},     # local terms/privacy receipt, kept in the existing preferences storage
 }
 
 const FPS_CHOICES := [30, 60, 120]    # MV-113: the frame-rate cap a player can pick
@@ -92,7 +93,11 @@ func _merge(d: Dictionary) -> void:
 ## settings that came with a cloud save from another device
 func apply_remote(d: Dictionary) -> void:
 	var before := v.duplicate()
-	_merge(d)
+	# A cloud/imported preference cannot grant consent on this device.
+	var remote := d.duplicate(true)
+	remote.erase("legal_consent")
+	remote.erase("telemetry")
+	_merge(remote)
 	for k in v:
 		if v[k] != before[k]:
 			if not (k == "fullscreen" and OS.has_feature("web")):
@@ -120,8 +125,11 @@ func set_value(k: String, value: Variant) -> void:
 
 
 func reset_defaults() -> void:
+	# Resetting preferences withdraws optional sharing, but preserves the terms version already accepted.
+	LegalPolicy.withdraw_all()
 	for k in DEFAULTS:
-		set_value(k, DEFAULTS[k])
+		if k != "legal_consent":
+			set_value(k, DEFAULTS[k])
 
 
 func _apply(k: String) -> void:

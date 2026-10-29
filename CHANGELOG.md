@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Draft terms/privacy window with intentionally blank provider details, separate optional diagnostics/analytics choices, versioned local consent and withdrawal controls (MV-589). Draft documents cannot authorize collection or bind players.
 - Optional Sentry forwarding of opted-in activity/error logs through a server outbox, with Player ID search, retry handling and a GOD MODE test action (MV-569; disabled until configured).
 - In-game activity log with category/warning filters, current resources, stressed crew, and saved history of loot, arrivals, morale and gameplay events (MV-569).
 - Exterior mods: worn steel, welds, straps and readable upgrade details across every vehicle, with small cloth/shock movements, roof-turret recoil, contact grit and rain runoff (MV-565).

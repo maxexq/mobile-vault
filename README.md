@@ -261,6 +261,14 @@ The engine now lives in a walk-in room inside the cab of every vehicle (van / bu
 | Switch | `engine_bay` (MV-40): off = the game before v4.6. `EngineBay.on()` gates every read (stock diesel I4 numbers whatever engine is fitted, mode normal, heat 40 °C / condition 100 %, no rest or job holds the vehicle, alternator at level 1) and `tick()` simulates nothing; tapping the cab only says the engine bay is off. Crew in the cab still repair the hull like the old engine room. The saved engine state and fitted engine come back when it is turned on again. GOD → รถ → สวิตช์. |
 | Art | `tools/art/engine_bay.py`: `cab_<tier>_<idle|run|hot|broken>` rooms + `eng_<type>` icons; `vehicles.py` cuts the cab hole. |
 
+## Terms and privacy window (MV-589)
+
+Settings → **ข้อกำหนดและความเป็นส่วนตัว** opens the summary, service terms and privacy notice. GOD MODE → ระบบ → **ดูหน้าต่างข้อกำหนด** previews it without accepting anything. The `legal_notice` switch controls entry points. Thai copy is in `config/legal_notice.json`; the provider name, email and contact address are intentionally blank. It is a **draft**, so it neither binds players nor records consent. Publication requires real controller details, effective date, completed retention/transfer information and explicit publication review.
+
+Optional diagnostic logs and GameAnalytics are separate choices, both off by default. Collection/upload require an explicit current-version receipt in the existing preferences store; the old `telemetry=true` default and privacy toast do not count. A cloud/imported preference cannot grant consent locally. Settings also offers **ปิดการส่งข้อมูลเสริมทั้งหมด**, which stops future sharing and clears pending analytics/its identifier; already uploaded data requires the published contact/request process. Resetting preferences withdraws optional sharing while preserving accepted terms. Necessary save/account handling and the in-game activity log inside the save remain covered separately in the notice. The first-run game entry gate activates only for a complete published policy.
+
+Focused tests: `--only=legal`, `--only=analytics`, `--only=activity`, `--only=touch`. Tests use a clearly marked, non-binding fixture and fake transports; never live Supabase or analytics.
+
 ## 4i. Cloud save (Supabase)
 
 Local-first: the game still reads and writes localStorage / `user://`; `scripts/autoload/cloud.gd` mirrors that save (plus Settings) to one row per player in Supabase, using `HTTPRequest` against the REST API (no addon).

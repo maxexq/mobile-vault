@@ -20,15 +20,33 @@ var sent_total := 0
 var last_sent_at := 0.0
 var last_error := ""
 var _t := 0.0
+var _privacy_epoch := 0
 
 
 func _ready() -> void:
 	Save.flush_requested.connect(_on_hide)
+	Settings.changed.connect(_privacy_changed)
 
 
 ## the player agreed (setting on), the build allows it and the cloud is signed in
 func active() -> bool:
-	return Features.on("cloud_logs") and bool(Settings.get_value("telemetry")) and Cloud.state == Cloud.State.OK
+	return Features.on("cloud_logs") and LegalPolicy.allows("diagnostics") and Cloud.state == Cloud.State.OK
+
+
+## Do not upload history from before a choice or from a period when sharing was off.
+func _privacy_changed(key: String) -> void:
+	if key not in ["telemetry", "legal_consent"]:
+		return
+	_privacy_epoch += 1
+	_t = 0.0
+	var at := Time.get_unix_time_from_system()
+	var count := 0
+	if not Trace.entries.is_empty():
+		at = float(Trace.entries[-1].t)
+		count = Trace.entries.filter(func(e): return float(e.t) == at).size()
+	Cloud.meta.log_t = at
+	Cloud.meta.log_k = count
+	Cloud._save_meta()
 
 
 func _process(delta: float) -> void:
@@ -51,11 +69,11 @@ func _on_hide() -> void:
 
 ## once per browser, in game where the player sees toasts
 func _notice() -> void:
-	if not Game.started:
+	if not Game.started or not (LegalPolicy.allows("diagnostics") or LegalPolicy.allows("analytics")):
 		return
 	Cloud.meta.log_notice = true
 	Cloud._save_meta()
-	Game.toast.emit("เกมส่งบันทึกการเล่นพร้อมไอดีผู้เล่นไปที่เซิร์ฟเวอร์ และอาจส่งต่อ Sentry พร้อมสถิติการเล่นแบบไม่ระบุตัวตนไปที่ GameAnalytics เพื่อแก้บั๊กและช่วยตรวจปัญหา ปิดได้ที่ ตั้งค่า > ความเป็นส่วนตัว", "info")
+	Game.toast.emit("เกมจะส่งข้อมูลเสริมเฉพาะประเภทที่คุณเลือกอนุญาต เปลี่ยนหรือถอนความยินยอมได้ที่ ตั้งค่า > ความเป็นส่วนตัว", "info")
 	Trace.rec("session", "log notice shown")
 
 
@@ -66,6 +84,11 @@ func cursor() -> float:
 		Cloud.meta.log_t = Trace._t0
 		Cloud.meta.log_k = 0
 		Cloud._save_meta()
+	# Restoring cloud metadata must not resurrect logs from before this local choice.
+	var since := float(LegalPolicy.receipt().get("changed_at", 0.0))
+	if float(Cloud.meta.log_t) < since:
+		Cloud.meta.log_t = since
+		Cloud.meta.log_k = 0
 	return float(Cloud.meta.log_t)
 
 
@@ -97,9 +120,12 @@ func flush() -> bool:
 	var batch := q.slice(0, maxi(1, int(Features.num("logs.batch", BATCH))))
 	var last_t := float(batch[-1].t)
 	var at_last := batch.filter(func(e): return float(e.t) == last_t).size()
+	var epoch := _privacy_epoch
 	sending = true
 	var r: Dictionary = await Cloud.post_logs(batch)
 	sending = false
+	if epoch != _privacy_epoch or not active():
+		return false
 	if not bool(r.get("ok", false)):
 		last_error = str(r.get("error", "ส่งไม่สำเร็จ"))
 		return false

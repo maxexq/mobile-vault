@@ -67,7 +67,7 @@ func record(category: String, text: String, kind: String = "info", data: Diction
 	if rows.size() > limit():
 		Game.s.activity_log = rows.slice(rows.size() - limit())
 	# Reuse Telemetry's authenticated, opt-in, offline queue. No Sentry credentials on clients.
-	if Features.on("activity_cloud") and Features.on("cloud_logs") and bool(Settings.get_value("telemetry")):
+	if Features.on("activity_cloud") and Features.on("cloud_logs") and LegalPolicy.allows("diagnostics"):
 		Trace.rec("activity", event_name if event_name != "" else "activity." + category,
 			{"text": text.left(1000), "category": category, "kind": kind, "km": float(Game.s.get("km", 0)),
 			"generation": Meta.generation(), "environment": BuildInfo.env(), "detail": data.duplicate(true)})
