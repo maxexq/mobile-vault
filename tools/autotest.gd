@@ -164,6 +164,9 @@ func _legal_test_fixture() -> void:
 
 
 func _legal_notice_test() -> void:
+	var original_game := Game.s.duplicate(true)
+	var original_account := Account.a.duplicate(true)
+	var original_save := Save.read()
 	var prefs := Settings.v.duplicate(true)
 	var override := LegalPolicy.document_override.duplicate(true)
 	var features: Dictionary = Features.layers.dev.duplicate(true)
@@ -211,7 +214,11 @@ func _legal_notice_test() -> void:
 	Settings.set_value("legal_consent", {})
 	Settings.set_value("telemetry", false)
 	_check("legal: published fixture requires first acceptance", LegalPolicy.publication_ready() and LegalPolicy.needs_acceptance())
-	Game.save_game()
+	# Earlier cloud tests may have left the title open with no local save.
+	if not Game.s.has("rooms"):
+		Game.setup_default_state()
+	Game.s.saved_at = Cloud.now()
+	Save.write(Account.envelope(Game.s))
 	Game.started = false
 	main.hud.title_screen.visible = true
 	main.hud.title_screen.modulate = Color.WHITE
@@ -299,6 +306,14 @@ func _legal_notice_test() -> void:
 	Analytics.transport = old_transport
 	Analytics.set_keys(old_keys[0], old_keys[1], old_keys[2])
 	Analytics.queue = old_queue
+	if original_save.is_empty():
+		Save.wipe()
+	else:
+		Save.write(original_save)
+	Game.s = original_game
+	Account.a = original_account
+	if not original_game.is_empty():
+		Account.attach(Game.s)
 	Cloud.state = old_state
 	Cloud.meta = old_meta
 	Game.started = was_started
@@ -374,6 +389,9 @@ func _run() -> void:
 		return
 	if "--only=legal" in OS.get_cmdline_user_args():
 		Tutorial.skip()
+		if "--legal-empty-save" in OS.get_cmdline_user_args():
+			Game.started = false
+			Save.wipe()
 		await _legal_notice_test()
 		_finish()
 		return

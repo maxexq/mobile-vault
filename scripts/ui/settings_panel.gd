@@ -251,11 +251,11 @@ func _tab_game() -> void:
 
 	_head("PRIVACY", Loc.t("ความเป็นส่วนตัว"))
 	if Features.on("legal_notice"):
-		_action("ข้อกำหนดและความเป็นส่วนตัว", "blue", "book", func():
+		_action(Loc.t("ข้อกำหนดและความเป็นส่วนตัว"), "blue", "book", func():
 			var hud := get_parent() as HUD
 			hud.open_legal())
-		_list.add_child(UIKit.wrap_label("ข้อมูลเสริม: บันทึกแก้ปัญหา %s · สถิติการเล่น %s" % ["เปิด" if LegalPolicy.allows("diagnostics") else "ปิด", "เปิด" if LegalPolicy.allows("analytics") else "ปิด"], UIKit.FS_SMALL, UIKit.C_DIM))
-	_action("ปิดการส่งข้อมูลเสริมทั้งหมด", "gray", "close", func():
+		_list.add_child(UIKit.wrap_label(Loc.t("ข้อมูลเสริม: บันทึกแก้ปัญหา %s · สถิติการเล่น %s") % [Loc.t("เปิด") if LegalPolicy.allows("diagnostics") else Loc.t("ปิด"), Loc.t("เปิด") if LegalPolicy.allows("analytics") else Loc.t("ปิด")], UIKit.FS_SMALL, UIKit.C_DIM))
+	_action(Loc.t("ปิดการส่งข้อมูลเสริมทั้งหมด"), "gray", "close", func():
 		LegalPolicy.withdraw_all()
 		refresh())
 
