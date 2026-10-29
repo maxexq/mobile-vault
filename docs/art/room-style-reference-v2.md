@@ -224,6 +224,22 @@ Columns: stage 1 just planted, stage 2 half grown, stage 3 fully grown (`grow_<k
 
 ![grow hotspots](room-style-reference-v2/grow-hotspots-preview.png)
 
+### Grow room merged 2 slots (level 3)
+
+Rooms merge only at level 3, so the 2-slot grow rooms are already the upgraded, clean version.
+Made the same way as the living room: stage-3 L1 + its mirror on a 288x96 canvas, then
+`edit-images-v2` with a level-3 prompt (`tools/merge_grow.py`; A seed 1, B seed 2), then stages 1 and 2
+with the plant-area inpaint (`tools/stages_grow.py`, keys `A_M2` / `B_M2`).
+
+- **A** keeps the pot table under the purple LED bar on the left; the right half is a three-tier metal
+  shelf rack, each tier with its own LED strip, plus a water tank with pump and a seed cabinet.
+- **B** keeps the rain barrel and seedling box; the rest is raised wooden beds (tomatoes, peppers, herbs),
+  a trellis planter, a tyre planter, a tool rack and a harvest crate under two warm bulbs. The steel rib
+  in the middle is part of the vehicle frame, not a dividing wall.
+
+![grow merged stages](room-style-reference-v2/grow-merged-preview.png)
+![grow merged hotspots](room-style-reference-v2/grow-merged-hotspots-preview.png)
+
 Sources: `tools/gen_grow.py` (generate-image-v2 with the kitchen L1 as `style_image`, seed 7; A = image 0,
 B = image 1), then the scripts above. They read and write a scratch `out/` folder.
 
