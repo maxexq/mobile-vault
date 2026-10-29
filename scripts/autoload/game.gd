@@ -15,6 +15,7 @@ signal event_resolved(event_id: String, action: String, result: Dictionary)   # 
 signal toast(text: String, kind: String)
 signal floating_text(slot: int, text: String, icon: String)
 signal game_started
+signal offline_summary_ready(report: Dictionary)
 signal gear_changed
 signal squad_changed
 signal pets_changed
@@ -143,9 +144,14 @@ func load_game() -> bool:
 	var elapsed := offline_elapsed(float(s.get("saved_at", now)), now, Cloud.server_seen if Features.on("anticheat") else 0.0)
 	Trace.rec("save", "loaded save", {"away_sec": int(elapsed), "bytes": JSON.stringify(s).length()})
 	game_started.emit()
+	var report: Dictionary = {}
 	if elapsed > 30.0:
-		_offline_progress(minf(elapsed, Data.OFFLINE_CAP_SEC * Modes.mul("offline")))
+		report = _offline_progress(minf(elapsed, Data.OFFLINE_CAP_SEC * Modes.mul("offline")), elapsed)
+		# Persist credited progress before showing the receipt; reopening cannot claim the same time twice.
+		save_game()
 	_emit_all(true)
+	if not report.is_empty() and Features.on("offline_summary"):
+		offline_summary_ready.emit(report)
 	if Account.take_mode_notice():
 		toast.emit("ตอนนี้ทุกคนเล่นด้วยไอดีถาวรแล้ว ขบวนของคุณกลับสู่โหมดเอาชีวิตรอด (ความยากเดิม) ของทุกอย่างยังอยู่ครบ", "biome")
 	return true
@@ -365,17 +371,40 @@ func _emit_all(instant: bool) -> void:
 	vault_level_changed.emit(s.vault_level)
 
 
-func _offline_progress(sec: float) -> void:
+func _offline_progress(sec: float, away_sec: float = -1.0) -> Dictionary:
 	var before := (s.res as Dictionary).duplicate()
+	var items_before := (s.items as Dictionary).duplicate()
+	var gear_before := {}
+	for item in s.gear:
+		gear_before[int(item.uid)] = true
 	var km0: float = s.km
+	_offline_built.clear()
 	var step := 10.0
 	var t := 0.0
 	while t < sec:
-		_simulate(step, true)
-		t += step
+		var dt := minf(step, sec - t)
+		_simulate(dt, true)
+		t += dt
+	# Include combat scrap in the final balance, including storage limits.
+	var cr := Combat.offline_rewards(sec)
+	var report := {"seconds": sec, "away_seconds": sec if away_sec < 0.0 else away_sec,
+		"resources": {}, "items": {}, "gear": [], "km": float(s.km) - km0,
+		"built": _offline_built.duplicate(), "combat": cr.duplicate(true),
+		"arrival": WorldMap.offline_arrival if Features.on("drive_help") else "",
+		"caches": WorldMap.offline_caches.duplicate()}
+	for k in s.res:
+		report.resources[k] = float(s.res[k]) - float(before.get(k, 0.0))
+	for k in s.items:
+		report.items[k] = int(s.items[k]) - int(items_before.get(k, 0))
+	for k in items_before:
+		if not s.items.has(k):
+			report.items[k] = -int(items_before[k])
+	for item in s.gear:
+		if not gear_before.has(int(item.uid)):
+			report.gear.append(item.duplicate(true))
 	var parts := []
-	for k in ["food", "water", "power", "scrap"] + (Data.RAW_KEYS if Data.raw_food() else []):
-		var dv: float = s.res[k] - before[k]
+	for k in report.resources:
+		var dv: float = report.resources[k]
 		if absf(dv) >= 1.0:
 			parts.append("%s %+d" % [Data.item_name(k), int(dv)])
 	parts.append("เดินทาง %.1f กม." % (s.km - km0))
@@ -391,10 +420,11 @@ func _offline_progress(sec: float) -> void:
 	if not _offline_built.is_empty():
 		parts.append("ก่อสร้างเสร็จ: " + ", ".join(_offline_built))
 		_offline_built.clear()
-	var cr := Combat.offline_rewards(sec)
 	if not cr.is_empty():
 		parts.append("ทีมป้องกันกำจัดศัตรู %d ตัว (+%d XP)" % [cr.kills, cr.xp])
-	toast.emit("ระหว่างที่คุณไม่อยู่ %d นาที: %s" % [int(sec / 60.0), ", ".join(parts)], "info")
+	if not Features.on("offline_summary"):
+		toast.emit("ระหว่างที่คุณไม่อยู่ %d นาที: %s" % [int(sec / 60.0), ", ".join(parts)], "info")
+	return report
 
 
 ## MV-113: the economy doesn't need every rendered frame (its rates are per minute), and at 120 fps it would run twice
