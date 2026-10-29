@@ -63,6 +63,7 @@
     "english": false,
     "persistent_account": true,
     "channel_badge": true,
+    "room_art_v2": false,
     "room_ambience": true,
     "resume_on_reload": true,
     "anticheat": true,

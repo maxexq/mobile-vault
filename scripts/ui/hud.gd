@@ -64,6 +64,7 @@ var _scav_btn: Button
 var _door_box: PanelContainer
 var _door_lbl: Label
 var room_closeup: RoomCloseup
+var room_v2: RoomV2View
 var event_popup: EventPopup
 var encounter_popup: EncounterPopup
 var title_screen: TitleScreen
@@ -136,6 +137,8 @@ func _ready() -> void:
 	_build_banner()
 	resized.connect(_apply_layout)
 
+	room_v2 = RoomV2View.new()      # MV-595: v2 kitchen art in the close-up (under the panel)
+	add_child(room_v2)
 	room_closeup = RoomCloseup.new()
 	add_child(room_closeup)
 	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen", "god", "door", "engine"]:

@@ -331,6 +331,15 @@ func _tab_vehicle() -> void:
 	_row([_b("ของแต่งละเอียด: " + ("เปิด" if Features.on("mod_detail_fine") else "ปิด"), func(): Dev.mod_detail_fine_switch(not Features.on("mod_detail_fine")),
 		"green" if Features.on("mod_detail_fine") else "red"), _b("มอดเต็มทุกตัว", func(): Dev.mods_all(true), "gray")],
 		"ของแต่งรถภายนอก MV-566 (ปิด = ภาพเดิม)")
+	_row([_b("ครัวแบบใหม่: " + ("เปิด" if Features.on("room_art_v2") else "ปิด"), func(): Dev.room_v2_switch(not Features.on("room_art_v2")),
+		"green" if Features.on("room_art_v2") else "red"), _b("Lv1", func(): Dev.room_v2_preview("L1"), "gray", true),
+		_b("Lv2", func(): Dev.room_v2_preview("L2"), "gray", true), _b("Lv3", func(): Dev.room_v2_preview("L3"), "gray", true),
+		_b("รวม 2", func(): Dev.room_v2_preview("L3_x2", "working"), "gray", true), _b("รวม 3", func(): Dev.room_v2_preview("L3_x3", "working"), "gray", true)],
+		"ห้องครัว v2 ทดลอง MV-595 (ซูมเข้าครัว)")
+	_row([_b("ว่าง", func(): Dev.room_v2_preview(RoomV2View.preview.get("art", "L2"), "idle"), "gray", true),
+		_b("มีคนทำงาน", func(): Dev.room_v2_preview(RoomV2View.preview.get("art", "L2"), "working"), "gray", true),
+		_b("ไฟดับ", func(): Dev.room_v2_preview(RoomV2View.preview.get("art", "L2"), "powerout"), "gray", true),
+		_b("ตามเกม", func(): Dev.room_v2_preview(""), "gray")], "ครัว v2 สถานะห้อง")
 	_row([_b("คนขับขยับ: " + ("เปิด" if Features.on("driver_cab") else "ปิด"), func(): Dev.driver_cab_switch(not Features.on("driver_cab")),
 		"green" if Features.on("driver_cab") else "red"), _b("กะพริบตา", func(): Dev.driver_cab_preview("blink"), "gray", true),
 		_b("ไฟหน้าปัด", func(): Dev.driver_cab_preview("lamp"), "gray", true), _b("จับพวงมาลัย", func(): Dev.driver_cab_preview("wheel"), "gray", true)],

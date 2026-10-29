@@ -490,6 +490,29 @@ func roof_deck_preview(lv: int) -> void:
 	Game.resources_changed.emit()
 
 
+## MV-595: the room_art_v2 switch (the kitchen close-up shows the v2 room art and new-scale crew)
+func room_v2_switch(v: bool) -> void:
+	feature_set("room_art_v2", v)
+
+
+## MV-595: open the kitchen close-up showing one v2 art ("L1".."L3", "L3_x2", "L3_x3") in one state
+## ("idle" / "working" / "powerout"); art "" goes back to what the game says. Returns the kitchen slot (-1 = none).
+func room_v2_preview(art: String, state: String = "idle") -> int:
+	RoomV2View.preview = {} if art == "" else {"art": art, "state": state}
+	if art != "":
+		feature_set("room_art_v2", true)
+	act("room v2 preview %s %s" % [art, state])
+	var m = get_tree().current_scene
+	if m == null or m.get("hud") == null:
+		return -1
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == "kitchen" and Game.room_anchor(i) == i:
+			if art != "":
+				m.open_closeup(i)
+			return i
+	return -1
+
+
 ## MV-519: the driver_cab switch (Viktor's small moves in the driving cab; the seated driver art stays)
 func driver_cab_switch(v: bool) -> void:
 	feature_set("driver_cab", v)

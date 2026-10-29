@@ -596,6 +596,11 @@ func _run() -> void:
 		await _exterior_mods_test()
 		_finish()
 		return
+	if "--only=room_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _room_v2_test()
+		_finish()
+		return
 	if "--only=driver_cab" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _driver_cab_test()
@@ -1333,6 +1338,7 @@ func _run() -> void:
 	await _engine_detail_test()
 	await _idle_motion_test()
 	await _driver_cab_test()
+	await _room_v2_test()
 	await _exterior_mods_test()
 	_env_micro_test()
 	await _engine_rest_test()
@@ -6470,6 +6476,41 @@ func _engine_detail_test() -> void:
 ## MV-388 phase 3: roof flag animates (frame 0 when off), rear chain follows the last deck, mudflap behind the
 ## rearmost road tyre (not under tracks, not on rails), exhaust puffs replace the smoke emitter (max 2, none when
 ## broken), roof drips only in rain / storm, switch off restores the old smoke
+## MV-595: the kitchen close-up with the v2 room art (switch room_art_v2): every art x state, off = hidden
+func _room_v2_test() -> void:
+	var v2: RoomV2View = main.hud.room_v2
+	var sizes := {"L1": Vector2(144, 96), "L2": Vector2(144, 96), "L3": Vector2(144, 96), "L3_x2": Vector2(288, 96), "L3_x3": Vector2(432, 96)}
+	var ok := true
+	for k in sizes:
+		var tex: Texture2D = load(RoomV2View.DIR + "kitchen_%s.png" % k)
+		ok = ok and tex != null and Vector2(tex.get_size()) == sizes[k]
+	_check("room v2: 5 kitchen arts at 144/288/432 x 96", ok)
+	var cl := RoomV2View.clip("street_cook", "work")
+	_check("room v2: cook work clip loads with feet found (%d frames, feet %d)" % [cl.frames.size(), cl.feet], cl.frames.size() >= 8 and cl.feet > 30)
+	Dev.room_v2_switch(false)
+	var slot := Dev.room_v2_preview("")
+	main.open_closeup(slot)
+	await wait(0.8)
+	_check("room v2: switch off = old close-up only", slot >= 0 and not v2.visible)
+	main.hud.room_closeup.close()
+	await wait(0.5)
+	for k in ["L1", "L2", "L3", "L3_x2", "L3_x3"]:
+		for st in ["idle", "working", "powerout"]:
+			if k.begins_with("L3_") and st == "idle":
+				continue
+			Dev.room_v2_preview(k, st)
+			await wait(0.9)
+			_check("room v2: %s %s shows over the close-up (art %s, scale %d)" % [k, st, v2.art_key, int(v2._root.scale.x)],
+				v2.visible and v2.art_key == k and v2.state == st and v2._root.scale.x >= 1.0)
+			if st != "idle" or k == "L2":
+				await shot("room_v2_%s_%s" % [k, st])
+			main.hud.room_closeup.close()
+			await wait(0.5)
+	Dev.room_v2_preview("")
+	_check("room v2: hidden once the close-up closes", not v2.visible)
+	Dev.room_v2_switch(false)
+
+
 ## MV-519: Viktor in every driving cab (baked) + the driver_cab micro-animation over the window
 func _driver_cab_test() -> void:
 	var v: Vehicle = main.vehicle
