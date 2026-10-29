@@ -63,6 +63,61 @@ Every room has three states, drawn in code on top of the background:
 The preview implementation and the anchor coordinates of every kitchen image are in
 `room-style-reference-v2/tools/anim.py` (`ROOMS`).
 
+## Tap hotspots (MV-599)
+
+A PixelLab room is one flat image, so the game cannot know where the TV or the stove is.
+Every room image therefore ships a **hotspot list**: one rectangle per object a player can tap.
+Approved by Parames on 2026-10-29 (option 1: hotspots on the existing art, no extra generations).
+
+![kitchen hotspots](room-style-reference-v2/kitchen-hotspots-preview.png)
+![living hotspots](room-style-reference-v2/living-hotspots-preview.png)
+
+Data lives next to the art, one file per room: `room-style-reference-v2/<room>/hotspots.json`.
+
+```json
+"L3": {"file": "kitchen_L3.png", "size": [144, 96], "hotspots": [
+  {"id": "stove", "label": "Cooking range with oven", "rect": [16, 49, 41, 32],
+   "kind": "station", "action": "open_cook_menu"},
+  {"id": "microwave", "label": "Microwave", "rect": [80, 43, 16, 12],
+   "kind": "device", "action": "use_device", "needs_power": true}
+]}
+```
+
+- `rect` is `[x, y, w, h]` in native pixels of that image, origin top-left. Merged rooms use the
+  coordinates of the whole 288x96 or 432x96 image. The rect covers the object's art; the game may
+  pad the touch area (aim for at least ~44 screen px) but never shrinks it.
+- `id` is stable across levels: the stove is `stove` at L1, L2 and L3 even when it changes from a
+  camp burner to a cooking range, so game logic keys on the id, not on the level. Repeated objects
+  are numbered (`stool_1`, `stool_2`, `wall_lamp_2`).
+- **Later entries win where rects overlap**, so list big furniture first and the small thing on it
+  after (TV cabinet, then TV, then console).
+- `kind` is one of `station` (where crew work), `storage`, `device`, `screen`, `seat`, `game`,
+  `light`, `info`, `decor`. `action` is a suggested handler name: `open_cook_menu`, `open_bar_menu`,
+  `open_storage`, `use_device`, `watch_tv`, `play_game`, `play_music`, `play_pool`, `play_darts`,
+  `read_book`, `water_plant`, `sit`, `toggle_light`, `show_info`, `inspect`. Add a new one to
+  `tools/hotspots.py` when a room needs it.
+- `needs_power: true` marks objects that stop working at power-out (lamps, fridge, TV, microwave);
+  tapping them in the dark should say so instead of opening the action.
+- `label` is English display text for now; the game will look it up through its own translations.
+
+Rules for new rooms:
+
+1. Every new v2 room image (each level and each merged size) ships its hotspots in the same
+   commit as the art. A room without hotspots is not finished.
+2. Mark every object a player would expect to tap: the room's work station(s), storage, devices,
+   screens, seats, games and lights. Background clutter (trash, single bottles) is not needed.
+3. Run `python tools/hotspots.py check` (ids unique, rects inside the image, known kind and action)
+   and `python tools/hotspots.py overlay out` and look at the overlay PNGs before committing;
+   add the overlay to the room's preview image in this doc.
+4. If an object later needs its own look (broken stove, lit/unlit sign, opening fridge), cut it out
+   as a separate sprite at the same rect and inpaint the background behind it. Do that only for
+   objects that really change, since it costs PixelLab generations.
+
+Wiring in Godot is not done yet, because the game still draws 64x52 rooms. When v2 rooms go in,
+the room node reads the JSON for its level and merge size, scales each rect by the room's draw scale,
+offsets it by the room's position, and routes taps through the same touch path as the rest of the
+room UI.
+
 ## How the kitchen was made (PixelLab)
 
 Sources are in `room-style-reference-v2/kitchen/`; the scripts in `tools/` are the exact ones used
