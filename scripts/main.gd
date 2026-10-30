@@ -20,6 +20,10 @@ const PORTRAIT_BASE := Vector2i(360, 640)
 const LANDSCAPE_BASE := Vector2i(560, 320)
 const SCALE_UP_AT := 0.6       # MV-266: this far past a whole scale, use the next one ...
 const SCALE_MIN := 0.8         # ... if the design size stays at least this share of the base
+const IDLE_FPS := 30           # MV-604 battery saver: frame cap while nothing fast moves (tune perf.idle_fps)
+const IDLE_AFTER := 2.0        # s without a touch before the cap drops (tune perf.idle_after)
+const BLUR_SETTLE := 0.2       # s the close-up view must hold still before its blur is cached (MV-604)
+const BLUR_REFRESH := 1.0      # s between re-caching the blurred frame (tune blur.refresh)
 
 var world_vp: SubViewport
 var world_tex: TextureRect
@@ -34,6 +38,7 @@ var camera: Camera2D
 var weather: WeatherFX
 var blur_rect: ColorRect
 var blur_mat: ShaderMaterial
+var blur_still_mat: ShaderMaterial   # MV-604: the cached blurred frame (no screen copy, no 16-tap blur per frame)
 var crt: ColorRect
 var hud: HUD
 var marquee: Marquee
@@ -58,6 +63,14 @@ var world_scale := 1.0           # physical px per art pixel used by the world (
 var view_k := 1.0                # world viewport px per UI/design px (S / world_scale)
 var pan_right := PAN_LIMIT       # how far right a swipe may move the camera (world px), set by _fit_camera
 var _touches := {}
+var idle_cap_allowed := true     # MV-604: the autotest turns the idle cap off outside its own group (a feature override
+                                 # would be wiped by the many clear_overrides() calls in the run)
+var blur_still := false          # MV-604: the close-up shows the cached blur right now (autotest, GOD overlay)
+var _blur_key: Array = []        # camera + focus the cached blur was taken with
+var _blur_t := 0.0
+var _blur_busy := false
+var _blur_tw: Tween
+var _blur_tex: ImageTexture
 var _real_size := Vector2.ZERO    # MV-571: the window size seen last (a change = the phone rotated / the window resized)
 var _pinch_d := 0.0
 
@@ -126,6 +139,8 @@ func _ready() -> void:
 	blur_mat = ShaderMaterial.new()
 	blur_mat.shader = load("res://shaders/focus_blur.gdshader")
 	blur_rect.material = blur_mat
+	blur_still_mat = ShaderMaterial.new()
+	blur_still_mat.shader = load("res://shaders/focus_blur_still.gdshader")
 	blur_rect.visible = false
 	blur_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	blur_layer.add_child(blur_rect)
@@ -414,6 +429,68 @@ func _process(delta: float) -> void:
 		camera.offset = Vector2.ZERO
 	if blur_rect.visible:
 		_update_blur_rect()
+	_update_blur_still(delta)
+	var fps := target_fps()
+	if Engine.max_fps != fps:
+		Engine.max_fps = fps
+
+
+## MV-604 battery saver: the player's frame cap (Settings fps), lowered to perf.idle_fps while nothing fast moves:
+## the road stands still (parked, close-up, a road event), no enemies, no touch for perf.idle_after s, no camera
+## glide / shake / pan drift. The crew and room loops run at 3-12 fps, so they look the same.
+func target_fps() -> int:
+	var fps := int(Settings.get_value("fps"))
+	if idle_cap_allowed and Features.on("idle_fps") and is_calm():
+		fps = mini(fps, int(Features.num("perf.idle_fps", IDLE_FPS)))
+	return fps
+
+
+func is_calm() -> bool:
+	return Game.started and not _pressing and _touches.is_empty() and _last_input_t >= Features.num("perf.idle_after", IDLE_AFTER) 		and background.current_speed_px() < 0.5 and Combat.enemies.is_empty() and _shake <= 0.0 		and (_zoom_tw == null or not _zoom_tw.is_running()) and (_closeup_slot >= 0 or absf(pan_x) <= 0.5)
+
+
+## MV-604: once the close-up camera holds still, cache one frame of the live blur and show that instead (the
+## focused room stays see-through, so it keeps animating). Any camera / focus change or a chat bubble on screen
+## (it draws above the blur) goes back to the live shader; the cache is refreshed every blur.refresh s.
+func _update_blur_still(delta: float) -> void:
+	if _closeup_slot < 0 or not blur_rect.visible or not Features.on("blur_still") or (_blur_tw and _blur_tw.is_running()) 			or (_zoom_tw and _zoom_tw.is_running()) or chatter.talking():
+		_blur_live()
+		return
+	var key := [camera.position, camera.zoom, camera.offset, world_vp.size, blur_mat.get_shader_parameter("focus_rect")]
+	if key != _blur_key:
+		_blur_live()
+		_blur_key = key
+		_blur_t = 0.0
+		return
+	_blur_t += delta
+	if not _blur_busy and _blur_t >= (Features.num("blur.refresh", BLUR_REFRESH) if blur_still else BLUR_SETTLE):
+		_blur_capture(key)
+
+
+func _blur_live() -> void:
+	blur_still = false
+	_blur_t = 0.0
+	if blur_rect.material != blur_mat:
+		blur_rect.material = blur_mat
+
+
+func _blur_capture(key: Array) -> void:
+	_blur_busy = true
+	blur_rect.material = blur_mat       # this frame draws the live blur; read it back once it is drawn
+	await RenderingServer.frame_post_draw
+	_blur_busy = false
+	if _closeup_slot < 0 or key != _blur_key or not Features.on("blur_still") or chatter.talking():
+		return
+	var img := world_vp.get_texture().get_image()
+	if _blur_tex and Vector2i(_blur_tex.get_size()) == img.get_size() and _blur_tex.get_format() == img.get_format():
+		_blur_tex.update(img)
+	else:
+		_blur_tex = ImageTexture.create_from_image(img)
+	blur_still_mat.set_shader_parameter("snap_tex", _blur_tex)
+	blur_still_mat.set_shader_parameter("focus_rect", key[4])
+	blur_rect.material = blur_still_mat
+	blur_still = true
+	_blur_t = 0.0
 
 
 ## amount is in UI pixels; tune fx.shake scales every shake (MV-175: half of the old strength by default)
@@ -572,8 +649,9 @@ func open_closeup(slot: int) -> void:
 	hud.room_closeup.open_slot(slot)
 	_zoom_from = {"pos": camera.position, "zoom": camera.zoom.x}
 	_run_zoom(true)
-	var tw := create_tween()
-	tw.tween_method(func(v: float): blur_mat.set_shader_parameter("amount", v), 0.0, 1.0, 0.45)
+	_blur_live()
+	_blur_tw = create_tween()
+	_blur_tw.tween_method(func(v: float): blur_mat.set_shader_parameter("amount", v), 0.0, 1.0, 0.45)
 
 
 ## the close-up's room area in world-viewport px. focus_rect() is in UI px; when a portrait screen fills with the
@@ -651,9 +729,10 @@ func _close_closeup() -> void:
 	weather.set_closeup(false)
 	_zoom_from = {"pos": camera.position, "zoom": camera.zoom.x}
 	_run_zoom(false)
-	var tw := create_tween()
-	tw.tween_method(func(v: float): blur_mat.set_shader_parameter("amount", v), 1.0, 0.0, 0.35)
-	tw.tween_callback(func(): blur_rect.visible = _closeup_slot >= 0)
+	_blur_live()
+	_blur_tw = create_tween()
+	_blur_tw.tween_method(func(v: float): blur_mat.set_shader_parameter("amount", v), 1.0, 0.0, 0.35)
+	_blur_tw.tween_callback(func(): blur_rect.visible = _closeup_slot >= 0)
 
 
 func _update_blur_rect() -> void:
