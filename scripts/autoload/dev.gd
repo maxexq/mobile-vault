@@ -131,6 +131,28 @@ func engine_shake(k: float) -> void:
 	Features.set_override("tune", "fx.engine_shake", null if k < 0.0 else k)
 
 
+## MV-562: compare smoothness with the per-step / per-frame caches on and off
+func perf_cache_switch(v: bool) -> void:
+	feature_set("perf_cache", v)
+
+
+## MV-562: web screen-pixel cap: c > 0 sets tune perf.dpr_cap, 0 = switch dpr_cap off, < 0 = back to the defaults
+func dpr_cap_set(c: float) -> void:
+	act("dpr cap %.2f" % c)
+	Features.set_override("features", "dpr_cap", null if c < 0.0 else (c > 0.0))
+	Features.set_override("tune", "perf.dpr_cap", c if c > 0.0 else null)
+
+
+## "cap 2.00 · screen 3.00 · canvas 2.00" (web), the cap alone elsewhere
+func dpr_info() -> String:
+	var txt := "cap %s" % ("off" if Settings.dpr_cap() <= 0.0 else "%.2f" % Settings.dpr_cap())
+	if OS.has_feature("web"):
+		var scr = JavaScriptBridge.eval("window.mvScreenRatio ? window.mvScreenRatio() : 0", true)
+		var cur = JavaScriptBridge.eval("window.devicePixelRatio", true)
+		txt += " · screen %.2f · canvas %.2f" % [float(scr), float(cur)]
+	return txt
+
+
 ## feel the screen shake at a given strength (MV-175): 6 = the biggest hit in the game (boss slam)
 func shake_test(amount: float = 6.0) -> void:
 	Trace.rec("god", "shake test %.1f" % amount)

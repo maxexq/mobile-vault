@@ -33,6 +33,9 @@ var biome_lbl: Label
 var toast_box: VBoxContainer
 var hull_alert: HullAlert     # MV-250: red frame + strip before the hull breaks
 var _hull_col := Color.TRANSPARENT
+var _regen_ms := -100000     # MV-562: when the repair rate label was last worked out
+var _regen_hurt := false
+const REGEN_MS := 250
 var banner: PanelContainer
 var banner_lbl: Label
 var biome_bar: BiomeBar
@@ -655,7 +658,13 @@ func _update_hull_bar() -> void:
 		hull_bar.add_theme_stylebox_override("fill", fill)
 	var blink := hull_alert.stage >= HullAlert.CRITICAL and int(Time.get_ticks_msec() / 400) % 2 == 1
 	hull_bar.modulate.a = 0.35 if blink else 1.0
-	# MV-541: the free repair rate while the hull is below full (updated in place, never rebuilt)
+	# MV-541: the free repair rate while the hull is below full (updated in place, never rebuilt).
+	# MV-562 (perf_cache): it walks every engine/workshop crew member, so 4 times a second is enough
+	var now := Time.get_ticks_msec()
+	if Features.on("perf_cache") and now - _regen_ms < REGEN_MS and (hp < 1.0) == _regen_hurt:
+		return
+	_regen_ms = now
+	_regen_hurt = hp < 1.0
 	var rg := Game.hull_regen_pm() if Features.on("hull_repair_v2") and hp < 1.0 else 0.0
 	hull_regen_lbl.visible = rg >= 0.05
 	if hull_regen_lbl.visible:

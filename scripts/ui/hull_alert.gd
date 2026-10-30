@@ -26,6 +26,7 @@ var stage := 0
 var _t := 0.0
 var _strip_t := 0.0
 var _edge: Control
+var _edge_on := false      # the frame drew something last time (MV-562)
 var _strip: PanelContainer
 var _lbl: Label
 var _fix: Button
@@ -110,7 +111,8 @@ func _process(delta: float) -> void:
 			_strip.visible = false
 			_edge.queue_redraw()
 		return
-	var st := stage_for(ratio(), stage)
+	var r := ratio()      # MV-562: once a frame (hull_max adds up the van gear)
+	var st := stage_for(r, stage)
 	if st > stage:
 		_raise(st)
 	stage = st
@@ -119,7 +121,7 @@ func _process(delta: float) -> void:
 	var show := (stage >= DANGER or (stage == WARN and _strip_t > 0.0)) and not (get_parent() as HUD)._closeup_on     # MV-482: not over the close-up panel
 	_strip.visible = show
 	if show:
-		var txt := impact(stage) % int(round(ratio() * 100.0))
+		var txt := impact(stage) % int(round(r * 100.0))
 		if _lbl.text != txt:
 			_lbl.text = txt
 		var missing := Game.hull_max() - float(Game.s.hull)
@@ -128,7 +130,11 @@ func _process(delta: float) -> void:
 		if _fix.text != ft:
 			_fix.text = ft
 		_fix.disabled = missing < 1.0 or not Game.can_afford({"scrap": cost})
-	_edge.queue_redraw()
+	# MV-562 (perf_cache): the red frame is only redrawn while it pulses, plus once to clear it
+	var edge_on := pulse_alpha() > 0.0
+	if edge_on or _edge_on or not Features.on("perf_cache"):
+		_edge.queue_redraw()
+	_edge_on = edge_on
 
 
 func _raise(st: int) -> void:
