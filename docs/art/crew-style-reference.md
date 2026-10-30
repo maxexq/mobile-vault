@@ -181,6 +181,7 @@ gun, fps, shot frames and a muzzle point per frame in the manifest `gun_animatio
 | lounge_singer | `pearl_revolver`, `tommy_gun` |
 | monk | `net_launcher`, `dart_pistol` (non-lethal) |
 | motorbike_courier | `silver_pistol`, `silver_pistol_b` (ponytail swing, legs pinned) |
+| office_worker | `belt_mg` (from the hip, left hand on the handguard, feet pinned) |
 
 ## Cast portraits
 

@@ -33,3 +33,6 @@ f motorbike_courier/shoot_B pistol 1,5 motorbike_courier/fx_B level
 for s in 2 3; do python3 lockfeet.py motorbike_courier/shoot_A$s motorbike_courier/shoot_A${s}L 37; HOLD=motorbike_courier/hold_A.png f motorbike_courier/shoot_A${s}L smg 2,3,4 motorbike_courier/fx_A${s}L level; done
 for s in 2 3; do python3 lockfeet.py motorbike_courier/shoot_B$s motorbike_courier/shoot_B${s}L 37; HOLD=motorbike_courier/hold_B.png f motorbike_courier/shoot_B${s}L pistol 1,5 motorbike_courier/fx_B${s}L level; done
 for s in 2 3; do rm -rf motorbike_courier/fx_B${s}H; cp -r motorbike_courier/fx_B${s}L motorbike_courier/fx_B${s}H; python3 hairfx.py motorbike_courier/fx_B${s}H 54,41,38; done
+for o in A B; do rm -rf office_worker/shoot_${o}L; python3 lockfeet.py office_worker/shoot_$o office_worker/shoot_${o}L 37; python3 declutter.py office_worker/shoot_${o}L office_worker/hold_$o.png 46:72 30 >/dev/null; done
+HOLD=office_worker/hold_A.png f office_worker/shoot_AL smg 1,2,3,4 office_worker/fx_A level
+rm -rf office_worker/shoot_BR; BODY=1 python3 recoil.py office_worker/hold_B.png office_worker/shoot_BR 012100121; f office_worker/shoot_BR nailgun 2,7 office_worker/fx_B level

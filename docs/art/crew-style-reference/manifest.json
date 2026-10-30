@@ -2249,7 +2249,16 @@
   "gun_animations/motorbike_courier/silver_pistol_b/5.png": "e522f1b7e4d4f54a5d7d20348e65f00bc6a4b1ea17a404aeaae2973bc5753fbf",
   "gun_animations/motorbike_courier/silver_pistol_b/6.png": "f591f4c39986243d765615c452ddc87419d9faa219df7c1ee4371bbf97f66408",
   "gun_animations/motorbike_courier/silver_pistol_b/7.png": "d271a38c1937fe2ef591b274d3e1d72c352521b3e91c63445aac8e73cd687d63",
-  "gun_animations/motorbike_courier/silver_pistol_b/8.png": "316cb37b83009f1c9959815bde85915a7ffcaadd4ddcedd2e1a91409ec4fef18"
+  "gun_animations/motorbike_courier/silver_pistol_b/8.png": "316cb37b83009f1c9959815bde85915a7ffcaadd4ddcedd2e1a91409ec4fef18",
+  "gun_animations/office_worker/belt_mg/0.png": "5dea3946d176b80ecfac9545cb337fd35cea759a3f89a02740c2e3e50503e641",
+  "gun_animations/office_worker/belt_mg/1.png": "f7852c670d386ea08dc1698dbf52c0ad0065b9d398845677d5544b5a17593916",
+  "gun_animations/office_worker/belt_mg/2.png": "5382adb5c26d3409417f118f53cf543813738c398a312b4317c028a0811ed99c",
+  "gun_animations/office_worker/belt_mg/3.png": "9e2ea57703190e1e67d74043f0281617a992836e406489ab3e5fcfca059b5cd5",
+  "gun_animations/office_worker/belt_mg/4.png": "7399de04930e9840623c896239dc52bb9ef4585481a402b54ded823f16dfec1d",
+  "gun_animations/office_worker/belt_mg/5.png": "907c4b7d38782deb9e037494d65d4fa2b449fd7f5bc7e49184a7c8ab6dedd4b9",
+  "gun_animations/office_worker/belt_mg/6.png": "0aa7721f164b24da67d37d08a864bfb054af5e1a1fcdb8cb8cf4b3b28b6220a7",
+  "gun_animations/office_worker/belt_mg/7.png": "92e1a33171c51b912ba832bb491ea45db1d56085bd7ee8a60b035fd58431807b",
+  "gun_animations/office_worker/belt_mg/8.png": "e16491015f6046595e6c45139eb928da009a7ffafdf9ed1503c5fd9dbc94c5df"
  },
  "cast_animations": {
   "how": "create_character mode pro, concept_image_url = approved/cast/<name>.png, size 48 (10 generations each); then animate_character mode v3, directions [east], frame_count 8 (1 generation each). Frame 0 is the reference pose; canvases 52-60 px.",
@@ -4223,6 +4232,60 @@
       [
        47,
        25
+      ]
+     ]
+    }
+   },
+   "office_worker": {
+    "belt_mg": {
+     "dir": "gun_animations/office_worker/belt_mg/",
+     "frames": 9,
+     "fps": 12,
+     "aim": "level",
+     "gun": "belt-fed machine gun from the hip, left hand on the handguard, feet pinned",
+     "fx_preset": "smg",
+     "shot_frames": [
+      1,
+      2,
+      3,
+      4
+     ],
+     "muzzle": [
+      [
+       56,
+       32
+      ],
+      [
+       56,
+       31
+      ],
+      [
+       56,
+       30
+      ],
+      [
+       55,
+       31
+      ],
+      [
+       53,
+       30
+      ],
+      [
+       54,
+       30
+      ],
+      [
+       56,
+       30
+      ],
+      [
+       55,
+       31
+      ],
+      [
+       56,
+       32
       ]
      ]
     }
