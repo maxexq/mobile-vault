@@ -465,6 +465,9 @@ func _run() -> void:
 	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
 	# event could time out in the middle of another test); _qte_test turns the clock on for itself (MV-134)
 	Settings.set_value("event_timer", "off")
+	# MV-604: the idle frame cap would halve the frames of every quiet test and move Engine.max_fps under the settings
+	# checks; _battery_test turns it on for itself
+	main.idle_cap_allowed = false
 	await wait(1.2)
 	await shot("title")
 	_check("audio: the lo-fi title music plays on the title screen", Sound.is_playing("title_lofi") or not Sound.bgm_on())
@@ -678,6 +681,11 @@ func _run() -> void:
 	if "--only=perf" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _perf_test()
+		_finish()
+		return
+	if "--only=battery" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _battery_test()
 		_finish()
 		return
 	if "--only=responsive" in OS.get_cmdline_user_args():
@@ -1566,6 +1574,7 @@ func _run() -> void:
 	await _morale_test()
 	await _responsive_test()
 	await _perf_test()
+	await _battery_test()
 	await _window_fit_test()
 	await _gear_slots_test()
 	await _trait_cards_test()
@@ -8957,6 +8966,92 @@ func _perf_test() -> void:
 	Game.dwellers_changed.emit()
 	await wait(0.5)
 
+
+## MV-604 battery saver: the idle frame cap (only while nothing fast moves, never above the player's setting) and the
+## close-up blur from a cached frame (live again whenever the camera moves)
+func _battery_test() -> void:
+	_no_events()
+	var fps0 = Settings.get_value("fps")
+	var keep_travel: bool = Game.s.traveling
+	Settings.set_value("fps", 60)
+	main.idle_cap_allowed = true
+	Features.set_override("features", "idle_fps", true)
+	Game.s.traveling = false
+	Threat.reset()
+	Combat.enemies = []
+	await wait(1.6)          # the road brakes to a stop
+	main._last_input_t = 10.0
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("battery: parked, quiet, untouched = %d fps (road %.2f px/s)" % [Engine.max_fps, main.background.current_speed_px()],
+		main.is_calm() and Engine.max_fps == 30)
+	main._last_input_t = 0.0
+	await get_tree().process_frame
+	_check("battery: a touch brings the player's 60 fps back at once", Engine.max_fps == 60)
+	main._last_input_t = 10.0
+	Game.s.traveling = true
+	await wait(0.5)
+	_check("battery: driving keeps the full frame rate", Game.is_moving() and not main.is_calm() and Engine.max_fps == 60)
+	Game.s.traveling = false
+	await wait(1.6)
+	Dev.spawn_mob("rad_rat", 1)
+	var t1 := Time.get_ticks_msec()
+	while Combat.enemies.is_empty() and Time.get_ticks_msec() - t1 < 3000:
+		await get_tree().process_frame
+	main._last_input_t = 10.0
+	await get_tree().process_frame
+	_check("battery: enemies on screen keep the full frame rate (%d)" % Combat.enemies.size(), not Combat.enemies.is_empty()
+		and not main.is_calm() and Engine.max_fps == 60)
+	Threat.reset()
+	Combat.enemies = []
+	Settings.set_value("fps", 30)
+	Features.set_override("tune", "perf.idle_fps", 45)
+	await get_tree().process_frame
+	_check("battery: the idle cap never raises a lower setting (30 stays 30)", Engine.max_fps == 30)
+	Features.set_override("tune", "perf.idle_fps", null)
+	Settings.set_value("fps", 60)
+	Features.set_override("features", "idle_fps", false)
+	await get_tree().process_frame
+	_check("battery: switch off = the setting's 60 fps even when quiet", main.is_calm() and Engine.max_fps == 60)
+	Features.set_override("features", "idle_fps", true)
+	# --- close-up blur from a cached frame
+	main.open_closeup(1)
+	await wait(0.2)
+	_check("battery: the blur is live while the camera zooms in", not main.blur_still and main.blur_rect.material == main.blur_mat)
+	main.chatter.focus_slot = 9999            # nobody talks (a bubble on screen keeps the blur live); old ones fade
+	var t0 := Time.get_ticks_msec()
+	while not main.blur_still and Time.get_ticks_msec() - t0 < 6000:
+		await get_tree().process_frame
+	main.chatter.focus_slot = 1
+	_check("battery: once still the close-up shows the cached blur", main.blur_still and main.blur_rect.material == main.blur_still_mat)
+	await RenderingServer.frame_post_draw
+	var frame: Image = main.world_vp.get_texture().get_image()
+	var cache: Image = main._blur_tex.get_image()
+	var sz: Vector2i = frame.get_size()
+	var same := true
+	for p in [Vector2i(1, 1), Vector2i(sz.x - 2, 1), Vector2i(1, sz.y - 2), Vector2i(sz.x - 2, sz.y - 2)]:
+		if not frame.get_pixelv(p).is_equal_approx(cache.get_pixelv(p)):
+			same = false
+	_check("battery: the cached blur draws 1:1, not flipped (%s vs %s)" % [frame.get_size(), cache.get_size()], same and frame.get_size() == cache.get_size())
+	await shot("closeup_blur_still")
+	var cam0: Vector2 = main.camera.position
+	main.camera.position += Vector2(1, 0)
+	await get_tree().process_frame           # resumes before Main._process: give it one whole frame
+	await get_tree().process_frame
+	_check("battery: a camera move goes back to the live blur", not main.blur_still and main.blur_rect.material == main.blur_mat)
+	main.camera.position = cam0
+	Features.set_override("features", "blur_still", false)
+	await wait(1.0)
+	_check("battery: switch off = the live blur all the time", not main.blur_still)
+	Features.set_override("features", "blur_still", null)
+	main.hud.room_closeup.close()
+	await wait(0.6)
+	_check("battery: closing the close-up leaves the live material", not main.blur_still and main.blur_rect.material == main.blur_mat
+		and not main.blur_rect.visible)
+	Features.set_override("features", "idle_fps", null)
+	main.idle_cap_allowed = false
+	Settings.set_value("fps", fps0)
+	Game.s.traveling = keep_travel
 
 ## MV-482: windows are as tall as their content (no empty space, up to the screen), a later change of content height
 ## slides there, and the room close-up shows the whole room with nothing over it, centred on portrait screens

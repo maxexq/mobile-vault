@@ -45,6 +45,11 @@ static var _tex: Texture2D
 static var _tail: Texture2D
 
 
+## a speech bubble is on screen (MV-604: the close-up only caches its blur while none is, they draw above it)
+func talking() -> bool:
+	return not _bubbles.is_empty()
+
+
 func _ready() -> void:
 	_rng.randomize()
 	z_index = 60

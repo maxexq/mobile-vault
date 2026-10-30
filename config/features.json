@@ -47,6 +47,8 @@
     "responsive_scale": true,
     "window_fit": true,
     "window_still": true,
+    "idle_fps": true,
+    "blur_still": true,
     "gear_slot_style": true,
     "gear_slot_vfx": true,
     "trait_card_style": true,
@@ -88,6 +90,9 @@
   },
   "events": {},
   "tune": {
+    "perf.idle_fps": 30,
+    "perf.idle_after": 2.0,
+    "blur.refresh": 1.0,
     "desert_background.clouds_speed": 0.03,
     "desert_background.far_speed": 0.08,
     "desert_background.mid_speed": 0.25,
