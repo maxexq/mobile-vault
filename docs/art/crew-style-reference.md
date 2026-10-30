@@ -122,12 +122,22 @@ approved edit.
 ## Cast animations
 
 All 24 cast designs are PixelLab characters (ids in the manifest `cast_animations`) with seven
-east clips each: `walk`, `eat`, `drink` (one-shot), `work` (hammer), `talk`, `idle` (5 frames)
+east clips each: `walk`, `eat`, `drink` (one-shot), `work` (hammer), `talk`, `idle` (8 frames at 8 fps)
 and a personal `signature` move that fits the character (one-shot; per-character prompt in the
 manifest, e.g. the hunter draws her bow, the monk gives a wai). Clips have 9 frames with frame 0
 as the reference pose; left-facing is a mirror of each clip. Files in
 [`approved/cast_animations/<name>/<clip>/`](crew-style-reference/approved/cast_animations/),
 plus each character's `east.png`.
+
+**Loop clean-up (MV-616, approved by Parames 2026-10-30), done in code, no PixelLab:**
+- `idle`: the 5 generated frames play as a ping-pong (0-4 then 3-1, 8 frames at 8 fps), so the loop never
+  jumps. Feet and legs are locked to frame 0 (whole rows when the outline at the knees does not move,
+  otherwise only the colour shimmer), and small detached specks are removed (old fisherman, retired teacher).
+- `talk` / `eat` / `walk`: where the last frame jumped back to frame 0, the loop is cut at the frames that
+  join cleanly, or plays as a ping-pong when no clean cut exists. Those clips have fewer or more than 9
+  frames; the manifest lists them per character under `clip_overrides`. `work` is unchanged.
+- Scripts: `/mnt/project-files/designs/crew-anim-fix/fix.py` (claude.ai project files). The preview sheet
+  below still shows the frames from before the clean-up.
 
 ![Frames 2, 4 and 6 of every clip](crew-style-reference/previews/cast-animations.png)
 
