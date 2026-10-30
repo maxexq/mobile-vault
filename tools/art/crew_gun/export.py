@@ -34,6 +34,8 @@ CLIPS = [
  ('lounge_singer', 'tommy_gun', 'lounge_singer/fx_B', 'smg', [2, 3, 4], 12, 'level', '1920s tommy gun from the hip, burst (flash spans the 2 px barrel)'),
  ('monk', 'net_launcher', 'monk/fx_A', 'airpuff', [2], 10, 'level', 'compressed-air net launcher, two hands (non-lethal: monks keep the precept against killing)'),
  ('monk', 'dart_pistol', 'monk/fx_B', 'airpuff', [1, 5], 10, 'level', 'wooden tranquiliser dart pistol, two-hand grip (PixelLab hold pose + code recoil)'),
+ ('motorbike_courier', 'silver_pistol', 'motorbike_courier/fx_B2H', 'pistol', [1, 5], 10, 'level', 'silver pistol, two hands, ponytail whips with the recoil (legs pinned, hair detail drawn in code)'),
+ ('motorbike_courier', 'silver_pistol_b', 'motorbike_courier/fx_B3H', 'pistol', [1, 5], 10, 'level', 'silver pistol, two hands, softer ponytail sway (take 2)'),
 ]
 man = json.load(open(REPO + 'manifest.json'))
 entry = {'how': 'MV-594. 1) edit_image_pro_flash on the character work/0 frame (60x60) -> holding-the-gun pose (5 gens). '

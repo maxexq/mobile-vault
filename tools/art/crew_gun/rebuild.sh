@@ -27,3 +27,9 @@ f lounge_singer/shoot_A revolver 1,4 lounge_singer/fx_A level
 BORE2=1 f lounge_singer/shoot_B smg 2,3,4 lounge_singer/fx_B level
 f monk/shoot_A airpuff 2 monk/fx_A level
 rm -rf monk/shoot_B; python3 recoil.py monk/hold_B.png monk/shoot_B 02100210; f monk/shoot_B airpuff 1,5 monk/fx_B level
+rm -rf motorbike_courier/shoot_A; BODY=1 python3 recoil.py motorbike_courier/hold_A.png motorbike_courier/shoot_A 012121210; f motorbike_courier/shoot_A smg 2,4,6 motorbike_courier/fx_A level
+f motorbike_courier/shoot_B pistol 1,5 motorbike_courier/fx_B level
+# courier A with PixelLab burst (ponytail swing), legs pinned: takes 2 and 3
+for s in 2 3; do python3 lockfeet.py motorbike_courier/shoot_A$s motorbike_courier/shoot_A${s}L 37; HOLD=motorbike_courier/hold_A.png f motorbike_courier/shoot_A${s}L smg 2,3,4 motorbike_courier/fx_A${s}L level; done
+for s in 2 3; do python3 lockfeet.py motorbike_courier/shoot_B$s motorbike_courier/shoot_B${s}L 37; HOLD=motorbike_courier/hold_B.png f motorbike_courier/shoot_B${s}L pistol 1,5 motorbike_courier/fx_B${s}L level; done
+for s in 2 3; do rm -rf motorbike_courier/fx_B${s}H; cp -r motorbike_courier/fx_B${s}L motorbike_courier/fx_B${s}H; python3 hairfx.py motorbike_courier/fx_B${s}H 54,41,38; done

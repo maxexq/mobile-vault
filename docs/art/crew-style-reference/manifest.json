@@ -2231,7 +2231,25 @@
   "gun_animations/monk/dart_pistol/4.png": "37dee1cc99b54ae4bd784879659d3448670ce64af38bade68300123d3f8ae26a",
   "gun_animations/monk/dart_pistol/5.png": "b94c5f496a19ff268b67ca50942fb821f1c84f313fecc7c4f315a09a43352ddf",
   "gun_animations/monk/dart_pistol/6.png": "3a7795af84582c2f0256a19456effc8ac6b74f644dcd43b82873081508b9a610",
-  "gun_animations/monk/dart_pistol/7.png": "43e14bf13162e7511e3202b3c880bb95da5e7499342b34b59f0ea2c1fa8a1ef8"
+  "gun_animations/monk/dart_pistol/7.png": "43e14bf13162e7511e3202b3c880bb95da5e7499342b34b59f0ea2c1fa8a1ef8",
+  "gun_animations/motorbike_courier/silver_pistol/0.png": "a06cab4c21aee9d8f74f8d9760a57d46f0093a7b0ca37da48c214174cae431e0",
+  "gun_animations/motorbike_courier/silver_pistol/1.png": "07a4393c2969fe1cf3baede4794e26555f5bb3f65b65d2ac702853143772d03b",
+  "gun_animations/motorbike_courier/silver_pistol/2.png": "ea1347c2b3c39a645fbcf7413c1c16d0a9071a03d8bf04c3aa1cb7212aba7003",
+  "gun_animations/motorbike_courier/silver_pistol/3.png": "c1670b40040189b518a489e4bbad640396c2a3d62f46dda987276450eaf94d6a",
+  "gun_animations/motorbike_courier/silver_pistol/4.png": "9eadfd71aebd6da83631ee5705845a70b6d68bbd77769b7b7ffc58b87ac08716",
+  "gun_animations/motorbike_courier/silver_pistol/5.png": "9ec2e865059a60df93f84757946e20638733dc52b1029b604645424b7aabba69",
+  "gun_animations/motorbike_courier/silver_pistol/6.png": "e8c13704360c3812426e0b29875e539ad7fa43ca5b3000685f727c2cef5ecd83",
+  "gun_animations/motorbike_courier/silver_pistol/7.png": "4caf37fb34a2c622f1d58ef16268783b834e0bfb8b0e42b806268001919c680f",
+  "gun_animations/motorbike_courier/silver_pistol/8.png": "896a1a7ff8a0a1037c4be6c37cda35265be96535d61befb84f6f904b4d543471",
+  "gun_animations/motorbike_courier/silver_pistol_b/0.png": "1bf488984e8a7987dd7cfb35baced7aae7bc7eb1bdcc42c32208dd09f6d8a5b2",
+  "gun_animations/motorbike_courier/silver_pistol_b/1.png": "a86b648cbfe408c2d7d63fbafcd1cf798601468e4365f24bebaf022fc593e272",
+  "gun_animations/motorbike_courier/silver_pistol_b/2.png": "cc4139842b572290b65677ed378f4e5bf811cc31863bc7e084326bd1861b4753",
+  "gun_animations/motorbike_courier/silver_pistol_b/3.png": "9eddb9e9f785a530f31fe303d8ac55108d2fe508b53ee9bc7c59c78b3cbdc66b",
+  "gun_animations/motorbike_courier/silver_pistol_b/4.png": "1fa5462b06aa9235ca72117214551f8bfb9e5ab5641eb406f0d15641668fd81c",
+  "gun_animations/motorbike_courier/silver_pistol_b/5.png": "e522f1b7e4d4f54a5d7d20348e65f00bc6a4b1ea17a404aeaae2973bc5753fbf",
+  "gun_animations/motorbike_courier/silver_pistol_b/6.png": "f591f4c39986243d765615c452ddc87419d9faa219df7c1ee4371bbf97f66408",
+  "gun_animations/motorbike_courier/silver_pistol_b/7.png": "d271a38c1937fe2ef591b274d3e1d72c352521b3e91c63445aac8e73cd687d63",
+  "gun_animations/motorbike_courier/silver_pistol_b/8.png": "316cb37b83009f1c9959815bde85915a7ffcaadd4ddcedd2e1a91409ec4fef18"
  },
  "cast_animations": {
   "how": "create_character mode pro, concept_image_url = approved/cast/<name>.png, size 48 (10 generations each); then animate_character mode v3, directions [east], frame_count 8 (1 generation each). Frame 0 is the reference pose; canvases 52-60 px.",
@@ -4103,6 +4121,108 @@
       [
        43,
        27
+      ]
+     ]
+    }
+   },
+   "motorbike_courier": {
+    "silver_pistol": {
+     "dir": "gun_animations/motorbike_courier/silver_pistol/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "silver pistol, two hands, ponytail whips with the recoil (legs pinned, hair detail drawn in code)",
+     "fx_preset": "pistol",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       47,
+       25
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       47,
+       24
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       46,
+       26
+      ],
+      [
+       48,
+       25
+      ],
+      [
+       48,
+       24
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       47,
+       25
+      ]
+     ]
+    },
+    "silver_pistol_b": {
+     "dir": "gun_animations/motorbike_courier/silver_pistol_b/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "silver pistol, two hands, softer ponytail sway (take 2)",
+     "fx_preset": "pistol",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       47,
+       25
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       46,
+       27
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       47,
+       26
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       27
+      ],
+      [
+       47,
+       26
+      ],
+      [
+       47,
+       25
       ]
      ]
     }

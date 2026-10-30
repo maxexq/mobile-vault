@@ -13,10 +13,13 @@ def shift(im, box, dx):
     out.alpha_composite(part, (box[0] + dx, box[1]))
     return out
 
+BODY = os.environ.get('BODY') == '1'   # whole figure above the ankles leans back (no tear at the waist; for backpacks, long hair)
+ANKLE = 44
+
 def kick(level):
     im = hold
-    if level >= 1: im = shift(im, (1, 0, hold.width, WAIST), -1)
-    if level >= 2: im = shift(im, (FRONT - 1, 0, hold.width, 46), -1)
+    if level >= 1: im = shift(im, (1, 0, hold.width, ANKLE if BODY else WAIST), -1)
+    if level >= 2: im = shift(im, (0, 0, hold.width, ANKLE) if BODY else (FRONT - 1, 0, hold.width, 46), -1)
     return im
 
 os.makedirs(dst, exist_ok=True)
