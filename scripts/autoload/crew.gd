@@ -196,8 +196,9 @@ func affinity(d: Dictionary, room_type: String) -> float:
 
 
 ## production multiplier for a room from its workers' traits, synergies and skills
-func room_mult(slot: int) -> float:
-	var workers := Game.room_workers(slot)
+## `w`: the room's Game.room_workers() when the caller already has them (MV-562)
+func room_mult(slot: int, w: Variant = null) -> float:
+	var workers: Array = Game.room_workers(slot) if w == null else w
 	if workers.is_empty():
 		return 1.0
 	var rt: String = Game.room(slot).type
@@ -205,7 +206,14 @@ func room_mult(slot: int) -> float:
 	var fits := 0
 	var night := Game.is_night()
 	var pair_div := float(Game.work_span(slot))
-	for d in workers:
+	# MV-562: each partner's pair bonus is looked up once, not once per other worker (same sums, same order)
+	var cheer := []
+	var mentor := []
+	for o in workers:
+		cheer.append(has(o, "cheerful"))
+		mentor.append(Skills.val(o, "mentor"))
+	for i in workers.size():
+		var d: Dictionary = workers[i]
 		var a := affinity(d, rt)
 		if a > 0.0:
 			fits += 1
@@ -217,12 +225,12 @@ func room_mult(slot: int) -> float:
 		if night and has(d, "night_owl"):
 			m += 0.30 / float(workers.size())
 		m += Skills.val(d, "prod") / float(workers.size())
-		for o in workers:
-			if o != d:
+		for j in workers.size():
+			if j != i:
 				# pair bonuses are per seat pair: a large room's 6 crew don't stack them 5x
-				if has(o, "cheerful"):
+				if cheer[j]:
 					m += 0.05 / pair_div
-				m += Skills.val(o, "mentor") / pair_div
+				m += float(mentor[j]) / pair_div
 	if fits >= 2:
 		m += DUO_BONUS
 	if Game.s.has("meta"):

@@ -44,6 +44,8 @@
     "build_room_effects": true,
     "morale_v2": true,
     "fixed_sim": true,
+    "perf_cache": true,
+    "dpr_cap": true,
     "responsive_scale": true,
     "window_fit": true,
     "window_still": true,

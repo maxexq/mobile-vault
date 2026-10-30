@@ -864,10 +864,15 @@ func danger_level() -> int:
 
 ## crew that actually works the room (strikers sit it out). A room still being built has no workers yet:
 ## the people assigned there are its builders (see site_crew).
+## (read-only: during a world step the array is shared, see _prod_begin)
 func room_workers(slot: int) -> Array:
 	var out := []
 	if is_site(slot):
 		return out
+	if _prod_step:
+		if _workers_ix.is_empty():
+			_index_workers()
+		return _workers_ix.get(slot, out)
 	for d in s.dwellers:
 		if int(d.room) == slot and not is_away(d) and not d.get("strike", false) and not Crew.busy(d):
 			out.append(d)
@@ -1034,11 +1039,12 @@ func dweller_by_id(id: int) -> Dictionary:
 	return {}
 
 
-func stat_sum(slot: int) -> float:
+## `workers`: the room's room_workers() when the caller already has them (MV-562)
+func stat_sum(slot: int, workers: Variant = null) -> float:
 	var r: Dictionary = s.rooms[slot]
 	var st: String = Data.room_def(r.type).get("stat", "str")
 	var sum := 0.0
-	for d in room_workers(slot):
+	for d in (room_workers(slot) if workers == null else workers):
 		sum += float(d[st])
 	return sum
 
@@ -1061,6 +1067,51 @@ func avg_happiness() -> float:
 	return t / s.dwellers.size()
 
 
+## MV-562 (perf_cache): during an economy world step the factors every room shares (crew happiness, science,
+## environment, Vault bonus) are worked out once, and who works where is sorted once (one pass over the crew instead
+## of one per room and helper). Room production was most of the step: with 24+ rooms and 35 crew about 2.5 ms of
+## 4-5 on a desktop, several times that in a phone browser. Like the synergy cache (MV-113) these are frozen for the
+## length of one step (1/20 s): a crew move in the middle of a step counts from the next one. Outside a step (UI,
+## tests, the crew half) everything is worked out fresh, as before.
+var _prod_step := false
+var _prod_g := {}
+var _workers_ix := {}     # slot -> room_workers(slot), filled on first use in a step
+var _span_ix := {}        # slot -> room_span(slot)
+
+
+func _prod_begin() -> void:
+	_prod_step = Features.on("perf_cache")
+	_prod_g = {}
+	_workers_ix = {}
+	_span_ix = {}
+
+
+func _prod_end() -> void:
+	_prod_step = false
+	_prod_g = {}
+	_workers_ix = {}
+	_span_ix = {}
+
+
+func _index_workers() -> void:
+	_workers_ix = {-1: []}     # never empty, so it is built once per step even with nobody working
+	for d in s.dwellers:
+		if not is_away(d) and not d.get("strike", false) and not Crew.busy(d):
+			var k := int(d.room)
+			if not _workers_ix.has(k):
+				_workers_ix[k] = []
+			_workers_ix[k].append(d)
+
+
+func prod_globals() -> Dictionary:
+	if _prod_step and not _prod_g.is_empty():
+		return _prod_g
+	var g := {"happy": 0.6 + avg_happiness() / 250.0, "science": 1.0 + science_boost(), "env": Env.prod_mult(), "vault": vault_prod_mult()}
+	if _prod_step:
+		_prod_g = g
+	return g
+
+
 func room_rate_pm(slot: int) -> Dictionary:
 	## production per minute for display
 	var r: Dictionary = s.rooms[slot]
@@ -1069,10 +1120,11 @@ func room_rate_pm(slot: int) -> Dictionary:
 	var workers := room_workers(slot)
 	if workers.is_empty() or not def.has("produce"):
 		return out
+	var g := prod_globals()
 	var lvl_mult := 1.0 + 0.6 * float(r.level - 1)
-	var stat_mult := 0.5 * float(work_span(slot)) + stat_sum(slot) / 10.0          # 1 avg worker per cell = 1.0 per cell
-	var happy_mult := 0.6 + avg_happiness() / 250.0
-	var mult := lvl_mult * stat_mult * span_efficiency(slot) * happy_mult * (1.0 + science_boost()) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot) * vault_prod_mult()
+	var stat_mult := 0.5 * float(work_span(slot)) + stat_sum(slot, workers) / 10.0          # 1 avg worker per cell = 1.0 per cell
+	var happy_mult: float = g.happy
+	var mult := lvl_mult * stat_mult * span_efficiency(slot) * happy_mult * float(g.science) * Crew.room_mult(slot, workers) * Synergy.room_mult(slot) * float(g.env) * outage_mult(slot) * float(g.vault)
 	if def.get("weather_crop", false):
 		mult *= float(weather_def().crop)
 	if def.power > 0.0 and s.res.power <= 0.5:
@@ -1138,7 +1190,8 @@ func craft_speed(slot: int) -> float:
 	for d in workers:
 		sk += Skills.val(d, "craft") / workers.size()
 	var n := float(work_span(slot))
-	return (0.6 + stat_sum(slot) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * (1.0 + science_boost()) * (1.0 + sk) * Crew.room_mult(slot) * Synergy.room_mult(slot) * Env.prod_mult() * outage_mult(slot) * vault_prod_mult()
+	var g := prod_globals()
+	return (0.6 + stat_sum(slot, workers) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * float(g.science) * (1.0 + sk) * Crew.room_mult(slot, workers) * Synergy.room_mult(slot) * float(g.env) * outage_mult(slot) * float(g.vault)
 
 
 func medical_power() -> float:
@@ -1243,7 +1296,9 @@ func _flush_sim() -> void:
 func _sim_world(dt: float, offline: bool) -> void:
 	var t0 := Time.get_ticks_usec()
 	Synergy.sim_begin()
+	_prod_begin()
 	_sim_world_body(dt, offline)
+	_prod_end()
 	Synergy.sim_end()
 	if not offline:
 		sim_ms.world = float(Time.get_ticks_usec() - t0) / 1000.0
@@ -2088,6 +2143,10 @@ func room_cells(slot: int) -> Array:
 
 
 func room_span(slot: int) -> int:
+	if _prod_step:      # MV-562: walked once per room per world step (production asks 3 times)
+		if not _span_ix.has(slot):
+			_span_ix[slot] = room_cells(slot).size()
+		return _span_ix[slot]
 	return room_cells(slot).size()
 
 

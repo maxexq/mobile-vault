@@ -22,6 +22,7 @@ const DEFAULTS := {
 	"crt": true,             # CRT scanlines / vignette overlay
 	"fx_gpu": true,          # GPU particles (pretty) / CPU (weak phones)
 	"fps": 60,               # 60 | 30 (battery saver) | 120 (high refresh screens, MV-113)
+	"render_res": "saver",   # web: saver (at most perf.dpr_cap screen pixels per CSS pixel) | full (MV-562)
 	"fullscreen": false,
 	"shake": true,
 	"car_shake": true,       # the vehicle body rumbles with the engine and bumps on the road (MV-176)
@@ -48,6 +49,7 @@ func _ready() -> void:
 		if k == "fullscreen" and OS.has_feature("web"):
 			continue
 		_apply(k)
+	Features.changed.connect(_apply_dpr)     # the switch / tune can arrive later from web/features.json
 
 
 func _ensure_buses() -> void:
@@ -88,6 +90,8 @@ func _merge(d: Dictionary) -> void:
 		v.zoom = "auto"
 	if not v.pacing in ["threat", "classic"]:
 		v.pacing = "threat"
+	if not v.render_res in ["saver", "full"]:
+		v.render_res = "saver"
 
 
 ## settings that came with a cloud save from another device
@@ -142,10 +146,26 @@ func _apply(k: String) -> void:
 			FX.use_gpu = bool(v.fx_gpu)
 		"fps":
 			Engine.max_fps = int(v.fps)
+		"render_res":
+			_apply_dpr()
 		"fullscreen":
 			var want := DisplayServer.WINDOW_MODE_FULLSCREEN if v.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 			if DisplayServer.get_name() != "headless" and DisplayServer.window_get_mode() != want:
 				DisplayServer.window_set_mode(want)
+
+
+## MV-562: the most screen pixels per CSS pixel the web canvas may use (0 = the screen's own ratio). Phones with 3x
+## screens then draw at 2x: integer-scaled pixel art looks the same, the GPU fills about half the pixels.
+func dpr_cap() -> float:
+	if not Features.on("dpr_cap") or str(v.render_res) == "full":
+		return 0.0
+	return Features.num("perf.dpr_cap", 2.0)
+
+
+## hands the cap to the web shell (tools/web_shell.html window.mvSetDprCap); the engine picks it up on the next frame
+func _apply_dpr() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.mvSetDprCap && window.mvSetDprCap(%s)" % str(dpr_cap()), true)
 
 
 func _apply_audio() -> void:
