@@ -47,6 +47,30 @@ All three levels keep the same layout (L1 and L3 are edits of L2), so object anc
 - A 3-slot merge keeps what the 2-slot room had, moved over and made bigger and better
   (kitchen: a longer bar with six stools, beer tap, lit bottle wall, big menu, standing table).
 
+### PixelLab generation rules for rooms (MV-605)
+
+Parames set these rules on 2026-10-29 for every PixelLab room generation, above all merged
+(multi-slot) rooms:
+
+1. **Use the existing image as the reference for style and equipment, but furniture may move
+   anywhere in the room.** The source room decides the look and what objects exist; it does not pin
+   where they stand. Re-plan the whole layout for the new width instead of stretching or mirroring
+   the old one in place.
+2. **Remove the walls, pillars, doors and gaps left by the old room edges.** A merged room is one
+   continuous room: no seam, divider, door frame or empty strip where the single slots used to meet.
+3. **Decide the use zones before generating.** Write the zones from left to right into the prompt
+   and the mask plan first (grow room example: seedling area → main growing area → water system and
+   equipment storage), then generate.
+4. **A 3-slot room adds real working area plus the equipment that supports it** (grow room: more
+   actual planting area). Leave only the small gaps the room needs to be used; no large empty space
+   to fill the width.
+5. **Keep the 6 px front walkway along the full width, and keep every furniture base complete.**
+   The open floor strip in front stays 6 px deep from the left edge to the right edge so crew walk on
+   the floor, and no table, bed, rack or shelf may have its legs or base cut off by the walkway, the
+   frame edge or a mask boundary.
+
+Check every candidate against all five before showing it to Parames.
+
 ## Animation states
 
 Every room has three states, drawn in code on top of the background:

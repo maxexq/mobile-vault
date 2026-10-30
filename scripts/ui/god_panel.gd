@@ -222,6 +222,15 @@ func _tab_main() -> void:
 	_head("OVERLAY", "ข้อมูลดีบักบนจอ")
 	_row([_b("FPS/ดีบัก: " + ("เปิด" if Dev.overlay else "ปิด"), func(): Dev.set_overlay(not Dev.overlay), "green" if Dev.overlay else "gray"),
 		_b("ซ่อนปุ่ม GOD", func(): Dev.lock(), "red", true)])
+	var idle := Features.on("idle_fps")
+	var still := Features.on("blur_still")
+	var m = get_tree().current_scene
+	_head("BATTERY", "ประหยัดแบต (MV-604) · ตอนนี้ %d FPS%s" % [Engine.max_fps,
+		(" · เบลอห้องเป็นภาพนิ่ง" if m.blur_still else "") if m and m.get("blur_still") != null else ""])
+	_note("ลดเหลือ %d FPS เมื่อรถไม่วิ่ง ไม่มีศัตรู ไม่แตะจอ %.1f วิ (ปิด GOD แล้วรอ)" % [int(Features.num("perf.idle_fps", 30.0)), Features.num("perf.idle_after", 2.0)])
+	_row([_b("ลด FPS ตอนนิ่ง", func(): Dev.battery_saver(not idle, still), "yellow" if idle else "gray"),
+		_b("เบลอภาพนิ่ง", func(): Dev.battery_saver(idle, not still), "yellow" if still else "gray"),
+		_b("ค่าเริ่มต้น", func(): Dev.battery_saver(null, null), "gray")], "สลับ")
 
 
 func _tab_res() -> void:

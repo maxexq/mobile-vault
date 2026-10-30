@@ -46,7 +46,7 @@ feet, not on the canvas.
 
 | Clip | Frames | fps | Playback | Notes |
 |---|---|---|---|---|
-| `idle` | 4 | 5 | loop | template `breathing-idle`; coat slightly whiter and slimmer than the reference (template drift) |
+| `idle` | 16 | 10 | loop | v3 animate-with-text, first + last frame = the old idle/0, seed 3 (MV-616, picked by Parames 2026-10-30): slow breathing, head nod |
 | `walk` | 8 | 10 | loop | template `walking-8-frames`; same drift as idle |
 | `work` | 9 | 9 | loop | hammer strike in front; the wind-up swings behind the head |
 | `sit` | 9 | 7 | one-shot, hold last | no seat drawn: place on a chair, bed or crate in the room |
@@ -180,6 +180,7 @@ gun, fps, shot frames and a muzzle point per frame in the manifest `gun_animatio
 | hunter | `bolt_rifle`, `over_under` |
 | lounge_singer | `pearl_revolver`, `tommy_gun` |
 | monk | `net_launcher`, `dart_pistol` (non-lethal) |
+| motorbike_courier | `silver_pistol`, `silver_pistol_b` (ponytail swing, legs pinned) |
 
 ## Cast portraits
 

@@ -30,13 +30,13 @@
  },
  "animations": {
   "idle": {
-   "source": "breathing-idle template",
-   "frames": 4,
+   "source": "v3 animate-with-text (MV-616): first+last frame = previous idle/0, 16 frames, seed 3, subtle breathing",
+   "frames": 16,
    "canvas": [
     48,
     48
    ],
-   "fps": 5,
+   "fps": 10,
    "playback": "loop",
    "frame0_is_reference": false,
    "direction": "east (west = horizontal mirror)"
@@ -437,9 +437,21 @@
   "animations/exercise/7.png": "e139eedb7e200f1d41d4dcb18661a14385c023ced4de93be712fe1fb0b203ef9",
   "animations/exercise/8.png": "95d95a194e8a73231c9dd35b73f77c9caad9f4b4fc9e377f10ee6a2276b43ec2",
   "animations/idle/0.png": "d574fb1b5a5261251e7bd9058d38365a605b3ea287e7db84da93aa6c3add3c25",
-  "animations/idle/1.png": "4b815938464a058f9606de7397c970693801836549175232c6f9ebbf36c85504",
-  "animations/idle/2.png": "b894f2d9e782ba05d547f0920c8d7492f859c964fb8157dafb998bd3eef2c519",
-  "animations/idle/3.png": "1cf831f3f5e99d03c7b5b8a75b48197ad2cfb1d1d8292605e46d4940b59758b8",
+  "animations/idle/1.png": "f740a1da6c53c0468d89386c7edca9c1d7fabfaf9b4fe15be3ef35a8e93e1f05",
+  "animations/idle/2.png": "017f4bae160f8aa738eae6e81671667d0aa580e2c73b30160aa864d8b10435a0",
+  "animations/idle/3.png": "82f959266660d8041971ecf205171483674933cb65dbb3136463749727193f37",
+  "animations/idle/4.png": "e947f4066ac09c51de7e167c5002d73bd3928a242d3c6b4812a955a84efc99df",
+  "animations/idle/5.png": "ae90b86e1e5e1aa255e14f480a0448c646b7efed33f1fad87c080c77520bb735",
+  "animations/idle/6.png": "a0866a1bdd3533b62dc1512bb42f777bac0b487b2950eae254ae12709342d1c0",
+  "animations/idle/7.png": "229742aa4ba1b1673683781ecabc7e07435fc63027f5e8a5de1a4367f3ab90dd",
+  "animations/idle/8.png": "e90f7b45e7238df79c78c6941b45fded5e01ef0d551927eb7edfa434f4b65146",
+  "animations/idle/9.png": "1c9f36f494f3a380ad5892a4bc1774186be3782dff10fc9104c10ecfb1e90acd",
+  "animations/idle/10.png": "6a316f310938d63f53736c224c29c2c1f467a0519a50730c04d892b82724bf91",
+  "animations/idle/11.png": "44c13d96e0528f0f3e922c49a6a5083251bd06a2282a172f2fda23d255d3c181",
+  "animations/idle/12.png": "44c13d96e0528f0f3e922c49a6a5083251bd06a2282a172f2fda23d255d3c181",
+  "animations/idle/13.png": "4709c55c6d1499e4868aafbd4fc3a2b7df6f2b76243c0302872138a145fabf6c",
+  "animations/idle/14.png": "7b964c6e25ff5ebfc727c0dee5cf994c64f999a70bbc99deeafdbca67ff66364",
+  "animations/idle/15.png": "c472ed8e02183e3cf0d1f1537cf2bddaa2612bf25e7b9e3129f7a004fcbe78f4",
   "animations/sit/0.png": "857874e253319eea43a5d5b75e58f2a6ec1bb2929860f3b2e2c02e63f44669d9",
   "animations/sit/1.png": "063cc866c88ee2d1a5151bcd8abccd19bce20011cc4cac295b847c2ba2a1fe0a",
   "animations/sit/2.png": "afbba2209246e07fee78d375e7b89c0e883612b610879dc9c542c7a0337e02af",
@@ -2231,7 +2243,25 @@
   "gun_animations/monk/dart_pistol/4.png": "37dee1cc99b54ae4bd784879659d3448670ce64af38bade68300123d3f8ae26a",
   "gun_animations/monk/dart_pistol/5.png": "b94c5f496a19ff268b67ca50942fb821f1c84f313fecc7c4f315a09a43352ddf",
   "gun_animations/monk/dart_pistol/6.png": "3a7795af84582c2f0256a19456effc8ac6b74f644dcd43b82873081508b9a610",
-  "gun_animations/monk/dart_pistol/7.png": "43e14bf13162e7511e3202b3c880bb95da5e7499342b34b59f0ea2c1fa8a1ef8"
+  "gun_animations/monk/dart_pistol/7.png": "43e14bf13162e7511e3202b3c880bb95da5e7499342b34b59f0ea2c1fa8a1ef8",
+  "gun_animations/motorbike_courier/silver_pistol/0.png": "a06cab4c21aee9d8f74f8d9760a57d46f0093a7b0ca37da48c214174cae431e0",
+  "gun_animations/motorbike_courier/silver_pistol/1.png": "07a4393c2969fe1cf3baede4794e26555f5bb3f65b65d2ac702853143772d03b",
+  "gun_animations/motorbike_courier/silver_pistol/2.png": "ea1347c2b3c39a645fbcf7413c1c16d0a9071a03d8bf04c3aa1cb7212aba7003",
+  "gun_animations/motorbike_courier/silver_pistol/3.png": "c1670b40040189b518a489e4bbad640396c2a3d62f46dda987276450eaf94d6a",
+  "gun_animations/motorbike_courier/silver_pistol/4.png": "9eadfd71aebd6da83631ee5705845a70b6d68bbd77769b7b7ffc58b87ac08716",
+  "gun_animations/motorbike_courier/silver_pistol/5.png": "9ec2e865059a60df93f84757946e20638733dc52b1029b604645424b7aabba69",
+  "gun_animations/motorbike_courier/silver_pistol/6.png": "e8c13704360c3812426e0b29875e539ad7fa43ca5b3000685f727c2cef5ecd83",
+  "gun_animations/motorbike_courier/silver_pistol/7.png": "4caf37fb34a2c622f1d58ef16268783b834e0bfb8b0e42b806268001919c680f",
+  "gun_animations/motorbike_courier/silver_pistol/8.png": "896a1a7ff8a0a1037c4be6c37cda35265be96535d61befb84f6f904b4d543471",
+  "gun_animations/motorbike_courier/silver_pistol_b/0.png": "1bf488984e8a7987dd7cfb35baced7aae7bc7eb1bdcc42c32208dd09f6d8a5b2",
+  "gun_animations/motorbike_courier/silver_pistol_b/1.png": "a86b648cbfe408c2d7d63fbafcd1cf798601468e4365f24bebaf022fc593e272",
+  "gun_animations/motorbike_courier/silver_pistol_b/2.png": "cc4139842b572290b65677ed378f4e5bf811cc31863bc7e084326bd1861b4753",
+  "gun_animations/motorbike_courier/silver_pistol_b/3.png": "9eddb9e9f785a530f31fe303d8ac55108d2fe508b53ee9bc7c59c78b3cbdc66b",
+  "gun_animations/motorbike_courier/silver_pistol_b/4.png": "1fa5462b06aa9235ca72117214551f8bfb9e5ab5641eb406f0d15641668fd81c",
+  "gun_animations/motorbike_courier/silver_pistol_b/5.png": "e522f1b7e4d4f54a5d7d20348e65f00bc6a4b1ea17a404aeaae2973bc5753fbf",
+  "gun_animations/motorbike_courier/silver_pistol_b/6.png": "f591f4c39986243d765615c452ddc87419d9faa219df7c1ee4371bbf97f66408",
+  "gun_animations/motorbike_courier/silver_pistol_b/7.png": "d271a38c1937fe2ef591b274d3e1d72c352521b3e91c63445aac8e73cd687d63",
+  "gun_animations/motorbike_courier/silver_pistol_b/8.png": "316cb37b83009f1c9959815bde85915a7ffcaadd4ddcedd2e1a91409ec4fef18"
  },
  "cast_animations": {
   "how": "create_character mode pro, concept_image_url = approved/cast/<name>.png, size 48 (10 generations each); then animate_character mode v3, directions [east], frame_count 8 (1 generation each). Frame 0 is the reference pose; canvases 52-60 px.",
@@ -4103,6 +4133,108 @@
       [
        43,
        27
+      ]
+     ]
+    }
+   },
+   "motorbike_courier": {
+    "silver_pistol": {
+     "dir": "gun_animations/motorbike_courier/silver_pistol/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "silver pistol, two hands, ponytail whips with the recoil (legs pinned, hair detail drawn in code)",
+     "fx_preset": "pistol",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       47,
+       25
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       47,
+       24
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       46,
+       26
+      ],
+      [
+       48,
+       25
+      ],
+      [
+       48,
+       24
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       47,
+       25
+      ]
+     ]
+    },
+    "silver_pistol_b": {
+     "dir": "gun_animations/motorbike_courier/silver_pistol_b/",
+     "frames": 9,
+     "fps": 10,
+     "aim": "level",
+     "gun": "silver pistol, two hands, softer ponytail sway (take 2)",
+     "fx_preset": "pistol",
+     "shot_frames": [
+      1,
+      5
+     ],
+     "muzzle": [
+      [
+       47,
+       25
+      ],
+      [
+       47,
+       25
+      ],
+      [
+       46,
+       27
+      ],
+      [
+       47,
+       27
+      ],
+      [
+       47,
+       26
+      ],
+      [
+       46,
+       25
+      ],
+      [
+       46,
+       27
+      ],
+      [
+       47,
+       26
+      ],
+      [
+       47,
+       25
       ]
      ]
     }

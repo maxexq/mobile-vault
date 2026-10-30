@@ -1586,6 +1586,15 @@ func window_motion(on: bool) -> void:
 	Trace.rec("god", "window motion %s" % ("on" if on else "off"))
 
 
+
+## MV-604 battery saver for this session: the idle frame cap and the cached close-up blur on or off (null = the
+## shipped / remote value again)
+func battery_saver(idle_fps, blur_still) -> void:
+	Features.set_override("features", "idle_fps", idle_fps)
+	Features.set_override("features", "blur_still", blur_still)
+	Trace.rec("god", "battery saver idle_fps %s blur_still %s" % [idle_fps, blur_still])
+	changed.emit()
+
 func reroll_traits(d: Dictionary) -> void:
 	d.erase("traits")
 	Crew.roll_traits(d)

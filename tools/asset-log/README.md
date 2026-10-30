@@ -59,6 +59,26 @@ Then in the Cloudflare dashboard (Parames):
    `{"url": "https://mobile-vault-asset-log.pages.dev", "client_id": "...", "client_secret": "..."}`
    (or env `ASSET_LOG_URL`, `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`). Check: `python tools/asset_log.py status`.
 
+## Backfill: images from one-off scripts (MV-606)
+
+Art made by scripts that call PixelLab directly (v2 rooms, pets, crew animations, the ambulance, under
+`/mnt/project-files/designs/` or anywhere else) never goes through `pixellab.py gen`, so nothing syncs it.
+
+```
+python tools/asset_log.py backfill /mnt/project-files/designs/pets-preview --dry-run     # what would go up
+python tools/asset_log.py backfill /mnt/project-files/designs/pets-preview [--group pet]
+```
+
+Every PNG/GIF becomes one generation (endpoint `script (backfill)`, cost 0, `params.source` = its path, seed
+from `seed12` / `_s3` in the name); a folder of numbered frames (`0.png`, `1.png` ...) becomes one animated
+GIF. Compare sheets, masks, sketches and hotspot overlays are skipped. The group (gallery prefix) defaults to
+the first word of the folder name. `<folder>/.asset_log_backfill.json` remembers what went up, so re-running
+only uploads new or changed images.
+
+On a claude.ai cloud session the proxy blocks the site unless `mobile-vault-asset-log.pages.dev` is in the
+environment's Allowed domains, and the service token comes from env `ASSET_LOG_URL`, `CF_ACCESS_CLIENT_ID`,
+`CF_ACCESS_CLIENT_SECRET` set on the environment (a new session picks them up).
+
 Schema change: add `migrations/000N_*.sql`, then `d1 migrations apply DB --remote` before deploying.
 
 ## Local development
