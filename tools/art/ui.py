@@ -238,6 +238,23 @@ def gen_icons():
         icon(k, fn)
     for k, fn in GEAR_ICONS.items():
         icon(k, fn)
+    gen_icons_v2()
+
+
+# MV-694 icons v2: 32 px PixelLab redraws (picked takes, palette-quantized) as ic2_<name>; Atlas.icon() shows
+# them behind the icons_v2 switch. stressed / broken are new mood icons with no 16 px original.
+ICONS_V2_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons_v2")
+
+
+def gen_icons_v2():
+    from PIL import Image
+    if not os.path.isdir(ICONS_V2_DIR):
+        return
+    for f in sorted(os.listdir(ICONS_V2_DIR)):
+        if f.endswith(".png"):
+            im = Image.open(os.path.join(ICONS_V2_DIR, f)).convert("RGBA")
+            assert im.size == (32, 32), f"{f} must be 32x32, is {im.size}"
+            add("ic2_" + f[:-4], im)
 
 
 def gen_particles():

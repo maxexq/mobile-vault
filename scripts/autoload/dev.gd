@@ -1902,6 +1902,13 @@ func icon_preview(scale: int) -> void:
 	changed.emit()
 
 
+## MV-694: switch the 32 px PixelLab icon set (icons_v2) on / off for this tester
+func icons_v2(on: bool) -> void:
+	act("icons v2 %s" % ("on" if on else "off"))
+	Features.set_override("features", "icons_v2", on)
+	Features.changed.emit()
+
+
 func channel_preview(ch: String) -> void:
 	act("channel preview %s" % (ch if ch != "" else "off"))
 	BuildInfo.channel_preview = ch if BuildInfo.CHANNELS.has(ch) else ""
