@@ -20,7 +20,7 @@ var regions: Dictionary = {}
 var dweller_variants: Array = []
 var _cache: Dictionary = {}
 var _v2_cache: Dictionary = {}
-const V2_ONLY := {"stressed": "sad", "broken": "sad"}
+const V2_ONLY := {"neutral": "happy", "stressed": "sad", "broken": "sad"}
 var _frames_cache: Dictionary = {}
 
 
@@ -66,14 +66,16 @@ func icon_v1(icon_name: String) -> AtlasTexture:
 	return tex("ic_" + str(V2_ONLY.get(icon_name, icon_name)) if not regions.has("ic_" + icon_name) else "ic_" + icon_name)
 
 
-## mood icon for a happiness value / morale stage (MV-694): happy >= 50, sad, stressed (Depressed), broken
+## mood icon for a happiness value / morale stage (MV-694): happy >= mood.happy_icon 70, neutral >= 50, sad, stressed (Depressed), broken
 func mood_icon(happy: float, stage: String = "") -> Texture2D:
 	if stage == "broken":
 		return icon("broken")
 	if stage == "depressed":
 		return icon("stressed")
-	if stage == "" and happy >= 50.0:
+	if stage == "" and happy >= Features.num("mood.happy_icon", 70.0):
 		return icon("happy")
+	if stage == "" and happy >= 50.0:
+		return icon("neutral")
 	if stage == "" and happy >= Features.num("morale.depressed", 35.0):
 		return icon("sad")
 	if happy >= Features.num("morale.broken", 20.0):

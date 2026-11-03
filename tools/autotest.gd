@@ -11763,8 +11763,8 @@ func _icons_v2_test() -> void:
 		sizes_ok = sizes_ok and t is IconTex and t.get_width() == 16 and t.get_height() == 16 and (t as IconTex).inner.get_width() == 32
 	_check("icons v2: every ic_* (%d) has a 32x32 ic2_* redraw" % ids.size(), all_v2)
 	_check("icons v2: Atlas.icon wraps it in IconTex reporting 16x16", sizes_ok)
-	_check("icons v2: stressed + broken mood icons exist", Atlas.regions.has("ic2_stressed") and Atlas.regions.has("ic2_broken"))
-	var mood_ok := Atlas.mood_icon(80.0) == Atlas.icon("happy") and Atlas.mood_icon(40.0) == Atlas.icon("sad") \
+	_check("icons v2: neutral + stressed + broken mood icons exist", Atlas.regions.has("ic2_neutral") and Atlas.regions.has("ic2_stressed") and Atlas.regions.has("ic2_broken"))
+	var mood_ok := Atlas.mood_icon(80.0) == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("neutral") and Atlas.mood_icon(40.0) == Atlas.icon("sad") \
 		and Atlas.mood_icon(25.0) == Atlas.icon("stressed") and Atlas.mood_icon(5.0) == Atlas.icon("broken") \
 		and Atlas.mood_icon(60.0, "depressed") == Atlas.icon("stressed") and Atlas.mood_icon(60.0, "broken") == Atlas.icon("broken")
 	_check("icons v2: mood icon follows happiness and morale stage", mood_ok)
@@ -11780,7 +11780,7 @@ func _icons_v2_test() -> void:
 	await shot("icons_v2_gallery_x2")
 	Dev.icons_v2(false)
 	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
-	_check("icons v2: switch off = stressed / broken fall back to sad", Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
+	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
 	god.refresh()
 	await wait(0.3)
 	await shot("icons_v1_gallery_x2")

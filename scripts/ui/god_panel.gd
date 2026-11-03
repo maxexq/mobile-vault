@@ -105,7 +105,7 @@ func _tab_icons() -> void:
 	var v2on := Features.on("icons_v2")
 	_row([_b("ไอคอนใหม่ v2", func(): Dev.icons_v2(true), "yellow" if v2on else "gray"), _b("ไอคอนเดิม 16 px", func(): Dev.icons_v2(false), "gray" if v2on else "yellow")])
 	var moods: Array = [UIKit.label(Loc.t("อารมณ์:"), 9, UIKit.C_DIM)]
-	for mk in ["happy", "sad", "stressed", "broken"]:
+	for mk in ["happy", "neutral", "sad", "stressed", "broken"]:
 		moods.append(UIKit.icon_rect(mk, Dev.icon_scale * 16))
 	_row(moods)
 	var names: Array[String] = []
