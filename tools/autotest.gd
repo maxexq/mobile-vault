@@ -8087,7 +8087,7 @@ func _drive_help_test() -> void:
 	if hud.offline_summary.is_open:
 		hud.offline_summary.close()
 	await wait(0.2)
-	_check("drive help: the Go button shows the map while a destination is needed", hud.go_btn.icon != null and hud.go_btn.icon.region == Atlas.icon("map").region)
+	_check("drive help: the Go button shows the map while a destination is needed", hud.go_btn.icon != null and hud.go_btn.icon == Atlas.icon("map"))
 	hud.go_btn.pressed.emit()
 	await wait(0.5)
 	var mp: ModalPanel = hud.panels.map
