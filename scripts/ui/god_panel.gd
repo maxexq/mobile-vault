@@ -661,7 +661,8 @@ func _tab_world() -> void:
 	_head("PARALLAX V2", "ฉากถนน 5 ชั้นชุดใหม่ทุก biome (MV-710) ของ biome ปัจจุบัน ตามเวลาในเกม")
 	_row([_b("v2 เช้า", func(): Dev.parallax_v2_preview(0.25)), _b("v2 เที่ยง", func(): Dev.parallax_v2_preview(0.5)), _b("v2 เย็น", func(): Dev.parallax_v2_preview(0.75)), _b("v2 คืน", func(): Dev.parallax_v2_preview(0.0))])
 	_row([_b("ฉาก v2: " + ("เปิด" if Features.on("parallax_v2") else "ปิด"), func(): Dev.feature_set("parallax_v2", not Features.on("parallax_v2")),
-		"green" if Features.on("parallax_v2") else "red")], "สวิตช์")
+		"green" if Features.on("parallax_v2") else "red"), _b("โลก 2x: " + ("เปิด" if Features.on("world_2x") else "ปิด"), func(): Dev.world_2x(not Features.on("world_2x")),
+		"green" if Features.on("world_2x") else "red")], "สวิตช์")
 	_head("INDUSTRIAL SKY", "นิคมอุตสาหกรรม 20 พาเนล (MV-548) ตามเวลาในเกม")
 	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
 	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])

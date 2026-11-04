@@ -4040,8 +4040,8 @@ func _portrait_fit_test() -> void:
 	var ws: float = main.world_scale
 	_check("view: zoomed in past the UI scale (S %d, world %d)" % [main.pixel_scale, ws], ws > main.pixel_scale)
 	_check("view: every art pixel is exactly %d screen px" % int(ws),
-		is_equal_approx(main.world_tex.size.x * main.pixel_scale, main.world_vp.size.x * ws)
-		and is_equal_approx(main.world_tex.size.y * main.pixel_scale, main.world_vp.size.y * ws)
+		is_equal_approx(main.world_tex.size.x * main.pixel_scale, main.vp_size().x * ws)
+		and is_equal_approx(main.world_tex.size.y * main.pixel_scale, main.vp_size().y * ws)
 		and main.world_tex.size.x * main.pixel_scale >= win.x - 0.5)
 	_check("view: still fits the main body", Vehicle.MAIN_W * ws <= win.x)
 	var mid: Vector2 = Vector2(win.x * 0.5, win.y * 0.6) / main.pixel_scale
@@ -5912,6 +5912,26 @@ func _parallax_v2_test() -> void:
 				await wait(2.5)
 				await shot("parallax_v2_%s_%s" % [id, entry[1]])
 		_check("parallax v2: %s animation spawns no nodes" % id, v2.get_child_count() == nodes)
+	# world_2x: the world viewport renders 2 px per art px, coordinates stay in art px
+	Features.set_override("features", "world_2x", true)
+	get_window().size = Vector2i(1280, 640)
+	await wait(0.6)
+	var ws: float = main.world_scale
+	var k2: int = main.render_k
+	var probe := Vector2(123, 77)
+	_check("world 2x: viewport renders %dx (world scale %d) with art-px coordinates" % [k2, int(ws)],
+		ws >= 2.0 and k2 == 2 and Vector2(main.world_vp.size) == main.vp_size() * k2
+		and (k2 == 1 or main.world_vp.size_2d_override == Vector2i(main.vp_size()))
+		and main.world_to_screen(main.screen_to_world(probe)).distance_to(probe) < 0.01)
+	await wait(2.0)
+	await shot("parallax_v2_world_2x")
+	var cam0: Vector2 = main.camera.position
+	Dev.world_2x(false)
+	await wait(0.3)
+	_check("world 2x: switch off renders 1:1 and keeps the camera framing", main.render_k == 1 and main.world_vp.size_2d_override == Vector2i.ZERO
+		and Vector2(main.world_vp.size) == main.vp_size() and main.camera.position.distance_to(cam0) < 1.0)
+	Dev.world_2x(true)
+	await wait(0.3)
 	var v2i: ParallaxV2Backdrop = bg.groups[Data.BIOMES[int(Game.s.biome)].id].v2
 	Features.set_override("features", "parallax_v2", false)
 	_check("parallax v2: switch off restores the previous backdrop", not v2i.visible and bg.backdrop_kind(v2i.biome) != "v2")
@@ -5928,7 +5948,7 @@ func _parallax_v2_test() -> void:
 		for control in row.get_children():
 			if control is Button:
 				labels[control.text] = true
-	_check("parallax v2: GOD world tab has the v2 previews and switch", labels.has("v2 เช้า") and labels.has("v2 คืน") and labels.has("ฉาก v2: เปิด"))
+	_check("parallax v2: GOD world tab has the v2 previews and switch", labels.has("v2 เช้า") and labels.has("v2 คืน") and labels.has("ฉาก v2: เปิด") and labels.has("โลก 2x: เปิด"))
 	god.close()
 	Features.layers.dev = overrides
 	Features.changed.emit()

@@ -26,6 +26,7 @@ const BLUR_SETTLE := 0.2       # s the close-up view must hold still before its 
 const BLUR_REFRESH := 1.0      # s between re-caching the blurred frame (tune blur.refresh)
 
 var world_vp: SubViewport
+var render_k := 1               # MV-710 world_2x: world viewport pixels per art pixel
 var world_tex: TextureRect
 var world: Node2D
 var background: Background
@@ -346,8 +347,17 @@ func _apply_world_scale() -> void:
 	# the overhang is off-screen) so every art pixel is ws screen px; zoomed out, the design size divides evenly
 	var want := Vector2i(int(ceilf(design.x * view_k)), int(ceilf(design.y * view_k))) if view_k < 1.0 \
 		else Vector2i(int(floorf(design.x * view_k)), int(floorf(design.y * view_k)))
-	if world_vp.size != want:
-		world_vp.size = want
+	# MV-710 world_2x: the world renders at render_k x its art size (size_2d_override keeps every coordinate in
+	# art px), so art drawn at 2x density (parallax v2 near/road, scale 0.5) keeps its detail. Only while a world
+	# pixel is at least render_k screen px, so the 2x frame is never shrunk.
+	render_k = world_render_k(ws)
+	var real := want * render_k
+	if world_vp.size != real:
+		world_vp.size = real
+	var override := want if render_k > 1 else Vector2i.ZERO
+	if world_vp.size_2d_override != override:
+		world_vp.size_2d_override = override
+		world_vp.size_2d_override_stretch = render_k > 1
 	if view_k < 1.0:
 		world_tex.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		world_tex.size = Vector2(want) / view_k
@@ -377,8 +387,17 @@ func cycle_zoom() -> void:
 	set_zoom_mode({"auto": "wide", "wide": "normal", "normal": "auto"}[zoom_mode])
 
 
+## the world viewport in art px (world_2x renders it larger, see _apply_world_scale)
 func vp_size() -> Vector2:
-	return Vector2(world_vp.size)
+	return Vector2(world_vp.size / render_k)
+
+
+## world_2x (MV-710): render pixels per art pixel, 2 by default (tune view.world_render), 1 when the switch is off
+## or a world pixel is smaller than that many screen px
+func world_render_k(ws: float) -> int:
+	if not Features.on("world_2x"):
+		return 1
+	return clampi(int(Features.num("view.world_render", 2.0)), 1, maxi(1, int(floorf(ws))))
 
 
 ## frames the truck (+ the fight behind it) inside the area the HUD leaves free, at zoom 1
@@ -516,7 +535,7 @@ func _on_setting_changed(key: String) -> void:
 
 func _on_features_changed() -> void:
 	_on_resize()        # MV-266: responsive_scale may change the UI scale
-	if world_vp != null and not is_equal_approx(target_ws(), world_scale):
+	if world_vp != null and (not is_equal_approx(target_ws(), world_scale) or world_render_k(world_scale) != render_k):
 		_apply_world_scale()
 
 

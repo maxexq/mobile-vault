@@ -302,6 +302,11 @@ func parallax_v2_preview(tod: float) -> void:
 	background_preview(tod, int(Game.s.biome))
 
 
+## MV-710: world rendered at 2x (parallax v2 near/road detail) on/off
+func world_2x(on: bool) -> void:
+	feature_set("world_2x", on)
+
+
 ## MV-539: clear-weather previews of the real desert biome.
 func desert_background_preview(tod: float) -> void:
 	background_preview(tod, 1)
