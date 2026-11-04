@@ -93,24 +93,43 @@ func _build_group(id: String) -> void:
 	ground.size = Vector2(8000, 1200)
 	ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(ground)
-	groups[id] = {"root": root, "layers": layers}
+	groups[id] = {"root": root, "layers": layers, "legacy": root.get_children()}
 	if id in ["industrial", "desert"]:
-		groups[id]["legacy"] = root.get_children()
 		var live: Node2D = IndustrialBackdrop.new() if id == "industrial" else DesertBackdrop.new()
 		live.name = id.capitalize() + "Live"
 		root.add_child(live)
 		groups[id]["modern"] = live
+	# MV-710: approved 5-layer parallax v2 (every biome), wins over legacy + modern when parallax_v2 is on
+	if DirAccess.dir_exists_absolute("res://assets/bg/v2/%s" % id):
+		var v2 := ParallaxV2Backdrop.new(id)
+		v2.name = id.capitalize() + "V2"
+		v2.visible = false
+		root.add_child(v2)
+		groups[id]["v2"] = v2
 
 
 func _refresh_backdrops() -> void:
-	for id in ["industrial", "desert"]:
-		if not groups.has(id):
-			continue
+	var use_v2 := Features.on("parallax_v2")
+	for id in groups:
 		var g: Dictionary = groups[id]
-		var enabled := Features.on(id + "_parallax")
+		var v2_on: bool = use_v2 and g.has("v2")
+		var modern_on: bool = not v2_on and g.has("modern") and Features.on(id + "_parallax")
 		for node in g.legacy:
-			(node as CanvasItem).visible = not enabled
-		(g.modern as Node2D).visible = enabled
+			(node as CanvasItem).visible = not v2_on and not modern_on
+		if g.has("modern"):
+			(g.modern as Node2D).visible = modern_on
+		if g.has("v2"):
+			(g.v2 as Node2D).visible = v2_on
+
+
+## which backdrop draws a biome right now: "v2", "modern" or "legacy"
+func backdrop_kind(id: String) -> String:
+	var g: Dictionary = groups.get(id, {})
+	if g.has("v2") and g.v2.visible:
+		return "v2"
+	if g.has("modern") and g.modern.visible:
+		return "modern"
+	return "legacy"
 
 
 func _on_biome_changed(index: int, instant: bool) -> void:
@@ -148,6 +167,9 @@ func _process(delta: float) -> void:
 	for k in groups:
 		var g: Dictionary = groups[k]
 		if not g.root.visible:
+			continue
+		if g.has("v2") and g.v2.visible:
+			g.v2.road_speed = _speed
 			continue
 		if g.has("modern") and g.modern.visible:
 			g.modern.road_speed = _speed

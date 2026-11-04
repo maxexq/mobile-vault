@@ -604,6 +604,12 @@ func _run() -> void:
 		Tutorial.skip()
 		await _industrial_background_test()
 		await _desert_background_test()
+		await _parallax_v2_test()
+		_finish()
+		return
+	if "--only=parallax_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _parallax_v2_test()
 		_finish()
 		return
 	if "--only=icons" in OS.get_cmdline_user_args():
@@ -1543,6 +1549,7 @@ func _run() -> void:
 	await _scene_art_test()
 	await _industrial_background_test()
 	await _desert_background_test()
+	await _parallax_v2_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
@@ -5716,6 +5723,7 @@ func _industrial_background_test() -> void:
 	var old_biome: int = int(Game.s.biome)
 	var old_weather: String = Game.s.weather
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "parallax_v2", false)
 	Features.set_override("features", "industrial_parallax", true)
 	get_window().size = Vector2i(1280, 640)
 	Game.s.biome = 0
@@ -5833,10 +5841,109 @@ func _industrial_background_test() -> void:
 	await wait(0.3)
 
 
+## MV-710: approved 5-layer parallax v2 backgrounds for every biome.
+func _parallax_v2_test() -> void:
+	var old_window := get_window().size
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "parallax_v2", true)
+	Game.force_weather("clear")
+	get_window().size = Vector2i(405, 720)
+	var bg: Background = main.background
+	var all_built := true
+	var heights := true
+	for i in Data.BIOMES.size():
+		var id: String = Data.BIOMES[i].id
+		var g: Dictionary = bg.groups[id]
+		all_built = all_built and g.has("v2") and bg.backdrop_kind(id) == "v2"
+		if not g.has("v2"):
+			continue
+		var v2: ParallaxV2Backdrop = g.v2
+		for key in ["far", "mid", "near", "road"]:
+			var e: Dictionary = v2.layers[key]
+			var px: Parallax2D = e.node
+			var sp := px.get_child(0) as Sprite2D
+			var d: int = e.d
+			# strips are drawn at 1x (far/mid) or 2x density (near/road) and repeat on their own shown width
+			heights = heights and sp.scale == Vector2.ONE / d and is_equal_approx(px.repeat_size.x, sp.texture.get_width() / float(d))
+			if key == "mid" or key == "near":
+				heights = heights and sp.position.y + sp.texture.get_height() / float(d) >= Background.ROAD_Y
+		heights = heights and v2._sky_textures.size() == 4 and v2._sheets.size() == 3
+	_check("parallax v2: every biome builds the v2 backdrop and it wins over legacy/modern art", all_built)
+	_check("parallax v2: 1x/2x layer density, repeat widths and land reaching the road", heights)
+	for i in Data.BIOMES.size():
+		var id: String = Data.BIOMES[i].id
+		Game.s.biome = i
+		bg._on_biome_changed(i, true)
+		Game.s.tod = 0.5
+		var v2: ParallaxV2Backdrop = bg.groups[id].v2
+		await wait(0.5)
+		_check("parallax v2: %s shows only the v2 layers" % id, v2.is_visible_in_tree() and not (bg.groups[id].legacy[0] as CanvasItem).visible)
+		var nodes := v2.get_child_count()
+		v2.set_process(false)
+		v2.preview_offset(0.0)
+		v2.road_speed = 100.0
+		v2._process(1.0)
+		var rates := true
+		for key in v2.layers:
+			var e: Dictionary = v2.layers[key]
+			rates = rates and is_equal_approx(float(e.offset), fposmod(100.0 * float(e.speed), e.node.repeat_size.x))
+		_check("parallax v2: %s road speed drives .08/.25/.60/1.0 scroll" % id, rates)
+		v2.preview_offset(0.0)
+		v2.road_speed = 0.0
+		v2._process(1.0)
+		var parked := true
+		for key in v2.layers:
+			parked = parked and is_zero_approx(float(v2.layers[key].offset))
+		_check("parallax v2: %s parked land stays still" % id, parked)
+		v2.preview_offset(9999999.0)
+		var snapped := true
+		for key in v2.layers:
+			var px: Parallax2D = v2.layers[key].node
+			snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
+		_check("parallax v2: %s long travel wraps on whole pixels" % id, snapped)
+		v2.preview_offset(0.0)
+		v2.set_process(true)
+		for entry in [[0.25, "dawn", 1, "low"], [0.5, "day", 2, "sun"], [0.75, "dusk", 3, "low"], [0.0, "night", 0, "moon"]]:
+			Game.s.tod = float(entry[0])
+			v2.update_clock()
+			_check("parallax v2: %s %s sky + %s on the pixel grid" % [id, entry[1], entry[3]], v2.sky_state == int(entry[2]) and v2.celestial_kind == str(entry[3]) and v2.celestial_position == v2.celestial_position.round())
+			if entry[1] == "day" or entry[1] == "night":
+				await wait(2.5)
+				await shot("parallax_v2_%s_%s" % [id, entry[1]])
+		_check("parallax v2: %s animation spawns no nodes" % id, v2.get_child_count() == nodes)
+	var v2i: ParallaxV2Backdrop = bg.groups[Data.BIOMES[int(Game.s.biome)].id].v2
+	Features.set_override("features", "parallax_v2", false)
+	_check("parallax v2: switch off restores the previous backdrop", not v2i.visible and bg.backdrop_kind(v2i.biome) != "v2")
+	Features.set_override("features", "parallax_v2", true)
+	Dev.parallax_v2_preview(0.75)
+	_check("parallax v2: GOD preview turns the switch on at the asked time", Features.on("parallax_v2") and is_equal_approx(float(Game.s.tod), 0.75))
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "world"
+	god.refresh()
+	await wait(0.2)
+	var labels := {}
+	for row in god._list.get_children():
+		for control in row.get_children():
+			if control is Button:
+				labels[control.text] = true
+	_check("parallax v2: GOD world tab has the v2 previews and switch", labels.has("v2 เช้า") and labels.has("v2 คืน") and labels.has("ฉาก v2: เปิด"))
+	god.close()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.force_weather(str(old_state.get("weather", "clear")))
+	bg._on_biome_changed(int(Game.s.biome), true)
+	get_window().size = old_window
+	await wait(0.3)
+
+
 func _desert_background_test() -> void:
 	var old_window := get_window().size
 	var old_state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "parallax_v2", false)
 	Features.set_override("features", "desert_parallax", true)
 	Features.set_override("features", "industrial_parallax", true)
 	Dev.desert_background_preview(0.5)

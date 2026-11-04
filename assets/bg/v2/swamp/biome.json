@@ -1,0 +1,284 @@
+{
+ "bird": "#22201a",
+ "midY": 152,
+ "nearY": 198,
+ "fireflies": true,
+ "spots": {
+  "far": [
+   {
+    "type": "smoke",
+    "tone": "pale",
+    "x": 686,
+    "y": 52,
+    "phase": 0,
+    "drift": 14,
+    "rise": 26
+   },
+   {
+    "type": "smoke",
+    "tone": "pale",
+    "x": 719,
+    "y": 50,
+    "phase": 16,
+    "drift": 14,
+    "rise": 26
+   },
+   {
+    "type": "smoke",
+    "tone": "dark",
+    "x": 436,
+    "y": 36,
+    "phase": 8,
+    "drift": 10,
+    "rise": 22
+   },
+   {
+    "type": "smoke",
+    "tone": "dark",
+    "x": 900,
+    "y": 38,
+    "phase": 30,
+    "drift": 10,
+    "rise": 22
+   },
+   {
+    "type": "blink",
+    "x": 195,
+    "y": 54,
+    "phase": 0
+   },
+   {
+    "type": "blink",
+    "x": 1228,
+    "y": 26,
+    "phase": 10
+   }
+  ],
+  "mid": [
+   {
+    "type": "glow",
+    "x": 53,
+    "y": 132,
+    "r": 3,
+    "phase": 0,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 145,
+    "y": 114,
+    "r": 3,
+    "phase": 6,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 332,
+    "y": 136,
+    "r": 3,
+    "phase": 12,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 651,
+    "y": 136,
+    "r": 3,
+    "phase": 18,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 777,
+    "y": 128,
+    "r": 3,
+    "phase": 24,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 885,
+    "y": 130,
+    "r": 3,
+    "phase": 30,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 972,
+    "y": 136,
+    "r": 3,
+    "phase": 36,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 1292,
+    "y": 136,
+    "r": 3,
+    "phase": 42,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   }
+  ],
+  "near": [
+   {
+    "type": "glow",
+    "x": 103,
+    "y": 150,
+    "r": 5,
+    "phase": 0,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 530,
+    "y": 154,
+    "r": 5,
+    "phase": 5,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 812,
+    "y": 162,
+    "r": 5,
+    "phase": 10,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 1192,
+    "y": 154,
+    "r": 5,
+    "phase": 15,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 1487,
+    "y": 162,
+    "r": 5,
+    "phase": 20,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 1785,
+    "y": 158,
+    "r": 5,
+    "phase": 25,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 2124,
+    "y": 154,
+    "r": 5,
+    "phase": 30,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 2304,
+    "y": 158,
+    "r": 5,
+    "phase": 35,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 2537,
+    "y": 142,
+    "r": 5,
+    "phase": 40,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 2664,
+    "y": 169,
+    "r": 5,
+    "phase": 45,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "glow",
+    "x": 3112,
+    "y": 146,
+    "r": 5,
+    "phase": 50,
+    "c1": "#eaffb0",
+    "c2": "#8ce83c"
+   },
+   {
+    "type": "drip",
+    "x": 2296,
+    "y": 140,
+    "phase": 0,
+    "c": "#8ce83c"
+   },
+   {
+    "type": "drip",
+    "x": 2126,
+    "y": 142,
+    "phase": 7,
+    "c": "#8ce83c"
+   },
+   {
+    "type": "drip",
+    "x": 104,
+    "y": 142,
+    "phase": 14,
+    "c": "#8ce83c"
+   },
+   {
+    "type": "sway",
+    "x": 1180,
+    "y": 22,
+    "w": 160,
+    "h": 40,
+    "anchor": "top",
+    "amp": 1.5,
+    "phase": 0
+   },
+   {
+    "type": "sway",
+    "x": 1455,
+    "y": 22,
+    "w": 150,
+    "h": 40,
+    "anchor": "top",
+    "amp": 1.5,
+    "phase": 9
+   },
+   {
+    "type": "sway",
+    "x": 990,
+    "y": 56,
+    "w": 70,
+    "h": 40,
+    "anchor": "top",
+    "amp": 1.5,
+    "phase": 18
+   }
+  ]
+ }
+}

@@ -88,7 +88,8 @@
     "audio_bgm": true,
     "audio_clean": true,
     "audio_cues": true,
-    "desert_parallax": true
+    "desert_parallax": true,
+    "parallax_v2": true
   },
   "events": {},
   "tune": {
