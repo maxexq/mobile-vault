@@ -42,6 +42,10 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
 - **Crew characters:** the chibi field medic in the [crew style reference](docs/art/crew-style-reference.md)
   is the approved model for every new crew character's art style and animation (2D side view).
   It is ~2x the current 14x20 `dw_*` scale; moving the game to it is a separate decision.
+- **v3 rooms + ref v3 crew (MV-711):** Room guide v3 rooms (144x96, one-point, L1-L3, red emergency lamp at (6,6) in a
+  power-out) and the ref v3 crew (~60 px on a 64 canvas, shown at 2/3 over rooms: room x3, crew x2) are in the game in the
+  v3 interior view (switch `rooms_v3`, README 4q). Every crew sprite over a v3 room gets a contact shadow + the room grade
+  (`shaders/crew_v3_blend.gdshader`). New or changed v3 art reaches the game only through `python3 tools/v3_import.py`.
 - **PixelLab API costs money:** `tools/pixellab.py gen ... --yes` spends Parames's credits. Show the
   `--dry-run` cost estimate and get an OK before every paid batch (README "Redrawing sprites with PixelLab").
 - **Every PixelLab image goes to the asset log** (https://mobile-vault-asset-log.pages.dev, MV-584/MV-606).
