@@ -687,7 +687,8 @@ func _refresh_res() -> void:
 	pop_lbl.text = "%d/%d" % [Game.s.dwellers.size(), Game.pop_cap()]
 	var h := Game.avg_happiness()
 	happy_lbl.text = "%d%%" % int(h)
-	happy_icon.texture = Atlas.icon("happy" if h >= 50 else "sad")
+	# MV-694: happy / sad / stressed / broken by the morale thresholds (old icons: happy / sad)
+	happy_icon.texture = Atlas.mood_icon(h)
 
 
 func _refresh_travel() -> void:
