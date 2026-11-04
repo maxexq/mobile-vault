@@ -6402,10 +6402,14 @@ func _exterior_mods_test() -> void:
 					Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
 				Game.s.mods.tracks = 1 if lv == 3 else 0
 				Mods.mods_changed.emit()
-				await wait(0.03)
 				var rail: bool = Data.VEHICLES[tier].rail
 				var expected_rims: int = 0 if rail or lv == 1 else int(Data.VEHICLES[tier].wheels.size()) + trailers * 2
 				if not rail and lv == 3: expected_rims -= int(Data.VEHICLES[tier].wheels.size()) - 1
+				# wait for the rebuild (frame-paced, not a fixed 0.03 s: a slow CI frame failed it now and then)
+				for _t in 20:
+					await wait(0.03)
+					if m.rims.size() == expected_rims and v.tracks.visible == (not rail and lv == 3):
+						break
 				matrix_ok = matrix_ok and m.rims.size() == expected_rims and v.tracks.visible == (not rail and lv == 3)
 				var armor_cues := v.sprite_regions(false).count("prop_ext_armor_lv1")
 				matrix_ok = matrix_ok and armor_cues == (2 if lv == 1 else 0)
