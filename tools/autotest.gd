@@ -612,6 +612,11 @@ func _run() -> void:
 		await _parallax_v2_test()
 		_finish()
 		return
+	if "--only=rooms_v3" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _rooms_v3_test()
+		_finish()
+		return
 	if "--only=icons" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _icon_art_test()
@@ -1557,6 +1562,7 @@ func _run() -> void:
 	await _industrial_background_test()
 	await _desert_background_test()
 	await _parallax_v2_test()
+	await _rooms_v3_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
@@ -5849,6 +5855,111 @@ func _industrial_background_test() -> void:
 
 
 ## MV-710: approved 5-layer parallax v2 backgrounds for every biome.
+## MV-711: v3 rooms + ref v3 crew in the v3 interior view (switches rooms_v3 / rooms_v3_review)
+func _rooms_v3_test() -> void:
+	var old_window := get_window().size
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "rooms_v3", true)
+	Features.set_override("features", "rooms_v3_review", true)
+	get_window().size = Vector2i(405, 720)
+	_check("rooms v3: manifests load (10 game rooms + empty cell, 11 crew)", V3Art.ok() and V3Art.room_types().size() >= 10 and V3Art.crew_ids().size() == 11)
+	var files_ok := true
+	var hot_ok := true
+	for t in V3Art.room_types():
+		for lv in [1, 2, 3]:
+			var d := V3Art.level(t, lv)
+			var tex := V3Art.room_tex(t, str(d.get("file", "")))
+			files_ok = files_ok and tex != null and tex.get_size() == V3Art.CELL
+			if d.has("idle"):
+				files_ok = files_ok and V3Art.room_tex(t, str(d.idle.file)) != null
+			for h in d.get("hotspots", []):
+				var r: Array = h.rect
+				hot_ok = hot_ok and r.size() == 4 and Rect2(Vector2.ZERO, V3Art.CELL).encloses(Rect2(r[0], r[1], r[2], r[3]))
+	_check("rooms v3: every level image is 144x96 and its idle sheet loads", files_ok)
+	_check("rooms v3: hotspot rects stay inside the cell", hot_ok)
+	var crew_ok := true
+	for cid in V3Art.crew_ids():
+		var sf := V3Art.crew_frames(cid)
+		crew_ok = crew_ok and sf.has_animation("idle") and sf.has_animation("walk") and sf.has_animation("work") and sf.get_frame_count("walk") >= 6
+	_check("rooms v3: every v3 crew has idle / walk / work clips", crew_ok)
+	Features.set_override("features", "rooms_v3_review", false)
+	_check("rooms v3: In Review sets are used only with rooms_v3_review on", V3Art.has_room("kitchen") and not V3Art.has_room("water"))
+	Features.set_override("features", "rooms_v3_review", true)
+	var hud: HUD = main.hud
+	_check("rooms v3: HUD button shows with the switch", hud._interior_btn.visible)
+	var n := Dev.rooms_v3_showcase(2)
+	await wait(0.6)
+	var panel: InteriorV3Panel = hud.panels.interior
+	_check("rooms v3: GOD showcase opens the interior with v3 rooms", panel.is_open and n >= 3 and panel.cells.size() == Game.slot_count())
+	var v3_cells := 0
+	var right_level := true
+	var actors := 0
+	var pos_ok := true
+	for slot in panel.cells:
+		var c: RoomV3Cell = panel.cells[slot]
+		if c.kind == "v3":
+			v3_cells += 1
+			right_level = right_level and str(c.data.file).begins_with("L%d" % clampi(c.level, 1, 3))
+		actors += c.actors.size()
+		for a in c.actors.values():
+			pos_ok = pos_ok and (a as CrewV3Actor).spr.scale.is_equal_approx(Vector2.ONE * V3Art.CREW_SCALE)
+	_check("rooms v3: cells draw the level image (L%d)" % 2, v3_cells >= 3 and right_level)
+	_check("rooms v3: crew aboard appear as v3 actors at 2/3 scale", actors > 0 and pos_ok)
+	await wait(2.5)
+	var moved := false
+	for slot in panel.cells:
+		for a in (panel.cells[slot] as RoomV3Cell).actors.values():
+			moved = moved or (a as CrewV3Actor).clip() in ["walk", "work", "carrywalk", "talk", "eat", "drink", "idle", "construct"]
+	_check("rooms v3: crew play their clips", moved)
+	await shot("rooms_v3_interior")
+	var first := -1
+	for slot in panel.cells:
+		if (panel.cells[slot] as RoomV3Cell).kind == "v3" and not (panel.cells[slot] as RoomV3Cell).data.get("hotspots", []).is_empty():
+			first = slot
+			break
+	if first >= 0:
+		var c: RoomV3Cell = panel.cells[first]
+		var h: Dictionary = c.data.hotspots[0]
+		var r: Array = h.rect
+		var hit := panel.tap(c.position + Vector2(float(r[0]) + float(r[2]) * 0.5, float(r[1]) + float(r[3]) * 0.5))
+		_check("rooms v3: tapping a hotspot selects the room and names the object", hit == first and c.selected_id != "" and panel.info.text.contains("> "))
+		_check("rooms v3: open-room button is ready", not panel.open_btn.disabled)
+	Dev.blackout(true)
+	panel.refresh()
+	await wait(0.3)
+	var dark_ok := true
+	for slot in panel.cells:
+		var c: RoomV3Cell = panel.cells[slot]
+		if c.kind == "v3":
+			dark_ok = dark_ok and c.dark and c.bg.modulate != Color.WHITE
+	_check("rooms v3: power-out darkens the v3 rooms (emergency lamp lit)", dark_ok)
+	await shot("rooms_v3_powerout")
+	Game.s.res.power = 50.0
+	panel.close()
+	await wait(0.2)
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "veh"
+	god.refresh()
+	await wait(0.2)
+	var labels := {}
+	for row in god._list.get_children():
+		for control in row.get_children():
+			if control is Button:
+				labels[control.text] = true
+	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด"))
+	god.close()
+	Features.set_override("features", "rooms_v3", false)
+	_check("rooms v3: switch off hides the HUD button and refuses to open", not hud._interior_btn.visible and not hud.open_interior())
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	get_window().size = old_window
+	await wait(0.3)
+
+
 func _parallax_v2_test() -> void:
 	var old_window := get_window().size
 	var old_state: Dictionary = Game.s.duplicate(true)
