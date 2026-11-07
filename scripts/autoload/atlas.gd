@@ -19,6 +19,8 @@ var sheet: Texture2D
 var regions: Dictionary = {}
 var dweller_variants: Array = []
 var _cache: Dictionary = {}
+var _v2_cache: Dictionary = {}
+const V2_ONLY := {"neutral": "happy", "stressed": "sad", "broken": "sad"}
 var _frames_cache: Dictionary = {}
 
 
@@ -46,8 +48,39 @@ func tex(region_name: String) -> AtlasTexture:
 	return at
 
 
-func icon(icon_name: String) -> AtlasTexture:
+## MV-694: icons_v2 on -> the 32 px PixelLab icon `ic2_<name>` wrapped in an IconTex that still reports 16x16,
+## so layouts never change. Mood icons "stressed" / "broken" exist only in v2 (old set falls back to "sad").
+func icon(icon_name: String) -> Texture2D:
+	if Features.on("icons_v2") and regions.has("ic2_" + icon_name):
+		var key := "ic2_" + icon_name
+		if not _v2_cache.has(key):
+			_v2_cache[key] = IconTex.new(tex(key))
+		return _v2_cache[key]
+	if not regions.has("ic_" + icon_name) and V2_ONLY.has(icon_name):
+		return tex("ic_" + str(V2_ONLY[icon_name]))
 	return tex("ic_" + icon_name)
+
+
+## the old 16 px icon even while icons_v2 is on (GOD before/after preview)
+func icon_v1(icon_name: String) -> AtlasTexture:
+	return tex("ic_" + str(V2_ONLY.get(icon_name, icon_name)) if not regions.has("ic_" + icon_name) else "ic_" + icon_name)
+
+
+## mood icon for a happiness value / morale stage (MV-694): happy >= mood.happy_icon 70, neutral >= 50, sad, stressed (Depressed), broken
+func mood_icon(happy: float, stage: String = "") -> Texture2D:
+	if stage == "broken":
+		return icon("broken")
+	if stage == "depressed":
+		return icon("stressed")
+	if stage == "" and happy >= Features.num("mood.happy_icon", 70.0):
+		return icon("happy")
+	if stage == "" and happy >= 50.0:
+		return icon("neutral")
+	if stage == "" and happy >= Features.num("morale.depressed", 35.0):
+		return icon("sad")
+	if happy >= Features.num("morale.broken", 20.0):
+		return icon("stressed")
+	return icon("broken")
 
 
 func sub(region_name: String, rect: Rect2) -> AtlasTexture:

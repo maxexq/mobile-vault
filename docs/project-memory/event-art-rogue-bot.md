@@ -1,0 +1,19 @@
+---
+name: event-art-rogue-bot
+description: RULE MV-636 rogue_bot option B + story animation APPROVED as the reference for all event/expedition/prestige scene art (designs/event-art-rogue-bot/approved/)
+metadata:
+  type: project
+---
+
+2026-10-30 (Plane MV-636, Needs Decision): from [[event-lore-adapt]] Parames asked to redo art for one event, 3 options + a 4th "Room v3 style without the layout". Picked event rogue_bot.
+- Files: /mnt/project-files/designs/event-art-rogue-bot/ (gen.py, gen_d.py, raw/ 16 candidates, option_A..D.png, compare.png). Event art = 160x80 assets/events/<image>.png.
+- Method: PixelLab Pro generate-image-v2 at 160x80 returns 4 images per job and cost 10 gens/job. style_image = old assets/events/robot.png (A/B/C) or nav_v3/approved/nav_L3.png (D, style only, no layout guide); reference_images = dr-ren-ambulance/C_closed.png so the vehicle matches [[dr-ren-ambulance]] option C.
+- Options: A red scan fan + green roof cross, B night intersection giant mech (has an extra small ambulance), C HELIOS ring + drone searchlight, D muted v3 look (best fit with v3 rooms).
+**How to apply:** for other event redraws reuse gen.py (one job = 4 variants for 10 gens); the picked style decides the whole event set.
+- 2026-10-30 13:52 Parames PICKED B and asked for story animation. anim/: inp.py (inpaint-v3 at 160x80 = 10 gens/call: clean_0 = extra small ambulance removed, pose_0 = mech gun lowered + green screen, same identity), anim.py = code-only 80 frames 10 fps (red scan band + eye beam -> roof transponder green blink + ping ring -> screen glitch red->green, traffic light turns green, ash loop), last frame held 1.6 s. Outputs rogue_bot_story.gif / _x4.gif / _sheet.png (10x8 grid of 160x80). Not in game yet: EventPopup shows a static 160x80 texture, needs an animated-texture path.
+- 2026-10-30 14:06 Parames: save it as the REFERENCE for making road events, expedition encounters, prestige stories and other event art. Saved to /mnt/project-files/designs/event-art-rogue-bot/approved/ with README.md (look rules, pipeline, gens). Every new/redone scene follows it: 160x80, night palette + one warm light, ambulance C as reference image, story in 3 beats (threat -> action -> outcome) as code animation over two inpaint stills.
+- 2026-10-30 14:07 next event `signal` (Plane MV-637): /mnt/project-files/designs/event-art-signal/ (gen.py style_image = approved guard still, 1 job 10 gens, pick.png = raw/signal_1; anim.py code-only waves tower->dish, cab radio pulse, Ren switches off, tower keeps blinking). Proven: an event with a known composition costs 10 gens when the end state can be done in code. Awaiting verdict. Order follows the doc table (M rows first): next would be cultists.
+- 2026-10-30 14:12 RULE Parames: event art colour tone must match the event, its biome and atmosphere/weather (not always night blue). README now has a biome base-tone table + event-mood accent table; multi-biome events use their home biome, per-biome tints later in code.
+- 2026-10-30 14:14 `cultists` (Plane MV-640): designs/event-art-cultists/, forest dusk; generate-image-v2 with style_options.color_palette=false so the biome colours come from the prompt (use this for every biome-toned event). Code anim: fire/torches -> mirror beams to the sky gap -> gold beam from the ring hits the road. Balance dropped 130 during my 10-gen call (other threads spending), so report own calls.
+- 2026-10-30 14:33 raiders (MV-641): designs/event-art-raiders/, industrial dusk rain, pick raw/raiders_0; anim searchlight sweep -> lock on red cross -> red flare. All events now listed on [[event-samples-page]].
+- 15:30 survivor (MV-642): designs/event-art-survivor/, glass desert noon, pick raw/survivor_1; figure motion via animate-with-text-v3 (wave_7 loop, relief_3), pasted by diff vs still. Rev-3 pattern: see [[event-vehicle-facing]].

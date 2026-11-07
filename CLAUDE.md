@@ -6,6 +6,13 @@ Parames's PC. Both follow this file. Codex CLI (`AGENTS.md`) is the art analyst:
 micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset tickets" below). The game itself is described in `README.md` and
 `docs/PROJECT_CONTEXT.md`; read the relevant README section before touching a system.
 
+**Project memory and handover (MV-712):** decisions, approved art, pending picks and history from the
+claude.ai project live in [`docs/project-memory/`](docs/project-memory/INDEX.md); read `INDEX.md` and the
+files for the system you touch before starting. Local setup, secrets and open work for T3 Code / local
+CLI sessions: [`docs/T3_CODE_HANDOVER.md`](docs/T3_CODE_HANDOVER.md). When you learn a lasting fact or
+Parames gives a new rule, update the matching memory file (and `INDEX.md`) in the same PR; new standing
+rules also go into this file.
+
 ## Hard rules
 
 - **Godot 4.7.2-stable only.** Never beta/rc/dev editors, templates or addons. Addons must
@@ -46,6 +53,9 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
   power-out) and the ref v3 crew (~60 px on a 64 canvas, shown at 2/3 over rooms: room x3, crew x2) are in the game in the
   v3 interior view (switch `rooms_v3`, README 4q). Every crew sprite over a v3 room gets a contact shadow + the room grade
   (`shaders/crew_v3_blend.gdshader`). New or changed v3 art reaches the game only through `python3 tools/v3_import.py`.
+- **After every PixelLab use** report to Parames what it was for, which model/endpoint (e.g.
+  `generate-image-v2`, `inpaint-v3`, `animate-with-text-v3`), how many gens were used and how many remain
+  (`GET /v2/balance`). "pl" in Parames's message means "use PixelLab".
 - **PixelLab API costs money:** `tools/pixellab.py gen ... --yes` spends Parames's credits. Show the
   `--dry-run` cost estimate and get an OK before every paid batch (README "Redrawing sprites with PixelLab").
 - **Every PixelLab image goes to the asset log** (https://mobile-vault-asset-log.pages.dev, MV-584/MV-606).
