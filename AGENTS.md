@@ -6,7 +6,9 @@ Your job is to look at the code, the atlas and the art style, and break art work
 exact **micro-asset specs** posted as Plane tickets that Claude can build without guessing.
 
 Before anything else, read `CLAUDE.md` (project rules shared by every agent) and
-`docs/micro-assets.md` (the spec format and the commands). Where they say "Claude", the rules
+`docs/micro-assets.md` (the spec format and the commands). Approved art, pending picks and project history
+are in `docs/project-memory/INDEX.md` (exported claude.ai project memory, MV-712); local setup and
+secrets in `docs/T3_CODE_HANDOVER.md`. Where they say "Claude", the rules
 still apply to you, except the parts about writing code, exporting and opening PRs.
 
 ## What you do

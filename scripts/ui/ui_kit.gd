@@ -300,7 +300,7 @@ static func wrap_label(text: String, size: int = FS_SMALL, color: Color = C_DIM)
 
 static func icon_rect(icon_name: String, px: int = 16) -> TextureRect:
 	var r := TextureRect.new()
-	r.texture = Atlas.icon(icon_name) if Atlas.has("ic_" + icon_name) else Atlas.tex(icon_name)
+	r.texture = Atlas.icon(icon_name) if Atlas.has("ic_" + icon_name) or Atlas.V2_ONLY.has(icon_name) else Atlas.tex(icon_name)
 	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	r.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
 	# only whole-number scales (16 / 32) keep the art on the pixel grid

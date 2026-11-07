@@ -1,0 +1,154 @@
+# Project memory index (exported 2026-11-06, MV-712)
+
+Snapshot of the claude.ai project memory, one file per subject. Files are dated notes, newest facts usually at the bottom of each file. `[[name]]` links point to `name.md` in this folder. Paths under `/mnt/project-files/` refer to the claude.ai project's shared folder, which is NOT in this repo (see docs/T3_CODE_HANDOVER.md). No secret values are stored here.
+
+# Mobile Vault
+- Goal: continue the idle survival game "Mobile Vault" from v4.2. Repo github.com/maxexq/mobile-vault (main) per goal; not yet in project settings.
+- Godot 4.7.2-stable only (no beta/rc/dev). Cite APIs from docs.godotengine.org stable, never guess. Addons must support that version.
+- Ask permission before downloading any software (standing OK for Godot 4.7.2-stable + templates: [godot-download-approval](godot-download-approval.md)).
+- Art: true 16-bit pixel art, dark post-apocalyptic; vehicle has 3 rooms per floor. 32-bit upgrade proposed (pending): [pixel-32bit-upgrade](pixel-32bit-upgrade.md)
+- Shorthand (Parames 2026-10-29): "pl" in a message means "use/order PixelLab".
+- RULE (Parames 2026-10-29, extended 2026-10-30): after every PixelLab use, report what it was used for, WHICH model/API endpoint was used (e.g. Pixen, inpaint-v3, animate-with-text-v3, skeleton-v3), how many gens used, and how many remain (check balance).
+- PixelLab room-gen rules (Parames 2026-10-29): use existing image as style+equipment ref but furniture may be rearranged across the whole room; remove walls/pillars/doors/gaps left by old room edges; define use zones before gen (e.g. seedlings -> main growing -> water+storage); 3-slot rooms add real working area + support equipment, only small necessary gaps; keep a 6 px front walkway along the full width and keep furniture bases intact.
+- Every feature: pass autotests, export for web, update artifact, push to GitHub.
+- Every task (Parames 2026-10-23): create/update its Plane ticket (project MV) at start, waiting, and done with PR/artifact links. Also in project instructions.
+- [construction-tutorial-integration](construction-tutorial-integration.md): API contract between timed construction and Tutorial branches
+- [backend-database-choice](backend-database-choice.md): Supabase cloud save (PR #8), project ref, cloud_config.json must be recreated before web export
+- [loot-economy-design](loot-economy-design.md): drop/reward design analysis, cascading tables + pity recommended, no NFT
+- [json-int-float-ids](json-int-float-ids.md): save is JSON, ids load as floats; never Array.find/has an int id
+- [gamedev-agent-skills](gamedev-agent-skills.md): 17 upstream gamedev skills vendored into .claude/skills (PR #4)
+- [festival-minigame-plan](festival-minigame-plan.md): minigames + seasonal festival plan, Festival framework first, Loy Krathong first full event
+- [modular-chassis-design](modular-chassis-design.md): v4.4 design, cells = room/turret/defense + engine tow rating for trailers (pending decision)
+- [random-event-selection](random-event-selection.md): road events use per-biome shuffle bag + no-repeat-last-3 (PR #6)
+- [expedition-encounters](expedition-encounters.md): expedition special encounters (PR #7), recruit hook coordination, artifact must include all open PRs
+- [event-window-layout](event-window-layout.md): ChoiceButton + media_layout for event popups, ICU data needed for Thai wrap on web (PR #11)
+- [god-mode](god-mode.md): GOD MODE panel/Dev actions layout (PR #12); every new feature adds a Dev action + god button + test
+- [threat-director-design](threat-director-design.md): threat meter + raid cycle instead of continuous waves (design, pending approval)
+- [roof-rest-deck](roof-rest-deck.md): rooftop rest deck mod + reserve defender tag-in (PR #14), Game.s.deck, re-import after art regen
+- [engine-bay-design](engine-bay-design.md): cab engine bay + engine menu (PR #18, v4.6), Data.CAB_SLOT=99 + Game.room(slot) accessor, EngineBay autoload
+- [feature-flags-design](feature-flags-design.md): Features autoload (PR #20): switches, per-event windows/weights, tune, remote web/features.json; gate every new feature
+- [game-modes-design](game-modes-design.md): offline + async online modes plan, s.mode preset layer, phase 1 recommended (pending pick)
+- [promo-trailer](promo-trailer.md): 45s trailer delivered (videos/), made from real gameplay via Godot Movie Maker; sources + gotchas
+- [plane-setup](plane-setup.md): Plane tracker (workspace mobile-vault, project MV) seeded 2026-10-23 via /mnt/project-files/plane/seed_plane.py; auth via proxy network secret
+- [game-name-apocarlypse](game-name-apocarlypse.md): renamed to "Apocarlypse: Mobile Vault" (PR #22), BuildInfo.GAME_NAME + UIKit.logo, vehicle/repo/domain/save keys keep mobile-vault
+- [langgraph-ai-setup](langgraph-ai-setup.md): LangGraph Opus+Gemini 4 Argon+Ollama qwen3:4b (MV-85); 8188 is ComfyUI, not an LLM
+- [mobile-touch-input](mobile-touch-input.md): touch fixes PR #27 (MV-86): release in Main._input, STOP->PASS in ScrollContainers, autotest --only=touch
+- [claude-cli-handover](claude-cli-handover.md): CLAUDE.md + tools/plane.py (PR #33, MV-94) so local Claude Code CLI follows the same rules; mirror new rules into CLAUDE.md
+- [discord-notify](discord-notify.md): PR/review/CI/Vercel deploy -> Discord via GitHub Actions (PR #36, MV-96), secret DISCORD_WEBHOOK_URL; new CI workflows go in workflow_run list
+- [error-spike-alerts](error-spike-alerts.md): MV-171 error spike/new error -> Discord #alerts (PR #54), DISCORD_ALERTS_WEBHOOK_URL fallback to dev feed, SUPABASE_SERVICE_KEY
+- [idea-backlog-2026-10-24](idea-backlog-2026-10-24.md): 47 ideas -> Plane MV-97..158 (13 cats, P0-P4); batch 2 MV-239..274 (playtest balance/bugs, hull, lore, security); MV-114 decided Persistent + mode events
+- [ci-autotest](ci-autotest.md): Autotest workflow on every PR (PR #37, MV-110) + MV-41 flaky fixes; docs.godotengine.org blocked, use doc/classes XML on raw.githubusercontent
+- [web-boot-shell](web-boot-shell.md): loading screen = Web preset custom HTML shell tools/web_shell.html (MV-160); artifact built from same export via tools/artifact_html.py
+- [pixellab-api](pixellab-api.md): PixelLab sprite redraw tool + atlas overrides (PR #41, MV-161), Network secret api.pixellab.ai, ask before spending credits
+- [pixellab-usage-report](pixellab-usage-report.md): Parames rule: after every PixelLab ("pl") use report what for, model/API used, how many gens, how many remain (GET /v2/balance)
+- [versioning-release](versioning-release.md): semver 4.7.0-alpha.1 (numbering continued from 4.6), ALPHA badge, tools/release.py bump/changelog/check, Release workflow (PR #42, MV-111)
+- [gemini-cli-agent](gemini-cli-agent.md): Gemini/agy as 3rd agent tried and DROPPED 2026-10-24 (PR #44 closed); agy account shows Free models only
+- [codex-art-analyst](codex-art-analyst.md): Codex CLI (ChatGPT sign-in) as art analyst -> micro-asset Plane tickets, AGENTS.md + tools/micro_asset.py (PR #50, MV-168)
+- [room-ambience](room-ambience.md): lamp light + per-room micro animation layer (MV-167, PR #49 stacked on #47), positions tied to PixelLab room art
+- [online-anticheat-design](online-anticheat-design.md): MV-174 anti-cheat; F0+F1 merged PR #59 (0006 run + verified live, Done, server_seen offline cap, shadow flags)
+- [vehicle-engine-shake](vehicle-engine-shake.md): MV-176 body rumble halved, tune fx.engine_shake 0.5 + setting car_shake; done via RC on Soba (cloud clone blocked)
+- [scene-art-prompts](scene-art-prompts.md): MV-177 GPT image prompt kit for all 49 scenes (designs/scene-prompts/), sizes + crew bible + refs
+- [crew-roster-20](crew-roster-20.md): MV-170 20 named crew + portraits behind crew_roster_20 (PR #68), CREW table in chars.py, reimport after atlas regen
+- [announce-marquee](announce-marquee.md): MV-188 top news strip + new-version notice (PR #70); features.json "announce" ids show once, web/version.json from stamp_build.sh
+- [scale-1000-plan](scale-1000-plan.md): MV-379 scale ~1000 players: keep Supabase Pro, Vercel Hobby -> Cloudflare Pages + R2 (wasm >25 MiB), fix public.logs growth first (pending pick)
+- [web-perf-plan](web-perf-plan.md): MV-562 web smoothness: perf_cache step cache + dpr_cap x2 + per-frame trims, PR #188 merged to staging 2026-10-30 (Awaiting Verify)
+- [crew-anim-preview](crew-anim-preview.md): MV-590 179 crew animation GIFs from staging, artifact Crew Animation Reel + designs/crew-anim-preview/
+- [room-redesign-preview](room-redesign-preview.md): MV-593/595 PixelLab 144x96 kitchen APPROVED as room standard v2 (PR #175, docs/art/room-style-reference-v2.md): levels L1-3, merge only at L3, deep floor + walkway, idle/working/power-out · now split per room, see room-sample-pages
+- [dr-ren-ambulance](dr-ren-ambulance.md): MV-596 Dr. Ren welded-ambulance starting vehicle, 3 options around 3-wide kitchen (inpaint-v3 512 max), awaiting pick
+- [grow-room-redesign](grow-room-redesign.md): MV-598 grow rooms A + B APPROVED (L1 + merged 2, 3 growth stages via plant-area inpaint, hotspots), PR #178
+- [room-hotspots](room-hotspots.md): (format 2 floor+stand approved 2026-10-29, see armory-redesign) MV-599 tap hotspots per v2 room image (PR #177), <room>/hotspots.json + tools/hotspots.py check; new rooms must ship them. PR #181 restores v2 docs missing from staging after merge-order mixup
+- [infirmary-redesign](infirmary-redesign.md): MV-600 infirmary v2 APPROVED: A ward L1-L3 + merged 2/3 with B surgery corner, PR #180 (stacked on #178)
+- [world-v2-scale-plan](world-v2-scale-plan.md): MV-602 move world to 144x96 v2 rooms: Layout v1/v2 behind world_v2, main body <=520 px, phase 1 van+kitchen slice pending
+- [empty-cell-v2](empty-cell-v2.md): MV-603 empty cell before building, v2 style, picked A bare shell + building materials (empty_A_mat.png), In Review
+- [pets-preview](pets-preview.md): MV-601 3 dogs/3 cats/3 chickens, REALISTIC size approved + saved (designs/pets-preview/approved-realistic/), walk only so far
+- [pixellab-room-gen-rules](pixellab-room-gen-rules.md): MV-605 5 PixelLab merged-room rules (move furniture, no old walls, zones first, 3-slot real area, 6 px walkway + full bases), PR #183
+- [water-room-redesign](water-room-redesign.md): MV-607 water room = WATER PURIFIER (not bathroom), v2 option C picked, L1-L3 + merged 2/3 + anim + hotspots, In Review (no PR yet)
+- [armory-redesign](armory-redesign.md): MV-609 armory L1 one-point perspective cutaway (layout guide as reference_images), options A/B/C awaiting pick
+- [crew-room-blend](crew-room-blend.md): RULE every crew sprite over a v2 room gets contact shadow + room tone grade (crew_blend.py), port to game shader later
+- [room-camera-one-point](room-camera-one-point.md): RULE one-point perspective cutaway is the standard camera for new v2 rooms (layout guide as reference_images); old rooms still flat
+- [room-sample-pages](room-sample-pages.md): Room Redesign Samples split into one artifact per room (index at old URL); URLs + how to add a room
+- [room-l1-makeshift](room-l1-makeshift.md): RULE every room L1 looks shabby, improvised survival build (scrap, tape, tarps, crates)
+- [crew-v2-detail](crew-v2-detail.md): MV-610 crew redraw finer detail + 3/4 side view, Medic A-E at 50x50 canvas (=38 px), artifact Crew v2 Detail, awaiting pick
+- [room-merged-widths](room-merged-widths.md): RULE v2 merged rooms 296 (x2) / 448 (x3) = rooms + absorbed 8 px I-beam walls; rear 16 px ladder shaft
+- [ai-audio-tools](ai-audio-tools.md): MV-612 AI game audio research, ElevenLabs SFX + Stable Audio 3.0 recommended, avoid Suno/Udio (pick pending)
+- [dr-ren-lore](dr-ren-lore.md): MV-613 Dr. Ren protagonist lore v1 (TRIAGE-9 author, ambulance transponders, cryo 30 yrs, endings) Claude Doc, awaiting picks
+- [event-lore-adapt](event-lore-adapt.md): MV-635 adapt all events to Dr. Ren lore, Claude Doc with per-row picks (rogue_bot + prestige stories conflict most), awaiting picks
+- [event-art-rogue-bot](event-art-rogue-bot.md): RULE rogue_bot B + 3-beat story animation = APPROVED reference for all event/expedition/prestige art (designs/event-art-rogue-bot/approved/README.md)
+- [event-vehicle-facing](event-vehicle-facing.md): RULE vehicle in event art faces east/west toward the encounter (flip + inpaint), raiders fixed, signal pending
+- [survivor-spot-ref](survivor-spot-ref.md): RULE survivor event = lounge_singer APPROVED, ref for any crew at that spot (back view, own wave), designs/event-art-survivor/approved/
+- [event-samples-page](event-samples-page.md): Event Art Samples page https://claude.ai/artifact/DfS8rEuCbCwQsHtNiiNKNR (one section per redrawn event), source in designs/event-samples-page/
+- [room-guide-v3](room-guide-v3.md): Claude Doc "Room guide v3" from the armory = standard for all new rooms (~215 gens/room)
+- [rest-room-v3](rest-room-v3.md): MV-614 rest room per Room guide v3, L1 B, L2 1, L3 1, merged2 3 picked, merged 3 awaiting pick, page Rest Room Samples
+- [infirmary-v3](infirmary-v3.md): MV-617 infirmary v3 per Room guide v3, single cell L1-L3 + anims + hotspots, Claude picks, Done; page Infirmary v3 Samples
+- [room-v3-emergency-light](room-v3-emergency-light.md): RULE every v3 room power-out = same red dot emergency lamp at (6,6) + blinking red glow; shared emergency_light.py fixture
+- [grow-room-v3](grow-room-v3.md): MV-619 grow room v3 L1-L3 + 3 growth stages + anim + hotspots fmt 2, page Grow Room v3, In Review
+- [empty-cell-v3](empty-cell-v3.md): MV-621 empty cell v3, no levels, 3 build stages + anim + hotspots (open_build_menu), page Empty Cell v3, In Review
+- [room-lineup-v3](room-lineup-v3.md): MV-622 Kitchen > Infirmary > Water v3 lineup in vehicle frame + I-beam walls + rear ladder (no gens), lineup_v3/lineup.py, artifact
+- [radio-room-v3](radio-room-v3.md): MV-623 radio room v3 L1-L3 + anim + hotspots fmt 2 (new action use_radio), page Radio Room v3, In Review
+- [science-room-v3](science-room-v3.md): MV-625 science room v3 L1-L3 (Claude picks, tone matched to kitchen v3), new hotspot action do_research, page Science Room v3, In Review
+- [saloon-v3](saloon-v3.md): MV-627 saloon v3 L1-L3 (Claude picks), new hotspot actions serve_drink/play_cards/play_darts/play_music, page Saloon v3, In Review
+- [new-rooms-10-ideas](new-rooms-10-ideas.md): MV-628 10 new room ideas ranked (pen, quarantine, nav, training, cryo, brig, power, vault, shrine, drones), pen first, awaiting pick
+- [rear-gunner-offcenter](rear-gunner-offcenter.md): MV-629 rear gunner room off-center one-point test; v2 gen ignores off-center guide, use code scaffold + inpaint-v3, awaiting verdict
+- [rear-gunner-v3](rear-gunner-v3.md): MV-705 rear gunner room v3 (crew shoot from inside, no turret) L1-L3 + anim + hotspots fmt 2 (man_gun/spot_targets/load_ammo), page Rear Gunner Room v3, In Review
+- [chicken-coop-v3](chicken-coop-v3.md): MV-630 chicken coop v3 APPROVED (option C tyre pen), saved pen_v3/approved/: L1-L3 + 3 egg stages + anim + hotspots, Done
+- [quarantine-room-v3](quarantine-room-v3.md): MV-631 quarantine & decon v3 L1-L3, human side + animal side in one room, anim + hotspots fmt 2, APPROVED + saved quar_v3/approved/, Done
+- [training-room-v3](training-room-v3.md): MV-633 training room v3 L1-L3 (Claude picks) + anim + hotspots fmt 2 (new actions lift_weights/hit_bag/spar_dummy/pull_ups), APPROVED + saved train_v3/approved/, Done
+- [vault-room-v3](vault-room-v3.md): MV-638 secure supply vault v3 L1-L3 (Claude picks) + anim + hotspots fmt 2 (new actions open_vault/check_ledger), APPROVED + saved vault_v3/approved/, Done
+- [drone-hangar-v3](drone-hangar-v3.md): MV-639 drone hangar v3 L1-L3, ceiling hatch closed/half/open + side-view PixelLab drone flies out , hotspots fmt 2 room "drones", APPROVED + saved drone_v3/approved/, Done
+- [library-room-v3](library-room-v3.md): MV-644 library & classroom v3 L1-L3 (Claude picks), anim + hotspots fmt 2 (5 new actions), APPROVED + saved library_v3/approved/, Done
+- [ambulance-l1-lineup](ambulance-l1-lineup.md): MV-645 ambulance C + 3 L1 v3 rooms x4 combos (code only, body +16 px = 448), artifact Ambulance L1 Lineup, In Review
+- [ambulance-drive-anim](ambulance-drive-anim.md): MV-646 ambulance drive anim 6 speed states, code wheels/shake/dust, PixelLab flag only (wheel takes failed), In Review
+- [art-audit-2026-10-30](art-audit-2026-10-30.md): MV-651 art audit Claude Doc, what still needs new graphics P0-P4 (world v2 MV-602 blocks rooms v3 + crew v2)
+- [dr-ren-25d-redraw](dr-ren-25d-redraw.md): MV-655 Dr. Ren 2.5D side view 10 options (gen-v2 64 canvas ~60 px), artifact Dr. Ren 2.5D Redraw, awaiting pick
+- [crew-portraits-v3](crew-portraits-v3.md): MV-708 64x64 bust portraits for all 11 ref v3 crew (gen-v2, ref = still), Claude picks, artifact Crew v3 Portraits, awaiting OK
+- [medic-sofa-sleep](medic-sofa-sleep.md): MV-668 Medic sleeps on Living Room L3 sofa preview (2 takes, 12 gens), artifact Medic Sofa Sleep, awaiting pick
+
+- [medic-25d-walk](medic-25d-walk.md): Dr. Ren/Medic 2.5D APPROVED set (still, walk W-3, eat, drink, work, construct, talk) in designs/medic-25d-walk/approved/, skin matched; rifle scene MV-671 DROPPED (Cancelled); 38 px rejected; artifact Medic 2.5D Walk
+- [road-train-design](road-train-design.md): MV-672 road train vehicle system design (Claude Doc), option B Consist builder recommended, 5 picks pending
+- [road-train-samples](road-train-samples.md): MV-673 road train PixelLab samples (artifact v10), compose pipeline, flat-2D lessons, 1/2/3-deck axles 3/5/7
+- [exp-interior-redraw](exp-interior-redraw.md): RULE all 7 expedition interiors APPROVED for use (exp-interior/approved/README.md index), hospital = ref, 5 seamless outpaint segments x200 tall, LOCK floor trick, 15 gens/outpaint
+- [crew-scale-2-3](crew-scale-2-3.md): RULE ref v3: crew drawn ~60 px, shown at 2/3 over rooms (room x3, crew x2, ~40 px), every pixel kept (MV-679); game impl pending
+- [clara-25d](clara-25d.md): MV-683/685 Clara 2.5D CF-4 + walk/eat/drink/work/construct/talk/idle all APPROVED in clara-25d/approved/, Done
+- [expedition-25d](expedition-25d.md): MV-686 Ren + Clara expedition clips (gun/flashlight/carry walk, shoot, search) APPROVED in approved/<clip>, beam from lens, lock_feet, Done
+- [bg-parallax-5layer-plan](bg-parallax-5layer-plan.md): MV-684 5-layer parallax road bg, ~600-720 gens/biome, Industrial approved, concept A/B pick pending
+- [item-frame-redesign](item-frame-redesign.md): RULE MV-687 item frame = Vault hatch APPROVED (approved/README.md): tier ladder beyond colour, +N red badge top-right, no item level; game impl not started
+- [gear-sets-design](gear-sets-design.md): MV-689 gear sets v1, 5 sets x 4 pieces 2/3/4 bonuses + PixelLab icons (32 px, style = one icon), artifact Gear Sets v1, awaiting picks
+- [biome-parallax-ref](biome-parallax-ref.md): RULE Industrial parallax bg APPROVED ref for all biomes (approved/README.md); desert/forest/swamp/tundra Done (MV-690/693/696/699), metro MV-701 concept pick pending, per-biome car grade CARL, preview page designs/bg-parallax-page/
+- [christmas-living-v3](christmas-living-v3.md): MV-691 Christmas festival living room v3 L1-L3 (Claude picks), anims crew 2/3 + hotspots, APPROVED + saved christmas/approved/, Done
+- [icons-v2](icons-v2.md): MV-694 all ic_* icons redrawn 32 px + moods neutral/stressed/broken, APPROVED + saved, PR #191 MERGED to staging 2026-11-04 (switch icons_v2, IconTex), web export pending
+- [icons-v2-approved](icons-v2-approved.md): RULE every in-game icon = 32 px PixelLab salvage-object style (designs/icons-v2/approved/README.md), shown in 16 px slot via IconTex
+- [lore-crew-3](lore-crew-3.md): MV-692/695 Bit, Auntie Wan, Captain Sorn 2.5D ref v3 stills + 13 anim clips each APPROVED by Parames 2026-11-03 (eye lock), designs/lore-crew-3/approved/, artifact Lore Crew Three; edit-image-pro-flash now ~15 gens
+- [art-readiness-v5](art-readiness-v5.md): MV-702 2026-11-03 big-upgrade readiness: not ready to ship, ready to integrate; staging has 0 new art; phase plan + ~1,600 gens missing
+- [celestial-clean-disc](celestial-clean-disc.md): RULE parallax sun/moon = clean disc, no clouds over it, code halo effect (MV-706, all 6 biomes)
+- [parallax-v2-ingame](parallax-v2-ingame.md): MV-710 all 6 biome parallax v2 in game (PR #192, switch parallax_v2, ParallaxV2Backdrop), world 2x decision pending
+- [biome-bosses-v2](biome-bosses-v2.md): MV-704 6 lore biome bosses, picks approved/<boss>/, code light grade page Boss Lighting
+- [biome-bosses-hd](biome-bosses-hd.md): MV-704 boss HD = Crew v3 pixels (B2-2 in-scene redraw x2), Foreman approved, other 5 done awaiting OK, page Boss Pixel Size
+- [rooms-crew-v3-ingame](rooms-crew-v3-ingame.md): MV-711 v3 rooms + v3 crew in game via v3 interior view (rooms_v3/rooms_v3_review), PR #193 on #192, web/ export pending (no cloud_config)
+
+## Other memory files (not in the short index above)
+
+- [ambulance-drive-anim-2](ambulance-drive-anim-2.md): Continuation of ambulance-drive-anim: physical headlight beam (MV-650 follow-up) + exhaust stack and smoke (MV-652), canvas 960x270
+- [asset-log-site](asset-log-site.md): PixelLab asset log web app mobile-vault-asset-log.pages.dev (MV-584): how it is fed, why script gens were missing, backfill command (MV-606, PR #184 merged to staging 2026-10-29)
+- [bg-v2-layers](bg-v2-layers.md): CANCELLED - layered v2 backgrounds (MV-163, PR #45 closed unmerged): tools/art/bg2.py real-scale 8 layers, long strips, per-biome palette, bg_v2 switch, lazy biome loading; industrial done, 5 biomes left
+- [construction-system-v43](construction-system-v43.md): v4.3 timed construction + builder role/traits in Mobile Vault (PR #2, branch feat/construction) — hooks, art, test gotchas
+- [crew-anim-style-fix](crew-anim-style-fix.md): MV-616 thread fixing the 25 crew animations + style one by one from Parames feedback; auto-scan results + files
+- [crew-gun-anim-log](crew-gun-anim-log.md): MV-594 per-character gun clip log (options, seeds, gens, fixes, approvals), alphabetical order
+- [crew-gun-anim](crew-gun-anim.md): MV-594 hold-gun + shoot clip per crew (PixelLab), one character at a time, 2 options each; pipeline + effects-in-code
+- [distillery-v3](distillery-v3.md): MV-626 distillery (Data id refinery, FUEL REFINERY) v3 per Room guide v3, L1-L3 single cell, Claude picked all, In Review; files distill_v3/
+- [drawdy-systems-map](drawdy-systems-map.md): Drawdy (drawdy.io MCP connector) game systems map for Mobile Vault: which board, free-plan 3-board limit, layout
+- [enemies-v2-per-biome](enemies-v2-per-biome.md): MV-677 18 non-boss enemies (3 per biome, 1 flyer each) at crew v2 scale via PixelLab, artifact Enemies v2 by Biome, awaiting feedback
+- [engine-bay-v3](engine-bay-v3.md): MV-707 engine bay v3 room (one-point, empty cradle) + 8 lore engines inpainted on it, artifact Engine Bay v3, awaiting picks
+- [event-art-320](event-art-320.md): Event art at 320x160 trial (gambler, MV-667): gen-v2 returns 1 image per 10 gens, far crisper; game popup still expects 160x80
+- [halloween-rest-room](halloween-rest-room.md): MV-615 Halloween festival rest room (guide v3, single cell only, L1-L3 + anims + hotspots), all picks made by Claude, Done 2026-10-30
+- [kitchen-v3](kitchen-v3.md): MV-620 kitchen redone per Room guide v3 (one-point, L1-L3 single cell only, picks delegated), files designs/room-redesign-preview/kitchen_v3/, page Kitchen v3 Samples
+- [large-rooms](large-rooms.md): Large rooms (merge 2-3 same-type cells) in Mobile Vault, PR #13 branch feat/large-rooms — data model, numbers, art keys, atlas size
+- [mushroom-farm-v3](mushroom-farm-v3.md): MV-643 mushroom farm (โรงเพาะเห็ด) v3 L1-L3 (Claude picks) + 3 code-drawn growth stages + anim + hotspots fmt 2 room "mushroom", APPROVED + saved (mush_v3/approved/), Done; page Mushroom Farm v3
+- [nav-room-v3](nav-room-v3.md): MV-632 navigation room (ห้องนำทาง) per Room guide v3, L1-L3 single cell, APPROVED 2026-10-30 + saved nav_v3/approved/, Done; files nav_v3/, page Navigation Room v3
+- [og-share-preview](og-share-preview.md): Link preview / OG tags live in Web preset html/head_include with absolute URLs on apocarlypse-mobile-vault.vercel.app; og-image from tools/og_image.py (PR #19)
+- [power-room-v3](power-room-v3.md): MV-634 battery & switchboard (power) room v3 L1-L3 (Claude picks), anim + hotspots fmt 2 (room "power"), APPROVED + saved (power_v3/approved/), Done; page Battery & Switchboard v3
+- [resources-changed-every-frame](resources-changed-every-frame.md): Game.resources_changed fires every sim frame; UI must not rebuild buttons on it (taps get lost) — PR #10 loot tab fix
+- [settings-and-version](settings-and-version.md): Where game version, build stamp and player settings live (Settings autoload, BuildInfo class) since PR #3
+- [stranger-inspection](stranger-inspection.md): v4.4 stranger-at-the-door inspection (No I'm Not a Human style); all recruits go through Game.offer_recruit
+- [strategic-depth-plan](strategic-depth-plan.md): Theorycraft/community-depth roadmap for Mobile Vault (A1-A4, B1-B4, C1-C4) in Claude Doc, decisions pending
+- [water-room-v3](water-room-v3.md): MV-618 water purifier redone per Room guide v3 (one-point, L1-L3 single cell, Claude picked all), states + hotspots format 2 done, In Review; files designs/room-redesign-preview/water_v3/
+- [workshop-v3](workshop-v3.md): MV-624 workshop (โรงช่าง) per Room guide v3, L1-L3 single cell, anim, hotspots fmt 2 (new actions salvage_parts/repair_hull), Claude picked all, In Review; files workshop_v3/

@@ -615,6 +615,7 @@ func _run() -> void:
 	if "--only=icons" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _icon_art_test()
+		await _icons_v2_test()
 		_finish()
 		return
 	if "--only=touch" in OS.get_cmdline_user_args():
@@ -702,6 +703,11 @@ func _run() -> void:
 	if "--only=responsive" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _responsive_test()
+		_finish()
+		return
+	if "--only=icons_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _icons_v2_test()
 		_finish()
 		return
 	if "--only=morale" in OS.get_cmdline_user_args():
@@ -1544,6 +1550,7 @@ func _run() -> void:
 	await _creatures_test()
 	await _engine_shake_test()
 	await _icon_art_test()
+	await _icons_v2_test()
 	await _crew_roster_test()
 	await _announce_test()
 	await _scene_art_test()
@@ -6522,10 +6529,14 @@ func _exterior_mods_test() -> void:
 					Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
 				Game.s.mods.tracks = 1 if lv == 3 else 0
 				Mods.mods_changed.emit()
-				await wait(0.03)
 				var rail: bool = Data.VEHICLES[tier].rail
 				var expected_rims: int = 0 if rail or lv == 1 else int(Data.VEHICLES[tier].wheels.size()) + trailers * 2
 				if not rail and lv == 3: expected_rims -= int(Data.VEHICLES[tier].wheels.size()) - 1
+				# wait for the rebuild (frame-paced, not a fixed 0.03 s: a slow CI frame failed it now and then)
+				for _t in 20:
+					await wait(0.03)
+					if m.rims.size() == expected_rims and v.tracks.visible == (not rail and lv == 3):
+						break
 				matrix_ok = matrix_ok and m.rims.size() == expected_rims and v.tracks.visible == (not rail and lv == 3)
 				var armor_cues := v.sprite_regions(false).count("prop_ext_armor_lv1")
 				matrix_ok = matrix_ok and armor_cues == (2 if lv == 1 else 0)
@@ -8207,7 +8218,7 @@ func _drive_help_test() -> void:
 	if hud.offline_summary.is_open:
 		hud.offline_summary.close()
 	await wait(0.2)
-	_check("drive help: the Go button shows the map while a destination is needed", hud.go_btn.icon != null and hud.go_btn.icon.region == Atlas.icon("map").region)
+	_check("drive help: the Go button shows the map while a destination is needed", hud.go_btn.icon != null and hud.go_btn.icon == Atlas.icon("map"))
 	hud.go_btn.pressed.emit()
 	await wait(0.5)
 	var mp: ModalPanel = hud.panels.map
@@ -11865,3 +11876,46 @@ func _nextgen_crew_test() -> void:
 	Game.set_process(saved_processing)
 	_nextgen_crew_checks_completed = true
 
+
+## MV-694 icons v2: every ic_* has a 32 px ic2_*, IconTex keeps 16x16 layout, mood icons, switch off = old set, GOD toggle
+func _icons_v2_test() -> void:
+	var was := Features.on("icons_v2")
+	Dev.icons_v2(true)
+	var ids: Array[String] = []
+	for key in Atlas.regions:
+		if str(key).begins_with("ic_"):
+			ids.append(str(key).trim_prefix("ic_"))
+	var all_v2 := true
+	var sizes_ok := true
+	for id in ids:
+		var r: Array = Atlas.regions.get("ic2_" + id, [])
+		all_v2 = all_v2 and r.size() == 4 and int(r[2]) == 32 and int(r[3]) == 32
+		var t := Atlas.icon(id)
+		sizes_ok = sizes_ok and t is IconTex and t.get_width() == 16 and t.get_height() == 16 and (t as IconTex).inner.get_width() == 32
+	_check("icons v2: every ic_* (%d) has a 32x32 ic2_* redraw" % ids.size(), all_v2)
+	_check("icons v2: Atlas.icon wraps it in IconTex reporting 16x16", sizes_ok)
+	_check("icons v2: neutral + stressed + broken mood icons exist", Atlas.regions.has("ic2_neutral") and Atlas.regions.has("ic2_stressed") and Atlas.regions.has("ic2_broken"))
+	var mood_ok := Atlas.mood_icon(80.0) == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("neutral") and Atlas.mood_icon(40.0) == Atlas.icon("sad") \
+		and Atlas.mood_icon(25.0) == Atlas.icon("stressed") and Atlas.mood_icon(5.0) == Atlas.icon("broken") \
+		and Atlas.mood_icon(60.0, "depressed") == Atlas.icon("stressed") and Atlas.mood_icon(60.0, "broken") == Atlas.icon("broken")
+	_check("icons v2: mood icon follows happiness and morale stage", mood_ok)
+	var b := UIKit.button("x", "green", "food")
+	_check("icons v2: button icon keeps the 16 px slot", b.icon is IconTex and b.icon.get_width() == 16)
+	b.free()
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "icons"
+	Dev.icon_preview(2)
+	god.refresh()
+	await wait(0.3)
+	await shot("icons_v2_gallery_x2")
+	Dev.icons_v2(false)
+	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
+	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
+	god.refresh()
+	await wait(0.3)
+	await shot("icons_v1_gallery_x2")
+	Dev.icons_v2(was)
+	god.tab = "main"
+	god.close()
+	await wait(0.2)

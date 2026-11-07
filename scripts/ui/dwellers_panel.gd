@@ -158,7 +158,14 @@ func _build_mood(d: Dictionary) -> void:
 				txt += Loc.t(" · อาจลงจากรถคืนนี้!")
 	if Crew.busy(d):
 		txt = Loc.t("กำลังคุยปลอบใจเพื่อนอยู่ อีก %s") % Game.fmt_time(float(d.talk_t)) if txt == "" else txt
-	v.add_child(UIKit.wrap_label(txt, UIKit.FS_SMALL, UIKit.C_RED if m == Crew.MOOD_BROKEN else UIKit.C_ORANGE))
+	var row := UIKit.hbox(4)
+	var mi := UIKit.tex_rect(Atlas.mood_icon(float(d.happy), m), Vector2(16, 16))
+	mi.name = "MoodIcon"
+	row.add_child(mi)
+	var ml := UIKit.wrap_label(txt, UIKit.FS_SMALL, UIKit.C_RED if m == Crew.MOOD_BROKEN else UIKit.C_ORANGE)
+	ml.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(ml)
+	v.add_child(row)
 	if m == Crew.MOOD_OK:
 		_list.add_child(p)
 		return
