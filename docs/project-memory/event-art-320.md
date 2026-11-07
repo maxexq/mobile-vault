@@ -1,0 +1,19 @@
+---
+name: event-art-320
+description: Event art at 320x160 trial (gambler, MV-667): gen-v2 returns 1 image per 10 gens, far crisper; game popup still expects 160x80
+metadata:
+  type: project
+---
+
+2026-11-02 Parames asked for crisper event pixels, then "ลองขยับไป 320×160" (was 160x80 for every event, assets/events/*.png).
+- Pilot: /mnt/project-files/designs/event-art-gambler/hd/ (gen.py with style = approved rogue_bot still scaled x2 nearest, prompt adds "crisp clean pixels, bold dark outlines, limited palette, no blur, no gradients"; dice.py BOX (208,56,320,152) animate-with-text-v3 112x96 crops; anim.py; x2 GIF for the page).
+- Cost: generate-image-v2 at 320x160 = 10 gens for ONE image (160x80 gives 4). 4 animate takes on 112x96 crops: balance fell 12 in the window (maybe ~3/take or other threads).
+- Result: much sharper outlines, truck order + 4 wheels correct first try.
+- Code-only sharpen (sharp/sharpen.py: unsharp r1 60% + shared 56-colour palette + despeckle) helped only a little; stronger unsharp blows the cream box white.
+**How to apply:** if Parames adopts 320x160, the game EventPopup / ModalPanel.media_layout must take 320x160 textures (see [[event-window-layout]]) and older events need regen. Page section under gambler on [[event-samples-page]]. Related: [[event-vehicle-facing]].
+- 2026-11-02 16:40 Parames LIKES 320x160: convert all 15 earlier events (gambler done). Asked for a gens estimate first: ~400 (260-550; ~2 gen jobs/event + inpaints + figure takes). Awaiting 'go'; stop and ask if spend passes 450.
+- 16:41 batch 1 stills done via /mnt/project-files/designs/event-hd/hdgen.py <ev> <seed> (9 events, 90 gens, signal wrong order). Parames paused: wants gambler WITHOUT vehicle (scene reused with other vehicles) -> hd/novan/ inpaint-v3 at 320x160 (~20 gens?). Asked if every event should be vehicle-free.
+- 16:45 Parames picked NO VEHICLE in every 320 event. Done 17:30 (MV-674 In Review): event-hd/novan.py <ev> <seed> = gen-v2 320x160, style = gambler novan still, no reference image, prompt "NO vehicles" + empty left third (10 gens, no truck drawn in 16/16). Picks event-art-*/hd/novan/still.png (bridge = seed 202 with deck at lower third). Anims: event-hd/code_events.py (signal acid bunker radstorm bridge frozen sandstorm plane gas) + fig_events.py (rogue_bot cultists survivor wolves trader raiders, PixelLab takes via take.py) + hdlib.py; use dithered tints (smooth tint looks non-pixel), raiders take had blown-out rim light (filter bright pixels). Page v33 section "320×160 แบบไม่มีรถ". Effects that hit the vehicle now land on the empty left road.
+- 18:10 fixes: wolves take widened (prowl2_1, box x80) so the front wolf's head stays in; raiders painted beam removed (nobeam_s1_0) and beam = PixelLab inpaint (beam_up2_s2 / beam_road2_s2, single soft cone + oval pool via ellipse mask), sweep = rotate the PL beam layer around lens (203,46), alpha 0.8; Parames: beams thin/light, pool round. Survivor 320 novan: Parames wants him FACING the viewer from the far side of the road (overrides Singer back-view for this event): front_s1.png + wavefront_1 take. Page v40.
+- 18:50 MV-675 (In Review): the 5 events that had no art (cache, bugs, stray_dog, stray_cat, mutant_hen; game image ids cache/bugs/dog/cat/hen) done the same way, folders event-art-<id with dashes>/hd/novan/. Raiders lamp beam CUT and lamp off (Parames 18:20). Page v43 has all 21. Every road event now has 320 novan art; next step is EventPopup 320x160 + animated texture in game.
+- 20:50 MV-676 (In Review): 10 NEW events designed by Claude (Parames "add 10 suitable events"): mirror_glint, cryo_pod, drone_flyby, wrecked_ambulance, refugee_camp, boar_herd, sinkhole, swamp_ferry, night_market, minefield; SCENE in novan.py, anims in fig_events.py, draft Thai text + choices only on page v44 (NOT in Data.EVENTS yet). Open: mutant_hen looks like 2 hens, offered redraw vs one head (no answer yet).

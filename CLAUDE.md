@@ -6,6 +6,13 @@ Parames's PC. Both follow this file. Codex CLI (`AGENTS.md`) is the art analyst:
 micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset tickets" below). The game itself is described in `README.md` and
 `docs/PROJECT_CONTEXT.md`; read the relevant README section before touching a system.
 
+**Project memory and handover (MV-712):** decisions, approved art, pending picks and history from the
+claude.ai project live in [`docs/project-memory/`](docs/project-memory/INDEX.md); read `INDEX.md` and the
+files for the system you touch before starting. Local setup, secrets and open work for T3 Code / local
+CLI sessions: [`docs/T3_CODE_HANDOVER.md`](docs/T3_CODE_HANDOVER.md). When you learn a lasting fact or
+Parames gives a new rule, update the matching memory file (and `INDEX.md`) in the same PR; new standing
+rules also go into this file.
+
 ## Hard rules
 
 - **Godot 4.7.2-stable only.** Never beta/rc/dev editors, templates or addons. Addons must
@@ -42,6 +49,9 @@ micro-asset specs as Plane tickets, which Claude builds (see "Micro-asset ticket
 - **Crew characters:** the chibi field medic in the [crew style reference](docs/art/crew-style-reference.md)
   is the approved model for every new crew character's art style and animation (2D side view).
   It is ~2x the current 14x20 `dw_*` scale; moving the game to it is a separate decision.
+- **After every PixelLab use** report to Parames what it was for, which model/endpoint (e.g.
+  `generate-image-v2`, `inpaint-v3`, `animate-with-text-v3`), how many gens were used and how many remain
+  (`GET /v2/balance`). "pl" in Parames's message means "use PixelLab".
 - **PixelLab API costs money:** `tools/pixellab.py gen ... --yes` spends Parames's credits. Show the
   `--dry-run` cost estimate and get an OK before every paid batch (README "Redrawing sprites with PixelLab").
 - **Every PixelLab image goes to the asset log** (https://mobile-vault-asset-log.pages.dev, MV-584/MV-606).
