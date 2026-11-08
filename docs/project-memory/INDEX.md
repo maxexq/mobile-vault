@@ -33,6 +33,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [game-name-apocarlypse](game-name-apocarlypse.md): renamed to "Apocarlypse: Mobile Vault" (PR #22), BuildInfo.GAME_NAME + UIKit.logo, vehicle/repo/domain/save keys keep mobile-vault
 - [langgraph-ai-setup](langgraph-ai-setup.md): LangGraph Opus+Gemini 4 Argon+Ollama qwen3:4b (MV-85); 8188 is ComfyUI, not an LLM
 - [mobile-touch-input](mobile-touch-input.md): touch fixes PR #27 (MV-86): release in Main._input, STOP->PASS in ScrollContainers, autotest --only=touch
+- [free-camera](free-camera.md): MV-723 free whole-step zoom + 2-axis pan + FIT button (switch free_cam), content-based pan limits
 - [claude-cli-handover](claude-cli-handover.md): CLAUDE.md + tools/plane.py (PR #33, MV-94) so local Claude Code CLI follows the same rules; mirror new rules into CLAUDE.md
 - [discord-notify](discord-notify.md): PR/review/CI/Vercel deploy -> Discord via GitHub Actions (PR #36, MV-96), secret DISCORD_WEBHOOK_URL; new CI workflows go in workflow_run list
 - [error-spike-alerts](error-spike-alerts.md): MV-171 error spike/new error -> Discord #alerts (PR #54), DISCORD_ALERTS_WEBHOOK_URL fallback to dev feed, SUPABASE_SERVICE_KEY

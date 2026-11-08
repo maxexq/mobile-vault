@@ -131,6 +131,24 @@ func engine_shake(k: float) -> void:
 	Features.set_override("tune", "fx.engine_shake", null if k < 0.0 else k)
 
 
+## MV-723 free camera: one whole zoom step (+1 closer / -1 farther) around the middle of the view
+func cam_zoom(dir: int) -> void:
+	var m = get_tree().current_scene
+	if m == null or not m.has_method("zoom_step"):
+		return
+	Trace.rec("god", "camera zoom %d" % dir)
+	m.zoom_step(dir)
+
+
+## MV-723: the FIT button: back to the AUTO framing
+func cam_fit() -> void:
+	var m = get_tree().current_scene
+	if m == null or not m.has_method("camera_auto_fit"):
+		return
+	Trace.rec("god", "camera fit")
+	m.camera_auto_fit()
+
+
 ## MV-562: compare smoothness with the per-step / per-frame caches on and off
 func perf_cache_switch(v: bool) -> void:
 	feature_set("perf_cache", v)
