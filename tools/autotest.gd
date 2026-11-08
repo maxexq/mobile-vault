@@ -798,6 +798,11 @@ func _run() -> void:
 		await _gunner_room_test()
 		_finish()
 		return
+	if "--only=room_squad" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _room_squad_test()
+		_finish()
+		return
 	if "--only=saloon" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _saloon_test()
@@ -1030,7 +1035,7 @@ func _run() -> void:
 		main.hud.panels[k].close()
 		await wait(0.3)
 	main.hud.open_panel("dwellers")
-	main.hud.panels.dwellers.manage(int(Game.s.squad[1]))
+	main.hud.panels.dwellers.manage(int(Game.s.squad[0]))
 	await wait(0.5)
 	await shot("dweller_manage")
 	main.hud.panels.dwellers.close()
@@ -1216,7 +1221,8 @@ func _run() -> void:
 	for id in ["spike_ram", "spike_ram", "spike_ram", "roof_turret", "roof_turret", "fuel_tanks", "fuel_tanks",
 			"tracks", "armor_plates", "armor_plates", "solar_covers", "rad_shield", "rain_catcher", "heater",
 			"suspension", "suspension", "offroad_wheels", "engine_tune"]:
-		ok_all = Mods.install(id) and ok_all
+		if Mods.enabled(id):      # MV-727: no roof turret with the room squad
+			ok_all = Mods.install(id) and ok_all
 	Mods.mods_changed.emit()
 	_check("install exterior mods", ok_all and Mods.level("spike_ram") == 3 and Mods.level("tracks") == 1)
 	_check("fuel cap grows with tanks", Env.fuel_cap() > 60.0)
@@ -1325,9 +1331,9 @@ func _run() -> void:
 	await wait(0.6)
 	await shot("expedition_plan")
 	# a defence squad member goes on the trip: a save loaded from JSON holds the squad ids as floats
-	var guard := Game.dweller_by_id(int(Game.s.squad[1]))
+	var guard := Game.dweller_by_id(int(Game.s.squad[0]))
 	Game.s.squad = JSON.parse_string(JSON.stringify(Game.s.squad))
-	_check("squad role survives JSON floats", not guard.is_empty() and Game.squad_role(guard) == 1)
+	_check("squad role survives JSON floats", not guard.is_empty() and Game.squad_role(guard) == 0)
 	var team_ids := [int(guard.id)]
 	for dd in Game.s.dwellers:
 		if not Game.is_away(dd) and team_ids.size() < 2 and not team_ids.has(int(dd.id)):
@@ -1342,15 +1348,15 @@ func _run() -> void:
 	var started := Expedition.start("market", team_ids, {"food": 10, "water": 10, "stimpack": 1, "ammo": 0, "antibiotics": 0})
 	_check("expedition start (team of 2)", started and Expedition.active())
 	Game.s.exp.erase("enc")     # keep this run deterministic; encounters are tested in _encounter_test()
-	_check("defence slot freed on expedition", int(Game.s.squad[1]) == -1 and Game.squad_role(guard) < 0)
+	_check("defence slot freed on expedition", int(Game.s.squad[0]) == -1 and Game.squad_role(guard) < 0)
 	var sub := {}
 	for dd in Game.s.dwellers:
 		if not Game.is_away(dd) and Game.squad_role(dd) < 0:
 			sub = dd
 			break
 	if not sub.is_empty():
-		Game.set_squad(1, int(sub.id))
-	_check("new member fills freed slot", not sub.is_empty() and int(Game.s.squad[1]) == int(sub.id))
+		Game.set_squad(0, int(sub.id))
+	_check("new member fills freed slot", not sub.is_empty() and int(Game.s.squad[0]) == int(sub.id))
 	Game.set_squad(0, int(guard.id))
 	_check("away member can't rejoin squad", Game.squad_role(guard) < 0)
 	main.hud.panels.expedition.close()
@@ -1625,6 +1631,7 @@ func _run() -> void:
 	await _rooms_x_test()
 	await _saloon_test()
 	await _gunner_room_test()
+	await _room_squad_test()
 	await _flagged_test()
 	await _flee_guard_test()
 	await _barks_test()
@@ -2297,7 +2304,7 @@ func _roaming_boss_test() -> void:
 		Combat._spawn({"mob": "scorpion", "lvl": 25, "elite": elite, "no_mutate": true})
 		var unchanged: Dictionary = Combat.enemies[0]
 		var defense := float(Combat.van_stats().def)
-		var expected := 1000.0 * (1.0 - defense / (defense + Combat.def_k(25.0)))
+		var expected := 1000.0 * (1.0 - defense / (defense + Combat.def_k(25.0))) * Combat.hull_take()
 		_check("roaming boss: normal/elite %s keeps its stats and uncapped armor calculation" % elite, old.max == unchanged.max and old.dmg == unchanged.dmg and is_equal_approx(Combat.van_hit_damage(unchanged, 1000.0), expected) and Combat.van_hit_damage(unchanged, 1000.0, true) == 1000.0)
 	# The actual on-kill path used to destroy a full vehicle even after winning the fight.
 	for enabled in [false, true]:
@@ -3461,6 +3468,7 @@ func _loot_tabs_test() -> void:
 ## rewards per hour vs the classic back-to-back waves, offline pay, classic toggle
 func _threat_test() -> void:
 	_no_events()
+	_ensure_squad()     # earlier groups may have sent the squad away; the pacing check needs a crew fighting
 	Settings.set_value("pacing", "threat")
 	Combat.reset_wave(1)
 	Threat.reset()
@@ -3778,7 +3786,14 @@ func _share_preview_test() -> void:
 	_check("boot: web/logo.png is the 192x60 pixel logo", web_logo != null and web_logo.get_size() == Vector2i(192, 60))
 
 
+## MV-727: the roof deck reserve only exists with the roof squad (switch room_squad off for this group)
 func _roof_deck_test() -> void:
+	Dev.feature_set("room_squad", false)
+	await _roof_deck_test_body()
+	Dev.feature_set("room_squad", null)
+
+
+func _roof_deck_test_body() -> void:
 	_no_events()
 	Game.s.mods.erase("roof_deck")
 	Mods.mods_changed.emit()
@@ -8115,6 +8130,7 @@ func _gunner_room_test() -> void:
 		main.hud.event_popup.close()
 	var keep: Dictionary = Game.s.duplicate(true)
 	var T := RearGunner.TYPE
+	Dev.feature_set("room_squad", false)    # MV-716 checks the post with the roof squad; MV-727 has its own test
 	# --- registry + art
 	var def := Data.room_def(T)
 	_check("gunner_room: registered (Lv.%d, %s, %d scrap)" % [int(def.get("unlock", 0)), def.get("stat", ""), int(def.get("cost", 0))],
@@ -8212,10 +8228,114 @@ func _gunner_room_test() -> void:
 	var slot := Dev.gunner_demo(2)
 	_check("gunner_room: GOD demo puts crew on the gun (slot %d)" % slot, slot >= 0 and RearGunner.gunners(slot).size() >= 1)
 	Combat._clear_enemies()
+	Dev.feature_set("room_squad", null)
 	Game.s = keep
 	Combat.rebuild_heroes()
 	Game.rooms_changed.emit()
 	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
+
+
+## MV-727: the defence squad is the crew of the rear gunner room (switch room_squad): no roof crew, turret or roof gun
+func _room_squad_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep: Dictionary = Game.s.duplicate(true)
+	var T := RearGunner.TYPE
+	Dev.feature_set("gunner_room", null)
+	Dev.feature_set("room_squad", null)
+	_check("room_squad: on in the config", Features.on("room_squad") and RearGunner.squad_on())
+	Game.setup_default_state()
+	Combat.rebuild_heroes()
+	Game.s.combat.threat = 0.0
+	var leo := {}
+	for d in Game.s.dwellers:
+		if str(d.get("lore", "")) == "leo":
+			leo = d
+	var post := RearGunner.post()
+	_check("room_squad: a new game fights from the gunner room in the rear slot (slot %d)" % post, Combat.room_mode() and post == 2)
+	_check("room_squad: Leo is its gunner and works in the room, Mark loads", not leo.is_empty() and Game.squad_role(leo) == 0 and int(leo.room) == post
+		and int(Game.s.squad[1]) >= 0 and int(Game.dweller_by_id(int(Game.s.squad[1])).room) == post and int(Game.s.squad[2]) < 0)
+	_check("room_squad: Vault Lv1 opens 2 slots, roles gunner / loader / spotter", Combat.slots_unlocked() == 2 and Game.room_capacity(post) == 2
+		and Combat.role(0).id == "gunner" and Combat.role(1).id == "loader" and Combat.role(2).id == "spotter")
+	_check("room_squad: no roof turret mod", not Mods.enabled("roof_turret"))
+	# --- build rules: one room, rear slots only
+	var floors := Game.floors()
+	_check("room_squad: a second gunner room is refused", RearGunner.build_block(5 if floors > 1 else 0) != "" and not Game.build_room(0, T))
+	var saved: Dictionary = Game.s.rooms[post].duplicate(true)
+	Game.s.rooms[post] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	_check("room_squad: front / middle slots refuse it", RearGunner.build_block(0) != "" and RearGunner.build_block(1) != "")
+	_check("room_squad: any rear slot takes it", RearGunner.build_block(2) == "" and (floors < 2 or RearGunner.build_block(5) == ""))
+	_check("room_squad: no room = the old roof squad", not Combat.room_mode())
+	Game.s.rooms[post] = saved
+	RearGunner.sync_squad()
+	# --- the fight: one gun from the hatch, enemies hit the hull, nobody on the roof
+	var kinds := {}
+	var hits := {}
+	var count := func(from_kind, _a, _b, _c, _d): kinds[from_kind] = int(kinds.get(from_kind, 0)) + 1
+	var hcount := func(kind, _a, _b, _c): hits[kind] = int(hits.get(kind, 0)) + 1
+	Combat.shot.connect(count)
+	Combat.hit.connect(hcount)
+	Combat.rebuild_heroes()
+	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	var q := []
+	for i in 4:
+		q.append({"t": 0.2 * i, "mob": mobs[i % mobs.size()], "lvl": 3, "no_mutate": true})
+	Combat.debug_spawn(q, false)
+	for i in 600:
+		Combat.tick(0.1)
+		if int(kinds.get("room_gun", 0)) >= 5 and int(hits.get("van", 0)) >= 1:
+			break
+	_check("room_squad: the gunner fires out of the hatch (%d shots)" % int(kinds.get("room_gun", 0)), int(kinds.get("room_gun", 0)) >= 1)
+	_check("room_squad: no roof hero / turret / roof gun shots", not kinds.has("hero") and not kinds.has("turret") and not kinds.has("roof"))
+	_check("room_squad: enemies hit the hull, never the crew", not hits.has("hero") and not hits.has("dodge"))
+	_check("room_squad: nobody stands on the roof", (main.combat_view.hero_nodes as Array).all(func(nd): return nd == null))
+	await shot("room_squad_fight")
+	Combat._clear_enemies()
+	var g1 := RearGunner.gun_stats()
+	_check("room_squad: the gun uses the gunner's gear + the mounted turret (%.1f dmg)" % float(g1.get("dmg", 0)),
+		not g1.is_empty() and float(g1.dmg) > float(Combat.hero_stats(leo, 0).dmg))
+	_check("room_squad: the loader shoots too", RearGunner.shooters().size() == 2 and Combat.squad_dps() > float(g1.dps))
+	Game.set_squad(1, -1)
+	var g0 := RearGunner.gun_stats()
+	# --- full squad at Lv3
+	var n := Dev.room_squad_full()
+	var g3 := RearGunner.gun_stats()
+	_check("room_squad: Vault Lv2 opens 3 slots and GOD fills them (%d)" % n, Combat.slots_unlocked() == 3 and n == 3)
+	_check("room_squad: loader = faster, spotter = more crit and range, Lv3 room = harder", float(g3.aspd) > float(g0.aspd) and float(g3.crit) > float(g0.crit)
+		and float(g3.range) > float(g0.range) and float(g3.dmg) > float(g0.dmg) * 1.5)
+	var all_in := true
+	for did in Game.s.squad:
+		all_in = all_in and int(Game.dweller_by_id(int(did)).room) == post
+	_check("room_squad: the whole squad works in the room", all_in and RearGunner.gunners(post).size() == 3)
+	# --- leaving the room leaves the squad and the other way round
+	var kitchen := -1
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == "kitchen":
+			kitchen = i
+	var spot := Game.dweller_by_id(int(Game.s.squad[2]))
+	Game.assign(spot, kitchen)
+	_check("room_squad: sent to the kitchen = off the squad", Game.squad_role(spot) < 0 and int(Game.s.squad[2]) < 0)
+	var ld := Game.dweller_by_id(int(Game.s.squad[1]))
+	Game.set_squad(1, -1)
+	_check("room_squad: taken off the squad = out of the room", int(ld.room) != post)
+	Game.assign(ld, post)
+	_check("room_squad: put to work in the room = back on the squad", Game.squad_role(ld) >= 0)
+	# --- switch off = the old roof squad
+	Dev.feature_set("room_squad", false)
+	Combat.rebuild_heroes()
+	_check("room_squad: switch off = roof roles again", not Combat.room_mode() and Combat.role(1).id == "bruiser" and Mods.enabled("roof_turret"))
+	Dev.feature_set("room_squad", null)
+	Combat.shot.disconnect(count)
+	Combat.hit.disconnect(hcount)
+	Combat._clear_enemies()
+	Game.s = keep
+	Combat.rebuild_heroes()
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.squad_changed.emit()
 	Game.resources_changed.emit()
 
 
@@ -8717,6 +8837,24 @@ func _five_floors_test() -> void:
 ## level gives max hull and production (a full vehicle's levels give more production instead); switch off = as before
 ## MV-557: both build lists (the Build window and an empty slot's list) say what each room does, wrap inside the
 ## window on phone portrait / landscape, still build on a tap, and the switch off brings back the old rows.
+## an empty squad gets a gunner and a loader who are aboard and willing (a squad that is already there stays as it is;
+## the room squad has no turret firing on its own, so an empty squad means nobody shoots)
+func _ensure_squad() -> void:
+	if int(Game.s.squad[0]) >= 0 or int(Game.s.squad[1]) >= 0 or int(Game.s.squad[2]) >= 0:
+		return
+	for i in mini(2, Combat.slots_unlocked()):
+		for d in Game.s.dwellers:
+			if not Game.is_away(d) and Game.squad_role(d) < 0 and not Crew.refuses(d) and int(d.room) != Data.CAB_SLOT:
+				Game.set_squad(i, int(d.id))
+				break
+	Combat.rebuild_heroes()
+
+
+## rooms the empty-slot list offers for this slot (MV-727: the gunner room only in a free rear slot)
+func _slot_buildable(slot: int) -> int:
+	return Data.buildable().filter(func(t): return t != RearGunner.TYPE or RearGunner.build_block(slot) == "").size()
+
+
 func _build_effects_test() -> void:
 	_no_events()
 	var hud: HUD = main.hud
@@ -8775,8 +8913,9 @@ func _build_effects_test() -> void:
 				bad.append("%s preview %s" % [cb.get_meta("room_type"), _thumb_off(cb)])
 			elif not cb.get_global_rect().grow(1.0).encloses(l.get_global_rect()) or cb.get_global_rect().position.x < cbox.position.x - 1.0 or cb.get_global_rect().end.x > cbox.end.x + 1.0:
 				bad.append("%s spills" % cb.get_meta("room_type"))
-		_check("build effects: %s empty-slot list shows each room's effect (%d of %d) inside its button %s" % [size, cbs.size(), Data.buildable().size(), bad],
-			cbs.size() == Data.buildable().size() and bad.is_empty() and screen.grow(1.0).encloses(cbox))
+		var slot_rooms := _slot_buildable(cu.slot)     # MV-727: the gunner room only shows in a free rear slot
+		_check("build effects: %s empty-slot list shows each room's effect (%d of %d) inside its button %s" % [size, cbs.size(), slot_rooms, bad],
+			cbs.size() == slot_rooms and bad.is_empty() and screen.grow(1.0).encloses(cbox))
 		await shot("build_effects_slot_%dx%d" % [size.x, size.y])
 		if size == Vector2i(720, 1280):
 			# a tap on an affordable room still builds it in that slot
@@ -8806,7 +8945,7 @@ func _build_effects_test() -> void:
 	var off_slot: int = hud.room_closeup._content.get_children().filter(func(n): return n is ChoiceButton).size()
 	var old_rows: int = hud.room_closeup._content.get_children().filter(func(n): return n is Button).size()
 	_check("build effects: switch off = no effect lines, the old plain rows (menu %d, slot %d, rows %d)" % [off_menu, off_slot, old_rows],
-		off_menu == 0 and off_slot == 0 and old_rows == Data.buildable().size())
+		off_menu == 0 and off_slot == 0 and old_rows == _slot_buildable(hud.room_closeup.slot))
 	hud.room_closeup.close()
 	await wait(0.3)
 	Features.set_override("features", "build_room_effects", null)
@@ -11387,7 +11526,14 @@ func _ms_marks(loot: LootPanel) -> int:
 	return loot.find_children("PickedMark", "", true, false).size()
 
 
+## MV-727: its squad layout uses the roof deck reserve (switch room_squad off for this group)
 func _individual_auto_equip_test() -> void:
+	Dev.feature_set("room_squad", false)
+	await _individual_auto_equip_test_body()
+	Dev.feature_set("room_squad", null)
+
+
+func _individual_auto_equip_test_body() -> void:
 	var saved_state := Game.s
 	var saved_layers := Features.layers.duplicate(true)
 	var saved_settings := Settings.v.duplicate(true)
@@ -11401,7 +11547,7 @@ func _individual_auto_equip_test() -> void:
 	Game.set_process(false)
 	Combat.set_process(false)
 	Game.s = saved_state.duplicate(true)
-	Features.layers.dev = {"features": {"individual_auto_equip": true, "english": true}, "tune": {}}
+	Features.layers.dev = {"features": {"individual_auto_equip": true, "english": true, "room_squad": false}, "tune": {}}
 	Features.layers.remote = {}
 	Features.layers.mode = {}
 	var d: Dictionary = Game.s.dwellers[0]
@@ -11475,6 +11621,7 @@ func _individual_auto_equip_test() -> void:
 	Game.s.squad = [did, -1, -1]
 	Game.s.mods.roof_deck = 1
 	Game.s.deck = int(other.id)
+	Game.dweller_by_id(int(other.id)).room = -1     # MV-727: a new game seats this one in the gunner room; the deck reserve rests off duty
 	for language in ["th", "en"]:
 		Settings.v.lang = language
 		Loc.apply()

@@ -149,6 +149,8 @@ func _card(t: String) -> Control:
 	var def := Data.room_def(t)
 	var ul := Game.room_unlock_level(t)
 	var locked := ul > int(Game.s.vault_level)
+	var built_one := t == RearGunner.TYPE and not RearGunner.can_build_any()    # MV-727: only one gunner room
+	locked = locked or built_one
 	var p := UIKit.panel()
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var h := UIKit.hbox(4)
@@ -173,7 +175,7 @@ func _card(t: String) -> Control:
 	ch.add_child(cl)
 	v.add_child(ch)
 	h.add_child(v)
-	var b := UIKit.button(("Lv.%d" % ul if ul < 99 else Loc.t("พิมพ์เขียว")) if locked else Loc.t("สร้าง"), "gray" if locked else "green", "lock" if locked else "hammer")
+	var b := UIKit.button(Loc.t("มีแล้ว") if built_one else (("Lv.%d" % ul if ul < 99 else Loc.t("พิมพ์เขียว")) if locked else Loc.t("สร้าง")), "gray" if locked else "green", "lock" if locked else "hammer")
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b.disabled = locked
 	b.set_meta("cost", {"scrap": Game.build_cost(t)})
