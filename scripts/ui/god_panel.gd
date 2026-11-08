@@ -10,9 +10,8 @@ var _tabs: HFlowContainer
 var _list: VBoxContainer
 var _log_cat := ""
 var _save_box: TextEdit
-var _crew_anim := "idle"       # MV-170 roster preview: animation every preview sprite plays
 
-const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["sound", "เสียง"], ["icons", "Icons"], ["log", "LOG/เซฟ"]]
+const TABS := [["main", "ทั่วไป"], ["res", "ทรัพยากร"], ["veh", "รถ"], ["crew", "ลูกเรือ"], ["fight", "ต่อสู้"], ["world", "โลก"], ["feat", "ฟีเจอร์"], ["sys", "ระบบ"], ["sound", "เสียง"], ["icons", "UI"], ["log", "LOG/เซฟ"]]
 const SRC_TH := {"code": "ค่าในโค้ด", "default": "ค่าเริ่มต้น", "build": "บิลด์", "remote": "รีโมต", "mode": "โหมดเกม", "dev": "ผู้ทดสอบ"}
 
 
@@ -94,44 +93,17 @@ func _note(text: String) -> void:
 
 
 # ------------------------------------------------------------------ tabs
+## UI previews: icon set switch, equipment slots (MV-473), item detail + multi salvage demos. The full icon atlas
+## gallery (92 icons x 1/2/3) was removed in MV-720: icons v2 is approved and in game, so it only cost build time.
 func _tab_icons() -> void:
-	_gear_slots_preview()
-	_head("ICON ATLAS", "16x16 / 1x / 2x / 3x")
-	var sizes := []
-	for scale in [1, 2, 3]:
-		var picked: int = scale
-		sizes.append(_b("%dx (%d px)" % [picked, picked * 16], func(): Dev.icon_preview(picked), "yellow" if Dev.icon_scale == picked else "gray"))
-	_row(sizes)
 	var v2on := Features.on("icons_v2")
+	_head("ICONS", "ชุดไอคอน (MV-694)")
 	_row([_b("ไอคอนใหม่ v2", func(): Dev.icons_v2(true), "yellow" if v2on else "gray"), _b("ไอคอนเดิม 16 px", func(): Dev.icons_v2(false), "gray" if v2on else "yellow")])
 	var moods: Array = [UIKit.label(Loc.t("อารมณ์:"), 9, UIKit.C_DIM)]
 	for mk in ["happy", "neutral", "sad", "stressed", "broken"]:
-		moods.append(UIKit.icon_rect(mk, Dev.icon_scale * 16))
+		moods.append(UIKit.icon_rect(mk, 32))
 	_row(moods)
-	var names: Array[String] = []
-	for key in Atlas.regions:
-		if str(key).begins_with("ic_"):
-			names.append(str(key).trim_prefix("ic_"))
-	names.sort()
-	_note("%d icons / nearest filtering / integer scale" % names.size())
-	var grid := GridContainer.new()
-	grid.name = "IconGrid"
-	grid.columns = 3
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 8)
-	_list.add_child(grid)
-	for key in names:
-		var cell := VBoxContainer.new()
-		cell.name = "ic_" + key
-		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(cell)
-		var icon := UIKit.icon_rect(key, Dev.icon_scale * 16)
-		icon.name = "Icon"
-		cell.add_child(icon)
-		var label := UIKit.label(key, 9, UIKit.C_DIM)
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cell.add_child(label)
+	_gear_slots_preview()
 
 
 ## MV-473: every rarity at every tile width with real icons, the empty / locked / +N / disabled states, and the
@@ -348,7 +320,7 @@ func _tab_vehicle() -> void:
 		_b("Lv1", func(): Dev.roof_deck_preview(1)), _b("Lv2", func(): Dev.roof_deck_preview(2)), _b("Lv3", func(): Dev.roof_deck_preview(3))],
 		"หลังคา MV-462 · ดาดฟ้าพัก Lv%d" % Mods.level("roof_deck"))
 	_row([_b("ของแต่งละเอียด: " + ("เปิด" if Features.on("mod_detail_fine") else "ปิด"), func(): Dev.mod_detail_fine_switch(not Features.on("mod_detail_fine")),
-		"green" if Features.on("mod_detail_fine") else "red"), _b("มอดเต็มทุกตัว", func(): Dev.mods_all(true), "gray")],
+		"green" if Features.on("mod_detail_fine") else "red")],
 		"ของแต่งรถภายนอก MV-566 (ปิด = ภาพเดิม)")
 	_row([_b("คนขับขยับ: " + ("เปิด" if Features.on("driver_cab") else "ปิด"), func(): Dev.driver_cab_switch(not Features.on("driver_cab")),
 		"green" if Features.on("driver_cab") else "red"), _b("กะพริบตา", func(): Dev.driver_cab_preview("blink"), "gray", true),
@@ -384,9 +356,8 @@ func _tab_vehicle() -> void:
 		"green" if Features.on("rooms_v3") else "red"), _b("ห้องรอตรวจ: " + ("ใช้" if Features.on("rooms_v3_review") else "ไม่ใช้"),
 		func(): Dev.feature_set("rooms_v3_review", not Features.on("rooms_v3_review")), "green" if Features.on("rooms_v3_review") else "red")], "สวิตช์")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
-	var ib := Dev.on("instant_build")
-	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),
-		_b(("[ON] " if ib else "[OFF] ") + "สร้างเสร็จทันทีเสมอ", func(): Dev.set_flag("instant_build", not Dev.on("instant_build")), "green" if ib else "gray")])
+	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5))])
+	_note("สร้างเสร็จทันทีเสมอ: สวิตช์ในแท็บทั่วไป")
 	_note("ช่างก่อสร้างและ trait ด้านช่าง: แท็บลูกเรือ > BUILDERS")
 	_row([_b("มอดเต็มทุกตัว", func(): Dev.mods_all(true), "green"), _b("ถอดมอดทั้งหมด", func(): Dev.mods_all(false))])
 	_note("น้ำหนักตอนนี้: " + Haul.status_text())
@@ -396,53 +367,16 @@ func _tab_vehicle() -> void:
 		_b("รังสี +40", func(): Dev.hazards("rads")), _b("ติดเชื้อ", func(): Dev.hazards("infect"))])
 
 
-## MV-483: the twelve approved trait-card profiles on real traits, the unclassified fallbacks, a long text card, and
-## the light live / still / off with frame stepping. Tiers here are a preview only (MV-497 decides the real ones).
-func _trait_cards_preview() -> void:
-	_head("TRAIT CARDS", "การ์ดนิสัย (MV-483)")
-	_note("trait_card_style %s · trait_card_vfx %s · จัดระดับแล้ว %d นิสัย (MV-497)" % [
-		"เปิด" if Features.on("trait_card_style") else "ปิด", "เปิด" if Features.on("trait_card_vfx") else "ปิด", Crew.TRAIT_TIERS.size()])
-	var modes := []
-	for m in [["", "สด"], ["still", "นิ่ง"], ["off", "ไม่มีแสง"]]:
-		var mm: String = m[0]
-		modes.append(_b(m[1], func(): Dev.trait_preview(mm), "yellow" if TraitFx.preview == mm else "gray"))
-	modes.append(_b("เฟรมถัดไป", func(): Dev.trait_step(), "green"))
+## MV-497 trait tiers. The 16-card MV-483 preview grid (animated lights rebuilt on every crew-tab refresh) was removed
+## in MV-720: the cards are approved and live in the crew dossier.
+func _trait_tiers_row() -> void:
 	var tiers_on := Features.on("trait_tiers")
-	modes.append(_b("ระดับ: เปิด" if tiers_on else "ระดับ: ปิด", func(): Dev.trait_tiers(not tiers_on), "yellow" if tiers_on else "gray"))
-	_row(modes, "แสง · เฟรม %d/16" % (TraitFx.current_phase() + 1))
-	var g := GridContainer.new()
-	g.name = "TraitCardPreview"
-	g.columns = 2 if box.custom_minimum_size.x - 36.0 >= TraitCard.MIN_W * 2 + TraitCard.GAP else 1
-	g.add_theme_constant_override("h_separation", TraitCard.GAP)
-	g.add_theme_constant_override("v_separation", TraitCard.GAP)
-	var items := []
-	for r in 6:
-		items.append(["cook", r])
-		items.append(["glutton", r])
-	items += [["cook", -1], ["glutton", -1], ["architect", 4], ["coward", -1]]
-	for it in items:
-		var c := TraitCard.new()
-		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		g.add_child(c)
-		c.setup(str(it[0]), int(it[1]))
-	var m := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 6)
-	m.add_child(g)
-	_list.add_child(m)
-	_note("ซ้าย: ข้อดี (พ่อครัว) ทั่วไป..ปฐมกาล · ขวา: ข้อเสีย (กินจุ) · แถวล่าง: ยังไม่จัดระดับ (สวิตช์ trait_tiers ปิด) และข้อความยาว")
-	var by_tier := {}
-	for t in Crew.TRAIT_TIERS:
-		var k := "%s%s" % ["!" if Crew.TRAITS[t].get("bad", false) else "", Loot.RARITY[int(Crew.TRAIT_TIERS[t])].en]
-		by_tier[k] = by_tier.get(k, []) + [str(Crew.TRAITS[t].en)]
-	var lines := []
-	for k in by_tier:
-		lines.append("%s: %s" % [k, ", ".join(by_tier[k])])
-	_note("ระดับนิสัย (MV-497, ! = ข้อเสีย) · " + " · ".join(lines))
+	_head("TRAIT TIERS", "ระดับนิสัย (MV-497) · trait_card_style %s · trait_card_vfx %s" % [
+		"เปิด" if Features.on("trait_card_style") else "ปิด", "เปิด" if Features.on("trait_card_vfx") else "ปิด"])
+	_row([_b("ระดับ: เปิด" if tiers_on else "ระดับ: ปิด", func(): Dev.trait_tiers(not tiers_on), "yellow" if tiers_on else "gray")], "%d นิสัย" % Crew.TRAIT_TIERS.size())
 
 
 func _tab_crew() -> void:
-	_trait_cards_preview()
 	_row([_b("+1 คน", func(): Dev.recruit(1), "green"), _b("+3 คน", func(): Dev.recruit(3), "green"), _b("รักษาทุกคน", func(): Dev.heal_all())])
 	_row([_b("สุข 100", func(): Dev.happy_all(100.0)), _b("สุข 20", func(): Dev.happy_all(20.0)), _b("สุข 0", func(): Dev.happy_all(0.0), "red")], "ทุกคน")
 	_row([_b("หมา", func(): Dev.add_pet("dog")), _b("แมว", func(): Dev.add_pet("cat")), _b("ไก่", func(): Dev.add_pet("hen")), _b("ล้าง", func(): Dev.clear_pets())],
@@ -463,6 +397,7 @@ func _tab_crew() -> void:
 		bb.append(_b("ช่าง+" + str(Crew.TRAITS[t].th), func(): Dev.spawn_builder(tid), "red" if Crew.TRAITS[t].get("bad", false) else "gray"))
 	_row(bb)
 	_trait_odds()
+	_trait_tiers_row()
 	_crew_roster()
 	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
 	for g in Inspection.GRADES:
@@ -526,42 +461,19 @@ func _trait_odds() -> void:
 	_row([_b("สุ่มทดสอบ 1000 คน", func(): Dev.trait_roll_test(1000), "green")], "ไม่เพิ่มคนจริง")
 
 
+## MV-170: board any named crew member. The animated 20-sprite preview grid was removed in MV-720 (approved art,
+## and it rebuilt 20 AnimatedSprite2D + portraits on every crew-tab refresh).
 func _crew_roster() -> void:
 	_head("CREW ROSTER", "ลูกเรือมีชื่อ 20 คน · สวิตช์ %s · โอกาส %d%%" % ["เปิด" if Features.on("crew_roster_20") else "ปิด",
 		roundi(Features.num("crew.roster_chance", Crew.ROSTER_CHANCE) * 100.0)])
-	var ab := []
-	for a in Atlas.DW_FRAMES:
-		var an: String = a
-		ab.append(_b(an, func(): _crew_anim = an, "yellow" if an == _crew_anim else "gray"))
-	_row(ab, "ท่า")
 	_row([_b("ขึ้นรถครบทุกคน", func(): Dev.spawn_roster_all(), "green"), _b("โอกาส 100%", func(): Dev.roster_chance(1.0)),
 		_b("โอกาส 0%", func(): Dev.roster_chance(0.0)), _b("โอกาสค่าเดิม", func(): Dev.roster_chance(-1.0))])
-	var grid := UIKit.flow(3)
-	grid.name = "RosterGrid"
+	var rb := []
 	for id in Data.CREW_ROSTER:
 		var rid: String = id
-		var r: Dictionary = Data.CREW_ROSTER[rid]
-		var cell := VBoxContainer.new()
-		cell.name = "crew_" + rid
-		cell.add_theme_constant_override("separation", 1)
-		var top := HBoxContainer.new()
-		var stage := Control.new()
-		stage.custom_minimum_size = Vector2(Atlas.DW_W * 2, Atlas.DW_H * 2)
-		var spr := AnimatedSprite2D.new()
-		spr.name = "Sprite"
-		spr.sprite_frames = Atlas.dweller_frames("dw_crew_" + rid)
-		spr.centered = false
-		spr.scale = Vector2(2, 2)
-		spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		stage.add_child(spr)
-		spr.play(_crew_anim)
-		top.add_child(stage)
-		top.add_child(UIKit.tex_rect(Atlas.tex("pt_dw_crew_" + rid), Vector2(20, 20)))
-		cell.add_child(top)
-		cell.add_child(UIKit.label(("★ " if r.cameo else "") + str(r.name), UIKit.FS_SMALL, UIKit.C_TEXT))
-		cell.add_child(_b("ขึ้นรถ", func(): Dev.spawn_roster(rid), "green"))
-		grid.add_child(cell)
-	_list.add_child(grid)
+		rb.append(_b(("★ " if Data.CREW_ROSTER[rid].cameo else "") + str(Data.CREW_ROSTER[rid].name), func(): Dev.spawn_roster(rid)))
+	var row := _row(rb, "ขึ้นรถ")
+	row.name = "RosterButtons"
 
 
 func _tab_fight() -> void:
@@ -578,8 +490,7 @@ func _tab_fight() -> void:
 	_head("SQUAD", "ทีมป้องกัน %s (ปลดล็อก %d ช่อง · DPS %d)" % [" / ".join(names), Combat.slots_unlocked(), int(Combat.squad_dps())])
 	_row([_b("จัดคนอัตโนมัติ (stat เหมาะสุด)", func(): Dev.squad_auto_pick(), "green"), _b("เติมช่องว่าง (เดิม)", func(): Dev.squad_auto()), _b("ใส่อุปกรณ์ดีสุด", func(): Dev.squad_gear()), _b("ถอดทั้งทีม", func(): Dev.squad_clear(), "red")])
 	_head("BOSSES", "เรียกบอส (ปิดแผงเพื่อดูศึก)")
-	_row([_b("บอสเวฟ: สมดุลใหม่", func(): Dev.roaming_boss_preview(true), "green", true), _b("บอสเวฟ: สมดุลเดิม", func(): Dev.roaming_boss_preview(false), "gray", true)])
-	_row([_b("บอสด่าน: ผ่านต่อเนื่อง", func(): Dev.warlord_preview(true), "green", true), _b("บอสด่าน: สมดุลเดิม", func(): Dev.warlord_preview(false), "gray", true)])
+	_row([_b("บอสเวฟ", func(): Dev.roaming_boss_preview(true), "green", true), _b("บอสด่าน", func(): Dev.warlord_preview(true), "green", true)], "สมดุลใหม่")
 	_note("บอสด่าน MV-550: %s · HP ×%.1f โตตามอุปกรณ์ · ลูกเรือ ≤%.1f%% / รถ ≤%.1f%% ต่อครั้ง" % ["เปิด" if Features.on("warlord_progression") else "ปิด", Features.num("warlord.hp", 6.0), Features.num("warlord.hero_hit_cap", 0.02) * 100.0, Features.num("warlord.hull_hit_cap", 0.01) * 100.0])
 	var wave_balance := Features.on("roaming_boss_balance")
 	_note("สมดุลบอสเวฟ (MV-544) %s · HP ×%.1f / ดาเมจ ×%.1f · %s" % ["เปิด" if wave_balance else "ปิด", Features.num("boss.wave_hp", 8.0) if wave_balance else 12.0, Features.num("boss.wave_damage", 1.6) if wave_balance else 2.4, ("ความเสียหายรถต่อครั้ง ≤%d%% หลังคิดเกราะ" % int(round(Features.num("boss.hull_hit_cap", 0.12) * 100.0))) if wave_balance else "ความเสียหายพิเศษแบบเดิม"])
@@ -675,12 +586,6 @@ func _tab_world() -> void:
 	_row([_b("ฉาก v2: " + ("เปิด" if Features.on("parallax_v2") else "ปิด"), func(): Dev.feature_set("parallax_v2", not Features.on("parallax_v2")),
 		"green" if Features.on("parallax_v2") else "red"), _b("โลก 2x: " + ("เปิด" if Features.on("world_2x") else "ปิด"), func(): Dev.world_2x(not Features.on("world_2x")),
 		"green" if Features.on("world_2x") else "red")], "สวิตช์")
-	_head("INDUSTRIAL SKY", "นิคมอุตสาหกรรม 20 พาเนล (MV-548) ตามเวลาในเกม")
-	_row([_b("รุ่งเช้า", func(): Dev.background_preview(0.25)), _b("กลางวัน", func(): Dev.background_preview(0.5)), _b("พระอาทิตย์ตก", func(): Dev.background_preview(0.75)), _b("กลางคืน", func(): Dev.background_preview(0.0))])
-	_row([_b("ฉากใหม่", func(): Dev.feature_set("industrial_parallax", true), "green"), _b("ฉากเดิม", func(): Dev.feature_set("industrial_parallax", false), "gray")])
-	_head("GLASS DESERT", "ทะเลทรายแก้ว (MV-539) ตามเวลาในเกม")
-	_row([_b("เช้า", func(): Dev.desert_background_preview(0.25)), _b("เที่ยง", func(): Dev.desert_background_preview(0.5)), _b("เย็น", func(): Dev.desert_background_preview(0.75)), _b("คืน", func(): Dev.desert_background_preview(0.0))])
-	_row([_b("ทะเลทรายใหม่", func(): Dev.feature_set("desert_parallax", true), "green"), _b("ทะเลทรายเดิม", func(): Dev.feature_set("desert_parallax", false), "gray")])
 	var bb := []
 	for i in Data.BIOMES.size():
 		var bi: int = i
@@ -689,7 +594,7 @@ func _tab_world() -> void:
 	_row([_b("ไปด่านตรวจ", func(): Dev.goto_checkpoint()), _b("ผ่านบอสด่านนี้", func(): Dev.beat_warlord()), _b("รอบ +1", func(): Dev.lap_add())],
 		"รอบ %d · %.1f กม." % [int(Game.s.get("lap", 0)) + 1, float(Game.s.km)])
 	_head("EVENTS", "เรียกอีเว้นต์บนถนน")
-	_row([_b("อีเว้นต์: ตามความก้าวหน้า", func(): Dev.event_progression_preview(true), "green", true), _b("อีเว้นต์: กฎเดิม", func(): Dev.event_progression_preview(false), "gray", true)])
+	_row([_b("อีเว้นต์ตามความก้าวหน้า (โจร)", func(): Dev.event_progression_preview(true), "green", true)])
 	_note("MV-553: %s · ระดับ %.1f · โจรต้องการพลัง %.0f · ความเสี่ยง ×%.2f" % ["เปิด" if Features.on("event_progression") else "ปิด", Game.event_progress_rank(), Game.event_fight_need("raiders"), Game.event_risk_scale()])
 	var bag: Array = Game.s.get("ev_bag", []) if int(Game.s.get("ev_bag_biome", -1)) == int(Game.s.biome) else []
 	_note("สำรับด่านนี้เหลือ %d ใบ · ล่าสุด: %s" % [bag.size(), ", ".join(Game.s.get("ev_recent", []).map(func(e): return str(Data.EVENTS.get(e, {}).get("th", e))))])
@@ -722,7 +627,7 @@ func _tab_world() -> void:
 			sb.append(_b(str(Expedition.SITES[id].th), func(): Dev.arrive(sid), "gray", true))
 		_row(sb)
 	_head("PRESTIGE", "รุ่นต่อไป")
-	_row([_b("พาทุกคน + เก็บครบ", func(): Dev.nextgen_crew_preview(true), "green", true), _b("เลือกหนีแบบเดิม", func(): Dev.nextgen_crew_preview(false), "gray", true)])
+	_row([_b("พาทุกคน + เก็บครบ", func(): Dev.nextgen_crew_preview(true), "green", true)])
 	_note("MV-559: ลูกเรือไปต่อ %d คน · เลเวล %d%% · คืนวิจัยเก่า %d แต้ม" % [Meta.carry_slots(), int(Meta.carry_level_keep() * 100), Meta.retired_research_refund()])
 	var nextgen := UIKit.button("เปิดหน้ารุ่นต่อไป", "yellow")
 	nextgen.pressed.connect(_open_nextgen)

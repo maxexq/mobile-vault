@@ -24,7 +24,6 @@ var player_view := false     # MV-588: Settings shows what a player sees (no ser
 var flags := {}
 var speed := 1.0
 var overlay := false
-var icon_scale := 2
 var _taps: Array = []
 var _layer: CanvasLayer
 var _lbl: Label
@@ -786,24 +785,12 @@ func gear_detail_demo() -> void:
 	inv.detail_uid = int(pick.uid)
 	inv.refresh()
 
-# ------------------------------------------------------------------ MV-483 trait cards
-## every trait card's light: "" = live, "still", "off" (read-only, not cheated)
-func trait_preview(mode: String) -> void:
-	TraitFx.preview = mode
-	TraitFx.paused_preview = false
-	Trace.rec("god", "trait preview %s" % mode)
 
-
+# ------------------------------------------------------------------ MV-483 / MV-497 trait cards
 ## MV-497: show the trait tiers or the untiered fallback (session override of the trait_tiers switch, read-only)
 func trait_tiers(on: bool) -> void:
 	Features.set_override("features", "trait_tiers", on)
 	Trace.rec("god", "trait tiers %s" % ("on" if on else "off"))
-
-
-## hold every trait card light and move it one phase (read-only)
-func trait_step() -> void:
-	TraitFx.frame_step()
-	Trace.rec("god", "trait step %d" % TraitFx.current_phase())
 
 
 # ------------------------------------------------------------------ MV-500 / MV-129 seeded world map
@@ -1937,15 +1924,6 @@ func mode_toll_test() -> void:
 	Game.travel_changed.emit()
 
 
-# ---- version channel (MV-111)
-## preview another channel's ALPHA/BETA/RC badge on the title + About ("" = the real channel); not saved
-## MV-275: inspect the real atlas at native / phone / large integer sizes.
-func icon_preview(scale: int) -> void:
-	icon_scale = clampi(scale, 1, 3)
-	Trace.rec("god", "icon preview x%d" % icon_scale)
-	changed.emit()
-
-
 ## MV-694: switch the 32 px PixelLab icon set (icons_v2) on / off for this tester
 func icons_v2(on: bool) -> void:
 	act("icons v2 %s" % ("on" if on else "off"))
@@ -1953,6 +1931,8 @@ func icons_v2(on: bool) -> void:
 	Features.changed.emit()
 
 
+# ---- version channel (MV-111)
+## preview another channel's ALPHA/BETA/RC badge on the title + About ("" = the real channel); not saved
 func channel_preview(ch: String) -> void:
 	act("channel preview %s" % (ch if ch != "" else "off"))
 	BuildInfo.channel_preview = ch if BuildInfo.CHANNELS.has(ch) else ""

@@ -22,7 +22,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [random-event-selection](random-event-selection.md): road events use per-biome shuffle bag + no-repeat-last-3 (PR #6)
 - [expedition-encounters](expedition-encounters.md): expedition special encounters (PR #7), recruit hook coordination, artifact must include all open PRs
 - [event-window-layout](event-window-layout.md): ChoiceButton + media_layout for event popups, ICU data needed for Thai wrap on web (PR #11)
-- [god-mode](god-mode.md): GOD MODE panel/Dev actions layout (PR #12); every new feature adds a Dev action + god button + test
+- [god-mode](god-mode.md): GOD MODE panel/Dev actions layout (PR #12); every new feature adds a Dev action + god button + test; MV-720 cleanup removed heavy art previews + old/new pairs
 - [threat-director-design](threat-director-design.md): threat meter + raid cycle instead of continuous waves (design, pending approval)
 - [roof-rest-deck](roof-rest-deck.md): rooftop rest deck mod + reserve defender tag-in (PR #14), Game.s.deck, re-import after art regen
 - [engine-bay-design](engine-bay-design.md): cab engine bay + engine menu (PR #18, v4.6), Data.CAB_SLOT=99 + Game.room(slot) accessor, EngineBay autoload

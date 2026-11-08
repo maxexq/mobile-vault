@@ -5099,34 +5099,6 @@ func _icon_art_test() -> void:
 			var texture := Atlas.icon(id)
 			sizes_ok = sizes_ok and texture.get_width() == 16 and texture.get_height() == 16
 	_check("icons: all 92 native atlas regions remain 16x16", names.size() == 92 and sizes_ok)
-	main.hud.open_panel("god")
-	var god = main.hud.panels.god
-	god.tab = "icons"
-	for scale in [1, 2, 3]:
-		Dev.icon_preview(scale)
-		god.refresh()
-		await wait(0.3)
-		var grid: Node = god._list.find_child("IconGrid", true, false)
-		var cells_ok: bool = grid != null and grid.get_child_count() == 92
-		if grid:
-			for cell in grid.get_children():
-				var texture: TextureRect = cell.get_node("Icon")
-				cells_ok = cells_ok and texture.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST and texture.custom_minimum_size == Vector2(scale * 16, scale * 16)
-		_check("icons: GOD gallery has 92 nearest-filtered entries at x%d" % scale, cells_ok)
-		var scroll := god._list.get_parent() as ScrollContainer
-		if scroll:
-			scroll.scroll_vertical = 0
-			await wait(0.2)
-		await shot("icons_gallery_x%d" % scale)
-		if scroll and scale == 2:
-			for page in [1, 2, 3, 4]:
-				scroll.scroll_vertical = page * 400
-				await wait(0.2)
-				await shot("icons_gallery_x2_page%d" % page)
-	Dev.icon_preview(2)
-	god.tab = "main"
-	god.close()
-	await wait(0.2)
 	main.hud.open_panel("inventory")
 	await wait(0.3)
 	await shot("icons_inventory")
@@ -5261,23 +5233,15 @@ func _crew_roster_test() -> void:
 	await shot("crew_roster_list")
 	main.hud.panels.dwellers.close()
 	Features.set_override("features", "crew_roster_20", null)
-	# GOD preview: one cell per crew member with the chosen animation playing
+	# GOD: one board button per crew member, no animated sprite grid (MV-720)
 	main.hud.open_panel("god")
 	var god = main.hud.panels.god
 	god.tab = "crew"
-	god._crew_anim = "hammer"
 	god.refresh()
-	await wait(0.5)
-	var grid: Node = god._list.find_child("RosterGrid", true, false)
-	var scroll := god._list.get_parent() as ScrollContainer
-	if scroll and grid:
-		scroll.scroll_vertical = int((grid as Control).position.y) - 80
-		await wait(0.3)
-	var cells := grid.get_child_count() if grid else 0
-	var spr: AnimatedSprite2D = grid.find_child("Sprite", true, false) if grid else null
-	_check("crew roster: GOD preview shows 20 with the picked animation (%d)" % cells, cells == 20 and spr != null and spr.animation == "hammer" and spr.is_playing())
-	await shot("god_crew_roster")
-	god._crew_anim = "idle"
+	await wait(0.3)
+	var row: Node = god._list.find_child("RosterButtons", true, false)
+	var btns := row.find_children("*", "Button", true, false).size() if row else 0
+	_check("crew roster: GOD has a board button for all 20 (%d), no sprite grid" % btns, btns == 20 and god.find_children("*", "AnimatedSprite2D", true, false).is_empty())
 	god.close()
 	await wait(0.3)
 
@@ -9982,14 +9946,13 @@ func _trait_cards_test() -> void:
 	dp.close()
 	await wait(0.3)
 	Features.set_override("features", "trait_card_style", null)
-	# --- GOD preview
+	# --- GOD crew tab: the tiers toggle only, no card grid (MV-720)
 	hud.open_panel("god")
 	var god = hud.panels.god
 	god.tab = "crew"
 	god.refresh()
-	await wait(0.5)
-	_check("trait cards: GOD previews all twelve profiles + fallbacks", god.find_children("*", "TraitCard", true, false).size() >= 16)
-	await shot("trait_cards_god")
+	await wait(0.3)
+	_check("trait cards: GOD crew tab builds no trait card preview (MV-720)", god.find_children("*", "TraitCard", true, false).is_empty())
 	god.close()
 	await wait(0.3)
 	Settings.set_value("tips", keep_tips)
@@ -11075,7 +11038,7 @@ func _gear_detail_test() -> void:
 	var god: Node = main.hud.panels.god
 	god.tab = "icons"
 	god.refresh()
-	_check("gear detail: GOD Icons tab has the demo", god.find_child("GearDetailDemo", true, false) != null)
+	_check("gear detail: GOD UI tab has the demo", god.find_child("GearDetailDemo", true, false) != null)
 	god.close()
 	Dev.gear_detail_demo()
 	_check("gear detail: GOD demo opens a weapon next to the equipped one", loot.is_open and loot.pick_slot == "weapon" and loot.detail_uid >= 0 and loot.find_child("StatTable", true, false) != null)
@@ -11182,7 +11145,7 @@ func _multi_salvage_test() -> void:
 	var god: Node = main.hud.panels.god
 	god.tab = "icons"
 	god.refresh()
-	_check("multi salvage: GOD Icons tab has the demo", god.find_child("MultiSalvageDemo", true, false) != null)
+	_check("multi salvage: GOD UI tab has the demo", god.find_child("MultiSalvageDemo", true, false) != null)
 	god.close()
 	Game.s.gear = []
 	Dev.multi_salvage_demo()
@@ -12013,20 +11976,7 @@ func _icons_v2_test() -> void:
 	var b := UIKit.button("x", "green", "food")
 	_check("icons v2: button icon keeps the 16 px slot", b.icon is IconTex and b.icon.get_width() == 16)
 	b.free()
-	main.hud.open_panel("god")
-	var god = main.hud.panels.god
-	god.tab = "icons"
-	Dev.icon_preview(2)
-	god.refresh()
-	await wait(0.3)
-	await shot("icons_v2_gallery_x2")
 	Dev.icons_v2(false)
 	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
 	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
-	god.refresh()
-	await wait(0.3)
-	await shot("icons_v1_gallery_x2")
 	Dev.icons_v2(was)
-	god.tab = "main"
-	god.close()
-	await wait(0.2)
