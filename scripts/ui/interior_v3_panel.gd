@@ -24,12 +24,23 @@ const AMB_X0 := 146.0
 const AMB_Y0 := 88.0
 const AMB_FH := 112.0
 const AMB_LIFT := 40.0         # trailers stand on the road: their bottom sits this far above the shell's bottom
+## MV-721 (switch road_train): the road train (tier rig) is the approved B-double v2: prime mover + lead trailer as
+## the main body (body_f<n>.png, 1-3 decks) and the red container for every trailer (trailer_f<n>.png), all drawn
+## on one road line; cells at x 226 / 20 + col * 152, y 116 + row * 112 (row 0 = top deck). designs/road-train/game/shell.py
+const RT_DIR := "res://assets/vehicles/road_train_v3/"
+const RT_W := 694.0
+const RT_TW := 500.0
+const RT_X0 := 226.0
+const RT_TX0 := 20.0
+const RT_Y0 := 116.0
+const RT_FH := 112.0
 
 var scroll: ScrollContainer
 var canvas: Control
 var world: Node2D
 var shell: Node2D
 var amb_shell: Sprite2D           # MV-715 ambulance shell over the main body's cells
+var rt_shells: Array = []         # MV-721 road train: body + one per trailer
 var cells: Dictionary = {}        # slot -> RoomV3Cell
 var info: Label
 var open_btn: Button
@@ -133,6 +144,9 @@ func cell_pos(slot: int) -> Vector2:
 	var top := _unit_top(unit)
 	if unit < 0 and amb():
 		return Vector2(AMB_X0 + c.x * (V3Art.CELL.x + WALL), top + AMB_Y0 + float(floors - 1 - c.y) * AMB_FH)
+	if rt():
+		var x0 := RT_X0 if unit < 0 else _unit_x(unit) + RT_TX0
+		return Vector2(x0 + c.x * (V3Art.CELL.x + WALL), top + RT_Y0 + float(floors - 1 - c.y) * RT_FH)
 	var x := _unit_x(unit) + FRAME + c.x * (V3Art.CELL.x + WALL)
 	return Vector2(x, top + FRAME + float(floors - 1 - c.y) * (V3Art.CELL.y + SLAB))
 
@@ -141,6 +155,16 @@ func cell_pos(slot: int) -> Vector2:
 func amb() -> bool:
 	return Features.on("ambulance_v3") and Game.tier() == "van" and Game.floors() >= 1 and Game.floors() <= 5 \
 		and ResourceLoader.exists(AMB_DIR + "shell_f%d.png" % Game.floors())
+
+
+## MV-721: the road train shells (switch road_train, tier rig, body 1-3 decks, trailers 2-3 decks)
+func rt() -> bool:
+	return Features.on("road_train") and Game.tier() == "rig" and ResourceLoader.exists(RT_DIR + "body_f%d.png" % Game.floors()) \
+		and (Game.trailers() == 0 or ResourceLoader.exists(RT_DIR + "trailer_f%d.png" % _unit_floors(0)))
+
+
+func _rt_h(floors: int) -> float:
+	return 268.0 + RT_FH * float(floors - 1)
 
 
 func _amb_h() -> float:
@@ -152,6 +176,8 @@ func _unit_w() -> float:
 
 
 func _main_w() -> float:
+	if rt():
+		return RT_W
 	return AMB_W if amb() else _unit_w()
 
 
@@ -159,6 +185,8 @@ func _main_w() -> float:
 func _unit_x(unit: int) -> float:
 	if unit < 0:
 		return 0.0
+	if rt():
+		return RT_W + RT_TW * float(unit)     # the container's nose rides on the unit in front: no gap
 	return _main_w() + UNIT_GAP + (_unit_w() + UNIT_GAP) * float(unit)
 
 
@@ -168,6 +196,8 @@ func _box_h(floors: int) -> float:
 
 ## everything stands on one road line: the ambulance's wheels, or the drawn boxes' bottoms
 func _world_h() -> float:
+	if rt():
+		return maxf(_rt_h(Game.floors()), _rt_h(_unit_floors(0)) if Game.trailers() > 0 else 0.0)
 	var h := _amb_h() if amb() else _box_h(Game.floors())
 	if Game.trailers() > 0:
 		h = maxf(h, _box_h(_unit_floors(0)) + (AMB_LIFT if amb() else 0.0))
@@ -175,6 +205,8 @@ func _world_h() -> float:
 
 
 func _unit_top(unit: int) -> float:
+	if rt():
+		return _world_h() - _rt_h(_unit_floors(unit))
 	if unit < 0:
 		return _world_h() - (_amb_h() if amb() else _box_h(Game.floors()))
 	return _world_h() - (AMB_LIFT if amb() else 0.0) - _box_h(_unit_floors(unit))
@@ -196,11 +228,27 @@ func _rebuild() -> void:
 		cells[slot] = c
 	var units := 1 + Game.trailers()
 	world_size = Vector2(_unit_x(units - 2) + _unit_w() if units > 1 else _main_w(), _world_h())
+	if rt():
+		world_size.x = _unit_x(units - 2) + RT_TW if units > 1 else RT_W
+	for sp in rt_shells:
+		sp.queue_free()
+	rt_shells.clear()
+	if rt():
+		for u in units:
+			var sp := Sprite2D.new()
+			sp.name = "RoadTrainShell%d" % u
+			sp.centered = false
+			sp.texture = load(RT_DIR + ("body_f%d.png" % Game.floors() if u == 0 else "trailer_f%d.png" % _unit_floors(u - 1)))
+			sp.position = Vector2(_unit_x(u - 1), _unit_top(u - 1))
+			world.add_child(sp)
+			rt_shells.append(sp)
 	amb_shell.visible = amb()
 	if amb_shell.visible:
 		amb_shell.texture = load(AMB_DIR + "shell_f%d.png" % Game.floors())
 		amb_shell.position = Vector2(0.0, _unit_top(-1))
 	world.move_child(amb_shell, world.get_child_count() - 1)     # the shell's lip and decks over the room edges
+	for i in range(rt_shells.size() - 1, -1, -1):                 # road train: rear units first, the body on top
+		world.move_child(rt_shells[i], world.get_child_count() - 1)
 	if not _fit_once():
 		set_zoom(zoom_i)
 	shell.queue_redraw()
@@ -226,7 +274,7 @@ func _fit_once() -> bool:
 func refresh() -> void:
 	if Game.s.is_empty():
 		return
-	var shape := "%d/%d/%d/%s" % [Game.floors(), Game.trailers(), Game.slot_count(), amb()]
+	var shape := "%d/%d/%d/%s/%s" % [Game.floors(), Game.trailers(), Game.slot_count(), amb(), rt()]
 	if shape != _shape or cells.is_empty():
 		_rebuild()
 		_shape = shape
@@ -313,6 +361,8 @@ func _draw_shell() -> void:
 		var h := _box_h(floors)
 		if unit < 0 and amb():
 			continue                # the ambulance shell sprite is the main body
+		if rt():
+			continue                # MV-721: the road train shell sprites are every unit
 		shell.draw_rect(Rect2(x0, top, _unit_w(), h), steel)
 		for rx in range(int(x0) + 4, int(x0 + _unit_w()), 12):
 			shell.draw_rect(Rect2(rx, top + 3, 1, 1), rivet)

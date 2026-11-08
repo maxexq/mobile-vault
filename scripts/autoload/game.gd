@@ -559,6 +559,12 @@ func target_floors() -> int:
 ## (Data.START_FLOORS: van 2, bus 3, rig 4, train 5) and gains one at each of the vault.floor_gain_1..3 levels,
 ## up to Data.BODY_FLOORS. Every cell of the body is open.
 func floors_at(lv: int) -> int:
+	if Features.on("road_train") and tier() == "rig":
+		# MV-721: the road train's body is the lead trailer: 2 decks, a 3rd at the first floor-gain Vault level, never taller
+		var d := Data.RT_DECKS[0]
+		if lv >= int(Features.num("vault.floor_gain_1", float(Data.FLOOR_GAIN_LEVELS[0]))):
+			d += 1
+		return mini(d, Data.RT_DECKS[1])
 	var n := int(Data.START_FLOORS.get(tier(), vehicle_def().floors))
 	for i in Data.FLOOR_GAIN_LEVELS.size():
 		if lv >= int(Features.num("vault.floor_gain_%d" % (i + 1), float(Data.FLOOR_GAIN_LEVELS[i]))):

@@ -12184,6 +12184,41 @@ func _road_train_test() -> void:
 	Dev.set_tier("bus")
 	_check("road train: GOD cannot pick a removed vehicle", Game.tier() == "rig")
 	await shot("road_train_rig")
+	# the body is the lead trailer: 2 decks at Vault 1, 3 from the first floor-gain level, never more
+	Features.set_override("features", "five_floors", true)
+	_check("road train: body decks 2 -> 3 with the Vault, never 4", Game.floors_at(1) == 2 and Game.floors_at(Data.FLOOR_GAIN_LEVELS[0]) == 3 and Game.floors_at(6) == 3)
+	var old_window := get_window().size
+	get_window().size = Vector2i(405, 720)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var shells_ok := true
+	for lv in [1, 6]:
+		for trailers in [0, 2]:
+			Dev.set_vault(lv)
+			Dev.set_trailers(trailers)
+			Dev.rooms_v3_open()
+			await wait(0.4)
+			shells_ok = shells_ok and panel.rt() and panel.rt_shells.size() == 1 + trailers
+			var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.RT_DIR + "shell.json"))
+			for slot in Game.slot_count():
+				var unit := Game.slot_unit(slot)
+				var c := Game.slot_cell(slot)
+				var sp: Sprite2D = panel.rt_shells[unit + 1]
+				var key := "body" if unit < 0 else "trailer"
+				var fl := str(Game.floors() if unit < 0 else Data.TRAILER_SLOTS / Data.ROOMS_PER_FLOOR)
+				var want := Vector2.ZERO
+				for cc in spec[key][fl].cells:
+					if int(cc.floor) == c.y and int(cc.col) == c.x:
+						want = sp.position + Vector2(float(cc.x), float(cc.y))
+				shells_ok = shells_ok and (panel.cells[slot] as RoomV3Cell).position.is_equal_approx(want)
+				# the window over the cell is cut out
+				var img := sp.texture.get_image()
+				var lp := (panel.cells[slot] as RoomV3Cell).position - sp.position + Vector2(72, 48)
+				shells_ok = shells_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1
+			if lv == 6 and trailers == 2:
+				await shot("road_train_interior_v3")
+			panel.close()
+	_check("road train: v3 interior draws the B-double shells, every room in its window (2/3 decks, 0/2 trailers)", shells_ok)
+	get_window().size = old_window
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
 	Features.layers.dev = overrides
