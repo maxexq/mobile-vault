@@ -12221,6 +12221,20 @@ func _road_train_test() -> void:
 	get_window().size = old_window
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
+	# an old 5-floor rig save becomes the 3-deck road train: rooms on removed floors move into empty cells, else scrap back
+	Dev.set_trailers(0)
+	Dev.set_vault(6)
+	Game.fit_body()
+	var n5 := Game.main_slots()
+	for i in range(1, n5):
+		Game.s.rooms[i] = {"type": "kitchen" if i < 9 and i != 5 else "empty", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[n5 - 1] = {"type": "kitchen", "level": 2, "job": {}, "build": {}}
+	Game.s.rooms[n5 - 2] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.dwellers[0].room = n5 - 1
+	var scrap0 := float(Game.s.res.scrap)
+	Features.set_override("features", "road_train", true)
+	Game.fit_body()
+	_check("road train: an old 5-floor rig keeps its rooms (moved into an empty cell, crew with it), the rest refunded", n5 == 15 and Game.main_slots() == 9 			and str(Game.s.rooms[5].type) == "kitchen" and int(Game.s.rooms[5].level) == 2 and int(Game.s.dwellers[0].room) == 5 			and is_equal_approx(float(Game.s.res.scrap), scrap0 + float(Data.ROOMS.kitchen.cost)))
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state

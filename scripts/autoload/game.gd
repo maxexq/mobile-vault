@@ -595,11 +595,12 @@ func relayout_body(old_main: int, new_main: int) -> void:
 	var main_part := rooms.slice(0, old_main)
 	var trailer_part := rooms.slice(old_main)
 	while main_part.size() > new_main:
-		main_part.pop_back()
+		var lost: Dictionary = main_part.pop_back()
 		var idx := main_part.size()
+		var to := _rehome_room(main_part, new_main, lost) if Features.on("road_train") else -1
 		for d in s.dwellers:
 			if int(d.room) == idx:
-				d.room = -1
+				d.room = to
 	while main_part.size() < new_main:
 		main_part.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	# dwellers working in trailers move with their rooms (the cab crew, slot Data.CAB_SLOT, stays put)
@@ -611,6 +612,21 @@ func relayout_body(old_main: int, new_main: int) -> void:
 	s.rooms = main_part
 	s.body_slots = new_main
 	_unl_key = -1
+
+
+## MV-721: a smaller body (an old 4-5 floor rig save becoming the 2-3 deck road train) keeps its rooms: a room on a
+## removed floor moves into an empty cell of the body that stays (crew with it); with no empty cell left its build
+## cost comes back as scrap. Returns the new slot, or -1.
+func _rehome_room(main_part: Array, new_main: int, room: Dictionary) -> int:
+	var t := str(room.get("type", "empty"))
+	if t == "empty" or not Data.ROOMS.has(t):
+		return -1
+	for i in mini(main_part.size(), new_main):
+		if i != Data.ENGINE_SLOT and str(main_part[i].get("type", "")) == "empty" and (main_part[i].get("build", {}) as Dictionary).is_empty():
+			main_part[i] = room
+			return i
+	s.res.scrap = float(s.res.get("scrap", 0.0)) + float(int(Data.ROOMS[t].get("cost", 0)) * maxi(1, int(room.get("level", 1))))
+	return -1
 
 
 func trailers() -> int:
