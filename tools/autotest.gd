@@ -867,6 +867,11 @@ func _run() -> void:
 		await _boss_intro_test()
 		_finish()
 		return
+	if "--only=bosses_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _bosses_v2_test()
+		_finish()
+		return
 	if "--only=enemies_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _enemies_v2_test()
@@ -1573,6 +1578,7 @@ func _run() -> void:
 	await _boss_intro_test()
 	await _enemy_size_test()
 	await _enemies_v2_test()
+	await _bosses_v2_test()
 	await _vehicle_detail_test()
 	await _cozy_roof_test()
 	await _mod_detail_fine_test()
@@ -6334,6 +6340,7 @@ func _wait_for(cond: Callable, max_s: float) -> void:
 func _enemy_size_test() -> void:
 	var cv: CombatView = main.combat_view
 	Features.set_override("features", "enemies_v2", false)    # MV-517 checks the old whole-number sprites
+	Features.set_override("features", "bosses_v2", false)     # (old boss sprites too, MV-718)
 	_no_events()
 	Dev.kill_enemies()
 	await wait(0.4)
@@ -6430,6 +6437,7 @@ func _enemy_size_test() -> void:
 	Features.set_override("features", "enemy_size", null)
 	Dev.kill_enemies()
 	await wait(0.4)
+	Features.set_override("features", "bosses_v2", null)
 	Features.set_override("features", "enemies_v2", null)
 
 
@@ -9145,9 +9153,8 @@ func _perf_test() -> void:
 	var cn: int = Game.sim_steps.crew - c0
 	Game._flush_sim()
 	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
-	# floor: half the frames, capped by the sim rate (a step can need two frames when frames come at 20-40 fps)
 	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
-		and wn + cn >= mini(frames, int(1.5 * Game.SIM_HZ)) / 2)
+		and wn + cn >= mini(frames, 20))
 	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
 	Features.set_override("features", "fixed_sim", false)
 	w0 = Game.sim_steps.world
@@ -11971,6 +11978,75 @@ func _icons_v2_test() -> void:
 	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
 	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
 	Dev.icons_v2(was)
+
+
+## MV-718: HD lore bosses replace the old biome bosses (names + art), walk / attack / strike clips
+func _bosses_v2_test() -> void:
+	var cv: CombatView = main.combat_view
+	Features.set_override("features", "bosses_v2", true)
+	_no_events()
+	Dev.kill_enemies()
+	await wait(0.4)
+	var meta := BossesV2.meta()
+	var sheets_ok := meta.size() == 6
+	for b in Combat.BOSSES:
+		var m: Dictionary = meta.get(b, {})
+		sheets_ok = sheets_ok and not m.is_empty() and Combat.BOSSES_V2.has(b)
+		if m.is_empty():
+			continue
+		var sf := BossesV2.frames(b)
+		for clip in ["walk", "attack", "strike"]:
+			sheets_ok = sheets_ok and sf.get_frame_count(clip) == int(m.frames[clip]) and sf.get_frame_count(clip) >= 6
+			var t := sf.get_frame_texture(clip, 0)
+			sheets_ok = sheets_ok and t != null and t.get_width() == int(m.fw) and t.get_height() == int(m.fh)
+	_check("bosses v2: 6 biome bosses, each with walk + attack + strike sheets of the stated size", sheets_ok)
+	var names_ok: bool = Combat.boss_def("industrial").th == "หัวหน้าคนงาน" and Combat.boss_def("metro").en == "WARDEN-9"
+	names_ok = names_ok and Combat.boss_def("swamp").base == Combat.BOSSES.swamp.base and Combat.boss_def("acid_matron").en == "ACID MATRON"
+	Features.set_override("features", "bosses_v2", false)
+	names_ok = names_ok and Combat.boss_def("industrial").th == Combat.BOSSES.industrial.th and not Combat.boss_def("industrial").has("v2")
+	Features.set_override("features", "bosses_v2", true)
+	_check("bosses v2: new names over the same stats, wave mutants unchanged, switch off = old names", names_ok)
+	# this biome's checkpoint boss walks in with the HD sheets at the crew pixel scale, inside the fight zone
+	Dev.bosses_v2_preview("on")
+	await _wait_for(func(): return not Combat.enemies.is_empty() and cv.enemy_nodes.has(int(Combat.enemies[0].id)), 5.0)
+	var boss: CombatView.EnemyActor = null
+	for e in Combat.enemies:
+		if bool(e.boss):
+			e.max = 1.0e9      # keep it alive for the screenshot
+			e.hp = 1.0e9
+			boss = cv.enemy_nodes.get(int(e.id))
+	var k := BossesV2.scale()
+	var node_ok := boss != null and boss.boss_v2 and boss.spr.scale == Vector2(k, k) and boss.spr.animation == "walk"
+	_check("bosses v2: checkpoint boss drawn with the HD sheets at x%.2f" % k, node_ok)
+	await wait(4.0)    # entrance + walk to its stop spot
+	await shot("bosses_v2_" + Combat.biome_id())
+	var zone_ok := boss != null and boss.sprite_rect().end.x <= CombatView.fight_right() + 1.0
+	_check("bosses v2: the boss's back stays inside the fight zone", zone_ok)
+	var atk_ok := boss != null
+	if boss:
+		boss.attack()
+		atk_ok = boss.spr.animation == "attack" and not boss.spr.sprite_frames.get_animation_loop("attack")
+		await boss.spr.animation_finished
+		atk_ok = atk_ok and boss.spr.animation == "walk"
+		Dev.tune_set("bosses_v2.fx", 0.0)
+		boss.attack()
+		atk_ok = atk_ok and boss.spr.animation == "strike"
+		Dev.tune_set("bosses_v2.fx", null)
+	_check("bosses v2: attack clip (with FX, or strike without FX by tune) plays once, then the walk loop", atk_ok)
+	# switch off: the old sprite comes back
+	Dev.kill_enemies()
+	await wait(0.4)
+	Dev.bosses_v2_preview("off")
+	await _wait_for(func(): return not Combat.enemies.is_empty() and cv.enemy_nodes.has(int(Combat.enemies[0].id)), 5.0)
+	var old_ok := true
+	for e in Combat.enemies:
+		if bool(e.boss):
+			var n = cv.enemy_nodes.get(int(e.id))
+			old_ok = n != null and not n.boss_v2 and str(e.boss_v2) == ""
+	_check("bosses v2: switch off = old boss sprite", old_ok)
+	Features.set_override("features", "bosses_v2", null)
+	Dev.kill_enemies()
+	await wait(0.4)
 
 
 ## MV-714: v2 enemies (crew-density sheets, move + attack clips, 3 per biome with one flyer)

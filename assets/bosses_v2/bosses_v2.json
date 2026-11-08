@@ -1,0 +1,86 @@
+{
+ "desert": {
+  "ax": 135,
+  "ay": 156,
+  "fh": 156,
+  "frames": {
+   "attack": 8,
+   "strike": 8,
+   "walk": 8
+  },
+  "fw": 256,
+  "h": 144,
+  "key": "glass_scorpion",
+  "w": 229
+ },
+ "forest": {
+  "ax": 135,
+  "ay": 172,
+  "fh": 172,
+  "frames": {
+   "attack": 8,
+   "strike": 8,
+   "walk": 8
+  },
+  "fw": 256,
+  "h": 160,
+  "key": "mossback_alpha",
+  "w": 229
+ },
+ "industrial": {
+  "ax": 148,
+  "ay": 252,
+  "fh": 252,
+  "frames": {
+   "attack": 8,
+   "strike": 6,
+   "walk": 8
+  },
+  "fw": 248,
+  "h": 240,
+  "key": "junk_foreman",
+  "w": 200
+ },
+ "metro": {
+  "ax": 131,
+  "ay": 238,
+  "fh": 238,
+  "frames": {
+   "attack": 8,
+   "strike": 8,
+   "walk": 8
+  },
+  "fw": 256,
+  "h": 226,
+  "key": "overseer_warden",
+  "w": 238
+ },
+ "swamp": {
+  "ax": 140,
+  "ay": 247,
+  "fh": 247,
+  "frames": {
+   "attack": 8,
+   "strike": 8,
+   "walk": 14
+  },
+  "fw": 256,
+  "h": 179,
+  "key": "bog_mother",
+  "w": 219
+ },
+ "tundra": {
+  "ax": 124,
+  "ay": 255,
+  "fh": 255,
+  "frames": {
+   "attack": 9,
+   "strike": 8,
+   "walk": 8
+  },
+  "fw": 213,
+  "h": 243,
+  "key": "cryo_titan",
+  "w": 165
+ }
+}

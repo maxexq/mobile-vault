@@ -1322,6 +1322,23 @@ func enemies_v2_parade(what: String) -> void:
 	act("enemies v2 parade %s x%d" % [what, mobs.size()])
 
 
+## MV-718: the HD lore bosses. "on" / "off" = bosses_v2 switch on or off, then this biome's checkpoint boss;
+## "strike" = new boss whose attack plays without FX (tune bosses_v2.fx 0); "all" = all six walk in one after another.
+func bosses_v2_preview(what: String) -> void:
+	feature_set("bosses_v2", what != "off")
+	tune_set("bosses_v2.fx", 0.0 if what == "strike" else null)
+	var q := []
+	if what == "all":
+		var i := 0
+		for b in Combat.BOSSES_V2:
+			q.append({"t": 0.3 + i * 3.0, "boss": "boss", "boss_id": b, "lvl": Combat.enemy_level()})
+			i += 1
+	else:
+		q.append({"t": 0.3, "boss": "warlord", "lvl": Combat.warlord_level()})
+	Combat.debug_spawn(q, true)
+	act("bosses v2 preview " + what)
+
+
 ## MV-387: play the warlord / boss / elite entrance without spawning anything (a stand-in enemy, id -1)
 func entrance_preview(kind: String) -> void:
 	var bd: Dictionary = Combat.boss_def(Combat.biome_id())
