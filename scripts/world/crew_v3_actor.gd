@@ -18,8 +18,11 @@ const SHADOW_A := [0.38, 0.20]       # outer ring, core (centre ~50 % opaque, in
 ## [row y from the feet line, width]: 5 rows, mostly below the feet so it shows past the boots
 const SHADOW_ROWS := [[-1, 11], [0, 15], [1, 15], [2, 13], [3, 7]]
 const SHADOW_CORE := [[0, 11], [1, 11], [2, 7]]
-## MV-724: how much room grade the crew get (tune crew_v3.grade; 1 = MV-711, which Parames found too dark)
-const GRADE := 0.35
+## MV-724: how much room grade the crew get (tune crew_v3.grade; 1 = MV-711, which Parames found too dark).
+## Default 0 = the sprites own colours, like the v2 crew in the world view (Parames 2026-11-08: "ทำให้สีคล้ายๆ v2")
+const GRADE := 0.0
+## MV-724: brighten / saturate the crew toward the v2 crew colours (tune crew_v3.lift, 1 = off)
+const LIFT := 1.5
 const BLEND := preload("res://shaders/crew_v3_blend.gdshader")
 
 var did := -1
@@ -149,6 +152,7 @@ func _process(delta: float) -> void:
 			if timer <= 0.0:
 				_enter(State.ACT if randf() < (0.8 if mode != "rest" else 0.5) else State.IDLE)
 	_mat.set_shader_parameter("grade", grade_k())
+	_mat.set_shader_parameter("lift", lift_k())
 	_mat.set_shader_parameter("light", lerpf(0.95, 0.65, clampf(absf(position.x - lamp_x) / 72.0, 0.0, 1.0)))
 	queue_redraw()
 
@@ -172,6 +176,11 @@ func _draw() -> void:
 ## contact shadow strength: tune crew_v3.shadow (MV-724), 1.0 = the pixel shadow's own alphas
 static func shadow_k() -> float:
 	return Features.num("crew_v3.shadow", SHADOW)
+
+
+## crew brightness lift toward the v2 crew colours: tune crew_v3.lift (MV-724), 1.0 = off
+static func lift_k() -> float:
+	return Features.num("crew_v3.lift", LIFT)
 
 
 ## room grade strength on the crew: tune crew_v3.grade (MV-724), 1.0 = the MV-711 grade

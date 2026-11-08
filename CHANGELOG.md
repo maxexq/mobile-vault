@@ -30,7 +30,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
 
 ### Changed
-- New 2.5D crew in the v3 interior blend into the rooms better: a crisp pixel floor shadow in the room's own dark tone (same width as before, no longer a black blob) and a lighter room tint on the crew so they are not too dark (MV-724)
+- New 2.5D crew in the v3 interior: a crisp pixel floor shadow in the room's own dark tone (same width as before, no longer a black blob), and brighter, livelier crew colours closer to the v2 crew instead of the dark room tint (MV-724)
 - Settings no longer show technical or personal details: About lists only the game version, channel, build and your Player ID, the Save tab hides the save file path and masks your e-mail (MV-588).
 - Next Generation brings every survivor with full levels, XP, skills and all equipment (worn, stash, vehicle gear and mods); obsolete crew/level research is refunded (MV-559).
 - Clearer sound: fixed the hiss and crackle (most of all on the web), and reworked rain, storm, sandstorm, snow, fog, acid rain, ashfall, overcast and thunder (MV-555).

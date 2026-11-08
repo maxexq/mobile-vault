@@ -5944,6 +5944,10 @@ func _rooms_v3_test() -> void:
 	Dev.crew_v3_grade(1.0)
 	var g_full := CrewV3Actor.grade_k()
 	Dev.crew_v3_grade(-1.0)
+	Dev.crew_v3_lift(1.0)
+	var lift_off := CrewV3Actor.lift_k()
+	Dev.crew_v3_lift(-1.0)
+	_check("rooms v3: crew colours lifted toward v2 by default, GOD x1 turns it off", lift_off == 1.0 and CrewV3Actor.lift_k() > 1.0)
 	_check("rooms v3: GOD crew shadow / grade buttons", none_a == 0.0 and g_full == 1.0 and CrewV3Actor.grade_k() < 1.0
 		and is_equal_approx(CrewV3Actor.shadow_k(), CrewV3Actor.SHADOW))
 	var first := -1
@@ -5981,7 +5985,7 @@ func _rooms_v3_test() -> void:
 		for control in row.get_children():
 			if control is Button:
 				labels[control.text] = true
-	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด") and labels.has("เงาอ่อน x0.5") and labels.has("ย้อม 0.5"))
+	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด") and labels.has("เงาอ่อน x0.5") and labels.has("ย้อม 0.5") and labels.has("สว่าง x1.5"))
 	god.close()
 	Features.set_override("features", "rooms_v3", false)
 	_check("rooms v3: switch off hides the HUD button and refuses to open", not hud._interior_btn.visible and not hud.open_interior())

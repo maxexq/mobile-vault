@@ -137,6 +137,12 @@ func crew_v3_shadow(k: float) -> void:
 	Features.set_override("tune", "crew_v3.shadow", null if k < 0.0 else k)
 
 
+## v3 crew brightness lift (MV-724): sets the crew_v3.lift override, < 0 = back to the build's value
+func crew_v3_lift(k: float) -> void:
+	Trace.rec("god", "crew v3 lift %.2f" % k)
+	Features.set_override("tune", "crew_v3.lift", null if k < 0.0 else k)
+
+
 ## v3 crew room grade strength (MV-724): sets the crew_v3.grade override, < 0 = back to the build's value
 func crew_v3_grade(k: float) -> void:
 	Trace.rec("god", "crew v3 grade %.2f" % k)

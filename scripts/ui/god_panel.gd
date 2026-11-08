@@ -389,6 +389,8 @@ func _tab_vehicle() -> void:
 		_b("ไม่มีเงา", func(): Dev.crew_v3_shadow(0.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_shadow(-1.0), "gray")], "เงาลูกเรือ")
 	_row([_b("สีแบบเดิม (เข้ม)", func(): Dev.crew_v3_grade(1.0)), _b("ย้อม 0.5", func(): Dev.crew_v3_grade(0.5)),
 		_b("สีสไปรต์ล้วน", func(): Dev.crew_v3_grade(0.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_grade(-1.0), "gray")], "สีลูกเรือ")
+	_row([_b("สว่าง x1 (สีเดิม)", func(): Dev.crew_v3_lift(1.0)), _b("สว่าง x1.25", func(): Dev.crew_v3_lift(1.25)), _b("สว่าง x1.5", func(): Dev.crew_v3_lift(1.5)),
+		_b("ค่าเริ่มต้น", func(): Dev.crew_v3_lift(-1.0), "gray")], "ความสว่างลูกเรือ (%.2f)" % CrewV3Actor.lift_k())
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
 	var ib := Dev.on("instant_build")
 	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),
