@@ -1252,7 +1252,7 @@ func spawn_mob(id: String, n: int) -> void:
 
 ## MV-387: n elites of this biome's mobs (real enemies, so their entrance plays)
 func spawn_elites(n: int) -> void:
-	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	var mobs: Array = Combat.biome_mobs()
 	var q := []
 	for i in n:
 		q.append({"t": 0.2 + i * 0.6, "mob": mobs[i % mobs.size()], "lvl": Combat.enemy_level(), "elite": true, "no_mutate": true})
@@ -1263,7 +1263,7 @@ func spawn_elites(n: int) -> void:
 ## MV-517: real enemies at their new size: "normal" / "elite" = one of this biome's mobs, "boss" = this biome's
 ## boss as a wave boss, "warlord" = the checkpoint warlord, "lineup" = a normal, an elite and the boss side by side
 func enemy_size_preview(kind: String) -> void:
-	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	var mobs: Array = Combat.biome_mobs()
 	var mob: String = mobs[0]
 	for m in mobs:
 		if not str(Combat.MOBS[m].sprite).begins_with("dw_"):
@@ -1281,6 +1281,25 @@ func enemy_size_preview(kind: String) -> void:
 		q.append({"t": 0.3, "boss": "warlord", "lvl": Combat.warlord_level()})
 	Combat.debug_spawn(q, kind in ["boss", "warlord", "lineup"])
 	act("enemy size preview " + kind)
+
+
+## MV-714: walk the v2 enemies in: "biome" = this biome's 3 v2 mobs, "all" = all 18 in waves of 3, "elite" = this
+## biome's 3 as elites. Turns the enemies_v2 switch on for the run like any other GOD feature toggle.
+func enemies_v2_parade(what: String) -> void:
+	feature_set("enemies_v2", true)
+	var mobs: Array = []
+	if what == "all":
+		mobs = EnemiesV2.meta().keys()
+		mobs.sort()
+	else:
+		for m in Combat.biome_mobs():
+			if not mobs.has(m):
+				mobs.append(m)
+	var q := []
+	for i in mobs.size():
+		q.append({"t": 0.2 + i * 0.7, "mob": mobs[i], "lvl": Combat.enemy_level(), "no_mutate": true, "elite": what == "elite"})
+	Combat.debug_spawn(q, false)
+	act("enemies v2 parade %s x%d" % [what, mobs.size()])
 
 
 ## MV-387: play the warlord / boss / elite entrance without spawning anything (a stand-in enemy, id -1)

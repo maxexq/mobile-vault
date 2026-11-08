@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- New monster art: every ordinary enemy in all 6 biomes is redrawn with more detail, a walk and an attack animation; each biome now has a flyer (new snow owl on the Frozen Highway and a HELIOS hunter drone in the Signal Metropolis, the forest hornet now flies) (MV-714)
 - Smoother web play: the economy works out room production with far less repeated work (no more small hitches on busy vehicles), the hull warning and HUD skip repeated per-frame work, and phones with very sharp screens draw at 2x by default (Settings → ความละเอียดจอ: ประหยัด / เต็ม) (MV-562)
 - Battery saver: the game drops to 30 fps while the vehicle is parked or you are looking into a room and nothing is happening, and the blur around a room close-up is drawn once instead of every frame (MV-604). Any touch, driving or fight brings the full frame rate back at once; a lower frame-rate setting is always kept.
 - Draft terms/privacy window with intentionally blank provider details, separate optional diagnostics/analytics choices, versioned local consent and withdrawal controls (MV-589). Draft documents cannot authorize collection or bind players.
