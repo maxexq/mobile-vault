@@ -10,6 +10,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Added
 - Free camera: pinch or scroll to zoom through every sharp pixel level around your fingers, drag to look around in any direction, and tap FIT to snap back to the automatic view (MV-723)
+- New monster art: every ordinary enemy in all 6 biomes is redrawn with more detail, a walk and an attack animation; each biome now has a flyer (new snow owl on the Frozen Highway and a HELIOS hunter drone in the Signal Metropolis, the forest hornet now flies) (MV-714)
 - New look inside the vehicle (v3 button): every room in its new detailed art by level, with idle animations and a red emergency lamp in a power-out, and the new 2.5D crew walking and working in their rooms; tap a room to see what is in it (MV-711)
 - Smoother web play: the economy works out room production with far less repeated work (no more small hitches on busy vehicles), the hull warning and HUD skip repeated per-frame work, and phones with very sharp screens draw at 2x by default (Settings → ความละเอียดจอ: ประหยัด / เต็ม) (MV-562)
 - Battery saver: the game drops to 30 fps while the vehicle is parked or you are looking into a room and nothing is happening, and the blur around a room close-up is drawn once instead of every frame (MV-604). Any touch, driving or fight brings the full frame rate back at once; a lower frame-rate setting is always kept.

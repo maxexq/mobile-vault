@@ -63,6 +63,9 @@ const MOBS := {
 	"gang_scav": {"th": "แก๊งเมืองร้าง", "sprite": "dw_raider_red", "hp": 38.0, "dmg": 7.0, "spd": 26.0, "cd": 1.3, "kind": "ranged", "range": 150.0},
 	"sentry_bot": {"th": "หุ่นยามติดปืน", "sprite": "en_sentry", "hp": 52.0, "dmg": 7.0, "spd": 20.0, "cd": 1.4, "kind": "ranged", "range": 160.0},
 	"mutant_ape": {"th": "ลิงกลายพันธุ์", "sprite": "en_ape", "hp": 70.0, "dmg": 10.0, "spd": 34.0, "cd": 1.3, "kind": "melee"},
+	# MV-714: the flyers of the tundra and the metro in the v2 rosters (old sprites only for the switch-off / feed)
+	"frost_owl": {"th": "นกฮูกหิมะกลายพันธุ์", "sprite": "en_vulture", "tint": "c8dcea", "hp": 22.0, "dmg": 5.5, "spd": 46.0, "cd": 1.2, "kind": "air", "range": 50.0},
+	"hunter_drone": {"th": "โดรนล่าเฮลิออส", "sprite": "en_drone", "tint": "6a7a8a", "hp": 26.0, "dmg": 6.5, "spd": 40.0, "cd": 1.3, "kind": "air", "range": 120.0},
 	# ---- mutations: appear further down the road and force a different loadout
 	"runner": {"th": "ซอมบี้วิ่งเร็ว", "sprite": "en_runner", "hp": 18.0, "dmg": 4.0, "spd": 72.0, "cd": 0.7, "kind": "melee", "mutant": true},
 	"spitter": {"th": "ซอมบี้พ่นกรด", "sprite": "en_spitter", "hp": 30.0, "dmg": 4.0, "spd": 22.0, "cd": 1.8, "kind": "ranged", "range": 150.0, "mech": ["acid"], "mutant": true},
@@ -84,6 +87,26 @@ const BIOME_MOBS := {
 	"swamp": ["toxic_toad", "mosquito", "bog_walker", "toxic_toad"],
 	"metro": ["gang_scav", "sentry_bot", "mutant_ape", "gang_scav"],
 }
+## MV-714 (switch enemies_v2): 3 monsters per biome with 1 flyer each, drawn at crew v3 density. The forest bug is
+## now a flying hornet; the tundra and the metro swap their human raiders for a flyer (snow owl, HELIOS hunter drone)
+const BIOME_MOBS_V2 := {
+	"industrial": ["rad_rat", "rad_rat", "scav_raider", "rust_drone"],
+	"desert": ["scorpion", "scorpion", "sand_raider", "vulture"],
+	"forest": ["rad_wolf", "mutant_bug", "mutant_bug", "vine_crawler"],
+	"tundra": ["frost_wolf", "frost_owl", "yeti", "frost_wolf"],
+	"swamp": ["toxic_toad", "mosquito", "bog_walker", "toxic_toad"],
+	"metro": ["sentry_bot", "hunter_drone", "mutant_ape", "sentry_bot"],
+}
+const V2_KIND := {"mutant_bug": "air"}
+
+
+## this biome's mob roster (v2 when the switch is on)
+func biome_mobs(biome: String = "") -> Array:
+	var b := biome if biome != "" else biome_id()
+	var table: Dictionary = BIOME_MOBS_V2 if Features.on("enemies_v2") else BIOME_MOBS
+	return table.get(b, table.industrial)
+
+
 ## bosses have their own native-size sprites (no upscaling -> true pixel art)
 ## mech: enrage (<30% hp faster & harder) | armor (-50% dmg taken above 60% hp) | summon (calls adds) |
 ##       acid (corrodes the hull & armour) | solar (dives at the solar panels) | burrow (dives underground,
@@ -554,7 +577,7 @@ func _clear_enemies() -> void:
 
 func _start_wave() -> void:
 	var w := wave()
-	var mobs: Array = BIOME_MOBS.get(biome_id(), BIOME_MOBS.industrial)
+	var mobs: Array = biome_mobs()
 	spawn_queue.clear()
 	wave_is_warlord = false
 	wave_is_boss = false
@@ -679,6 +702,8 @@ func _spawn(q: Dictionary) -> void:
 	e.spd = float(def.spd) * (0.7 if e.boss else 1.0) * rng.randf_range(0.9, 1.1)
 	e.cd = float(def.cd) * (1.3 if e.boss else 1.0)
 	e.kind = "air" if e.get("boss_air", false) else def.kind
+	if not e.boss and V2_KIND.has(str(e.mob)) and Features.on("enemies_v2"):
+		e.kind = V2_KIND[str(e.mob)]
 	e.range = float(def.get("range", 0.0)) * RANGE_SCALE
 	e.sprite = e.get("boss_sprite", def.sprite)
 	e.x = SPAWN_X + rng.randf_range(0, 30)
@@ -876,6 +901,7 @@ func _tick_mechanics(dt: float) -> void:
 		if e.mech_t > 0.0:
 			continue
 		e.mech_t = 9.0 if not e.get("enraged", false) else 6.0
+		# boss adds keep the balance-tested pre-v2 rosters (MV-714: the v2 metro roster failed the warlord bench)
 		var mobs: Array = BIOME_MOBS.get(biome_id(), BIOME_MOBS.industrial)
 		if mech.has("summon") and enemies.size() < 9:
 			for i in 2:
