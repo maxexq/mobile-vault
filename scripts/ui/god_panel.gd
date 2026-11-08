@@ -397,6 +397,11 @@ func _tab_vehicle() -> void:
 		_b("4 ชั้น", func(): Dev.world_v2_preview(4)),
 		_b("โลก v2: " + ("เปิด" if Features.on("world_v2") else "ปิด"), func(): Dev.feature_set("world_v2", not Features.on("world_v2")),
 		"green" if Features.on("world_v2") else "red")], "โลก v2")
+	_row([_b("ขับ", func(): Dev.vehicle_anim("drive"), "green"), _b("เร็ว", func(): Dev.vehicle_anim("fast")),
+		_b("เบรกจอด", func(): Dev.vehicle_anim("brake")), _b("ดับเครื่อง", func(): Dev.vehicle_anim("park")),
+		_b("หลุม", func(): Dev.vehicle_anim("bump")), _b("ไซเรน", func(): Dev.vehicle_anim("beacon"), "yellow"),
+		_b("รถขยับ: " + ("เปิด" if Features.on("vehicle_anim") else "ปิด"), func(): Dev.feature_set("vehicle_anim", not Features.on("vehicle_anim")),
+		"green" if Features.on("vehicle_anim") else "red")], "รถขยับ")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
 	var ib := Dev.on("instant_build")
 	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),
