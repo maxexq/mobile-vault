@@ -6,6 +6,8 @@ extends Control
 
 signal build_placement_requested(room_type: String)
 signal build_placement_cancelled
+## MV-711: the v3 interior asked for the classic room close-up of a slot
+signal closeup_requested(slot: int)
 signal layout_changed
 
 ## MV-247: raw food chips, shown after food while the raw_food switch is on
@@ -77,6 +79,7 @@ var _view_box: HBoxContainer
 var _xray_btn: Button
 var _zoom_btn: Button
 var _god_btn: Button
+var _interior_btn: Button
 var tutorial_overlay: TutorialOverlay
 var tip_card: TipCard
 var settings_panel: SettingsPanel
@@ -118,6 +121,15 @@ func _ready() -> void:
 	_zoom_btn.tooltip_text = Loc.t("ซูม: อัตโนมัติ / กว้าง / ปกติ")
 	_zoom_btn.pressed.connect(func(): zoom_pressed.emit())
 	_view_box.add_child(_zoom_btn)
+	_interior_btn = UIKit.button("v3", "gray")
+	_interior_btn.name = "InteriorV3Button"
+	_interior_btn.custom_minimum_size = Vector2(30, 22)
+	_interior_btn.add_theme_font_override("font", UIKit.font_pixel)
+	_interior_btn.add_theme_font_size_override("font_size", UIKit.FP)
+	_interior_btn.tooltip_text = Loc.t("ภายในรถ: ห้องและลูกเรือชุดใหม่ v3")
+	_interior_btn.pressed.connect(func(): open_interior())
+	_view_box.add_child(_interior_btn)
+	Features.changed.connect(_sync_interior_btn)
 	_settings_btn = UIKit.button("", "gray", "gear")
 	_settings_btn.custom_minimum_size = Vector2(26, 22)
 	_settings_btn.tooltip_text = Loc.t("ตั้งค่า / ข้อมูลเวอร์ชัน")
@@ -143,7 +155,7 @@ func _ready() -> void:
 
 	room_closeup = RoomCloseup.new()
 	add_child(room_closeup)
-	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen", "god", "door", "engine"]:
+	for k in ["build", "map", "dwellers", "squad", "solar", "inventory", "log", "garage", "skills", "expedition", "nextgen", "god", "door", "engine", "interior"]:
 		var p: ModalPanel
 		match k:
 			"build": p = BuildPanel.new()
@@ -160,8 +172,11 @@ func _ready() -> void:
 			"god": p = GodPanel.new()
 			"door": p = InspectionPanel.new()
 			"engine": p = EnginePanel.new()
+			"interior": p = InteriorV3Panel.new()
 		add_child(p)
 		panels[k] = p
+	(panels.interior as InteriorV3Panel).room_requested.connect(func(s): closeup_requested.emit(s))
+	_sync_interior_btn()
 	(panels.build as BuildPanel).placement_requested.connect(func(t): build_placement_requested.emit(t))
 	event_popup = EventPopup.new()
 	add_child(event_popup)
@@ -1023,6 +1038,19 @@ func any_modal_open() -> bool:
 		if panels[k].is_open:
 			return true
 	return event_popup.is_open or encounter_popup.is_open or title_screen.visible
+
+
+func _sync_interior_btn() -> void:
+	if _interior_btn != null:
+		_interior_btn.visible = Features.on("rooms_v3") and V3Art.ok()
+
+
+## MV-711: the v3 interior (switch rooms_v3), optionally scrolled to a slot
+func open_interior(slot: int = -1) -> bool:
+	if not Features.on("rooms_v3") or not V3Art.ok():
+		return false
+	(panels.interior as InteriorV3Panel).open_at(slot)
+	return true
 
 
 func _sync_god_btn() -> void:

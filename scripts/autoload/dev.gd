@@ -1006,6 +1006,39 @@ func finish_construction() -> void:
 	act("finish construction")
 
 
+# ------------------------------------------------------------------ MV-711 v3 rooms + crew
+## open the v3 interior (switch rooms_v3 turned on), scrolled to `slot` when given; false when the HUD isn't up
+func rooms_v3_open(slot: int = -1) -> bool:
+	feature_set("rooms_v3", true)
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud == null:
+		return false
+	act("rooms v3 open", {"slot": slot})
+	return hud.open_interior(slot)
+
+
+## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
+## the v3 interior opens; returns how many rooms have v3 art now
+func rooms_v3_showcase(lv: int) -> int:
+	var types: Array = V3Art.room_types().keys()
+	types.sort()
+	var i := 0
+	for slot in Game.s.rooms.size():
+		if Game.is_slot_unlocked(slot) and str(Game.s.rooms[slot].type) == "empty" and not Game.is_annex(slot) and slot != Data.ENGINE_SLOT:
+			Game.s.rooms[slot] = {"type": types[i % types.size()], "level": 1, "job": {}}
+			i += 1
+	var n := 0
+	for r in Game.s.rooms:
+		if str(r.type) != "empty" and str(r.type) != "annex":
+			r.level = clampi(lv, 1, Data.ROOM_MAX_LEVEL)
+		if V3Art.has_room(str(r.type)):
+			n += 1
+	act("rooms v3 showcase", {"level": lv, "v3_rooms": n})
+	Game.rooms_changed.emit()
+	rooms_v3_open()
+	return n
+
+
 func rooms_max() -> void:
 	for r in Game.s.rooms:
 		if r.type != "empty":

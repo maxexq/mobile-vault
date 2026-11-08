@@ -377,6 +377,12 @@ func _tab_vehicle() -> void:
 	_head("ROOMS & MODS", "ห้องและมอด")
 	_row([_b("สร้างห้องทุกช่องว่าง", func(): Dev.rooms_fill(), "green"), _b("ทุกห้อง Lv สูงสุด", func(): Dev.rooms_max())])
 	_row([_b("ไฟทุกห้องกะพริบ", func(): Dev.lamps_flicker(), "gray", true)], "แสง/อนิเมชันห้อง")
+	_head("ROOMS + CREW v3", "ห้อง 144x96 + ลูกเรือ 2.5D ชุดใหม่ (MV-711) ในมุมมองภายในรถ")
+	_row([_b("เปิดภายในรถ v3", func(): Dev.rooms_v3_open(), "green"), _b("โชว์ L1", func(): Dev.rooms_v3_showcase(1)),
+		_b("โชว์ L2", func(): Dev.rooms_v3_showcase(2)), _b("โชว์ L3", func(): Dev.rooms_v3_showcase(3))], "ดู")
+	_row([_b("ห้อง v3: " + ("เปิด" if Features.on("rooms_v3") else "ปิด"), func(): Dev.feature_set("rooms_v3", not Features.on("rooms_v3")),
+		"green" if Features.on("rooms_v3") else "red"), _b("ห้องรอตรวจ: " + ("ใช้" if Features.on("rooms_v3_review") else "ไม่ใช้"),
+		func(): Dev.feature_set("rooms_v3_review", not Features.on("rooms_v3_review")), "green" if Features.on("rooms_v3_review") else "red")], "สวิตช์")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
 	var ib := Dev.on("instant_build")
 	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),
