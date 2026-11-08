@@ -634,6 +634,9 @@ func _run() -> void:
 		get_window().size = Vector2i(2560, 1440)
 		await wait(1.2)
 		await _free_cam_test()
+		get_window().size = Vector2i(2532, 1170)      # iPhone 13 landscape at 3x (Parames's black box in the sky)
+		await wait(1.2)
+		await _free_cam_test()
 		_finish()
 		return
 	if "--only=touch" in OS.get_cmdline_user_args():
@@ -1511,6 +1514,9 @@ func _run() -> void:
 	await _portrait_fit_test()
 	await _free_cam_test()
 	get_window().size = Vector2i(2560, 1440)      # big desktop screen: the farthest free view is > 2000 art px wide
+	await wait(1.2)
+	await _free_cam_test()
+	get_window().size = Vector2i(2532, 1170)      # landscape phone at 3x: the widest free view of all
 	await wait(1.2)
 	await _free_cam_test()
 	get_window().size = Vector2i(780, 1688)
@@ -4116,21 +4122,27 @@ func _free_cam_test() -> void:
 	# the backdrop still covers the whole wide view: no clear-colour holes in the sky (the 64 px sky strip used to run
 	# out on the right on big screens, Parames 2026-11-08)
 	# ... also panned to either end of the road (Parames 2026-11-08: a black box on the right after dragging)
-	var clear: Color = ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color")
+	# A pixel test missed it (the hole shows the dark clear colour only after the CRT pass), so check the strips the way
+	# the GL renderer draws them: copies -(n/2)..(n - n/2) of repeat_size around the layer, against the visible rect.
 	var holes := 0
-	for side in [0.0, main.pan_right, -main.PAN_LIMIT]:
+	var gaps: Array[String] = []
+	for side in [0.0, main.pan_right, -main.PAN_LIMIT, main.pan_right * 0.37, -main.PAN_LIMIT * 0.61]:
 		main.pan_x = side
 		main._clamp_pan()
 		main._place_camera()
-		await wait(0.15)
-		await RenderingServer.frame_post_draw
-		var img: Image = main.world_vp.get_texture().get_image()
-		for ix in 12:
-			for iy in 8:
-				var c := img.get_pixel(int((ix + 0.5) / 12.0 * (img.get_width() - 1)), int((iy + 0.5) / 8.0 * img.get_height() * 0.6))
-				if absf(c.r - clear.r) + absf(c.g - clear.g) + absf(c.b - clear.b) < 0.01:
-					holes += 1
-	_check("free cam: the farthest view has no holes in the sky, centre and both pan ends (%d of 288, view %d art px wide)" % [holes, main.vp_size().x], holes == 0)
+		await wait(0.1)
+		var view: Rect2 = main.world_vp.get_canvas_transform().affine_inverse() * Rect2(Vector2.ZERO, main.vp_size())
+		for px in main.background.find_children("*", "Parallax2D", true, false):
+			var p2 := px as Parallax2D
+			if not p2.is_visible_in_tree() or p2.repeat_size.x <= 0.0:
+				continue
+			var w := p2.repeat_size.x
+			var left := p2.global_position.x - float(p2.repeat_times / 2) * w
+			var right := p2.global_position.x + float(p2.repeat_times - p2.repeat_times / 2 + 1) * w
+			if left > view.position.x + 0.5 or right < view.end.x - 0.5:
+				holes += 1
+				gaps.append("%s %d..%d vs %d..%d" % [p2.name, left, right, view.position.x, view.end.x])
+	_check("free cam: every backdrop strip covers the farthest view, centre and across the pan range (%d gaps, view %d art px wide) %s" % [holes, main.vp_size().x, ", ".join(gaps.slice(0, 3))], holes == 0)
 	if holes > 0:
 		await shot("free_cam_sky_holes")
 	main.pan_x = 0.0
