@@ -293,6 +293,12 @@ func _tab_vehicle() -> void:
 		(Saloon.st().get("cd", {}) as Dictionary).size(), (Saloon.st().get("bonds", {}) as Dictionary).size()])
 	_row([_b("เริ่มมื้อเย็น", func(): Dev.saloon_supper(), "green"), _b("รับมื้อที่เสร็จ", func(): Dev.saloon_claim_all(), "yellow"),
 		_b("ล้างคูลดาวน์", func(): Dev.saloon_clear_cd(), "gray")], "โรงเตี๊ยม")
+	var gslots := RearGunner.rooms()
+	var gn := 0
+	for gs in gslots:
+		gn += RearGunner.gunners(gs).size()
+	_note("ห้องยิงท้ายรถ (MV-716): %d ห้อง · คนยิง %d · %.1f ดาเมจ/วิ · สวิตช์ gunner_room %s" % [gslots.size(), gn, RearGunner.dps(), "เปิด" if RearGunner.on() else "ปิด"])
+	_row([_b("ยิงทดสอบ", func(): Dev.gunner_demo(4), "green"), _b("อัปเลเวล", func(): Dev.gunner_level_up(), "yellow")], "ห้องยิง")
 	_row([_b("สด", func(): Dev.rx_anim_preview(""), "yellow" if RoomAnim.preview == "" else "gray"),
 		_b("ท่าพัก", func(): Dev.rx_anim_preview("rest"), "yellow" if RoomAnim.preview == "rest" else "gray"),
 		_b("ทำงาน", func(): Dev.rx_anim_preview("active"), "yellow" if RoomAnim.preview == "active" else "gray"),
@@ -610,6 +616,9 @@ func _tab_fight() -> void:
 		"ขนาดมอนสเตอร์ (MV-517) x%d / x%d / x%d / x%d%s" % [int(Features.num("enemy_size.normal", CombatView.ENEMY_SCALE.normal)),
 		int(Features.num("enemy_size.elite", CombatView.ENEMY_SCALE.elite)), int(Features.num("enemy_size.boss", CombatView.ENEMY_SCALE.boss)),
 		int(Features.num("enemy_size.warlord", CombatView.ENEMY_SCALE.warlord)), "" if Features.on("enemy_size") else " · ปิดอยู่"])
+	_row([_b("ศัตรูชุดใหม่ biome นี้", func(): Dev.enemies_v2_parade("biome"), "yellow", true), _b("อีลิทชุดใหม่", func(): Dev.enemies_v2_parade("elite"), "gray", true),
+		_b("ครบ 18 ตัว", func(): Dev.enemies_v2_parade("all"), "gray", true)],
+		"ศัตรูชุดใหม่ (MV-714) ขนาดพิกเซลเท่าลูกเรือ x%.2f · มีท่าเดิน + ท่าโจมตี%s" % [EnemiesV2.scale(), "" if Features.on("enemies_v2") else " · ปิดอยู่"])
 	_head("MOBS", "เรียกศัตรูทีละชนิด ×3")
 	var mb := []
 	for id in Combat.MOBS:

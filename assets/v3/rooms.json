@@ -6514,6 +6514,548 @@
      }
     }
    }
+  },
+  "rear_gunner": {
+   "status": "approved",
+   "ticket": "MV-705",
+   "levels": {
+    "L1": {
+     "file": "L1.png",
+     "tint": [
+      1.0,
+      0.867,
+      0.694
+     ],
+     "dark": [
+      0,
+      0,
+      0
+     ],
+     "lamp_x": 74,
+     "floor": {
+      "walk": [
+       [
+        0,
+        95
+       ],
+       [
+        0,
+        92
+       ],
+       [
+        30,
+        90
+       ],
+       [
+        48,
+        80
+       ],
+       [
+        96,
+        80
+       ],
+       [
+        108,
+        90
+       ],
+       [
+        143,
+        93
+       ],
+       [
+        143,
+        95
+       ]
+      ],
+      "walkway": [
+       89,
+       95
+      ],
+      "depth": [
+       78,
+       95
+      ],
+      "drop": []
+     },
+     "hotspots": [
+      {
+       "id": "ammo",
+       "label": "Ammo crates & belts",
+       "rect": [
+        2,
+        28,
+        40,
+        64
+       ],
+       "kind": "storage",
+       "action": "load_ammo",
+       "stand": [
+        30,
+        92
+       ],
+       "face": "left"
+      },
+      {
+       "id": "slit",
+       "label": "Spotter slit",
+       "rect": [
+        58,
+        34,
+        28,
+        10
+       ],
+       "kind": "station",
+       "action": "spot_targets",
+       "stand": [
+        72,
+        88
+       ],
+       "face": "right"
+      },
+      {
+       "id": "tally",
+       "label": "Chalk kill tally",
+       "rect": [
+        58,
+        44,
+        28,
+        22
+       ],
+       "kind": "info",
+       "action": "show_info"
+      },
+      {
+       "id": "seat",
+       "label": "Scrap car seat",
+       "rect": [
+        86,
+        46,
+        20,
+        30
+       ],
+       "kind": "station",
+       "action": "man_gun",
+       "stand": [
+        106,
+        91
+       ],
+       "face": "right"
+      },
+      {
+       "id": "gun",
+       "label": "Swivel machine gun",
+       "rect": [
+        104,
+        44,
+        32,
+        40
+       ],
+       "kind": "station",
+       "action": "man_gun",
+       "stand": [
+        106,
+        91
+       ],
+       "face": "right"
+      },
+      {
+       "id": "hatch",
+       "label": "Firing hatch",
+       "rect": [
+        120,
+        28,
+        20,
+        28
+       ],
+       "kind": "info",
+       "action": "show_info"
+      },
+      {
+       "id": "lamp",
+       "label": "Bare bulb",
+       "rect": [
+        68,
+        8,
+        10,
+        14
+       ],
+       "kind": "light",
+       "action": "toggle_light",
+       "needs_power": true
+      }
+     ],
+     "idle": {
+      "file": "L1_idle.png",
+      "rect": [
+       3,
+       1,
+       131,
+       63
+      ],
+      "n": 36,
+      "cols": 6,
+      "fps": 3.125
+     }
+    },
+    "L2": {
+     "file": "L2.png",
+     "tint": [
+      1.0,
+      0.879,
+      0.703
+     ],
+     "dark": [
+      0,
+      0,
+      0
+     ],
+     "lamp_x": 73,
+     "floor": {
+      "walk": [
+       [
+        0,
+        95
+       ],
+       [
+        0,
+        92
+       ],
+       [
+        30,
+        90
+       ],
+       [
+        48,
+        80
+       ],
+       [
+        96,
+        80
+       ],
+       [
+        108,
+        90
+       ],
+       [
+        143,
+        93
+       ],
+       [
+        143,
+        95
+       ]
+      ],
+      "walkway": [
+       89,
+       95
+      ],
+      "depth": [
+       78,
+       95
+      ],
+      "drop": []
+     },
+     "hotspots": [
+      {
+       "id": "ammo",
+       "label": "Ammo rack",
+       "rect": [
+        2,
+        28,
+        40,
+        64
+       ],
+       "kind": "storage",
+       "action": "load_ammo",
+       "stand": [
+        30,
+        92
+       ],
+       "face": "left"
+      },
+      {
+       "id": "slit",
+       "label": "Periscope visor",
+       "rect": [
+        58,
+        28,
+        28,
+        16
+       ],
+       "kind": "station",
+       "action": "spot_targets",
+       "stand": [
+        72,
+        88
+       ],
+       "face": "right"
+      },
+      {
+       "id": "chart",
+       "label": "Monster chart",
+       "rect": [
+        70,
+        48,
+        16,
+        18
+       ],
+       "kind": "info",
+       "action": "show_info"
+      },
+      {
+       "id": "seat",
+       "label": "Steel gunner seat",
+       "rect": [
+        86,
+        52,
+        20,
+        28
+       ],
+       "kind": "station",
+       "action": "man_gun",
+       "stand": [
+        106,
+        91
+       ],
+       "face": "right"
+      },
+      {
+       "id": "gun",
+       "label": "Shielded pedestal gun",
+       "rect": [
+        104,
+        40,
+        32,
+        40
+       ],
+       "kind": "station",
+       "action": "man_gun",
+       "stand": [
+        106,
+        91
+       ],
+       "face": "right"
+      },
+      {
+       "id": "hatch",
+       "label": "Shuttered hatch",
+       "rect": [
+        118,
+        26,
+        22,
+        24
+       ],
+       "kind": "info",
+       "action": "show_info"
+      },
+      {
+       "id": "lamp",
+       "label": "Tin-shade lamp",
+       "rect": [
+        64,
+        10,
+        18,
+        10
+       ],
+       "kind": "light",
+       "action": "toggle_light",
+       "needs_power": true
+      }
+     ],
+     "idle": {
+      "file": "L2_idle.png",
+      "rect": [
+       3,
+       1,
+       131,
+       63
+      ],
+      "n": 36,
+      "cols": 6,
+      "fps": 3.125
+     }
+    },
+    "L3": {
+     "file": "L3.png",
+     "tint": [
+      1.0,
+      0.946,
+      0.845
+     ],
+     "dark": [
+      0,
+      0,
+      1
+     ],
+     "lamp_x": 71,
+     "floor": {
+      "walk": [
+       [
+        0,
+        95
+       ],
+       [
+        0,
+        92
+       ],
+       [
+        30,
+        90
+       ],
+       [
+        48,
+        80
+       ],
+       [
+        96,
+        80
+       ],
+       [
+        108,
+        90
+       ],
+       [
+        143,
+        93
+       ],
+       [
+        143,
+        95
+       ]
+      ],
+      "walkway": [
+       89,
+       95
+      ],
+      "depth": [
+       78,
+       95
+      ],
+      "drop": []
+     },
+     "hotspots": [
+      {
+       "id": "ammo",
+       "label": "Ammo locker + feed chute",
+       "rect": [
+        2,
+        8,
+        42,
+        86
+       ],
+       "kind": "storage",
+       "action": "load_ammo",
+       "stand": [
+        30,
+        92
+       ],
+       "face": "left"
+      },
+      {
+       "id": "slit",
+       "label": "Armoured viewing slit",
+       "rect": [
+        58,
+        34,
+        26,
+        10
+       ],
+       "kind": "station",
+       "action": "spot_targets",
+       "stand": [
+        72,
+        88
+       ],
+       "face": "right"
+      },
+      {
+       "id": "monitor",
+       "label": "Targeting monitor",
+       "rect": [
+        84,
+        34,
+        12,
+        14
+       ],
+       "kind": "info",
+       "action": "show_info",
+       "needs_power": true
+      },
+      {
+       "id": "seat",
+       "label": "Gunner seat",
+       "rect": [
+        86,
+        48,
+        20,
+        32
+       ],
+       "kind": "station",
+       "action": "man_gun",
+       "stand": [
+        106,
+        91
+       ],
+       "face": "right"
+      },
+      {
+       "id": "gun",
+       "label": "Twin MG + armour shield",
+       "rect": [
+        100,
+        30,
+        40,
+        52
+       ],
+       "kind": "station",
+       "action": "man_gun",
+       "stand": [
+        106,
+        91
+       ],
+       "face": "right"
+      },
+      {
+       "id": "search",
+       "label": "Searchlight",
+       "rect": [
+        130,
+        8,
+        12,
+        14
+       ],
+       "kind": "light",
+       "action": "toggle_light",
+       "needs_power": true
+      },
+      {
+       "id": "lamp",
+       "label": "Caged lamp",
+       "rect": [
+        66,
+        6,
+        14,
+        14
+       ],
+       "kind": "light",
+       "action": "toggle_light",
+       "needs_power": true
+      }
+     ],
+     "idle": {
+      "file": "L3_idle.png",
+      "rect": [
+       3,
+       1,
+       137,
+       63
+      ],
+      "n": 36,
+      "cols": 6,
+      "fps": 3.125
+     }
+    }
+   }
   }
  },
  "empty": {
