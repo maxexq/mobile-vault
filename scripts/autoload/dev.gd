@@ -685,6 +685,48 @@ func saloon_supper() -> Dictionary:
 	return Saloon.start(slot, ids)
 
 
+## MV-716 rear gunner post: make sure one exists (the default rear slot first, else any empty slot), put up to two of
+## the crew with the best AGI on its gun and send a few of this biome's mobs so they fire. Returns the room's slot.
+func gunner_demo(mobs: int = 4) -> int:
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == RearGunner.TYPE and not Game.is_site(i):
+			slot = i
+			break
+	if slot < 0 and Game.s.rooms.size() > RearGunner.DEFAULT_SLOT and str(Game.s.rooms[RearGunner.DEFAULT_SLOT].type) == "empty":
+		Game.s.rooms[RearGunner.DEFAULT_SLOT] = {"type": RearGunner.TYPE, "level": 1, "job": {}, "build": {}}
+		slot = RearGunner.DEFAULT_SLOT
+	if slot < 0:
+		slot = rx_build(RearGunner.TYPE)
+	if slot < 0:
+		return -1
+	var pool := (Game.s.dwellers as Array).filter(func(d): return not Game.is_away(d) and Game.squad_role(d) < 0 and int(d.room) != slot)
+	pool.sort_custom(func(a, b): return float(a.agi) > float(b.agi))
+	var need := maxi(0, 2 - RearGunner.gunners(slot).size())
+	for d in pool.slice(0, need):
+		Game.assign(d, slot)
+	Game.rooms_changed.emit()
+	if mobs > 0:
+		var ids: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+		var q := []
+		for i in mobs:
+			q.append({"t": 0.2 + i * 0.6, "mob": ids[i % ids.size()], "lvl": Combat.enemy_level(), "no_mutate": true})
+		Combat.debug_spawn(q, false)
+	act("gunner demo", {"slot": slot, "gunners": RearGunner.gunners(slot).size(), "mobs": mobs})
+	return slot
+
+
+## level the first rear gunner post up by one (1..3), done at once
+func gunner_level_up() -> void:
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == RearGunner.TYPE:
+			Game.s.rooms[i].level = mini(3, int(Game.s.rooms[i].level) + 1)
+			Game.s.rooms[i].build = {}
+			Game.rooms_changed.emit()
+			act("gunner level", {"slot": i, "level": int(Game.s.rooms[i].level)})
+			return
+
+
 ## every crew member may sit down to supper again right away
 func saloon_clear_cd() -> void:
 	(Saloon.st().cd as Dictionary).clear()
