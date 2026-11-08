@@ -4115,16 +4115,27 @@ func _free_cam_test() -> void:
 	await shot("free_cam_far")
 	# the backdrop still covers the whole wide view: no clear-colour holes in the sky (the 64 px sky strip used to run
 	# out on the right on big screens, Parames 2026-11-08)
-	await RenderingServer.frame_post_draw
-	var img: Image = main.world_vp.get_texture().get_image()
+	# ... also panned to either end of the road (Parames 2026-11-08: a black box on the right after dragging)
 	var clear: Color = ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color")
 	var holes := 0
-	for ix in 12:
-		for iy in 8:
-			var c := img.get_pixel(int((ix + 0.5) / 12.0 * (img.get_width() - 1)), int((iy + 0.5) / 8.0 * img.get_height() * 0.6))
-			if absf(c.r - clear.r) + absf(c.g - clear.g) + absf(c.b - clear.b) < 0.01:
-				holes += 1
-	_check("free cam: the farthest view has no holes in the sky (%d of 96, view %d art px wide)" % [holes, main.vp_size().x], holes == 0)
+	for side in [0.0, main.pan_right, -main.PAN_LIMIT]:
+		main.pan_x = side
+		main._clamp_pan()
+		main._place_camera()
+		await wait(0.15)
+		await RenderingServer.frame_post_draw
+		var img: Image = main.world_vp.get_texture().get_image()
+		for ix in 12:
+			for iy in 8:
+				var c := img.get_pixel(int((ix + 0.5) / 12.0 * (img.get_width() - 1)), int((iy + 0.5) / 8.0 * img.get_height() * 0.6))
+				if absf(c.r - clear.r) + absf(c.g - clear.g) + absf(c.b - clear.b) < 0.01:
+					holes += 1
+	_check("free cam: the farthest view has no holes in the sky, centre and both pan ends (%d of 288, view %d art px wide)" % [holes, main.vp_size().x], holes == 0)
+	if holes > 0:
+		await shot("free_cam_sky_holes")
+	main.pan_x = 0.0
+	main._place_camera()
+	await wait(0.15)
 	# wheel in at a point: the world point under the cursor stays where it is
 	var wr: Rect2 = main.hud.world_rect()
 	var f: Vector2 = main.world_to_screen(main.vehicle.slot_global_rect(2).get_center()).round()      # on a room
