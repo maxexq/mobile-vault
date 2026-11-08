@@ -9213,7 +9213,7 @@ func _perf_test() -> void:
 	Game._flush_sim()
 	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
 	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
-		and wn + cn >= mini(frames, 20))
+		and wn + cn >= mini(frames / 2 - 1, 20))   # a step resets the timer: frames of 25-50 ms run one every other frame
 	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
 	Features.set_override("features", "fixed_sim", false)
 	w0 = Game.sim_steps.world
