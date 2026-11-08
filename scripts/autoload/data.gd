@@ -507,7 +507,7 @@ func room_art(t: String) -> String:
 ## machines give none
 const MEAT_MOBS := {
 	"rad_rat": 0.5, "scorpion": 0.8, "vulture": 0.6, "rad_wolf": 1.0, "mutant_bug": 0.4,
-	"frost_wolf": 1.0, "yeti": 1.6, "toxic_toad": 0.6, "mosquito": 0.2, "mutant_ape": 1.4,
+	"frost_wolf": 1.0, "yeti": 1.6, "toxic_toad": 0.6, "mosquito": 0.2, "mutant_ape": 1.4, "frost_owl": 0.6,
 }
 const MEAT_PER_KILL := 0.6       # x the table above (boss x12, elite x3)
 const RAW_KEYS := ["crops", "meat"]

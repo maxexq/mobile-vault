@@ -18,7 +18,7 @@ extends Node
 ##  * switch rooms_expansion off: new rooms leave the build menu, jobs and their clocks freeze where they are (no
 ##    hidden catch-up when it comes back on), saved rooms and keepsakes stay.
 ## GOD → รถ → ROOM EXPANSION. Autotest --only=rooms_x. Style: docs/art/room-style-reference.md.
-## Rooms so far: salvagers_saloon (MV-430, scripts/rooms/saloon.gd).
+## Rooms so far: salvagers_saloon (MV-430, scripts/rooms/saloon.gd), rear_gunner (MV-716, scripts/rooms/rear_gunner.gd).
 
 signal job_started(job: Dictionary)
 signal job_done(job: Dictionary)
@@ -30,6 +30,16 @@ signal talk(lines: Array)
 const VERSION := 1
 ## the ten approved rooms register here, one PR each (MV-430..MV-439)
 const DEFS := {
+	# MV-716: rear gunner post, the crew fire from the rear firing hatch at whatever chases the vehicle
+	# (scripts/rooms/rear_gunner.gd, own switch gunner_room; art MV-705)
+	"rear_gunner": {
+		"th": "ห้องยิงท้ายรถ", "en": "REAR GUNNER POST", "cost": 160, "unlock": 1, "stat": "agi", "feature": "gunner_room",
+		"produce": {}, "power": 0.2,
+		"effect_th": "ลูกเรือในห้องยิงศัตรูที่ไล่ท้ายรถ · ยิงมือได้แม้ไฟดับ · AGI สูงยิงแรงขึ้น",
+		"effect_en": "CREW SHOOT CHASERS FROM THE REAR HATCH",
+		"recipes": [],
+		"anims": [{"prefix": "fx_room_gunner_flash", "count": 4, "fps": 12.0, "loop": true, "rest": 0, "x": 56, "y": 24, "active": "firing"}],
+	},
 	# MV-430: shared supper for one or two crew → happiness, a bond and a short conversation (scripts/rooms/saloon.gd)
 	"salvagers_saloon": {
 		"th": "โรงเตี๊ยมนักคุ้ยซาก", "en": "SALVAGERS' SALOON", "cost": 180, "unlock": 2, "stat": "agi",
@@ -230,6 +240,9 @@ func progress(j: Dictionary) -> float:
 # =================================================================== activity (drives RoomAnim)
 ## is this room doing its thing right now: a job running (not paused), and lit
 func active(slot: int, what: String = "job") -> bool:
+	if what == "firing":
+		# MV-716 rear gunner: a manual gun, so the flash shows in a power-out too (never on a construction site)
+		return on() and Game.has_room(slot) and not Game.is_constructing(slot) and RearGunner.firing(slot)
 	if not on() or not Game.has_room(slot) or Game.room_dark(slot) or Game.is_constructing(slot):
 		return false
 	match what:
