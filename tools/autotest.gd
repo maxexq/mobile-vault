@@ -622,6 +622,11 @@ func _run() -> void:
 		await _world_v2_test()
 		_finish()
 		return
+	if "--only=vehicle_anim" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _vehicle_anim_test()
+		_finish()
+		return
 	if "--only=ambulance_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _ambulance_v3_test()
@@ -1585,6 +1590,7 @@ func _run() -> void:
 	await _rooms_v3_test()
 	await _ambulance_v3_test()
 	await _world_v2_test()
+	await _vehicle_anim_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
@@ -5066,7 +5072,8 @@ func _thai_terms_test() -> void:
 ## title screen: the backdrop van drives (wheels turn, engine rumbles) and the menu window stays on screen
 func _title_backdrop_test() -> void:
 	var v: Node = main.vehicle
-	_check("title: van wheels turn (world v2 ambulance: axles are in its shell)", v.v2 or (v.wheels.size() > 0 and v.wheels[0].is_playing()))
+	var amb_rolls: bool = v.v2 and (not v.amb_on or v.amb.tyres.size() > 0)     # MV-726: the ambulance's own tyres
+	_check("title: van wheels turn (world v2 ambulance: its own rolling tyres)", amb_rolls or (v.wheels.size() > 0 and v.wheels[0].is_playing()))
 	# Half-pixel rumble randomly skips beats; test motion with a deterministic whole-pixel amplitude.
 	# _engine_shake_test separately checks the default half strength and its distribution.
 	var rumble_override = Features.layers.dev.get("tune", {}).get("fx.engine_shake")
@@ -12232,6 +12239,76 @@ func _ambulance_v3_test() -> void:
 	Game.s = old_state
 	Game.rooms_changed.emit()
 	get_window().size = old_window
+	await wait(0.3)
+
+
+## MV-726: the world v2 ambulance moves: rolling tyres on the road, body on its springs, lights, flag
+func _vehicle_anim_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var v: Vehicle = main.vehicle
+	Dev.feature_set("vehicle_anim", true)
+	Dev.world_v2_preview(2)
+	await wait(0.3)
+	var spot := AmbulanceMotion.spot(2)
+	_check("vehicle anim: anchors match every ambulance shell (tools/ambulance_anim.py)",
+		AmbulanceMotion.ok(1) and AmbulanceMotion.ok(2) and AmbulanceMotion.ok(3) and AmbulanceMotion.ok(4) and AmbulanceMotion.ok(5))
+	_check("vehicle anim: the ambulance gets its own tyres (one per axle of the 2-floor shell)", v.amb_on
+		and v.amb.tyres.size() == (spot.wheels as Array).size() and v.amb.tyres.size() == 6)
+	var img: Image = v.v2_shell.texture.get_image()
+	var w0: Array = spot.wheels[1]
+	var fr: Array = spot.flag
+	_check("vehicle anim: tyres + flag cloth are cut out of the shell", img.get_pixel(int(w0[0]), int(w0[1])).a == 0.0
+		and img.get_pixel(int(w0[0]) - 15, int(w0[1]) + 10).a == 0.0 and img.get_pixel(fr[0] + 5, fr[1] + fr[3] / 2).a == 0.0)
+	Features.set_override("tune", "fx.engine_shake", 0.0)   # no random road bumps: the bump below is the only one
+	v.debug_speed = 1.0
+	await wait(1.6)
+	var f1 := v.amb.spin_frame()
+	var g1 := v.amb.flag_frame()
+	await wait(0.13)
+	_check("vehicle anim: driving rolls the tyres and waves the flag", f1 != v.amb.spin_frame() and g1 != v.amb.flag_frame())
+	_check("vehicle anim: headlight lens + tail lamps on while driving", v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1)
+	var y_before: Array = v.amb.tyres.map(func(t): return t.global_position.y)
+	v.amb.bump(90.0)
+	await wait(0.03)
+	var front_up: bool = v.amb.tyres[0].global_position.y < y_before[0]
+	var rear_wait: bool = v.amb.tyres[-1].global_position.y == y_before[-1]
+	await wait(5.6)
+	_check("vehicle anim: a bump lifts the front tyre first, the rear ones later", front_up and rear_wait
+		and v.amb.tyres.all(func(t): return t.position.y == float(t.get_meta("y0"))))
+	await shot("vehicle_anim_drive")
+	v.debug_speed = 0.0
+	await wait(0.4)
+	_check("vehicle anim: braking lights the brake lamps + the indicator signals the stop", v.amb.lamp_alpha("tail0") > 0.7
+		and v.amb.signal_t >= 0.0)
+	var marker_seen := false
+	await wait(1.6)
+	v.amb.force_beacon = true
+	var bl := false
+	var br := false
+	for i in 30:
+		await wait(0.04)
+		bl = bl or v.amb.lamp_alpha("bar_l") > 0.5
+		br = br or v.amb.lamp_alpha("bar_r") > 0.5
+		marker_seen = marker_seen or v.amb.lamp_alpha("marker") > 0.5
+	_check("vehicle anim: the raid light bar flashes left then right", bl and br)
+	_check("vehicle anim: the amber marker blinks after pulling over", marker_seen)
+	await shot("vehicle_anim_beacon")
+	var f2 := v.amb.spin_frame()
+	await wait(0.3)
+	_check("vehicle anim: parked tyres stand still", f2 == v.amb.spin_frame())
+	v.amb.force_beacon = false
+	v.debug_speed = -1.0
+	_check("vehicle anim: GOD MODE actions drive it", Dev.vehicle_anim("fast") and v.debug_speed > 1.0 and Dev.vehicle_anim("park"))
+	Dev.feature_set("vehicle_anim", false)
+	await wait(0.3)
+	_check("vehicle anim: switch off = the plain shell, no extra tyres", not v.amb_on and v.amb.tyres.is_empty()
+		and v.v2_shell.texture is CompressedTexture2D and v.v2_root.position.x == 0.0)
+	v.debug_speed = -1.0
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Dev._vehicle_changed()
 	await wait(0.3)
 
 

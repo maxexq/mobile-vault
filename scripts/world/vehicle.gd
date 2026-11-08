@@ -118,6 +118,10 @@ var v2_root: Node2D              # scale V2_K: ambulance shell over RoomV3Cell p
 var v2_shell: Sprite2D
 var v2_cells: Dictionary = {}    # slot -> RoomV3Cell
 var _v2_tick := 0.0
+var amb := AmbulanceMotion.new()  # MV-726 wheels / suspension / lights / flag on the world v2 ambulance
+var amb_on := false
+var debug_speed := -1.0           # GOD MODE / autotest: speed factor to show (>= 0), the game's own speed otherwise
+var _night := 0.0
 
 
 static func roof_dy_for(n_floors: int) -> float:
@@ -268,7 +272,7 @@ func _ready() -> void:
 			_refresh_mods())
 	Meta.generation_started.connect(func(_g): rebuild())
 	Features.changed.connect(func():
-		if v2 != v2_wanted():
+		if v2 != v2_wanted() or amb_on != amb_wanted():
 			rebuild()
 			return
 		_sync_detail()
@@ -367,6 +371,11 @@ func _build_v2() -> void:
 	_mods_root.visible = not v2   # (old-van mod overlays: world v2 phase 2)
 	if cab_view:
 		cab_view.visible = not v2
+	amb.clear()
+	amb_on = false
+	v2_root.position.x = 0.0
+	for p in puffs:               # the old shells hide the puffs' start behind them; the ambulance's stack is in front
+		body.move_child(p, (body.get_child_count() - 1) if v2 else smoke.get_index() + 1)
 	if not v2:
 		return
 	v2_shell.texture = load(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % floors)
@@ -379,9 +388,18 @@ func _build_v2() -> void:
 		v2_root.add_child(c)
 		v2_cells[slot] = c
 	v2_root.move_child(v2_shell, v2_root.get_child_count() - 1)
+	if amb_wanted():
+		amb_on = true
+		v2_shell.texture = AmbulanceMotion.cut_shell(floors)
+		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K)
 	for rv in room_views:
 		if v2_cells.has(rv.slot):
 			rv.visible = false
+
+
+## MV-726: the ambulance's own wheels / suspension / lights / flag (switch vehicle_anim; anchors from anim.json)
+func amb_wanted() -> bool:
+	return v2 and tier == "van" and Features.on("vehicle_anim") and AmbulanceMotion.ok(floors)   # the road train (MV-721) has its own shells
 
 
 ## atlas region of a main shell ("veh" / "ext") of this tier with n floors: its own shell, or the grown one
@@ -818,6 +836,7 @@ func apply_light(ambient: Color, night: float) -> void:
 	if cab_view:
 		cab_view.set_glow(warm)
 		cab_view.ambience.night = night
+	_night = night
 	headlight.visible = night > 0.15 or Game.s.get("weather", "") in ["storm", "fog", "sandstorm", "snow", "ashfall"]
 	headlight.modulate.a = clampf(maxf(night, 0.5), 0.0, 1.0)
 	antenna_light.modulate = Color("ff5a4a") * Color(inv.r, inv.g, inv.b) if night > 0.3 else Color("ff5a4a")
@@ -840,7 +859,11 @@ func _process(delta: float) -> void:
 		# stepped fade (4 levels) so the hull "slides" open in a pixel-art way
 		_exteriors.modulate.a = floorf(_ext_alpha * 4.0) / 4.0
 	var f := Game.speed_factor() if Game.started else TITLE_CRUISE
+	if debug_speed >= 0.0:
+		f = debug_speed
+	var was := _speed
 	_speed = move_toward(_speed, f, delta * 0.7)
+	var accel := (_speed - was) / maxf(delta, 0.001)
 	var moving := _speed > 0.02
 	for w in wheels:
 		if moving:
@@ -872,6 +895,8 @@ func _process(delta: float) -> void:
 		_bump = -px_amp((2.0 if randf() < 0.15 else 1.0) * k)
 		if Game.vehicle_def().get("rail", false):
 			_bump = -px_amp(k) if randf() < 0.3 else 0.0     # rails are smoother
+		if amb_on and _bump < 0.0:
+			amb.bump(_speed * AmbulanceMotion.ROAD_PX)        # the tyres take the bump first, front axle to rear
 	_bump = move_toward(_bump, 0.0, delta * 14.0)
 	# engine rumble: the body buzzes 1 px while the engine runs (driving, title backdrop), slower when idling;
 	# every other beat is a buzz, and fx.engine_shake decides how many of those beats really move (MV-176)
@@ -882,6 +907,10 @@ func _process(delta: float) -> void:
 		_rumble = -px_amp(k) if _rumble_on else 0.0
 		_rumble_t = randf_range(0.06, 0.1) if moving else randf_range(0.1, 0.16)
 	body.position.y = round(minf(_bump, _rumble))
+	if amb_on:
+		var engine := moving or not Game.started or bool(Game.s.get("traveling", false)) or debug_speed >= 0.0
+		amb.tick(delta, _speed * AmbulanceMotion.ROAD_PX, accel, engine, _night, body.position.y,
+			Combat.wave_active, EngineBay.state_key() == "broken")
 	var sun := Game.sun_level()
 	var az := clampf((float(Game.s.tod) - 0.25) / 0.5, 0.0, 1.0)
 	var frame := 2
@@ -946,6 +975,8 @@ func _place_idle_motion() -> void:
 	var ch: Array = vd.get("chimney", [250, 272])
 	for i in puffs.size():
 		puffs[i].position = Vector2(float(ch[0]) + i * 2, float(ch[1]) - 14.0)
+		if v2:                    # MV-726: from the ambulance's exhaust stack, not the old van's chimney
+			puffs[i].position = smoke.position + Vector2(i * 2 - 4, -10.0)
 	drip.position = Vector2(250, roof_y() + 6.0)
 
 
@@ -1059,7 +1090,7 @@ func _driver_step() -> void:
 
 func _tick_driver(delta: float) -> void:
 	driver_cab.position = DRIVER_CAB.get(tier, DRIVER_CAB.rig)
-	if not driver_cab_on():
+	if not driver_cab_on() or v2:  # MV-726: the old van's cab frames floated beside the world v2 ambulance
 		_driver_seq.clear()
 		driver_cab.visible = false
 		return
