@@ -779,7 +779,7 @@ func blocked_reason() -> String:
 				return "ด่านตรวจ: ต้องการ Vault Lv.%d + %s" % [Data.biome(s.biome + 1).req, "ค่าผ่านทาง" if Modes.peaceful() else "ปราบบอส"]
 			if Modes.peaceful():
 				return "ด่านตรวจ: ค่าผ่านทาง %d เศษเหล็ก" % Modes.toll()
-			return "ด่านตรวจ: ปราบบอส %s" % Combat.BOSSES[Data.biome(s.biome).id].th
+			return "ด่านตรวจ: ปราบบอส %s" % Combat.boss_def(Data.biome(s.biome).id).th
 		return "ด่านตรวจ: ต้องการ Vault Lv.%d" % Data.biome(s.biome + 1).req
 	return ""
 
@@ -846,7 +846,7 @@ func _drive_map(m: float, dt: float, offline: bool) -> void:
 		if Modes.peaceful() and not Combat.boss_beaten(int(s.biome)):
 			toast.emit("ถึงด่านตรวจ! ค่าผ่านทาง %d เศษเหล็ก (จ่ายเองเมื่อมีพอ)" % Modes.toll(), "warn")
 		elif not Combat.boss_beaten(int(s.biome)):
-			toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.BOSSES[Data.biome(s.biome).id].th, "warn")
+			toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.boss_def(Data.biome(s.biome).id).th, "warn")
 		else:
 			toast.emit("ถึงด่านตรวจ! อัปเกรด Mobile Vault เป็น Lv.%d เพื่อไปต่อ" % checkpoint_req(), "warn")
 		travel_changed.emit()
@@ -1518,7 +1518,7 @@ func _sim_crew_body(dt: float, offline: bool) -> void:
 					if Modes.peaceful() and not Combat.boss_beaten(int(s.biome)):
 						toast.emit("ถึงด่านตรวจ! ค่าผ่านทาง %d เศษเหล็ก (จ่ายเองเมื่อมีพอ)" % Modes.toll(), "warn")
 					elif not Combat.boss_beaten(int(s.biome)):
-						toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.BOSSES[Data.biome(s.biome).id].th, "warn")
+						toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.boss_def(Data.biome(s.biome).id).th, "warn")
 					else:
 						toast.emit("ถึงด่านตรวจ! อัปเกรด Mobile Vault เป็น Lv.%d เพื่อไปต่อ" % next_req, "warn")
 				travel_changed.emit()
