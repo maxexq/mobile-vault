@@ -612,6 +612,11 @@ func _run() -> void:
 		await _parallax_v2_test()
 		_finish()
 		return
+	if "--only=enc_art_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _enc_art_v2_test()
+		_finish()
+		return
 	if "--only=rooms_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _rooms_v3_test()
@@ -1371,6 +1376,7 @@ func _run() -> void:
 		main.hud.panels.expedition.close()
 	Expedition.skip_site()
 	await _encounter_test()
+	await _enc_art_v2_test()
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
 	Meta.m().legacy = 9999
 	Meta.add_blueprint("bp_bus")
@@ -2890,6 +2896,52 @@ func _encounter_test() -> void:
 	Game.s.exp.enc.at = Time.get_unix_time_from_system() + 99999999.0
 	var r4 := await _enc_finish()
 	_check("encounter: scheduled-but-unreached is dropped", not r4.has("enc") and not Expedition.active())
+
+
+## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2)
+func _enc_art_v2_test() -> void:
+	Features.set_override("features", "enc_art_v2", true)
+	var sizes_ok := true
+	for id in Encounter.ENCOUNTERS:
+		var img: String = Encounter.def(id).image
+		var st := EncArt.still(img)
+		var sh: Texture2D = load(EncArt.DIR + img + "_anim.png")
+		if st == null or st.get_size() != Vector2(320, 160) or sh == null or sh.get_size() != Vector2(320 * 8, 160 * 6):
+			sizes_ok = false
+	_check("enc art v2: every encounter has a 320x160 still + 8x6 sheet", sizes_ok)
+	_check("enc art v2: sweep plays once, then the hold part loops",
+		EncArt.frame_at(0.0) == 0 and EncArt.frame_at(4.75) == 47 and EncArt.frame_at(4.8) == 18 and EncArt.frame_at(7.79) == 47 and EncArt.frame_at(7.8) == 18)
+	_check("enc art v2: frame cells", EncArt.frame_rect(9) == Rect2(320, 160, 320, 160))
+	var sup := {"food": 10, "water": 10, "stimpack": 1, "ammo": 10, "antibiotics": 0}
+	if not Expedition.active():
+		_check("enc art v2: expedition starts", _enc_start(sup))
+	Encounter.trigger_now("cry")
+	await wait(0.8)
+	var pop = main.hud.encounter_popup
+	_check("enc art v2: popup open", pop.is_open)
+	var rect: TextureRect = pop.media.get_child(0)
+	_check("enc art v2: popup shows the 320x160 animated art", rect.texture is AtlasTexture and rect.texture.get_size() == Vector2(320, 160))
+	var r0: Rect2 = (rect.texture as AtlasTexture).region
+	await wait(0.6)
+	_check("enc art v2: the flashlight animation advances", (rect.texture as AtlasTexture).region != r0)
+	await shot("enc_art_v2_cry")
+	pop.close()
+	Dev.enc_art_v2(false)
+	_check("enc art v2: switch off -> old 160x80 art", not Features.on("enc_art_v2") and EncArt.anim_texture("enc_cry").get_size() == Vector2(160, 80))
+	pop.show_encounter()
+	await wait(0.4)
+	_check("enc art v2: popup falls back to the old art", (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(160, 80))
+	pop.close()
+	Dev.enc_art_v2(true)
+	_check("enc art v2: GOD toggle turns it back on", Features.on("enc_art_v2"))
+	pop.show_encounter()
+	await wait(0.3)
+	pop.choose(Encounter.def("cry").choices.size() - 1)
+	await wait(0.4)
+	_check("enc art v2: result shows the 320x160 still", (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(320, 160))
+	await shot("enc_art_v2_cry_result")
+	pop.close()
+	await _enc_finish()
 
 
 ## random road events: shuffle bag per biome, no back-to-back repeats, survives a save round-trip
