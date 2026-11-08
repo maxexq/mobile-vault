@@ -4665,8 +4665,17 @@ func _engine_bay_test() -> void:
 	e.heat = 40.0
 	e.auto_rest = true
 	EngineBay.set_mode("normal")
-	# stock-ish driving stays under the rest line
+	# stock-ish driving stays under the rest line, with the usual two mechanics in the cab (the run's earlier state
+	# decided this before: an empty cab cools at 0.10/min and a V8 cruise settles ~120 C in the day, flaky on CI)
+	var cab_keep := {}
+	for d in Game.s.dwellers:
+		if cab_keep.size() < mini(2, Data.CAB_WORKERS) and Game.squad_role(d) < 0 and not Game.is_away(d):
+			cab_keep[int(d.id)] = d.room
+			d.room = Data.CAB_SLOT
 	_check("engine: normal V8 cruise settles below auto-rest (%.1f C: ambient %.0f, heat in %.2f, cooling %.3f, load %.2f, weather %s, night %s)" % [EngineBay.settle_temp(), EngineBay.ambient(), EngineBay.heat_in(), EngineBay.cooling(), Haul.load_ratio(), str(Game.s.get("weather", "clear")), str(Game.is_night())], EngineBay.settle_temp() < 110.0 or Haul.load_ratio() > 1.0 or EngineBay.ambient() >= 40.0)
+	for d in Game.s.dwellers:
+		if cab_keep.has(int(d.id)):
+			d.room = cab_keep[int(d.id)]
 	# --- jobs
 	Game.s.res.scrap = maxf(500.0, float(Game.s.res.scrap))
 	Game.s.res.fuel = maxf(50.0, float(Game.s.res.fuel))
