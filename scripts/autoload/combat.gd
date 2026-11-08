@@ -901,7 +901,8 @@ func _tick_mechanics(dt: float) -> void:
 		if e.mech_t > 0.0:
 			continue
 		e.mech_t = 9.0 if not e.get("enraged", false) else 6.0
-		var mobs: Array = biome_mobs()
+		# boss adds keep the balance-tested pre-v2 rosters (MV-714: the v2 metro roster failed the warlord bench)
+		var mobs: Array = BIOME_MOBS.get(biome_id(), BIOME_MOBS.industrial)
 		if mech.has("summon") and enemies.size() < 9:
 			for i in 2:
 				spawn_queue.append({"t": 0.2 + i * 0.4, "mob": mobs[rng.randi() % mobs.size()], "lvl": maxi(1, int(e.lvl) - 2), "warlord_add": bool(e.get("warlord", false))})
