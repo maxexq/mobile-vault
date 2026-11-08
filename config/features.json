@@ -93,7 +93,9 @@
     "audio_cues": true,
     "desert_parallax": true,
     "parallax_v2": true,
-    "world_2x": true
+    "world_2x": true,
+    "rooms_v3": true,
+    "rooms_v3_review": true
   },
   "events": {},
   "tune": {
