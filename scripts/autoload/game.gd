@@ -459,8 +459,11 @@ func _process(delta: float) -> void:
 		_acc_world += delta
 		_acc_crew += delta
 		_acc_step += delta
-		if _acc_step >= 1.0 / Features.num("perf.sim_hz", SIM_HZ):
-			_acc_step = 0.0
+		var step := 1.0 / Features.num("perf.sim_hz", SIM_HZ)
+		if _acc_step >= step:
+			# keep the remainder (capped at one step) so frames just above sim_hz still step at sim_hz; a reset to 0
+			# made every other frame skip at ~22 fps and the step rate fell to half (autotest perf, MV-714 CI)
+			_acc_step = minf(_acc_step - step, step)
 			if _crew_next:
 				_sim_crew(_acc_crew, false)
 				_acc_crew = 0.0

@@ -318,6 +318,7 @@ func _on_shot(from_kind: String, from_id: int, to_kind: String, to_id: int, styl
 			if en == null:
 				return
 			a = en.global_position + Vector2(-4, -en.height() * 0.6)
+			en.attack()
 	match to_kind:
 		"enemy":
 			var tn: EnemyActor = enemy_nodes.get(to_id)
@@ -746,6 +747,8 @@ class EnemyActor extends Node2D:
 	var size := 1             # MV-517: whole-number sprite scale (CombatView.enemy_scale)
 	var _grow := 0.0          # how far the centre moves back so the front edge stays put
 	var _right := 0.0         # sprite's right edge from the node (scaled)
+	var v2 := false           # MV-714: drawn with EnemiesV2 sheets
+	var _attacking := false
 
 	func height() -> float:
 		return _h
@@ -764,7 +767,7 @@ class EnemyActor extends Node2D:
 	## the drawn sprite in this node's parent space (for tests)
 	func sprite_rect() -> Rect2:
 		var tex := spr.sprite_frames.get_frame_texture("walk", 0)
-		return Rect2(position + spr.offset * float(size), Vector2(tex.get_size()) * float(size))
+		return Rect2(position + spr.offset * spr.scale.x, Vector2(tex.get_size()) * spr.scale.x)
 
 	func setup(e: Dictionary) -> void:
 		is_boss = e.boss
@@ -775,6 +778,9 @@ class EnemyActor extends Node2D:
 		var sf: SpriteFrames
 		var sprite: String = e.sprite
 		spr.centered = false
+		if EnemiesV2.use_for(e):
+			_setup_v2(e)
+			return
 		if sprite.begins_with("dw_"):
 			sf = Atlas.dweller_frames(sprite)
 			spr.flip_h = true
@@ -813,6 +819,44 @@ class EnemyActor extends Node2D:
 			# MV-517: a scaled-up boss stands behind the smaller mobs so they don't vanish inside it
 			z_index = 7 if size == 1 else 4
 
+	## MV-714: v2 art (crew-density sheets with move + attack clips), shown at EnemiesV2.scale(); no whole-number
+	## growth, so the body anchor (feet, or the body centre for flyers) sits on the simulated spot
+	func _setup_v2(e: Dictionary) -> void:
+		v2 = true
+		var m := EnemiesV2.info(str(e.mob))
+		var k := EnemiesV2.scale()
+		spr.sprite_frames = EnemiesV2.frames(str(e.mob))
+		spr.offset = Vector2(-float(m.ax), -float(m.ay))
+		spr.scale = Vector2(k, k)
+		size = 1
+		_w = float(m.w) * k
+		_h = float(m.h) * k
+		_grow = 0.0
+		_right = (float(m.fw) - float(m.ax)) * k
+		position = place(position)
+		target = position
+		spr.play("walk")
+		spr.frame = randi() % int(m.frames)
+		spr.animation_finished.connect(_on_clip_done)
+		add_child(spr)
+		# the v2 art carries its own colours (frost wolf is already icy); elites keep the gold tint
+		if bool(e.get("elite", false)) and str(e.tint) != "":
+			_base_mod = Color(str(e.tint))
+		spr.modulate = _base_mod
+		z_index = 5 if e.kind != "air" else 6
+
+	## MV-714: play the attack clip once when this enemy hits (v2 art only), then back to the move loop
+	func attack() -> void:
+		if not v2 or spr == null:
+			return
+		_attacking = true
+		spr.play("attack")
+
+	func _on_clip_done() -> void:
+		if spr.animation == "attack":
+			_attacking = false
+			spr.play("walk")
+
 	func flash() -> void:
 		_flash = 0.07
 
@@ -821,7 +865,7 @@ class EnemyActor extends Node2D:
 		var moving := position.distance_to(target) > 0.5
 		position = position.lerp(target, clampf(delta * 10.0, 0.0, 1.0))
 		spr.position = position.round() - position + Vector2(0, -roundf(drop))
-		spr.speed_scale = 1.0 if moving else 0.4
+		spr.speed_scale = 1.0 if moving or _attacking else 0.4
 		if stunned:
 			spr.speed_scale = 0.0
 		_flash -= delta

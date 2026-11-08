@@ -81,6 +81,7 @@
     "boss_intro": true,
     "vehicle_detail": true,
     "vehicle_ambience": true,
+    "enemies_v2": true,
     "enemy_size": true,
     "cozy_roof": true,
     "mod_detail_fine": true,
