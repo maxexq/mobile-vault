@@ -5913,15 +5913,21 @@ func _rooms_v3_test() -> void:
 			moved = moved or (a as CrewV3Actor).clip() in ["walk", "work", "carrywalk", "talk", "eat", "drink", "idle", "construct"]
 	_check("rooms v3: crew play their clips", moved)
 	await shot("rooms_v3_interior")
-	# MV-724: softer contact shadow (same size), GOD buttons drive the tune
-	var old_a := 1.0 - (1.0 - CrewV3Actor.SHADOW_A[0]) * (1.0 - CrewV3Actor.SHADOW_A[1])
-	_check("rooms v3: crew shadow is softer than MV-711 but still there", CrewV3Actor.shadow_alpha() > 0.15 and CrewV3Actor.shadow_alpha() < old_a * 0.7)
-	Dev.crew_v3_shadow(1.0)
-	var full_a := CrewV3Actor.shadow_alpha()
+	# MV-724: crisp room-toned pixel shadow (same width), lighter crew grade, GOD buttons drive both tunes
+	var old_a := 1.0 - (1.0 - 0.43) * (1.0 - 0.25)   # the MV-711 draw_circle shadow
+	_check("rooms v3: crew shadow is lighter than MV-711 but clearly there", CrewV3Actor.shadow_alpha() > 0.35 and CrewV3Actor.shadow_alpha() < old_a)
+	var widest := 0
+	for r in CrewV3Actor.SHADOW_ROWS:
+		widest = maxi(widest, int(r[1]))
+	_check("rooms v3: crew shadow keeps its width", widest == int(CrewV3Actor.SHADOW_W))
 	Dev.crew_v3_shadow(0.0)
 	var none_a := CrewV3Actor.shadow_alpha()
 	Dev.crew_v3_shadow(-1.0)
-	_check("rooms v3: GOD crew shadow x1 / x0 / default", is_equal_approx(full_a, old_a) and none_a == 0.0 and is_equal_approx(CrewV3Actor.shadow_k(), CrewV3Actor.SHADOW))
+	Dev.crew_v3_grade(1.0)
+	var g_full := CrewV3Actor.grade_k()
+	Dev.crew_v3_grade(-1.0)
+	_check("rooms v3: GOD crew shadow / grade buttons", none_a == 0.0 and g_full == 1.0 and CrewV3Actor.grade_k() < 1.0
+		and is_equal_approx(CrewV3Actor.shadow_k(), CrewV3Actor.SHADOW))
 	var first := -1
 	for slot in panel.cells:
 		if (panel.cells[slot] as RoomV3Cell).kind == "v3" and not (panel.cells[slot] as RoomV3Cell).data.get("hotspots", []).is_empty():
@@ -5957,7 +5963,7 @@ func _rooms_v3_test() -> void:
 		for control in row.get_children():
 			if control is Button:
 				labels[control.text] = true
-	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด") and labels.has("เงาอ่อน x0.5"))
+	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด") and labels.has("เงาอ่อน x0.5") and labels.has("ย้อม 0.5"))
 	god.close()
 	Features.set_override("features", "rooms_v3", false)
 	_check("rooms v3: switch off hides the HUD button and refuses to open", not hud._interior_btn.visible and not hud.open_interior())

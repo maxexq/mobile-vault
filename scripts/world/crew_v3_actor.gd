@@ -10,10 +10,16 @@ enum State { IDLE, WALK, ACT }
 
 const SPEED := 16.0               # room px / s (old crew 11 px/s in a 64 px room, x 144/64 x 2/3)
 const SHADOW_W := 15.0
-## MV-724: contact shadow strength x (tune crew_v3.shadow; 1.0 = the MV-711 shadow, alpha 0.43 + 0.25 core, which
-## read as a black blob on the lit v3 floors). The size stays SHADOW_W so other crew-sized shadows can match it.
-const SHADOW := 0.5
-const SHADOW_A := [0.43, 0.25]
+## MV-724: contact shadow = a pixel-grid ellipse in room pixels (crisp edge like the room art, the first soft
+## draw_circle version read as a faint smudge), width SHADOW_W kept so other crew-sized shadows can match it.
+## Strength x tune crew_v3.shadow (1 = these alphas), colour = the room's deepest tone.
+const SHADOW := 1.0
+const SHADOW_A := [0.38, 0.20]       # outer ring, core (centre ~50 % opaque, in the room's own dark tone)
+## [row y from the feet line, width]: 5 rows, mostly below the feet so it shows past the boots
+const SHADOW_ROWS := [[-1, 11], [0, 15], [1, 15], [2, 13], [3, 7]]
+const SHADOW_CORE := [[0, 11], [1, 11], [2, 7]]
+## MV-724: how much room grade the crew get (tune crew_v3.grade; 1 = MV-711, which Parames found too dark)
+const GRADE := 0.35
 const BLEND := preload("res://shaders/crew_v3_blend.gdshader")
 
 var did := -1
@@ -142,24 +148,35 @@ func _process(delta: float) -> void:
 			timer -= delta
 			if timer <= 0.0:
 				_enter(State.ACT if randf() < (0.8 if mode != "rest" else 0.5) else State.IDLE)
+	_mat.set_shader_parameter("grade", grade_k())
 	_mat.set_shader_parameter("light", lerpf(0.95, 0.65, clampf(absf(position.x - lamp_x) / 72.0, 0.0, 1.0)))
 	queue_redraw()
 
 
 func _draw() -> void:
-	# contact shadow under the feet (~15 room px, soft outer + core), strength = shadow_k() (MV-724)
+	# contact shadow under the feet (MV-724): crisp pixel ellipse on the room grid, room-toned
 	var k := shadow_k()
 	if k <= 0.0:
 		return
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.2))
-	draw_circle(Vector2.ZERO, SHADOW_W * 0.5, Color(_shadow_col, minf(SHADOW_A[0] * k, 1.0)))
-	draw_circle(Vector2.ZERO, SHADOW_W * 0.3, Color(_shadow_col, minf(SHADOW_A[1] * k, 1.0)))
-	draw_set_transform(Vector2.ZERO)
+	var o := Vector2(roundf(position.x), roundf(position.y)) - position   # snap to whole room pixels
+	var c1 := Color(_shadow_col, minf(SHADOW_A[0] * k, 1.0))
+	var c2 := Color(_shadow_col, minf(SHADOW_A[1] * k, 1.0))
+	for r in SHADOW_ROWS:
+		var w := int(r[1])
+		draw_rect(Rect2(o + Vector2(-floorf(w * 0.5), float(r[0])), Vector2(w, 1)), c1)
+	for r in SHADOW_CORE:
+		var w := int(r[1])
+		draw_rect(Rect2(o + Vector2(-floorf(w * 0.5), float(r[0])), Vector2(w, 1)), c2)
 
 
-## contact shadow strength: tune crew_v3.shadow (MV-724), 1.0 = the old MV-711 shadow
+## contact shadow strength: tune crew_v3.shadow (MV-724), 1.0 = the pixel shadow's own alphas
 static func shadow_k() -> float:
 	return Features.num("crew_v3.shadow", SHADOW)
+
+
+## room grade strength on the crew: tune crew_v3.grade (MV-724), 1.0 = the MV-711 grade
+static func grade_k() -> float:
+	return Features.num("crew_v3.grade", GRADE)
 
 
 ## alpha at the centre of the shadow (outer + core blended), for checks and the GOD note
