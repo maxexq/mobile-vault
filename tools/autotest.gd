@@ -867,6 +867,11 @@ func _run() -> void:
 		await _boss_intro_test()
 		_finish()
 		return
+	if "--only=enemies_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _enemies_v2_test()
+		_finish()
+		return
 	if "--only=enemy_size" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _enemy_size_test()
@@ -1567,6 +1572,7 @@ func _run() -> void:
 	await _pity_test()
 	await _boss_intro_test()
 	await _enemy_size_test()
+	await _enemies_v2_test()
 	await _vehicle_detail_test()
 	await _cozy_roof_test()
 	await _mod_detail_fine_test()
@@ -2432,6 +2438,12 @@ func _confirm_actions_test() -> void:
 	Input.parse_input_event(enter)
 	await wait(0.1)
 	_check("confirm: default Enter cancels and preserves the room", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
+	if dialog.is_open or not is_same(Game.s.rooms[1], room_before):
+		var modals := []
+		for n in get_tree().get_nodes_in_group("modal_open"):
+			modals.append(str(n.get_path()))
+		print("[confirm-failure] open=%s same_room=%s focus=%s modals=%s event=%s" % [dialog.is_open, is_same(Game.s.rooms[1], room_before),
+			get_viewport().gui_get_focus_owner().get_path() if get_viewport().gui_get_focus_owner() else "none", modals, Game.active_event])
 	room_ui._request_demolish()
 	var escape := InputEventKey.new()
 	escape.keycode = KEY_ESCAPE
@@ -6321,6 +6333,7 @@ func _wait_for(cond: Callable, max_s: float) -> void:
 ## spots (hp bar + crown included), tune steps down when too big, switch off = the old size
 func _enemy_size_test() -> void:
 	var cv: CombatView = main.combat_view
+	Features.set_override("features", "enemies_v2", false)    # MV-517 checks the old whole-number sprites
 	_no_events()
 	Dev.kill_enemies()
 	await wait(0.4)
@@ -6417,6 +6430,7 @@ func _enemy_size_test() -> void:
 	Features.set_override("features", "enemy_size", null)
 	Dev.kill_enemies()
 	await wait(0.4)
+	Features.set_override("features", "enemies_v2", null)
 
 
 ## MV-387: boss / warlord / elite entrances: the HUD band with the name, drop-in + landing in the world, elites
@@ -11958,3 +11972,76 @@ func _icons_v2_test() -> void:
 	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
 	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
 	Dev.icons_v2(was)
+
+
+## MV-714: v2 enemies (crew-density sheets, move + attack clips, 3 per biome with one flyer)
+func _enemies_v2_test() -> void:
+	var cv: CombatView = main.combat_view
+	Features.set_override("features", "enemies_v2", true)
+	_no_events()
+	Dev.kill_enemies()
+	await wait(0.4)
+	var meta := EnemiesV2.meta()
+	var sheets_ok := meta.size() == 18
+	for mob in meta:
+		var m: Dictionary = meta[mob]
+		var sf := EnemiesV2.frames(mob)
+		for clip in ["walk", "attack"]:
+			sheets_ok = sheets_ok and sf.get_frame_count(clip) == 8
+			var t := sf.get_frame_texture(clip, 0)
+			sheets_ok = sheets_ok and t != null and t.get_width() == int(m.fw) and t.get_height() == int(m.fh)
+		sheets_ok = sheets_ok and Combat.MOBS.has(mob)
+	_check("enemies v2: 18 mobs, each with 8-frame move + attack sheets of the stated size", sheets_ok)
+	var roster_ok := true
+	for b in Combat.BIOME_MOBS_V2:
+		var kinds := {}
+		var air := 0
+		for mob in Combat.biome_mobs(b):
+			if kinds.has(mob):
+				continue
+			var k: String = Combat.V2_KIND.get(mob, Combat.MOBS[mob].kind)
+			kinds[mob] = k
+			air += 1 if k == "air" else 0
+		roster_ok = roster_ok and kinds.size() == 3 and air == 1
+		for mob in kinds:
+			roster_ok = roster_ok and meta.has(mob)
+	_check("enemies v2: every biome roster = 3 v2 mobs with exactly 1 flyer", roster_ok)
+	# walk this biome's three in, check they use the v2 sheets at the crew pixel scale
+	Dev.enemies_v2_parade("biome")
+	await _wait_for(func(): return cv.enemy_nodes.size() >= 3, 5.0)
+	await wait(0.5)
+	var nodes_ok := cv.enemy_nodes.size() >= 3
+	var k := EnemiesV2.scale()
+	var one: CombatView.EnemyActor = null
+	for e in Combat.enemies:
+		var n = cv.enemy_nodes.get(int(e.id))
+		if n == null:
+			continue
+		nodes_ok = nodes_ok and n.v2 and n.spr.scale == Vector2(k, k) and n.spr.animation == "walk"
+		nodes_ok = nodes_ok and (str(e.kind) == "air") == bool(EnemiesV2.info(str(e.mob)).air)
+		one = n
+	_check("enemies v2: biome parade drawn with v2 sheets at x%.2f, flyers in the air" % k, nodes_ok)
+	for e in Combat.enemies:
+		e.max = 1.0e9      # keep them alive for the screenshot
+		e.hp = 1.0e9
+	await wait(3.0)    # let them reach their stop spots behind the truck
+	await shot("enemies_v2_biome")
+	var atk_ok := one != null
+	if one:
+		one.attack()
+		atk_ok = one.spr.animation == "attack" and not one.spr.sprite_frames.get_animation_loop("attack")
+		await one.spr.animation_finished
+		atk_ok = atk_ok and one.spr.animation == "walk"    # (it may attack again right after: real hits replay it)
+	_check("enemies v2: attack clip plays once, then back to the move loop", atk_ok)
+	# switch off = old roster + old sprites, bosses never use v2
+	Dev.kill_enemies()
+	await wait(0.4)
+	Features.set_override("features", "enemies_v2", false)
+	var off_ok := Combat.biome_mobs("tundra") == Combat.BIOME_MOBS.tundra
+	off_ok = off_ok and not EnemiesV2.use_for({"mob": "rad_rat"})
+	Features.set_override("features", "enemies_v2", true)
+	off_ok = off_ok and not EnemiesV2.use_for({"mob": "scorpion", "boss": true}) and EnemiesV2.use_for({"mob": "scorpion"})
+	_check("enemies v2: switch off = old roster/sprites, bosses keep their own art", off_ok)
+	Features.set_override("features", "enemies_v2", null)
+	Dev.kill_enemies()
+	await wait(0.4)
