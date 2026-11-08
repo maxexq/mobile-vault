@@ -468,6 +468,9 @@ func _run() -> void:
 	# MV-604: the idle frame cap would halve the frames of every quiet test and move Engine.max_fps under the settings
 	# checks; _battery_test turns it on for itself
 	main.idle_cap_allowed = false
+	# MV-715: the ambulance starts with 1 floor; the older checks assume the 2-floor van (slots 0-5), _world_v2_test
+	# checks the real 1-floor start
+	Game.test_van_floors = 2
 	await wait(1.2)
 	await shot("title")
 	_check("audio: the lo-fi title music plays on the title screen", Sound.is_playing("title_lofi") or not Sound.bgm_on())
@@ -12106,6 +12109,26 @@ func _world_v2_test() -> void:
 	var old_state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	var v: Vehicle = main.vehicle
+	# the real start (Parames 2026-11-08): 1 floor, +1 at each Vault floor level; a used 2nd floor is never taken away
+	Game.test_van_floors = 0
+	Dev.set_tier("van")
+	Features.set_override("features", "five_floors", true)
+	_check("world v2: the ambulance starts with 1 floor and grows to 4 with the Vault", Game.floors_at(1) == 1 and Game.floors_at(6) == 4)
+	Game.s.vault_level = 1
+	Game.s.body_slots = 6
+	while Game.s.rooms.size() < 6 + Data.TRAILER_SLOTS * Game.trailers():
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	Game.s.rooms[4] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.fit_body(true)
+	var kept := Game.floors() == 2 and str(Game.s.rooms[4].type) == "kitchen"
+	for i in range(3, 6):
+		Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	for d in Game.s.dwellers:
+		if int(d.room) >= 3 and int(d.room) < 6:
+			d.room = -1
+	Game.fit_body(true)
+	_check("world v2: an old save keeps a used 2nd floor, an unused one folds away", kept and Game.floors() == 1)
+	Game.test_van_floors = 2
 	var f := Dev.world_v2_preview(2)
 	await wait(0.4)
 	_check("world v2: van becomes the ambulance (2 floors, half-size shell, old van wheels gone)", f == 2 and v.v2 and v.v2_root.visible

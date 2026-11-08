@@ -1017,8 +1017,8 @@ func rooms_v3_open(slot: int = -1) -> bool:
 	return hud.open_interior(slot)
 
 
-## MV-715: the first vehicle (van) with `n` floors (2-5, the van's range: the Vault level that gives it, switch
-## five_floors on), the ambulance shell switch on, then the v3 interior opens; returns the floors it has now
+## MV-715: the first vehicle (van) with `n` floors (1-5: the van starts with 1 and gets one at each Vault floor
+## level, 5 = beyond its ladder, for the art; switch five_floors on), the ambulance shell switch on, then the v3 interior opens; returns the floors it has now
 func ambulance_v3_preview(n: int) -> int:
 	feature_set("ambulance_v3", true)
 	_van_floors(n)
@@ -1040,12 +1040,13 @@ func world_v2_preview(n: int) -> int:
 func _van_floors(n: int) -> void:
 	set_tier("van")
 	Features.set_override("features", "five_floors", true)
+	n = clampi(n, 1, Data.BODY_FLOORS)
 	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
-		if Game.floors_at(lv) >= clampi(n, 2, Data.BODY_FLOORS) or lv == Data.MAX_VAULT_LEVEL:
+		if Game.floors_at(lv) >= n or lv == Data.MAX_VAULT_LEVEL:
 			Game.s.vault_level = lv
 			break
 	var old_main := Game.main_slots()
-	Game.s.body_slots = Data.ROOMS_PER_FLOOR * Game.target_floors()
+	Game.s.body_slots = Data.ROOMS_PER_FLOOR * n      # 5 floors is past the van's own ladder (1 + 3 Vault floors)
 	Game.relayout_body(old_main, Game.main_slots())
 
 

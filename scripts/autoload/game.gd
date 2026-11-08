@@ -37,6 +37,9 @@ var _offline_built: Array = []     # room names finished while away (for the wel
 var sim_offline := false           # MV-244: the current simulation step is offline catch-up
 
 
+## MV-715: the autotest's older checks were written for the 2-floor van; it sets this to 2 (0 = Data.START_FLOORS)
+var test_van_floors := 0
+
 func _ready() -> void:
 	rng.randomize()
 	Save.flush_requested.connect(save_game)
@@ -235,7 +238,7 @@ func _migrate() -> void:
 	# MV-247: raw food (crops + meat) for the kitchen; old saves get the same starting stock as a new game
 	(s.res as Dictionary).merge(Data.START_RAW, false)
 	_migrate_v4()
-	fit_body()
+	fit_body(true)
 	while s.rooms.size() < slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for d in s.dwellers:
@@ -527,21 +530,30 @@ func floors() -> int:
 		if s.has("body_slots"):
 			return int(s.body_slots) / Data.ROOMS_PER_FLOOR
 		return floors_at(int(s.vault_level))
-	return int(vehicle_def().floors)
+	return base_floors()
 
 
 ## floors the body should have now: grown with the Vault (switch five_floors) or the vehicle's own
 func target_floors() -> int:
 	if Features.on("five_floors") and not s.is_empty():
 		return floors_at(int(s.vault_level))
-	return int(vehicle_def().floors)
+	return base_floors()
 
 
 ## MV-563 (switch five_floors): the body grows with the Vault level. Each vehicle starts with its own floors
 ## (Data.START_FLOORS: van 2, bus 3, rig 4, train 5) and gains one at each of the vault.floor_gain_1..3 levels,
 ## up to Data.BODY_FLOORS. Every cell of the body is open.
+## the vehicle's own floors without the Vault growth (Data.VEHICLES floors; the autotest's 2-floor van)
+func base_floors() -> int:
+	if test_van_floors > 0 and tier() == "van":
+		return test_van_floors
+	return int(vehicle_def().floors)
+
+
 func floors_at(lv: int) -> int:
 	var n := int(Data.START_FLOORS.get(tier(), vehicle_def().floors))
+	if test_van_floors > 0 and tier() == "van":
+		n = test_van_floors
 	for i in Data.FLOOR_GAIN_LEVELS.size():
 		if lv >= int(Features.num("vault.floor_gain_%d" % (i + 1), float(Data.FLOOR_GAIN_LEVELS[i]))):
 			n += 1
@@ -556,14 +568,30 @@ func vault_adds_floor(lv: int) -> bool:
 ## the rooms are stored for a body of s.body_slots cells (main_slots() of the save that wrote them). When the body
 ## grows or shrinks (five_floors switch, Dev chassis swap) the trailer rooms and their crew move with it; rooms on
 ## removed floors are lost and their crew goes idle. Returns true when anything moved.
-func fit_body() -> bool:
-	var old := int(s.get("body_slots", Data.ROOMS_PER_FLOOR * int(vehicle_def().floors)))
+## keep_used (loading a save): a floor that already has rooms or crew on it is never folded away (MV-715)
+func fit_body(keep_used := false) -> bool:
+	var old := int(s.get("body_slots", Data.ROOMS_PER_FLOOR * base_floors()))
 	var new_main := Data.ROOMS_PER_FLOOR * target_floors()
+	# MV-715: the van now starts with 1 floor; a save that already has a floor with rooms or crew on it keeps it
+	if keep_used and new_main < old and _body_part_used(new_main, mini(old, s.rooms.size())):
+		new_main = old
 	s.body_slots = new_main
 	if old == new_main or s.rooms.size() < old:
 		return false
 	relayout_body(old, new_main)
 	return true
+
+
+## is any slot in [from, to) built, being built or worked in?
+func _body_part_used(from: int, to: int) -> bool:
+	for i in range(from, to):
+		var r: Dictionary = s.rooms[i]
+		if str(r.get("type", "empty")) != "empty" or not (r.get("build", {}) as Dictionary).is_empty():
+			return true
+	for d in s.dwellers:
+		if int(d.room) >= from and int(d.room) < to:
+			return true
+	return false
 
 
 func relayout_body(old_main: int, new_main: int) -> void:

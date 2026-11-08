@@ -382,6 +382,7 @@ func _build_v2() -> void:
 	for rv in room_views:
 		if v2_cells.has(rv.slot):
 			rv.visible = false
+			rv.process_mode = Node.PROCESS_MODE_DISABLED   # hidden twin: no per-frame room / crew work (MV-715 perf)
 
 
 ## atlas region of a main shell ("veh" / "ext") of this tier with n floors: its own shell, or the grown one
@@ -556,6 +557,7 @@ func refresh_rooms() -> void:
 		rv.refresh()
 		if v2_cells.has(rv.slot):
 			rv.visible = false
+			rv.process_mode = Node.PROCESS_MODE_DISABLED
 	if cab_view:
 		cab_view.refresh()
 	for c in v2_cells.values():
