@@ -28,6 +28,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
 
 ### Changed
+- Stranger screening at the door is paused: rare and very rare survivors now board straight away with no inspection, and nobody flags the vehicle down (switch `strangers` off by default, MV-719)
 - Settings no longer show technical or personal details: About lists only the game version, channel, build and your Player ID, the Save tab hides the save file path and masks your e-mail (MV-588).
 - Next Generation brings every survivor with full levels, XP, skills and all equipment (worn, stash, vehicle gear and mods); obsolete crew/level research is refunded (MV-559).
 - Clearer sound: fixed the hiss and crackle (most of all on the web), and reworked rain, storm, sandstorm, snow, fog, acid rain, ashfall, overcast and thunder (MV-555).

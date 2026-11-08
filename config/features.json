@@ -20,7 +20,7 @@
     "road_events": true,
     "raids": true,
     "encounters": true,
-    "strangers": true,
+    "strangers": false,
     "expeditions": true,
     "roof_deck": true,
     "large_rooms": true,
