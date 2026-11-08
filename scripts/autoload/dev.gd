@@ -1037,6 +1037,35 @@ func world_v2_preview(n: int) -> int:
 	return Game.floors()
 
 
+## MV-726 vehicle micro animations on the world v2 ambulance (switch vehicle_anim): "drive" (cruise speed),
+## "fast", "brake" (slow down to a stop), "park" (engine off), "beacon" (raid light bar on/off), "bump" (one road
+## bump: the tyres hop front to rear). Returns false when the ambulance animation is not up.
+func vehicle_anim(mode: String) -> bool:
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null:
+		return false
+	if not v.amb_on:
+		feature_set("vehicle_anim", true)
+		world_v2_preview(maxi(2, Game.floors()))
+	if not v.amb_on:
+		return false
+	match mode:
+		"drive":
+			v.debug_speed = 1.0
+		"fast":
+			v.debug_speed = 1.8
+		"brake":
+			v.debug_speed = 0.0
+		"park":
+			v.debug_speed = -1.0
+		"beacon":
+			v.amb.force_beacon = not v.amb.force_beacon
+		"bump":
+			v.amb.bump(maxf(v._speed, 0.5) * AmbulanceMotion.ROAD_PX)
+	act("vehicle anim", {"mode": mode})
+	return true
+
+
 func _van_floors(n: int) -> void:
 	set_tier("van")
 	Features.set_override("features", "five_floors", true)
