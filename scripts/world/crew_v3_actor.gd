@@ -135,8 +135,8 @@ func _process(delta: float) -> void:
 			timer -= delta
 			if timer <= 0.0:
 				_enter(State.ACT if randf() < (0.8 if mode != "rest" else 0.5) else State.IDLE)
-	_mat.set_shader_parameter("light", lerpf(0.95, 0.65, clampf(absf(position.x - lamp_x) / 72.0, 0.0, 1.0)))
-	queue_redraw()
+	if state == State.WALK:         # the lamp light only changes while walking; the shadow is drawn once
+		_mat.set_shader_parameter("light", lerpf(0.95, 0.65, clampf(absf(position.x - lamp_x) / 72.0, 0.0, 1.0)))
 
 
 func _draw() -> void:

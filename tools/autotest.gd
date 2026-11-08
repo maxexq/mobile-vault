@@ -474,6 +474,9 @@ func _run() -> void:
 	# MV-604: the idle frame cap would halve the frames of every quiet test and move Engine.max_fps under the settings
 	# checks; _battery_test turns it on for itself
 	main.idle_cap_allowed = false
+	# MV-715: the ambulance starts with 1 floor; the older checks assume the 2-floor van (slots 0-5), _world_v2_test
+	# checks the real 1-floor start
+	Game.test_van_floors = 2
 	await wait(1.2)
 	await shot("title")
 	_check("audio: the lo-fi title music plays on the title screen", Sound.is_playing("title_lofi") or not Sound.bgm_on())
@@ -631,6 +634,11 @@ func _run() -> void:
 	if "--only=road_train" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _road_train_test()
+		_finish()
+		return
+	if "--only=vehicle_anim" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _vehicle_anim_test()
 		_finish()
 		return
 	if "--only=ambulance_v3" in OS.get_cmdline_user_args():
@@ -891,6 +899,11 @@ func _run() -> void:
 	if "--only=boss_intro" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _boss_intro_test()
+		_finish()
+		return
+	if "--only=bosses_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _bosses_v2_test()
 		_finish()
 		return
 	if "--only=enemies_v2" in OS.get_cmdline_user_args():
@@ -1599,11 +1612,13 @@ func _run() -> void:
 	await _ambulance_v3_test()
 	await _world_v2_test()
 	await _road_train_test()
+	await _vehicle_anim_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
 	await _enemy_size_test()
 	await _enemies_v2_test()
+	await _bosses_v2_test()
 	await _vehicle_detail_test()
 	await _cozy_roof_test()
 	await _mod_detail_fine_test()
@@ -5083,7 +5098,8 @@ func _thai_terms_test() -> void:
 ## title screen: the backdrop van drives (wheels turn, engine rumbles) and the menu window stays on screen
 func _title_backdrop_test() -> void:
 	var v: Node = main.vehicle
-	_check("title: van wheels turn (world v2 ambulance: axles are in its shell)", v.v2 or (v.wheels.size() > 0 and v.wheels[0].is_playing()))
+	var amb_rolls: bool = v.v2 and (not v.amb_on or v.amb.tyres.size() > 0)     # MV-726: the ambulance's own tyres
+	_check("title: van wheels turn (world v2 ambulance: its own rolling tyres)", amb_rolls or (v.wheels.size() > 0 and v.wheels[0].is_playing()))
 	# Half-pixel rumble randomly skips beats; test motion with a deterministic whole-pixel amplitude.
 	# _engine_shake_test separately checks the default half strength and its distribution.
 	var rumble_override = Features.layers.dev.get("tune", {}).get("fx.engine_shake")
@@ -6429,6 +6445,7 @@ func _wait_for(cond: Callable, max_s: float) -> void:
 func _enemy_size_test() -> void:
 	var cv: CombatView = main.combat_view
 	Features.set_override("features", "enemies_v2", false)    # MV-517 checks the old whole-number sprites
+	Features.set_override("features", "bosses_v2", false)     # (old boss sprites too, MV-718)
 	_no_events()
 	Dev.kill_enemies()
 	await wait(0.4)
@@ -6525,6 +6542,7 @@ func _enemy_size_test() -> void:
 	Features.set_override("features", "enemy_size", null)
 	Dev.kill_enemies()
 	await wait(0.4)
+	Features.set_override("features", "bosses_v2", null)
 	Features.set_override("features", "enemies_v2", null)
 
 
@@ -12256,15 +12274,107 @@ func _ambulance_v3_test() -> void:
 	await wait(0.3)
 
 
+## MV-726: the world v2 ambulance moves: rolling tyres on the road, body on its springs, lights, flag
+func _vehicle_anim_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var v: Vehicle = main.vehicle
+	Dev.feature_set("vehicle_anim", true)
+	Dev.world_v2_preview(2)
+	await wait(0.3)
+	var spot := AmbulanceMotion.spot(2)
+	_check("vehicle anim: anchors match every ambulance shell (tools/ambulance_anim.py)",
+		AmbulanceMotion.ok(1) and AmbulanceMotion.ok(2) and AmbulanceMotion.ok(3) and AmbulanceMotion.ok(4) and AmbulanceMotion.ok(5))
+	_check("vehicle anim: the ambulance gets its own tyres (one per axle of the 2-floor shell)", v.amb_on
+		and v.amb.tyres.size() == (spot.wheels as Array).size() and v.amb.tyres.size() == 6)
+	var img: Image = v.v2_shell.texture.get_image()
+	var w0: Array = spot.wheels[1]
+	var fr: Array = spot.flag
+	_check("vehicle anim: tyres + flag cloth are cut out of the shell", img.get_pixel(int(w0[0]), int(w0[1])).a == 0.0
+		and img.get_pixel(int(w0[0]) - 15, int(w0[1]) + 10).a == 0.0 and img.get_pixel(fr[0] + 5, fr[1] + fr[3] / 2).a == 0.0)
+	Features.set_override("tune", "fx.engine_shake", 0.0)   # no random road bumps: the bump below is the only one
+	v.debug_speed = 1.0
+	await wait(1.6)
+	var f1 := v.amb.spin_frame()
+	var g1 := v.amb.flag_frame()
+	await wait(0.13)
+	_check("vehicle anim: driving rolls the tyres and waves the flag", f1 != v.amb.spin_frame() and g1 != v.amb.flag_frame())
+	_check("vehicle anim: headlight lens + tail lamps on while driving", v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1)
+	var y_before: Array = v.amb.tyres.map(func(t): return t.global_position.y)
+	v.amb.bump(90.0)
+	await wait(0.03)
+	var front_up: bool = v.amb.tyres[0].global_position.y < y_before[0]
+	var rear_wait: bool = v.amb.tyres[-1].global_position.y == y_before[-1]
+	await wait(5.6)
+	_check("vehicle anim: a bump lifts the front tyre first, the rear ones later", front_up and rear_wait
+		and v.amb.tyres.all(func(t): return t.position.y == float(t.get_meta("y0"))))
+	await shot("vehicle_anim_drive")
+	v.debug_speed = 0.0
+	await wait(0.4)
+	_check("vehicle anim: braking lights the brake lamps + the indicator signals the stop", v.amb.lamp_alpha("tail0") > 0.7
+		and v.amb.signal_t >= 0.0)
+	var marker_seen := false
+	await wait(1.6)
+	v.amb.force_beacon = true
+	var bl := false
+	var br := false
+	for i in 30:
+		await wait(0.04)
+		bl = bl or v.amb.lamp_alpha("bar_l") > 0.5
+		br = br or v.amb.lamp_alpha("bar_r") > 0.5
+		marker_seen = marker_seen or v.amb.lamp_alpha("marker") > 0.5
+	_check("vehicle anim: the raid light bar flashes left then right", bl and br)
+	_check("vehicle anim: the amber marker blinks after pulling over", marker_seen)
+	await shot("vehicle_anim_beacon")
+	var f2 := v.amb.spin_frame()
+	await wait(0.3)
+	_check("vehicle anim: parked tyres stand still", f2 == v.amb.spin_frame())
+	v.amb.force_beacon = false
+	v.debug_speed = -1.0
+	_check("vehicle anim: GOD MODE actions drive it", Dev.vehicle_anim("fast") and v.debug_speed > 1.0 and Dev.vehicle_anim("park"))
+	Dev.feature_set("vehicle_anim", false)
+	await wait(0.3)
+	_check("vehicle anim: switch off = the plain shell, no extra tyres", not v.amb_on and v.amb.tyres.is_empty()
+		and v.v2_shell.texture is CompressedTexture2D and v.v2_root.position.x == 0.0)
+	v.debug_speed = -1.0
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Dev._vehicle_changed()
+	await wait(0.3)
+
+
 ## MV-715 world v2 phase 1: the van on the road is the ambulance with v3 rooms + crew at half size
 func _world_v2_test() -> void:
 	var old_state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	var v: Vehicle = main.vehicle
+	# the real start (Parames 2026-11-08): 1 floor, +1 at each Vault floor level; a used 2nd floor is never taken away
+	Game.test_van_floors = 0
+	Dev.set_tier("van")
+	Features.set_override("features", "five_floors", true)
+	_check("world v2: the ambulance starts with 1 floor and grows to 4 with the Vault", Game.floors_at(1) == 1 and Game.floors_at(6) == 4)
+	Game.s.vault_level = 1
+	Game.s.body_slots = 6
+	while Game.s.rooms.size() < 6 + Data.TRAILER_SLOTS * Game.trailers():
+		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	Game.s.rooms[4] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.fit_body(true)
+	var kept := Game.floors() == 2 and str(Game.s.rooms[4].type) == "kitchen"
+	for i in range(3, 6):
+		Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}, "build": {}}
+	for d in Game.s.dwellers:
+		if int(d.room) >= 3 and int(d.room) < 6:
+			d.room = -1
+	Game.fit_body(true)
+	_check("world v2: an old save keeps a used 2nd floor, an unused one folds away", kept and Game.floors() == 1)
+	Game.test_van_floors = 2
 	var f := Dev.world_v2_preview(2)
 	await wait(0.4)
 	_check("world v2: van becomes the ambulance (2 floors, half-size shell, old van wheels gone)", f == 2 and v.v2 and v.v2_root.visible
 		and v.v2_root.scale == Vector2.ONE * Vehicle.V2_K and v.v2_shell.texture.get_size().y == 352.0 and v.wheels.is_empty())
+	await wait(0.2)
+	_check("world v2: no old-van leftovers (cab window frames, mudflap)", not v.driver_cab.visible and not v.mudflap.visible)
 	_check("world v2: one v3 cell per main-body slot, old room views hidden", v.v2_cells.size() == Game.main_slots()
 		and v.room_views.filter(func(rv): return v.v2_cells.has(rv.slot) and rv.visible).is_empty())
 	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
@@ -12400,7 +12510,7 @@ func _road_train_test() -> void:
 	Game.s.dwellers[0].room = n5 - 1
 	var scrap0 := float(Game.s.res.scrap)
 	Features.set_override("features", "road_train", true)
-	Game.fit_body()
+	Game.fit_body(true)      # the load path: keep_used never keeps more than the road train's 3 decks
 	_check("road train: an old 5-floor rig keeps its rooms (moved into an empty cell, crew with it), the rest refunded", n5 == 15 and Game.main_slots() == 9 			and str(Game.s.rooms[5].type) == "kitchen" and int(Game.s.rooms[5].level) == 2 and int(Game.s.dwellers[0].room) == 5 			and is_equal_approx(float(Game.s.res.scrap), scrap0 + float(Data.ROOMS.kitchen.cost)))
 	Features.layers.dev = overrides
 	Features.changed.emit()
@@ -12414,6 +12524,75 @@ func _road_train_test() -> void:
 
 
 
+
+
+## MV-718: HD lore bosses replace the old biome bosses (names + art), walk / attack / strike clips
+func _bosses_v2_test() -> void:
+	var cv: CombatView = main.combat_view
+	Features.set_override("features", "bosses_v2", true)
+	_no_events()
+	Dev.kill_enemies()
+	await wait(0.4)
+	var meta := BossesV2.meta()
+	var sheets_ok := meta.size() == 6
+	for b in Combat.BOSSES:
+		var m: Dictionary = meta.get(b, {})
+		sheets_ok = sheets_ok and not m.is_empty() and Combat.BOSSES_V2.has(b)
+		if m.is_empty():
+			continue
+		var sf := BossesV2.frames(b)
+		for clip in ["walk", "attack", "strike"]:
+			sheets_ok = sheets_ok and sf.get_frame_count(clip) == int(m.frames[clip]) and sf.get_frame_count(clip) >= 6
+			var t := sf.get_frame_texture(clip, 0)
+			sheets_ok = sheets_ok and t != null and t.get_width() == int(m.fw) and t.get_height() == int(m.fh)
+	_check("bosses v2: 6 biome bosses, each with walk + attack + strike sheets of the stated size", sheets_ok)
+	var names_ok: bool = Combat.boss_def("industrial").th == "หัวหน้าคนงาน" and Combat.boss_def("metro").en == "WARDEN-9"
+	names_ok = names_ok and Combat.boss_def("swamp").base == Combat.BOSSES.swamp.base and Combat.boss_def("acid_matron").en == "ACID MATRON"
+	Features.set_override("features", "bosses_v2", false)
+	names_ok = names_ok and Combat.boss_def("industrial").th == Combat.BOSSES.industrial.th and not Combat.boss_def("industrial").has("v2")
+	Features.set_override("features", "bosses_v2", true)
+	_check("bosses v2: new names over the same stats, wave mutants unchanged, switch off = old names", names_ok)
+	# this biome's checkpoint boss walks in with the HD sheets at the crew pixel scale, inside the fight zone
+	Dev.bosses_v2_preview("on")
+	await _wait_for(func(): return not Combat.enemies.is_empty() and cv.enemy_nodes.has(int(Combat.enemies[0].id)), 5.0)
+	var boss: CombatView.EnemyActor = null
+	for e in Combat.enemies:
+		if bool(e.boss):
+			e.max = 1.0e9      # keep it alive for the screenshot
+			e.hp = 1.0e9
+			boss = cv.enemy_nodes.get(int(e.id))
+	var k := BossesV2.scale()
+	var node_ok := boss != null and boss.boss_v2 and boss.spr.scale == Vector2(k, k) and boss.spr.animation == "walk"
+	_check("bosses v2: checkpoint boss drawn with the HD sheets at x%.2f" % k, node_ok)
+	await wait(4.0)    # entrance + walk to its stop spot
+	await shot("bosses_v2_" + Combat.biome_id())
+	var zone_ok := boss != null and boss.sprite_rect().end.x <= CombatView.fight_right() + 1.0
+	_check("bosses v2: the boss's back stays inside the fight zone", zone_ok)
+	var atk_ok := boss != null
+	if boss:
+		boss.attack()
+		atk_ok = boss.spr.animation == "attack" and not boss.spr.sprite_frames.get_animation_loop("attack")
+		await boss.spr.animation_finished
+		atk_ok = atk_ok and boss.spr.animation == "walk"
+		Dev.tune_set("bosses_v2.fx", 0.0)
+		boss.attack()
+		atk_ok = atk_ok and boss.spr.animation == "strike"
+		Dev.tune_set("bosses_v2.fx", null)
+	_check("bosses v2: attack clip (with FX, or strike without FX by tune) plays once, then the walk loop", atk_ok)
+	# switch off: the old sprite comes back
+	Dev.kill_enemies()
+	await wait(0.4)
+	Dev.bosses_v2_preview("off")
+	await _wait_for(func(): return not Combat.enemies.is_empty() and cv.enemy_nodes.has(int(Combat.enemies[0].id)), 5.0)
+	var old_ok := true
+	for e in Combat.enemies:
+		if bool(e.boss):
+			var n = cv.enemy_nodes.get(int(e.id))
+			old_ok = n != null and not n.boss_v2 and str(e.boss_v2) == ""
+	_check("bosses v2: switch off = old boss sprite", old_ok)
+	Features.set_override("features", "bosses_v2", null)
+	Dev.kill_enemies()
+	await wait(0.4)
 
 
 ## MV-714: v2 enemies (crew-density sheets, move + attack clips, 3 per biome with one flyer)
