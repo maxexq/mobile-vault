@@ -685,6 +685,48 @@ func saloon_supper() -> Dictionary:
 	return Saloon.start(slot, ids)
 
 
+## MV-716 rear gunner post: make sure one exists (the default rear slot first, else any empty slot), put up to two of
+## the crew with the best AGI on its gun and send a few of this biome's mobs so they fire. Returns the room's slot.
+func gunner_demo(mobs: int = 4) -> int:
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == RearGunner.TYPE and not Game.is_site(i):
+			slot = i
+			break
+	if slot < 0 and Game.s.rooms.size() > RearGunner.DEFAULT_SLOT and str(Game.s.rooms[RearGunner.DEFAULT_SLOT].type) == "empty":
+		Game.s.rooms[RearGunner.DEFAULT_SLOT] = {"type": RearGunner.TYPE, "level": 1, "job": {}, "build": {}}
+		slot = RearGunner.DEFAULT_SLOT
+	if slot < 0:
+		slot = rx_build(RearGunner.TYPE)
+	if slot < 0:
+		return -1
+	var pool := (Game.s.dwellers as Array).filter(func(d): return not Game.is_away(d) and Game.squad_role(d) < 0 and int(d.room) != slot)
+	pool.sort_custom(func(a, b): return float(a.agi) > float(b.agi))
+	var need := maxi(0, 2 - RearGunner.gunners(slot).size())
+	for d in pool.slice(0, need):
+		Game.assign(d, slot)
+	Game.rooms_changed.emit()
+	if mobs > 0:
+		var ids: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+		var q := []
+		for i in mobs:
+			q.append({"t": 0.2 + i * 0.6, "mob": ids[i % ids.size()], "lvl": Combat.enemy_level(), "no_mutate": true})
+		Combat.debug_spawn(q, false)
+	act("gunner demo", {"slot": slot, "gunners": RearGunner.gunners(slot).size(), "mobs": mobs})
+	return slot
+
+
+## level the first rear gunner post up by one (1..3), done at once
+func gunner_level_up() -> void:
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == RearGunner.TYPE:
+			Game.s.rooms[i].level = mini(3, int(Game.s.rooms[i].level) + 1)
+			Game.s.rooms[i].build = {}
+			Game.rooms_changed.emit()
+			act("gunner level", {"slot": i, "level": int(Game.s.rooms[i].level)})
+			return
+
+
 ## every crew member may sit down to supper again right away
 func saloon_clear_cd() -> void:
 	(Saloon.st().cd as Dictionary).clear()
@@ -1318,7 +1360,7 @@ func spawn_mob(id: String, n: int) -> void:
 
 ## MV-387: n elites of this biome's mobs (real enemies, so their entrance plays)
 func spawn_elites(n: int) -> void:
-	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	var mobs: Array = Combat.biome_mobs()
 	var q := []
 	for i in n:
 		q.append({"t": 0.2 + i * 0.6, "mob": mobs[i % mobs.size()], "lvl": Combat.enemy_level(), "elite": true, "no_mutate": true})
@@ -1329,7 +1371,7 @@ func spawn_elites(n: int) -> void:
 ## MV-517: real enemies at their new size: "normal" / "elite" = one of this biome's mobs, "boss" = this biome's
 ## boss as a wave boss, "warlord" = the checkpoint warlord, "lineup" = a normal, an elite and the boss side by side
 func enemy_size_preview(kind: String) -> void:
-	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	var mobs: Array = Combat.biome_mobs()
 	var mob: String = mobs[0]
 	for m in mobs:
 		if not str(Combat.MOBS[m].sprite).begins_with("dw_"):
@@ -1347,6 +1389,25 @@ func enemy_size_preview(kind: String) -> void:
 		q.append({"t": 0.3, "boss": "warlord", "lvl": Combat.warlord_level()})
 	Combat.debug_spawn(q, kind in ["boss", "warlord", "lineup"])
 	act("enemy size preview " + kind)
+
+
+## MV-714: walk the v2 enemies in: "biome" = this biome's 3 v2 mobs, "all" = all 18 in waves of 3, "elite" = this
+## biome's 3 as elites. Turns the enemies_v2 switch on for the run like any other GOD feature toggle.
+func enemies_v2_parade(what: String) -> void:
+	feature_set("enemies_v2", true)
+	var mobs: Array = []
+	if what == "all":
+		mobs = EnemiesV2.meta().keys()
+		mobs.sort()
+	else:
+		for m in Combat.biome_mobs():
+			if not mobs.has(m):
+				mobs.append(m)
+	var q := []
+	for i in mobs.size():
+		q.append({"t": 0.2 + i * 0.7, "mob": mobs[i], "lvl": Combat.enemy_level(), "no_mutate": true, "elite": what == "elite"})
+	Combat.debug_spawn(q, false)
+	act("enemies v2 parade %s x%d" % [what, mobs.size()])
 
 
 ## MV-387: play the warlord / boss / elite entrance without spawning anything (a stand-in enemy, id -1)

@@ -96,6 +96,8 @@ func _enter(st: State) -> void:
 				_act = "construct"
 			elif mode == "rest":
 				_act = ["talk", "eat", "drink", "idle"][randi() % 4]
+			elif pick[2] == "man_gun":
+				_act = "shoot"      # MV-716: at the rear gunner post's gun the crew aim and fire (approved shoot clip)
 			else:
 				_act = "work"
 			timer = randf_range(4.0, 8.0)
@@ -103,13 +105,13 @@ func _enter(st: State) -> void:
 			_play("carrywalk" if mode == "build" and randf() < 0.5 else "walk")
 
 
-## [position, face] of the next place to go: a stand point of the room's stations, or a spot on the walkway
+## [position, face, action] of the next place to go: a stand point of the room's stations, or a spot on the walkway
 func _pick_target() -> Array:
 	if not stands.is_empty() and (mode != "rest" or randf() < 0.5):
 		var h: Dictionary = stands[randi() % stands.size()]
 		var s: Array = h.stand
-		return [Vector2(float(s[0]) + randf_range(-2, 2), float(s[1])), str(h.get("face", ""))]
-	return [Vector2(randf_range(12, 132), _walk_y()), ""]
+		return [Vector2(float(s[0]) + randf_range(-2, 2), float(s[1])), str(h.get("face", "")), str(h.get("action", ""))]
+	return [Vector2(randf_range(12, 132), _walk_y()), "", ""]
 
 
 func _process(delta: float) -> void:
