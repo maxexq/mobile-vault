@@ -131,6 +131,12 @@ func engine_shake(k: float) -> void:
 	Features.set_override("tune", "fx.engine_shake", null if k < 0.0 else k)
 
 
+## v3 crew contact shadow strength (MV-724): sets the crew_v3.shadow override, < 0 = back to the build's value
+func crew_v3_shadow(k: float) -> void:
+	Trace.rec("god", "crew v3 shadow %.2f" % k)
+	Features.set_override("tune", "crew_v3.shadow", null if k < 0.0 else k)
+
+
 ## MV-562: compare smoothness with the per-step / per-frame caches on and off
 func perf_cache_switch(v: bool) -> void:
 	feature_set("perf_cache", v)

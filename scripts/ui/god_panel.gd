@@ -383,6 +383,9 @@ func _tab_vehicle() -> void:
 	_row([_b("ห้อง v3: " + ("เปิด" if Features.on("rooms_v3") else "ปิด"), func(): Dev.feature_set("rooms_v3", not Features.on("rooms_v3")),
 		"green" if Features.on("rooms_v3") else "red"), _b("ห้องรอตรวจ: " + ("ใช้" if Features.on("rooms_v3_review") else "ไม่ใช้"),
 		func(): Dev.feature_set("rooms_v3_review", not Features.on("rooms_v3_review")), "green" if Features.on("rooms_v3_review") else "red")], "สวิตช์")
+	_note("เงาใต้เท้าลูกเรือ x%.2f (tune crew_v3.shadow) · กลางเงาทึบ %d%%" % [CrewV3Actor.shadow_k(), roundi(CrewV3Actor.shadow_alpha() * 100.0)])
+	_row([_b("เงาแบบเดิม (x1)", func(): Dev.crew_v3_shadow(1.0)), _b("เงาอ่อน x0.5", func(): Dev.crew_v3_shadow(0.5)),
+		_b("เงาจาง x0.25", func(): Dev.crew_v3_shadow(0.25)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_shadow(-1.0), "gray")], "เงาลูกเรือ")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
 	var ib := Dev.on("instant_build")
 	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),

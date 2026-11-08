@@ -10,6 +10,10 @@ enum State { IDLE, WALK, ACT }
 
 const SPEED := 16.0               # room px / s (old crew 11 px/s in a 64 px room, x 144/64 x 2/3)
 const SHADOW_W := 15.0
+## MV-724: contact shadow strength x (tune crew_v3.shadow; 1.0 = the MV-711 shadow, alpha 0.43 + 0.25 core, which
+## read as a black blob on the lit v3 floors). The size stays SHADOW_W so other crew-sized shadows can match it.
+const SHADOW := 0.5
+const SHADOW_A := [0.43, 0.25]
 const BLEND := preload("res://shaders/crew_v3_blend.gdshader")
 
 var did := -1
@@ -25,6 +29,7 @@ var stands: Array = []            # [{stand: [x, y], face: "left"|"right"}]
 var walkway := Vector2(89, 95)
 var _mat: ShaderMaterial
 var _act := "work"
+var _shadow_col := Color(0.05, 0.04, 0.035)
 
 
 func setup(d: Dictionary, room_mode: String, level_data: Dictionary, index: int) -> void:
@@ -57,6 +62,10 @@ func set_room(room_mode: String, level_data: Dictionary) -> void:
 	lamp_x = float(level_data.get("lamp_x", 72))
 	_mat.set_shader_parameter("tint", _v3(level_data.get("tint", [1, 1, 1])))
 	_mat.set_shader_parameter("dark_col", _v3(level_data.get("dark", [12, 10, 9])))
+	# the shadow takes the room's own deepest tone (a warm brown in most rooms) instead of pure black
+	var dk := V3Art.color_of(level_data.get("dark", [12, 10, 9]))
+	_shadow_col = Color(maxf(dk.r, 0.05), maxf(dk.g, 0.04), maxf(dk.b, 0.035))
+	queue_redraw()
 
 
 func set_dim(v: float) -> void:
@@ -138,11 +147,25 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	# contact shadow under the feet (~15 room px, alpha 110 + darker core)
+	# contact shadow under the feet (~15 room px, soft outer + core), strength = shadow_k() (MV-724)
+	var k := shadow_k()
+	if k <= 0.0:
+		return
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.2))
-	draw_circle(Vector2.ZERO, SHADOW_W * 0.5, Color(0, 0, 0, 0.43))
-	draw_circle(Vector2.ZERO, SHADOW_W * 0.3, Color(0, 0, 0, 0.25))
+	draw_circle(Vector2.ZERO, SHADOW_W * 0.5, Color(_shadow_col, minf(SHADOW_A[0] * k, 1.0)))
+	draw_circle(Vector2.ZERO, SHADOW_W * 0.3, Color(_shadow_col, minf(SHADOW_A[1] * k, 1.0)))
 	draw_set_transform(Vector2.ZERO)
+
+
+## contact shadow strength: tune crew_v3.shadow (MV-724), 1.0 = the old MV-711 shadow
+static func shadow_k() -> float:
+	return Features.num("crew_v3.shadow", SHADOW)
+
+
+## alpha at the centre of the shadow (outer + core blended), for checks and the GOD note
+static func shadow_alpha() -> float:
+	var k := shadow_k()
+	return 1.0 - (1.0 - minf(SHADOW_A[0] * k, 1.0)) * (1.0 - minf(SHADOW_A[1] * k, 1.0))
 
 
 func clip() -> String:
