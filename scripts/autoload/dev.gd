@@ -1017,6 +1017,25 @@ func rooms_v3_open(slot: int = -1) -> bool:
 	return hud.open_interior(slot)
 
 
+## MV-715: the first vehicle (van) with `n` floors (2-5, the van's range: the Vault level that gives it, switch
+## five_floors on), the ambulance shell switch on, then the v3 interior opens; returns the floors it has now
+func ambulance_v3_preview(n: int) -> int:
+	feature_set("ambulance_v3", true)
+	set_tier("van")
+	Features.set_override("features", "five_floors", true)
+	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
+		if Game.floors_at(lv) >= clampi(n, 2, Data.BODY_FLOORS) or lv == Data.MAX_VAULT_LEVEL:
+			Game.s.vault_level = lv
+			break
+	var old_main := Game.main_slots()
+	Game.s.body_slots = Data.ROOMS_PER_FLOOR * Game.target_floors()
+	Game.relayout_body(old_main, Game.main_slots())
+	act("ambulance v3 preview", {"floors": Game.floors()})
+	_vehicle_changed()
+	rooms_v3_open()
+	return Game.floors()
+
+
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
 ## the v3 interior opens; returns how many rooms have v3 art now
 func rooms_v3_showcase(lv: int) -> int:

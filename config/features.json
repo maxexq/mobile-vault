@@ -93,6 +93,7 @@
     "parallax_v2": true,
     "world_2x": true,
     "rooms_v3": true,
+    "ambulance_v3": true,
     "rooms_v3_review": true
   },
   "events": {},

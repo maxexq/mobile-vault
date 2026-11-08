@@ -617,6 +617,11 @@ func _run() -> void:
 		await _rooms_v3_test()
 		_finish()
 		return
+	if "--only=ambulance_v3" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _ambulance_v3_test()
+		_finish()
+		return
 	if "--only=icons" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _icon_art_test()
@@ -1563,6 +1568,7 @@ func _run() -> void:
 	await _desert_background_test()
 	await _parallax_v2_test()
 	await _rooms_v3_test()
+	await _ambulance_v3_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
@@ -12030,3 +12036,59 @@ func _icons_v2_test() -> void:
 	god.tab = "main"
 	god.close()
 	await wait(0.2)
+
+
+## MV-715: the van's main body in the v3 interior is Dr. Ren's ambulance shell (switch ambulance_v3)
+func _ambulance_v3_test() -> void:
+	var old_window := get_window().size
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	get_window().size = Vector2i(405, 720)
+	var files_ok := true
+	var holes_ok := true
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.AMB_DIR + "shell.json"))
+	for n in range(1, 6):
+		var tex: Texture2D = load(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % n)
+		files_ok = files_ok and tex != null and tex.get_size() == Vector2(InteriorV3Panel.AMB_W, 240.0 + 112.0 * (n - 1))
+		var cells: Array = spec.floors[str(n)].cells
+		files_ok = files_ok and cells.size() == n * 3
+		if tex != null:
+			var img := tex.get_image()
+			for c in cells:             # the window over a cell is see-through, the frame around it is not
+				holes_ok = holes_ok and img.get_pixel(int(c.x) + 72, int(c.y) + 48).a < 0.1 and img.get_pixel(int(c.x) + 72, int(c.y) - 6).a > 0.9
+	_check("ambulance v3: shells for 1-5 floors load at 638 wide with 3 cells per floor", files_ok)
+	_check("ambulance v3: every cell window is cut out and the deck above it is solid", holes_ok)
+	var hud: HUD = main.hud
+	var panel: InteriorV3Panel = hud.panels.interior
+	var f := Dev.ambulance_v3_preview(3)
+	await wait(0.6)
+	_check("ambulance v3: GOD preview opens the van at 3 floors with the ambulance shell", f == 3 and panel.is_open and panel.amb() and panel.amb_shell.visible and panel.amb_shell.texture.get_size().y == 464.0)
+	var pos_ok := panel.cells.size() == Game.slot_count()
+	for slot in Game.main_slots():
+		var c := Game.slot_cell(slot)
+		var want := panel.amb_shell.position + Vector2(146.0 + 152.0 * c.x, 88.0 + 112.0 * (f - 1 - c.y))
+		pos_ok = pos_ok and (panel.cells[slot] as RoomV3Cell).position.is_equal_approx(want)
+	_check("ambulance v3: every room sits in its shell window (floor 0 at the bottom)", pos_ok)
+	_check("ambulance v3: the shell draws over the cells", panel.amb_shell.get_index() == panel.world.get_child_count() - 1)
+	await shot("ambulance_v3_f3")
+	Dev.set_trailers(1)
+	await wait(0.4)
+	var tslot := Game.main_slots()
+	var tc: RoomV3Cell = panel.cells.get(tslot)
+	_check("ambulance v3: a trailer stands behind the ambulance", tc != null and tc.position.x > InteriorV3Panel.AMB_W and panel.world_size.x > InteriorV3Panel.AMB_W + 400.0)
+	Dev.set_trailers(0)
+	f = Dev.ambulance_v3_preview(5)
+	await wait(0.4)
+	_check("ambulance v3: 5 floors uses the 5-floor shell", f == 5 and panel.amb_shell.texture.get_size().y == 688.0 and panel.world_size.y == 688.0)
+	await shot("ambulance_v3_f5")
+	Dev.feature_set("ambulance_v3", false)
+	panel.refresh()
+	await wait(0.2)
+	_check("ambulance v3: switch off goes back to the drawn steel frame", not panel.amb() and not panel.amb_shell.visible and (panel.cells[0] as RoomV3Cell).position.x == InteriorV3Panel.FRAME)
+	panel.close()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	get_window().size = old_window
+	await wait(0.3)

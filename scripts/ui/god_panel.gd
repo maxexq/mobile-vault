@@ -383,6 +383,10 @@ func _tab_vehicle() -> void:
 	_row([_b("ห้อง v3: " + ("เปิด" if Features.on("rooms_v3") else "ปิด"), func(): Dev.feature_set("rooms_v3", not Features.on("rooms_v3")),
 		"green" if Features.on("rooms_v3") else "red"), _b("ห้องรอตรวจ: " + ("ใช้" if Features.on("rooms_v3_review") else "ไม่ใช้"),
 		func(): Dev.feature_set("rooms_v3_review", not Features.on("rooms_v3_review")), "green" if Features.on("rooms_v3_review") else "red")], "สวิตช์")
+	_row([_b("รถพยาบาล 2 ชั้น", func(): Dev.ambulance_v3_preview(2)), _b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)),
+		_b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)), _b("5 ชั้น", func(): Dev.ambulance_v3_preview(5)),
+		_b("รถพยาบาล: " + ("เปิด" if Features.on("ambulance_v3") else "ปิด"), func(): Dev.feature_set("ambulance_v3", not Features.on("ambulance_v3")),
+		"green" if Features.on("ambulance_v3") else "red")], "รถพยาบาล v3")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
 	var ib := Dev.on("instant_build")
 	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),
