@@ -4666,7 +4666,7 @@ func _engine_bay_test() -> void:
 	e.auto_rest = true
 	EngineBay.set_mode("normal")
 	# stock-ish driving stays under the rest line
-	_check("engine: normal V8 cruise settles below auto-rest", EngineBay.settle_temp() < 110.0 or Haul.load_ratio() > 1.0 or EngineBay.ambient() >= 40.0)
+	_check("engine: normal V8 cruise settles below auto-rest (%.1f C: ambient %.0f, heat in %.2f, cooling %.3f, load %.2f, weather %s, night %s)" % [EngineBay.settle_temp(), EngineBay.ambient(), EngineBay.heat_in(), EngineBay.cooling(), Haul.load_ratio(), str(Game.s.get("weather", "clear")), str(Game.is_night())], EngineBay.settle_temp() < 110.0 or Haul.load_ratio() > 1.0 or EngineBay.ambient() >= 40.0)
 	# --- jobs
 	Game.s.res.scrap = maxf(500.0, float(Game.s.res.scrap))
 	Game.s.res.fuel = maxf(50.0, float(Game.s.res.fuel))
