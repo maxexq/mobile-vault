@@ -1,0 +1,182 @@
+{
+ "bog_walker": {
+  "air": false,
+  "ax": 76,
+  "ay": 87,
+  "fh": 87,
+  "frames": 8,
+  "fw": 110,
+  "h": 71,
+  "w": 48
+ },
+ "frost_owl": {
+  "air": true,
+  "ax": 63,
+  "ay": 32,
+  "fh": 65,
+  "frames": 8,
+  "fw": 105,
+  "h": 37,
+  "w": 63
+ },
+ "frost_wolf": {
+  "air": false,
+  "ax": 70,
+  "ay": 58,
+  "fh": 58,
+  "frames": 8,
+  "fw": 114,
+  "h": 44,
+  "w": 68
+ },
+ "hunter_drone": {
+  "air": true,
+  "ax": 70,
+  "ay": 19,
+  "fh": 43,
+  "frames": 8,
+  "fw": 99,
+  "h": 19,
+  "w": 37
+ },
+ "mosquito": {
+  "air": true,
+  "ax": 41,
+  "ay": 27,
+  "fh": 59,
+  "frames": 8,
+  "fw": 69,
+  "h": 35,
+  "w": 35
+ },
+ "mutant_ape": {
+  "air": false,
+  "ax": 63,
+  "ay": 77,
+  "fh": 77,
+  "frames": 8,
+  "fw": 104,
+  "h": 59,
+  "w": 62
+ },
+ "mutant_bug": {
+  "air": true,
+  "ax": 36,
+  "ay": 23,
+  "fh": 51,
+  "frames": 8,
+  "fw": 60,
+  "h": 27,
+  "w": 28
+ },
+ "rad_rat": {
+  "air": false,
+  "ax": 32,
+  "ay": 40,
+  "fh": 40,
+  "frames": 8,
+  "fw": 64,
+  "h": 21,
+  "w": 44
+ },
+ "rad_wolf": {
+  "air": false,
+  "ax": 64,
+  "ay": 59,
+  "fh": 59,
+  "frames": 8,
+  "fw": 110,
+  "h": 45,
+  "w": 72
+ },
+ "rust_drone": {
+  "air": true,
+  "ax": 24,
+  "ay": 26,
+  "fh": 44,
+  "frames": 8,
+  "fw": 48,
+  "h": 24,
+  "w": 34
+ },
+ "sand_raider": {
+  "air": false,
+  "ax": 72,
+  "ay": 70,
+  "fh": 70,
+  "frames": 8,
+  "fw": 110,
+  "h": 56,
+  "w": 56
+ },
+ "scav_raider": {
+  "air": false,
+  "ax": 64,
+  "ay": 64,
+  "fh": 64,
+  "frames": 8,
+  "fw": 100,
+  "h": 56,
+  "w": 56
+ },
+ "scorpion": {
+  "air": false,
+  "ax": 61,
+  "ay": 56,
+  "fh": 56,
+  "frames": 8,
+  "fw": 104,
+  "h": 38,
+  "w": 66
+ },
+ "sentry_bot": {
+  "air": false,
+  "ax": 69,
+  "ay": 68,
+  "fh": 68,
+  "frames": 8,
+  "fw": 97,
+  "h": 54,
+  "w": 35
+ },
+ "toxic_toad": {
+  "air": false,
+  "ax": 73,
+  "ay": 47,
+  "fh": 47,
+  "frames": 8,
+  "fw": 104,
+  "h": 33,
+  "w": 42
+ },
+ "vine_crawler": {
+  "air": false,
+  "ax": 75,
+  "ay": 76,
+  "fh": 76,
+  "frames": 8,
+  "fw": 112,
+  "h": 62,
+  "w": 54
+ },
+ "vulture": {
+  "air": true,
+  "ax": 62,
+  "ay": 34,
+  "fh": 68,
+  "frames": 8,
+  "fw": 106,
+  "h": 40,
+  "w": 68
+ },
+ "yeti": {
+  "air": false,
+  "ax": 76,
+  "ay": 113,
+  "fh": 113,
+  "frames": 8,
+  "fw": 126,
+  "h": 95,
+  "w": 80
+ }
+}

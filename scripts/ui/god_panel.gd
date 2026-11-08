@@ -597,6 +597,9 @@ func _tab_fight() -> void:
 		"ขนาดมอนสเตอร์ (MV-517) x%d / x%d / x%d / x%d%s" % [int(Features.num("enemy_size.normal", CombatView.ENEMY_SCALE.normal)),
 		int(Features.num("enemy_size.elite", CombatView.ENEMY_SCALE.elite)), int(Features.num("enemy_size.boss", CombatView.ENEMY_SCALE.boss)),
 		int(Features.num("enemy_size.warlord", CombatView.ENEMY_SCALE.warlord)), "" if Features.on("enemy_size") else " · ปิดอยู่"])
+	_row([_b("ศัตรูชุดใหม่ biome นี้", func(): Dev.enemies_v2_parade("biome"), "yellow", true), _b("อีลิทชุดใหม่", func(): Dev.enemies_v2_parade("elite"), "gray", true),
+		_b("ครบ 18 ตัว", func(): Dev.enemies_v2_parade("all"), "gray", true)],
+		"ศัตรูชุดใหม่ (MV-714) ขนาดพิกเซลเท่าลูกเรือ x%.2f · มีท่าเดิน + ท่าโจมตี%s" % [EnemiesV2.scale(), "" if Features.on("enemies_v2") else " · ปิดอยู่"])
 	_head("MOBS", "เรียกศัตรูทีละชนิด ×3")
 	var mb := []
 	for id in Combat.MOBS:
