@@ -5796,18 +5796,7 @@ func _industrial_background_test() -> void:
 	live.update_clock()
 	await wait(3.0)
 	await shot("industrial_portrait_daylight")
-	main.hud.open_panel("god")
-	var god = main.hud.panels.god
-	god.tab = "world"
-	god.refresh()
-	await wait(0.2)
-	var preview_buttons := {}
-	for row in god._list.get_children():
-		for control in row.get_children():
-			if control is Button:
-				preview_buttons[control.text] = control
-	_check("background: GOD world tab provides all four clock previews", preview_buttons.has("รุ่งเช้า") and preview_buttons.has("กลางวัน") and preview_buttons.has("พระอาทิตย์ตก") and preview_buttons.has("กลางคืน") and preview_buttons.has("ฉากเดิม"))
-	god.close()
+	# MV-720: the GOD world tab no longer has Industrial preview buttons (parallax v2 draws every biome)
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s.tod = old_tod
@@ -6125,22 +6114,9 @@ func _desert_background_test() -> void:
 	before = live.phase
 	await wait(0.3)
 	_check("desert: cross-fade completes and hidden desert stops updating", not live.is_visible_in_tree() and main.background.groups.industrial.modern.is_visible_in_tree() and live.phase == before)
-	main.hud.open_panel("god")
-	var god = main.hud.panels.god
-	god.tab = "world"
-	god.refresh()
-	await wait(0.2)
-	var buttons := {}
-	for row in god._list.get_children():
-		for control in row.get_children():
-			if control is Button:
-				buttons[control.text] = control
-	_check("desert: GOD world tab has four clock previews and both switch buttons", buttons.has("เช้า") and buttons.has("เที่ยง") and buttons.has("เย็น") and buttons.has("คืน") and buttons.has("ทะเลทรายใหม่") and buttons.has("ทะเลทรายเดิม"))
-	await shot("desert_god_world")
-	if buttons.has("เที่ยง"):
-		buttons["เที่ยง"].pressed.emit()
-		_check("desert: GOD button invokes the desert preview action", int(Game.s.biome) == 1 and is_equal_approx(float(Game.s.tod), 0.5) and Game.s.weather == "clear")
-	god.close()
+	# MV-720: the GOD buttons are gone; the Dev action stays for this test
+	Dev.desert_background_preview(0.5)
+	_check("desert: Dev preview action shows the desert at noon, clear", int(Game.s.biome) == 1 and is_equal_approx(float(Game.s.tod), 0.5) and Game.s.weather == "clear")
 	await wait(3.2)
 	Features.layers.dev = overrides
 	Features.changed.emit()
