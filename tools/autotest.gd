@@ -2444,6 +2444,12 @@ func _confirm_actions_test() -> void:
 	Input.parse_input_event(enter)
 	await wait(0.1)
 	_check("confirm: default Enter cancels and preserves the room", not dialog.is_open and is_same(Game.s.rooms[1], room_before))
+	if dialog.is_open or not is_same(Game.s.rooms[1], room_before):
+		var modals := []
+		for n in get_tree().get_nodes_in_group("modal_open"):
+			modals.append(str(n.get_path()))
+		print("[confirm-failure] open=%s same_room=%s focus=%s modals=%s event=%s" % [dialog.is_open, is_same(Game.s.rooms[1], room_before),
+			get_viewport().gui_get_focus_owner().get_path() if get_viewport().gui_get_focus_owner() else "none", modals, Game.active_event])
 	room_ui._request_demolish()
 	var escape := InputEventKey.new()
 	escape.keycode = KEY_ESCAPE
