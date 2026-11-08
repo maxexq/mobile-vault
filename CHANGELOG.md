@@ -10,6 +10,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Added
 - Free camera: pinch or scroll to zoom through every sharp pixel level around your fingers, drag to look around in any direction, and tap FIT to snap back to the automatic view (MV-723)
+- The ambulance on the road comes alive: its tyres roll with the speed and hop over bumps one axle after another while the body rides on its springs, it rocks when pulling out and braking, and it has working lights (headlight, tail and brake lights, a blinking marker when it pulls out or over, the red light bar flashing during raids, a flickering lantern at night) and a flag waving in the wind (MV-726)
+- Rear gunner post: a new room at the back of the vehicle where the crew shoot the monsters and bosses chasing you through a firing hatch, even in a power-out; new games start with it in the rear slot (MV-716)
 - New monster art: every ordinary enemy in all 6 biomes is redrawn with more detail, a walk and an attack animation; each biome now has a flyer (new snow owl on the Frozen Highway and a HELIOS hunter drone in the Signal Metropolis, the forest hornet now flies) (MV-714)
 - New look inside the vehicle (v3 button): every room in its new detailed art by level, with idle animations and a red emergency lamp in a power-out, and the new 2.5D crew walking and working in their rooms; tap a room to see what is in it (MV-711)
 - New biome bosses from Dr. Ren's story: The Foreman, Glass King, Mossback Alpha, Bog Mother, Cryo Titan and Warden-9 replace the old checkpoint bosses, with detailed art, a walk (Bog Mother hops) and an attack animation (MV-718)

@@ -61,6 +61,7 @@
     "seeded_world_map": false,
     "map_blueprint_caches": false,
     "world_map_detail": true,
+    "gunner_room": true,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,
@@ -96,6 +97,9 @@
     "parallax_v2": true,
     "world_2x": true,
     "rooms_v3": true,
+    "ambulance_v3": true,
+    "world_v2": true,
+    "vehicle_anim": true,
     "rooms_v3_review": true
   },
   "events": {},

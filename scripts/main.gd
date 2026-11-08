@@ -414,7 +414,7 @@ func _fit_ws() -> float:
 		return 0.0
 	var free: Rect2 = hud.world_rect()
 	var m := Features.num("view.fit_margin", FIT_MARGIN)
-	var w := Vehicle.MAIN_W + 2.0 * m
+	var w := Vehicle.MAIN_W + vehicle.v2_extra() + 2.0 * m
 	var h := Vehicle.ROAD_Y - (vehicle.top_y() - 6.0) + 12.0 + m
 	var ws := floorf(minf(free.size.x * pixel_scale / w, free.size.y * pixel_scale / h))
 	return minf(ws, floorf(pixel_scale * Features.num("view.fit_cap", FIT_CAP)))
