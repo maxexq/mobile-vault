@@ -27,6 +27,7 @@ var _top: Node2D
 var _idle_t := 0.0
 var _t := 0.0
 var _stage := -1
+var _drawn := ""                  # what _top last drew (kind/dark/selection): a still lamp needs no redraw
 
 
 func _ready() -> void:
@@ -146,7 +147,12 @@ func _process(delta: float) -> void:
 		if st != _stage:
 			_stage = st
 			bg.texture = V3Art.room_tex(room_type, str(data.stages[st]))
-	_top.queue_redraw()
+	# the lamp only animates in a power-out; otherwise redraw when what it shows changed (MV-715: the world v2
+	# body keeps a cell per room on screen all the time)
+	var key := "%s/%s/%s" % [kind, dark, selected_id]
+	if dark or key != _drawn:
+		_drawn = key
+		_top.queue_redraw()
 
 
 ## hotspot under a room-local point (later entries win on overlap, as in hotspots.py)

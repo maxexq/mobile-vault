@@ -737,6 +737,9 @@ def gen_rooms():
 RX_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rooms_x")
 RX_ROOMS = {
     "room_salvagers_saloon": "8151d1be66b74c911700800b861f9c6236714f94aa172dae901858538809c16f",   # MV-440
+    # MV-716: 64x52 fallback for the old 64x52 world / build menu, box-downscaled from the approved v3 L1 (MV-705)
+    # and mapped onto the master palette without the green ramps. The real art is the v3 set (assets/v3/rooms/rear_gunner).
+    "room_rear_gunner": "d6b0c0597bf8c4ebca531dee18f6d14fcfdfceb0ed29c7b0e42412e146cf5ee0",
 }
 
 
@@ -771,11 +774,31 @@ def fx_room_saloon_steam(f):
     return img
 
 
+def room_rear_gunner():
+    return rx_room("room_rear_gunner")
+
+
+def fx_room_gunner_flash(f):
+    """MV-716: 6x5 muzzle flash at the firing hatch of the rear gunner room (gun muzzle at room x59, y26; strip at
+    56,24). Frame 0 is the empty rest frame, 1-2 a two-step flash, 3 the fading spark; plays while crew fire at enemies."""
+    img = new(6, 5)
+    for x, y, col in (
+        (),
+        ((3, 2, "lamp2"), (4, 2, "lamp1"), (3, 1, "lamp1"), (3, 3, "lamp1")),
+        ((2, 2, "lamp1"), (3, 2, "lamp2"), (4, 2, "lamp2"), (5, 2, "lamp1"), (3, 1, "lamp2"), (3, 3, "lamp2"), (4, 0, "lamp0"), (4, 4, "lamp0")),
+        ((4, 2, "lamp0"), (5, 1, "yellow3")),
+    )[f]:
+        px(img, x, y, c(col))
+    return img
+
+
 def gen_rooms_x():
     for name in RX_ROOMS:
         add(name, globals()[name]())
     for f in range(4):
         add("fx_room_saloon_steam_%d" % f, fx_room_saloon_steam(f))
+    for f in range(4):
+        add("fx_room_gunner_flash_%d" % f, fx_room_gunner_flash(f))
 
 
 # ------------------------------------------------------------------ v4.3 construction site

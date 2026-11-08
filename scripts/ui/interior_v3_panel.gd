@@ -6,6 +6,9 @@ extends ModalPanel
 ## Tap a room: its name, level and the object under the finger (hotspots format 2) show in the bar below, and
 ## "เปิดห้อง" opens the usual room close-up. The outside world keeps the old vehicle until the v3 shells exist
 ## (MV-602), so this view is where the new rooms and crew live for now. Drag to scroll, -/+ to zoom.
+## MV-715 (switch ambulance_v3): the first vehicle (van) is Dr. Ren's welded ambulance here: the approved PixelLab
+## shell for its 1-5 floors (assets/vehicles/ambulance_v3/shell_f<n>.png, cab at the front, roof garden, wheels
+## per weight) is drawn over the cells, which sit in its cut-out windows (shell.json).
 
 signal room_requested(slot: int)
 
@@ -15,11 +18,18 @@ const SHAFT := 16.0
 const SLAB := 8.0
 const UNIT_GAP := 24.0
 const ZOOMS := [1.0, 1.5, 2.0, 3.0]
+const AMB_DIR := "res://assets/vehicles/ambulance_v3/"
+const AMB_W := 638.0           # shell width; cells at x 146 + col * 152, y 88 + row * 112 (row 0 = top floor)
+const AMB_X0 := 146.0
+const AMB_Y0 := 88.0
+const AMB_FH := 112.0
+const AMB_LIFT := 40.0         # trailers stand on the road: their bottom sits this far above the shell's bottom
 
 var scroll: ScrollContainer
 var canvas: Control
 var world: Node2D
 var shell: Node2D
+var amb_shell: Sprite2D           # MV-715 ambulance shell over the main body's cells
 var cells: Dictionary = {}        # slot -> RoomV3Cell
 var info: Label
 var open_btn: Button
@@ -52,6 +62,11 @@ func _build() -> void:
 	shell = Node2D.new()
 	shell.draw.connect(_draw_shell)
 	world.add_child(shell)
+	amb_shell = Sprite2D.new()
+	amb_shell.name = "AmbulanceShell"
+	amb_shell.centered = false
+	amb_shell.visible = false
+	world.add_child(amb_shell)
 	var bar := UIKit.hbox(4)
 	info = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_TEXT)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -114,24 +129,59 @@ func set_zoom(i: int) -> void:
 func cell_pos(slot: int) -> Vector2:
 	var unit := Game.slot_unit(slot)
 	var c := Game.slot_cell(slot)
-	var x := FRAME + c.x * (V3Art.CELL.x + WALL)
-	if unit >= 0:
-		x += _unit_w() * float(unit + 1) + UNIT_GAP * float(unit + 1)
 	var floors := _unit_floors(unit)
-	var top := (float(_max_floors() - floors)) * (V3Art.CELL.y + SLAB)
+	var top := _unit_top(unit)
+	if unit < 0 and amb():
+		return Vector2(AMB_X0 + c.x * (V3Art.CELL.x + WALL), top + AMB_Y0 + float(floors - 1 - c.y) * AMB_FH)
+	var x := _unit_x(unit) + FRAME + c.x * (V3Art.CELL.x + WALL)
 	return Vector2(x, top + FRAME + float(floors - 1 - c.y) * (V3Art.CELL.y + SLAB))
+
+
+## MV-715: the main body is the ambulance shell (switch ambulance_v3, first vehicle, 1-5 floors)
+func amb() -> bool:
+	return Features.on("ambulance_v3") and Game.tier() == "van" and Game.floors() >= 1 and Game.floors() <= 5 \
+		and ResourceLoader.exists(AMB_DIR + "shell_f%d.png" % Game.floors())
+
+
+func _amb_h() -> float:
+	return 240.0 + AMB_FH * float(Game.floors() - 1)
 
 
 func _unit_w() -> float:
 	return FRAME * 2.0 + V3Art.CELL.x * 3.0 + WALL * 2.0 + SHAFT
 
 
+func _main_w() -> float:
+	return AMB_W if amb() else _unit_w()
+
+
+## left edge of a unit (-1 = main body, 0.. = trailers)
+func _unit_x(unit: int) -> float:
+	if unit < 0:
+		return 0.0
+	return _main_w() + UNIT_GAP + (_unit_w() + UNIT_GAP) * float(unit)
+
+
+func _box_h(floors: int) -> float:
+	return FRAME * 2.0 + floors * (V3Art.CELL.y + SLAB) - SLAB
+
+
+## everything stands on one road line: the ambulance's wheels, or the drawn boxes' bottoms
+func _world_h() -> float:
+	var h := _amb_h() if amb() else _box_h(Game.floors())
+	if Game.trailers() > 0:
+		h = maxf(h, _box_h(_unit_floors(0)) + (AMB_LIFT if amb() else 0.0))
+	return h
+
+
+func _unit_top(unit: int) -> float:
+	if unit < 0:
+		return _world_h() - (_amb_h() if amb() else _box_h(Game.floors()))
+	return _world_h() - (AMB_LIFT if amb() else 0.0) - _box_h(_unit_floors(unit))
+
+
 func _unit_floors(unit: int) -> int:
 	return Game.floors() if unit < 0 else Data.TRAILER_SLOTS / Data.ROOMS_PER_FLOOR
-
-
-func _max_floors() -> int:
-	return maxi(Game.floors(), _unit_floors(0) if Game.trailers() > 0 else 0)
 
 
 func _rebuild() -> void:
@@ -145,7 +195,12 @@ func _rebuild() -> void:
 		world.add_child(c)
 		cells[slot] = c
 	var units := 1 + Game.trailers()
-	world_size = Vector2(_unit_w() * units + UNIT_GAP * (units - 1), FRAME * 2.0 + _max_floors() * (V3Art.CELL.y + SLAB) - SLAB)
+	world_size = Vector2(_unit_x(units - 2) + _unit_w() if units > 1 else _main_w(), _world_h())
+	amb_shell.visible = amb()
+	if amb_shell.visible:
+		amb_shell.texture = load(AMB_DIR + "shell_f%d.png" % Game.floors())
+		amb_shell.position = Vector2(0.0, _unit_top(-1))
+	world.move_child(amb_shell, world.get_child_count() - 1)     # the shell's lip and decks over the room edges
 	if not _fit_once():
 		set_zoom(zoom_i)
 	shell.queue_redraw()
@@ -162,7 +217,7 @@ func _fit_once() -> bool:
 	var i := 0
 	for k in ZOOMS.size():
 		var z := float(ZOOMS[k])
-		if world_size.y * z <= avail.y and (portrait or _unit_w() * z <= avail.x):
+		if world_size.y * z <= avail.y and (portrait or _main_w() * z <= avail.x):
 			i = k
 	set_zoom(i)
 	return true
@@ -171,7 +226,7 @@ func _fit_once() -> bool:
 func refresh() -> void:
 	if Game.s.is_empty():
 		return
-	var shape := "%d/%d/%d" % [Game.floors(), Game.trailers(), Game.slot_count()]
+	var shape := "%d/%d/%d/%s" % [Game.floors(), Game.trailers(), Game.slot_count(), amb()]
 	if shape != _shape or cells.is_empty():
 		_rebuild()
 		_shape = shape
@@ -253,9 +308,11 @@ func _draw_shell() -> void:
 	for u in units:
 		var unit := u - 1
 		var floors := _unit_floors(unit)
-		var x0 := (_unit_w() + UNIT_GAP) * float(u)
-		var top := float(_max_floors() - floors) * (V3Art.CELL.y + SLAB)
-		var h := FRAME * 2.0 + floors * (V3Art.CELL.y + SLAB) - SLAB
+		var x0 := _unit_x(unit)
+		var top := _unit_top(unit)
+		var h := _box_h(floors)
+		if unit < 0 and amb():
+			continue                # the ambulance shell sprite is the main body
 		shell.draw_rect(Rect2(x0, top, _unit_w(), h), steel)
 		for rx in range(int(x0) + 4, int(x0 + _unit_w()), 12):
 			shell.draw_rect(Rect2(rx, top + 3, 1, 1), rivet)

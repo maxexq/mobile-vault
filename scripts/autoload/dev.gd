@@ -685,6 +685,48 @@ func saloon_supper() -> Dictionary:
 	return Saloon.start(slot, ids)
 
 
+## MV-716 rear gunner post: make sure one exists (the default rear slot first, else any empty slot), put up to two of
+## the crew with the best AGI on its gun and send a few of this biome's mobs so they fire. Returns the room's slot.
+func gunner_demo(mobs: int = 4) -> int:
+	var slot := -1
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == RearGunner.TYPE and not Game.is_site(i):
+			slot = i
+			break
+	if slot < 0 and Game.s.rooms.size() > RearGunner.DEFAULT_SLOT and str(Game.s.rooms[RearGunner.DEFAULT_SLOT].type) == "empty":
+		Game.s.rooms[RearGunner.DEFAULT_SLOT] = {"type": RearGunner.TYPE, "level": 1, "job": {}, "build": {}}
+		slot = RearGunner.DEFAULT_SLOT
+	if slot < 0:
+		slot = rx_build(RearGunner.TYPE)
+	if slot < 0:
+		return -1
+	var pool := (Game.s.dwellers as Array).filter(func(d): return not Game.is_away(d) and Game.squad_role(d) < 0 and int(d.room) != slot)
+	pool.sort_custom(func(a, b): return float(a.agi) > float(b.agi))
+	var need := maxi(0, 2 - RearGunner.gunners(slot).size())
+	for d in pool.slice(0, need):
+		Game.assign(d, slot)
+	Game.rooms_changed.emit()
+	if mobs > 0:
+		var ids: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+		var q := []
+		for i in mobs:
+			q.append({"t": 0.2 + i * 0.6, "mob": ids[i % ids.size()], "lvl": Combat.enemy_level(), "no_mutate": true})
+		Combat.debug_spawn(q, false)
+	act("gunner demo", {"slot": slot, "gunners": RearGunner.gunners(slot).size(), "mobs": mobs})
+	return slot
+
+
+## level the first rear gunner post up by one (1..3), done at once
+func gunner_level_up() -> void:
+	for i in Game.s.rooms.size():
+		if str(Game.s.rooms[i].type) == RearGunner.TYPE:
+			Game.s.rooms[i].level = mini(3, int(Game.s.rooms[i].level) + 1)
+			Game.s.rooms[i].build = {}
+			Game.rooms_changed.emit()
+			act("gunner level", {"slot": i, "level": int(Game.s.rooms[i].level)})
+			return
+
+
 ## every crew member may sit down to supper again right away
 func saloon_clear_cd() -> void:
 	(Saloon.st().cd as Dictionary).clear()
@@ -1015,6 +1057,68 @@ func rooms_v3_open(slot: int = -1) -> bool:
 		return false
 	act("rooms v3 open", {"slot": slot})
 	return hud.open_interior(slot)
+
+
+## MV-715: the first vehicle (van) with `n` floors (1-5: the van starts with 1 and gets one at each Vault floor
+## level, 5 = beyond its ladder, for the art; switch five_floors on), the ambulance shell switch on, then the v3 interior opens; returns the floors it has now
+func ambulance_v3_preview(n: int) -> int:
+	feature_set("ambulance_v3", true)
+	_van_floors(n)
+	act("ambulance v3 preview", {"floors": Game.floors()})
+	_vehicle_changed()
+	rooms_v3_open()
+	return Game.floors()
+
+
+## MV-715 world v2 phase 1: the van in the world as the ambulance with v3 rooms + crew, `n` floors (2-5); returns floors
+func world_v2_preview(n: int) -> int:
+	feature_set("world_v2", true)
+	_van_floors(n)
+	act("world v2 preview", {"floors": Game.floors()})
+	_vehicle_changed()
+	return Game.floors()
+
+
+## MV-726 vehicle micro animations on the world v2 ambulance (switch vehicle_anim): "drive" (cruise speed),
+## "fast", "brake" (slow down to a stop), "park" (engine off), "beacon" (raid light bar on/off), "bump" (one road
+## bump: the tyres hop front to rear). Returns false when the ambulance animation is not up.
+func vehicle_anim(mode: String) -> bool:
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null:
+		return false
+	if not v.amb_on:
+		feature_set("vehicle_anim", true)
+		world_v2_preview(maxi(2, Game.floors()))
+	if not v.amb_on:
+		return false
+	match mode:
+		"drive":
+			v.debug_speed = 1.0
+		"fast":
+			v.debug_speed = 1.8
+		"brake":
+			v.debug_speed = 0.0
+		"park":
+			v.debug_speed = -1.0
+		"beacon":
+			v.amb.force_beacon = not v.amb.force_beacon
+		"bump":
+			v.amb.bump(maxf(v._speed, 0.5) * AmbulanceMotion.ROAD_PX)
+	act("vehicle anim", {"mode": mode})
+	return true
+
+
+func _van_floors(n: int) -> void:
+	set_tier("van")
+	Features.set_override("features", "five_floors", true)
+	n = clampi(n, 1, Data.BODY_FLOORS)
+	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
+		if Game.floors_at(lv) >= n or lv == Data.MAX_VAULT_LEVEL:
+			Game.s.vault_level = lv
+			break
+	var old_main := Game.main_slots()
+	Game.s.body_slots = Data.ROOMS_PER_FLOOR * n      # 5 floors is past the van's own ladder (1 + 3 Vault floors)
+	Game.relayout_body(old_main, Game.main_slots())
 
 
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
