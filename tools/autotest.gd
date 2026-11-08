@@ -9145,8 +9145,7 @@ func _perf_test() -> void:
 	var cn: int = Game.sim_steps.crew - c0
 	Game._flush_sim()
 	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
-	# a step fires on the first frame after 1/sim_hz has collected, then the collector restarts at 0, so between 20 and
-	# 40 fps every step takes two frames (36 frames -> 18 steps): the floor is half the frames, capped by the sim rate
+	# floor: half the frames, capped by the sim rate (a step can need two frames when frames come at 20-40 fps)
 	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
 		and wn + cn >= mini(frames, int(1.5 * Game.SIM_HZ)) / 2)
 	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
