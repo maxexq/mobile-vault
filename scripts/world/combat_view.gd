@@ -313,6 +313,7 @@ func _on_shot(from_kind: String, from_id: int, to_kind: String, to_id: int, styl
 			if en == null:
 				return
 			a = en.global_position + Vector2(-4, -en.height() * 0.6)
+			en.attack()
 	match to_kind:
 		"enemy":
 			var tn: EnemyActor = enemy_nodes.get(to_id)
@@ -741,6 +742,9 @@ class EnemyActor extends Node2D:
 	var size := 1             # MV-517: whole-number sprite scale (CombatView.enemy_scale)
 	var _grow := 0.0          # how far the centre moves back so the front edge stays put
 	var _right := 0.0         # sprite's right edge from the node (scaled)
+	var v2 := false           # MV-714: drawn with EnemiesV2 sheets
+	var boss_v2 := false      # MV-718: drawn with BossesV2 sheets (HD lore boss)
+	var _attacking := false
 
 	func height() -> float:
 		return _h
@@ -752,14 +756,14 @@ class EnemyActor extends Node2D:
 	## kept inside the fight zone behind the truck so a big boss never hangs off the right of the screen
 	func place(view: Vector2) -> Vector2:
 		var p := view + Vector2(_grow, 0)
-		if size > 1:
+		if size > 1 or boss_v2:
 			p.x = minf(p.x, CombatView.fight_right() - _right)
 		return p
 
 	## the drawn sprite in this node's parent space (for tests)
 	func sprite_rect() -> Rect2:
 		var tex := spr.sprite_frames.get_frame_texture("walk", 0)
-		return Rect2(position + spr.offset * float(size), Vector2(tex.get_size()) * float(size))
+		return Rect2(position + spr.offset * spr.scale.x, Vector2(tex.get_size()) * spr.scale.x)
 
 	func setup(e: Dictionary) -> void:
 		is_boss = e.boss
@@ -770,6 +774,12 @@ class EnemyActor extends Node2D:
 		var sf: SpriteFrames
 		var sprite: String = e.sprite
 		spr.centered = false
+		if BossesV2.use_for(e):
+			_setup_boss_v2(e)
+			return
+		if EnemiesV2.use_for(e):
+			_setup_v2(e)
+			return
 		if sprite.begins_with("dw_"):
 			sf = Atlas.dweller_frames(sprite)
 			spr.flip_h = true
@@ -808,6 +818,68 @@ class EnemyActor extends Node2D:
 			# MV-517: a scaled-up boss stands behind the smaller mobs so they don't vanish inside it
 			z_index = 7 if size == 1 else 4
 
+	## MV-714: v2 art (crew-density sheets with move + attack clips), shown at EnemiesV2.scale(); no whole-number
+	## growth, so the body anchor (feet, or the body centre for flyers) sits on the simulated spot
+	func _setup_v2(e: Dictionary) -> void:
+		v2 = true
+		var m := EnemiesV2.info(str(e.mob))
+		var k := EnemiesV2.scale()
+		spr.sprite_frames = EnemiesV2.frames(str(e.mob))
+		spr.offset = Vector2(-float(m.ax), -float(m.ay))
+		spr.scale = Vector2(k, k)
+		size = 1
+		_w = float(m.w) * k
+		_h = float(m.h) * k
+		_grow = 0.0
+		_right = (float(m.fw) - float(m.ax)) * k
+		position = place(position)
+		target = position
+		spr.play("walk")
+		spr.frame = randi() % int(m.frames)
+		spr.animation_finished.connect(_on_clip_done)
+		add_child(spr)
+		# the v2 art carries its own colours (frost wolf is already icy); elites keep the gold tint
+		if bool(e.get("elite", false)) and str(e.tint) != "":
+			_base_mod = Color(str(e.tint))
+		spr.modulate = _base_mod
+		z_index = 5 if e.kind != "air" else 6
+
+	## MV-718: HD lore boss (BossesV2), shown at BossesV2.scale(); feet anchor on the simulated spot and, like the
+	## scaled old bosses, kept inside the fight zone so its back never hangs off the right of the screen
+	func _setup_boss_v2(e: Dictionary) -> void:
+		v2 = true
+		boss_v2 = true
+		var b := str(e.boss_v2)
+		var m := BossesV2.info(b)
+		var k := BossesV2.scale()
+		spr.sprite_frames = BossesV2.frames(b)
+		spr.offset = Vector2(-float(m.ax), -float(m.ay))
+		spr.scale = Vector2(k, k)
+		size = 1
+		_w = float(m.w) * k
+		_h = float(m.h) * k
+		_grow = 0.0
+		_right = (float(m.fw) - float(m.ax)) * k
+		position = place(position)
+		target = position
+		spr.play("walk")
+		spr.animation_finished.connect(_on_clip_done)
+		add_child(spr)
+		spr.modulate = _base_mod
+		z_index = 4     # behind the smaller mobs so they don't vanish inside it
+
+	## MV-714: play the attack clip once when this enemy hits (v2 art only), then back to the move loop
+	func attack() -> void:
+		if not v2 or spr == null:
+			return
+		_attacking = true
+		spr.play(BossesV2.attack_clip() if boss_v2 else "attack")
+
+	func _on_clip_done() -> void:
+		if spr.animation == "attack" or spr.animation == "strike":
+			_attacking = false
+			spr.play("walk")
+
 	func flash() -> void:
 		_flash = 0.07
 
@@ -816,7 +888,7 @@ class EnemyActor extends Node2D:
 		var moving := position.distance_to(target) > 0.5
 		position = position.lerp(target, clampf(delta * 10.0, 0.0, 1.0))
 		spr.position = position.round() - position + Vector2(0, -roundf(drop))
-		spr.speed_scale = 1.0 if moving else 0.4
+		spr.speed_scale = 1.0 if moving or _attacking else 0.4
 		if stunned:
 			spr.speed_scale = 0.0
 		_flash -= delta

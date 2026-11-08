@@ -450,8 +450,11 @@ func _process(delta: float) -> void:
 		_acc_world += delta
 		_acc_crew += delta
 		_acc_step += delta
-		if _acc_step >= 1.0 / Features.num("perf.sim_hz", SIM_HZ):
-			_acc_step = 0.0
+		var step := 1.0 / Features.num("perf.sim_hz", SIM_HZ)
+		if _acc_step >= step:
+			# keep the remainder (capped at one step) so frames just above sim_hz still step at sim_hz; a reset to 0
+			# made every other frame skip at ~22 fps and the step rate fell to half (autotest perf, MV-714 CI)
+			_acc_step = minf(_acc_step - step, step)
 			if _crew_next:
 				_sim_crew(_acc_crew, false)
 				_acc_crew = 0.0
@@ -779,7 +782,7 @@ func blocked_reason() -> String:
 				return "ด่านตรวจ: ต้องการ Vault Lv.%d + %s" % [Data.biome(s.biome + 1).req, "ค่าผ่านทาง" if Modes.peaceful() else "ปราบบอส"]
 			if Modes.peaceful():
 				return "ด่านตรวจ: ค่าผ่านทาง %d เศษเหล็ก" % Modes.toll()
-			return "ด่านตรวจ: ปราบบอส %s" % Combat.BOSSES[Data.biome(s.biome).id].th
+			return "ด่านตรวจ: ปราบบอส %s" % Combat.boss_def(Data.biome(s.biome).id).th
 		return "ด่านตรวจ: ต้องการ Vault Lv.%d" % Data.biome(s.biome + 1).req
 	return ""
 
@@ -846,7 +849,7 @@ func _drive_map(m: float, dt: float, offline: bool) -> void:
 		if Modes.peaceful() and not Combat.boss_beaten(int(s.biome)):
 			toast.emit("ถึงด่านตรวจ! ค่าผ่านทาง %d เศษเหล็ก (จ่ายเองเมื่อมีพอ)" % Modes.toll(), "warn")
 		elif not Combat.boss_beaten(int(s.biome)):
-			toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.BOSSES[Data.biome(s.biome).id].th, "warn")
+			toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.boss_def(Data.biome(s.biome).id).th, "warn")
 		else:
 			toast.emit("ถึงด่านตรวจ! อัปเกรด Mobile Vault เป็น Lv.%d เพื่อไปต่อ" % checkpoint_req(), "warn")
 		travel_changed.emit()
@@ -1518,7 +1521,7 @@ func _sim_crew_body(dt: float, offline: bool) -> void:
 					if Modes.peaceful() and not Combat.boss_beaten(int(s.biome)):
 						toast.emit("ถึงด่านตรวจ! ค่าผ่านทาง %d เศษเหล็ก (จ่ายเองเมื่อมีพอ)" % Modes.toll(), "warn")
 					elif not Combat.boss_beaten(int(s.biome)):
-						toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.BOSSES[Data.biome(s.biome).id].th, "warn")
+						toast.emit("ถึงด่านตรวจ! บอส %s ขวางทางอยู่" % Combat.boss_def(Data.biome(s.biome).id).th, "warn")
 					else:
 						toast.emit("ถึงด่านตรวจ! อัปเกรด Mobile Vault เป็น Lv.%d เพื่อไปต่อ" % next_req, "warn")
 				travel_changed.emit()
