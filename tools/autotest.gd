@@ -631,6 +631,9 @@ func _run() -> void:
 		get_window().size = Vector2i(1280, 640)
 		await wait(1.2)
 		await _free_cam_test()
+		get_window().size = Vector2i(2560, 1440)
+		await wait(1.2)
+		await _free_cam_test()
 		_finish()
 		return
 	if "--only=touch" in OS.get_cmdline_user_args():
@@ -1507,6 +1510,11 @@ func _run() -> void:
 	await shot("portrait")
 	await _portrait_fit_test()
 	await _free_cam_test()
+	get_window().size = Vector2i(2560, 1440)      # big desktop screen: the farthest free view is > 2000 art px wide
+	await wait(1.2)
+	await _free_cam_test()
+	get_window().size = Vector2i(780, 1688)
+	await wait(1.2)
 	main.set_zoom_mode("auto")
 	main.open_closeup(2)
 	await wait(1.0)
@@ -4105,6 +4113,18 @@ func _free_cam_test() -> void:
 	await wait(0.3)
 	_check("free cam: zooming out stops at the farthest level (%d)" % main.world_scale, main.zoom_mode == "free" and is_equal_approx(main.world_scale, lo))
 	await shot("free_cam_far")
+	# the backdrop still covers the whole wide view: no clear-colour holes in the sky (the 64 px sky strip used to run
+	# out on the right on big screens, Parames 2026-11-08)
+	await RenderingServer.frame_post_draw
+	var img: Image = main.world_vp.get_texture().get_image()
+	var clear: Color = ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color")
+	var holes := 0
+	for ix in 12:
+		for iy in 8:
+			var c := img.get_pixel(int((ix + 0.5) / 12.0 * (img.get_width() - 1)), int((iy + 0.5) / 8.0 * img.get_height() * 0.6))
+			if absf(c.r - clear.r) + absf(c.g - clear.g) + absf(c.b - clear.b) < 0.01:
+				holes += 1
+	_check("free cam: the farthest view has no holes in the sky (%d of 96, view %d art px wide)" % [holes, main.vp_size().x], holes == 0)
 	# wheel in at a point: the world point under the cursor stays where it is
 	var wr: Rect2 = main.hud.world_rect()
 	var f: Vector2 = main.world_to_screen(main.vehicle.slot_global_rect(2).get_center()).round()      # on a room

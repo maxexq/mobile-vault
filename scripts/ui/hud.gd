@@ -143,6 +143,7 @@ func _ready() -> void:
 	_fit_btn.pressed.connect(func(): fit_pressed.emit())
 	_view_box.add_child(_fit_btn)
 	sync_fit_btn(false)
+	Features.changed.connect(func(): sync_fit_btn(_fit_lit))     # the switch shows / hides it at once
 	_interior_btn = UIKit.button("v3", "gray")
 	_interior_btn.name = "InteriorV3Button"
 	_interior_btn.custom_minimum_size = Vector2(30, 22)

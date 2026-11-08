@@ -448,6 +448,7 @@ func _apply_world_scale() -> void:
 		world_tex.size = Vector2(want) / view_k
 	elif world_tex.anchor_right != 1.0:
 		world_tex.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.fit_repeats(vp_size().x)
 	_fit_camera.call_deferred()
 
 
