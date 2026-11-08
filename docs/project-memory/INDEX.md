@@ -137,7 +137,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [crew-gun-anim](crew-gun-anim.md): MV-594 hold-gun + shoot clip per crew (PixelLab), one character at a time, 2 options each; pipeline + effects-in-code
 - [distillery-v3](distillery-v3.md): MV-626 distillery (Data id refinery, FUEL REFINERY) v3 per Room guide v3, L1-L3 single cell, Claude picked all, In Review; files distill_v3/
 - [drawdy-systems-map](drawdy-systems-map.md): Drawdy (drawdy.io MCP connector) game systems map for Mobile Vault: which board, free-plan 3-board limit, layout
-- [enemies-v2-per-biome](enemies-v2-per-biome.md): MV-677 18 non-boss enemies (3 per biome, 1 flyer each) at crew v2 scale via PixelLab, artifact Enemies v2 by Biome, awaiting feedback
+- [enemies-v2-per-biome](enemies-v2-per-biome.md): MV-677 18 non-boss enemies (3 per biome, 1 flyer) + anims; MV-714 in game behind switch enemies_v2 (PR #195, In Review), boss adds keep old rosters
 - [engine-bay-v3](engine-bay-v3.md): MV-707 engine bay v3 room (one-point, empty cradle) + 8 lore engines inpainted on it, artifact Engine Bay v3, awaiting picks
 - [event-art-320](event-art-320.md): Event art at 320x160 trial (gambler, MV-667): gen-v2 returns 1 image per 10 gens, far crisper; game popup still expects 160x80
 - [halloween-rest-room](halloween-rest-room.md): MV-615 Halloween festival rest room (guide v3, single cell only, L1-L3 + anims + hotspots), all picks made by Claude, Done 2026-10-30

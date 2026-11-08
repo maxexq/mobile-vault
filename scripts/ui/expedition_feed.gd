@@ -105,7 +105,7 @@ func setup() -> void:
 	if _loot_keys.is_empty():
 		_loot_keys = ["scrap"]
 	var biome: String = str(Expedition.SITES[site].biome) if Expedition.SITES.has(site) else Combat.biome_id()
-	_mobs = (Combat.BIOME_MOBS.get(biome, Combat.BIOME_MOBS.industrial) as Array).duplicate()
+	_mobs = Combat.biome_mobs(biome).duplicate()
 	_mobs.append_array(Combat.MUTANT_POOL.get(biome, []))
 	_plans = {}
 	_zombie_beat = -99
