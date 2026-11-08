@@ -460,6 +460,12 @@ func _run() -> void:
 	# read at boot: the trace keeps only the last Trace.MAX entries, and a full run pushes "start" out before the env check
 	_trace_start_env = Trace.entries.any(func(e): return str(e.msg) == "start" and str(e.get("data", {}).get("env", "")) == "dev")
 	Save.wipe()
+	# MV-721: the older tests were written for the 4-vehicle ladder (bus, train, 4-5 floor rig). Pin road_train off
+	# in the build layer, under every dev override, so clear_overrides() keeps it; _road_train_test turns it on.
+	var bl: Dictionary = Features.layers.build
+	if not bl.has("features"):
+		bl["features"] = {}
+	bl.features["road_train"] = false
 	if "--only=legal" not in OS.get_cmdline_user_args():
 		_legal_test_fixture()
 	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
@@ -4289,8 +4295,11 @@ func _features_test() -> void:
 	# (MV-546) rides on the world map, so it ships off with it
 	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud"]
 	var all_on := true
+	var pin: Dictionary = Features.layers.build.get("features", {})
+	pin.erase("road_train")         # the run's MV-721 test pin is not what ships
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
+	pin["road_train"] = false
 	_check("features: every switch on by default (except %s, off)" % ", ".join(ships_off), all_on)
 	_check("features: tune falls back to the code constant", Features.num("threat.rate_scale", Threat.RATE_SCALE) == Threat.RATE_SCALE)
 	var base: Array = Data.biome(0).events
