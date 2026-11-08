@@ -49,6 +49,10 @@ rules also go into this file.
 - **Crew characters:** the chibi field medic in the [crew style reference](docs/art/crew-style-reference.md)
   is the approved model for every new crew character's art style and animation (2D side view).
   It is ~2x the current 14x20 `dw_*` scale; moving the game to it is a separate decision.
+- **v3 rooms + ref v3 crew (MV-711):** Room guide v3 rooms (144x96, one-point, L1-L3, red emergency lamp at (6,6) in a
+  power-out) and the ref v3 crew (~60 px on a 64 canvas, shown at 2/3 over rooms: room x3, crew x2) are in the game in the
+  v3 interior view (switch `rooms_v3`, README 4q). Every crew sprite over a v3 room gets a contact shadow + the room grade
+  (`shaders/crew_v3_blend.gdshader`). New or changed v3 art reaches the game only through `python3 tools/v3_import.py`.
 - **After every PixelLab use** report to Parames what it was for, which model/endpoint (e.g.
   `generate-image-v2`, `inpaint-v3`, `animate-with-text-v3`), how many gens were used and how many remain
   (`GET /v2/balance`). "pl" in Parames's message means "use PixelLab".

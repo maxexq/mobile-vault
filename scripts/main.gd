@@ -157,6 +157,7 @@ func _ready() -> void:
 	hud = HUD.new()
 	ui_layer.add_child(hud)
 	hud.build_placement_requested.connect(_enter_placement)
+	hud.closeup_requested.connect(open_closeup)
 	hud.build_placement_cancelled.connect(_exit_placement)
 	hud.room_closeup.closed.connect(_close_closeup)
 	hud.room_closeup.focus_changed.connect(_on_closeup_focus)
