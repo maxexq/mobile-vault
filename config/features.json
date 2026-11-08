@@ -81,6 +81,7 @@
     "boss_intro": true,
     "vehicle_detail": true,
     "vehicle_ambience": true,
+    "bosses_v2": true,
     "enemies_v2": true,
     "enemy_size": true,
     "cozy_roof": true,
@@ -98,6 +99,7 @@
     "road_train": true,
     "ambulance_v3": true,
     "world_v2": true,
+    "vehicle_anim": true,
     "rooms_v3_review": true
   },
   "events": {},

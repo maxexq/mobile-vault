@@ -389,18 +389,26 @@ func _tab_vehicle() -> void:
 	_row([_b("ห้อง v3: " + ("เปิด" if Features.on("rooms_v3") else "ปิด"), func(): Dev.feature_set("rooms_v3", not Features.on("rooms_v3")),
 		"green" if Features.on("rooms_v3") else "red"), _b("ห้องรอตรวจ: " + ("ใช้" if Features.on("rooms_v3_review") else "ไม่ใช้"),
 		func(): Dev.feature_set("rooms_v3_review", not Features.on("rooms_v3_review")), "green" if Features.on("rooms_v3_review") else "red")], "สวิตช์")
-	_row([_b("รถพยาบาล 2 ชั้น", func(): Dev.ambulance_v3_preview(2)), _b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)),
-		_b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)), _b("5 ชั้น", func(): Dev.ambulance_v3_preview(5)),
+	_row([_b("รถพยาบาล 1 ชั้น", func(): Dev.ambulance_v3_preview(1)), _b("2 ชั้น", func(): Dev.ambulance_v3_preview(2)),
+		_b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)), _b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)),
 		_b("รถพยาบาล: " + ("เปิด" if Features.on("ambulance_v3") else "ปิด"), func(): Dev.feature_set("ambulance_v3", not Features.on("ambulance_v3")),
 		"green" if Features.on("ambulance_v3") else "red")], "รถพยาบาล v3")
-	_row([_b("บนถนน 2 ชั้น", func(): Dev.world_v2_preview(2)), _b("3 ชั้น", func(): Dev.world_v2_preview(3)),
-		_b("5 ชั้น", func(): Dev.world_v2_preview(5)),
+	_row([_b("บนถนน 1 ชั้น", func(): Dev.world_v2_preview(1)), _b("2 ชั้น", func(): Dev.world_v2_preview(2)),
+		_b("4 ชั้น", func(): Dev.world_v2_preview(4)),
 		_b("โลก v2: " + ("เปิด" if Features.on("world_v2") else "ปิด"), func(): Dev.feature_set("world_v2", not Features.on("world_v2")),
 		"green" if Features.on("world_v2") else "red")], "โลก v2")
 	_row([_b("ขับโร้ดเทรน", func(): Dev.road_train_preview()),
 		_b("บนถนน 2 ชั้น", func(): Dev.road_train_world(2)), _b("3 ชั้น", func(): Dev.road_train_world(3)),
 		_b("รถ 2 คัน: " + ("เปิด" if Features.on("road_train") else "ปิด"), func(): Dev.feature_set("road_train", not Features.on("road_train")),
 		"green" if Features.on("road_train") else "red")], "โร้ดเทรน")
+
+
+
+	_row([_b("ขับ", func(): Dev.vehicle_anim("drive"), "green"), _b("เร็ว", func(): Dev.vehicle_anim("fast")),
+		_b("เบรกจอด", func(): Dev.vehicle_anim("brake")), _b("ดับเครื่อง", func(): Dev.vehicle_anim("park")),
+		_b("หลุม", func(): Dev.vehicle_anim("bump")), _b("ไซเรน", func(): Dev.vehicle_anim("beacon"), "yellow"),
+		_b("รถขยับ: " + ("เปิด" if Features.on("vehicle_anim") else "ปิด"), func(): Dev.feature_set("vehicle_anim", not Features.on("vehicle_anim")),
+		"green" if Features.on("vehicle_anim") else "red")], "รถขยับ")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
 	var ib := Dev.on("instant_build")
 	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),
@@ -601,7 +609,7 @@ func _tab_fight() -> void:
 	_note("บอสด่าน MV-550: %s · HP ×%.1f โตตามอุปกรณ์ · ลูกเรือ ≤%.1f%% / รถ ≤%.1f%% ต่อครั้ง" % ["เปิด" if Features.on("warlord_progression") else "ปิด", Features.num("warlord.hp", 6.0), Features.num("warlord.hero_hit_cap", 0.02) * 100.0, Features.num("warlord.hull_hit_cap", 0.01) * 100.0])
 	var wave_balance := Features.on("roaming_boss_balance")
 	_note("สมดุลบอสเวฟ (MV-544) %s · HP ×%.1f / ดาเมจ ×%.1f · %s" % ["เปิด" if wave_balance else "ปิด", Features.num("boss.wave_hp", 8.0) if wave_balance else 12.0, Features.num("boss.wave_damage", 1.6) if wave_balance else 2.4, ("ความเสียหายรถต่อครั้ง ≤%d%% หลังคิดเกราะ" % int(round(Features.num("boss.hull_hit_cap", 0.12) * 100.0))) if wave_balance else "ความเสียหายพิเศษแบบเดิม"])
-	var bb := [_b("บอสด่าน: " + str(Combat.BOSSES[Combat.biome_id()].th), func(): Dev.spawn_boss("warlord"), "red", true)]
+	var bb := [_b("บอสด่าน: " + str(Combat.boss_def(Combat.biome_id()).th), func(): Dev.spawn_boss("warlord"), "red", true)]
 	for id in Combat.WAVE_BOSSES:
 		var bid: String = id
 		bb.append(_b(str(Combat.WAVE_BOSSES[id].th), func(): Dev.spawn_boss(bid), "gray", true))
@@ -618,6 +626,9 @@ func _tab_fight() -> void:
 	_row([_b("ศัตรูชุดใหม่ biome นี้", func(): Dev.enemies_v2_parade("biome"), "yellow", true), _b("อีลิทชุดใหม่", func(): Dev.enemies_v2_parade("elite"), "gray", true),
 		_b("ครบ 18 ตัว", func(): Dev.enemies_v2_parade("all"), "gray", true)],
 		"ศัตรูชุดใหม่ (MV-714) ขนาดพิกเซลเท่าลูกเรือ x%.2f · มีท่าเดิน + ท่าโจมตี%s" % [EnemiesV2.scale(), "" if Features.on("enemies_v2") else " · ปิดอยู่"])
+	_row([_b("บอสใหม่ biome นี้", func(): Dev.bosses_v2_preview("on"), "yellow", true), _b("บอสใหม่ ไม่มีเอฟเฟกต์", func(): Dev.bosses_v2_preview("strike"), "gray", true),
+		_b("บอสใหม่ครบ 6 ตัว", func(): Dev.bosses_v2_preview("all"), "gray", true), _b("บอสเดิม", func(): Dev.bosses_v2_preview("off"), "gray", true)],
+		"บอสชุดใหม่ (MV-718) x%.2f · ท่าโจมตี%s%s" % [BossesV2.scale(), "มีเอฟเฟกต์" if BossesV2.attack_clip() == "attack" else "ไม่มีเอฟเฟกต์", "" if BossesV2.on() else " · ปิดอยู่"])
 	_head("MOBS", "เรียกศัตรูทีละชนิด ×3")
 	var mb := []
 	for id in Combat.MOBS:
