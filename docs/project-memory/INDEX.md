@@ -153,3 +153,4 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [water-room-v3](water-room-v3.md): MV-618 water purifier redone per Room guide v3 (one-point, L1-L3 single cell, Claude picked all), states + hotspots format 2 done, In Review; files designs/room-redesign-preview/water_v3/
 - [workshop-v3](workshop-v3.md): MV-624 workshop (โรงช่าง) per Room guide v3, L1-L3 single cell, anim, hotspots fmt 2 (new actions salvage_parts/repair_hull), Claude picked all, In Review; files workshop_v3/
 - [ambulance-v3-ingame](ambulance-v3-ingame.md): MV-715 ambulance replaces the van: v3 interior shell (switch ambulance_v3) done, outside world v2 picked, next
+- [road-train-ingame](road-train-ingame.md): MV-721 two vehicles (ambulance + road train, switch road_train), B-double shells in the v3 interior, body 2-3 decks
