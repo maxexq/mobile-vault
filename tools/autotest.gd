@@ -12267,6 +12267,8 @@ func _world_v2_test() -> void:
 	await wait(0.4)
 	_check("world v2: van becomes the ambulance (2 floors, half-size shell, old van wheels gone)", f == 2 and v.v2 and v.v2_root.visible
 		and v.v2_root.scale == Vector2.ONE * Vehicle.V2_K and v.v2_shell.texture.get_size().y == 352.0 and v.wheels.is_empty())
+	await wait(0.2)
+	_check("world v2: no old-van leftovers (cab window frames, mudflap)", not v.driver_cab.visible and not v.mudflap.visible)
 	_check("world v2: one v3 cell per main-body slot, old room views hidden", v.v2_cells.size() == Game.main_slots()
 		and v.room_views.filter(func(rv): return v.v2_cells.has(rv.slot) and rv.visible).is_empty())
 	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K

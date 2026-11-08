@@ -939,6 +939,8 @@ func _place_idle_motion() -> void:
 	var flap_x := -1.0
 	if str(vd.get("trailer", "trailer")) == "trailer" and n_trailers > 0:
 		flap_x = unit_x(n_trailers - 1) + TRAILER_WHEELS[-1].x + 16.0
+	elif v2:
+		flap_x = -1.0                 # world v2: the ambulance's axles are in its shell, no old-van mudflap
 	elif not vd.get("rail", false) and not (vd.wheels as Array).is_empty():
 		var rear: Array = vd.wheels[-1]
 		if not (Mods.level("tracks") > 0 and float(rear[0]) > 100.0):
