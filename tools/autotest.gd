@@ -3566,7 +3566,7 @@ func _large_room_test() -> void:
 	Game.fit_body()       # MV-563: grow the fresh 2-floor van body to this rig at Vault Lv6
 	while Game.s.rooms.size() < Game.slot_count():
 		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
-	for i in range(1, Game.s.rooms.size()):
+	for i in range(0, Game.s.rooms.size()):   # MV-716: the default layout now has the purifier in slot 0
 		Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}, "build": {}}
 	for i in [3, 4, 5]:
 		Game.s.rooms[i] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
