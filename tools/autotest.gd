@@ -6283,6 +6283,7 @@ func _wait_for(cond: Callable, max_s: float) -> void:
 func _enemy_size_test() -> void:
 	var cv: CombatView = main.combat_view
 	Features.set_override("features", "enemies_v2", false)    # MV-517 checks the old whole-number sprites
+	Features.set_override("features", "bosses_v2", false)     # (old boss sprites too, MV-718)
 	_no_events()
 	Dev.kill_enemies()
 	await wait(0.4)
@@ -6379,6 +6380,7 @@ func _enemy_size_test() -> void:
 	Features.set_override("features", "enemy_size", null)
 	Dev.kill_enemies()
 	await wait(0.4)
+	Features.set_override("features", "bosses_v2", null)
 	Features.set_override("features", "enemies_v2", null)
 
 
