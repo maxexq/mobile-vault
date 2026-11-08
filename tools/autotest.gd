@@ -617,6 +617,11 @@ func _run() -> void:
 		await _rooms_v3_test()
 		_finish()
 		return
+	if "--only=world_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _world_v2_test()
+		_finish()
+		return
 	if "--only=ambulance_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _ambulance_v3_test()
@@ -1569,6 +1574,7 @@ func _run() -> void:
 	await _parallax_v2_test()
 	await _rooms_v3_test()
 	await _ambulance_v3_test()
+	await _world_v2_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
@@ -5042,7 +5048,7 @@ func _thai_terms_test() -> void:
 ## title screen: the backdrop van drives (wheels turn, engine rumbles) and the menu window stays on screen
 func _title_backdrop_test() -> void:
 	var v: Node = main.vehicle
-	_check("title: van wheels turn", v.wheels.size() > 0 and v.wheels[0].is_playing())
+	_check("title: van wheels turn (world v2 ambulance: axles are in its shell)", v.v2 or (v.wheels.size() > 0 and v.wheels[0].is_playing()))
 	# Half-pixel rumble randomly skips beats; test motion with a deterministic whole-pixel amplitude.
 	# _engine_shake_test separately checks the default half strength and its distribution.
 	var rumble_override = Features.layers.dev.get("tune", {}).get("fx.engine_shake")
@@ -6622,6 +6628,7 @@ func _exterior_mods_test() -> void:
 	var saved_view := v.xray
 	Features.set_override("features", "exterior_mod_ambience", true)
 	Features.set_override("features", "cozy_roof", true)
+	Features.set_override("features", "world_v2", false)   # the old van's mods (world v2 phase 1 hides them)
 	Game.s.traveling = false
 	Game.s.weather = "clear"
 	m.set_process(false) # explicit phase steps below; no timing race against the renderer
@@ -12091,4 +12098,53 @@ func _ambulance_v3_test() -> void:
 	Game.s = old_state
 	Game.rooms_changed.emit()
 	get_window().size = old_window
+	await wait(0.3)
+
+
+## MV-715 world v2 phase 1: the van on the road is the ambulance with v3 rooms + crew at half size
+func _world_v2_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var v: Vehicle = main.vehicle
+	var f := Dev.world_v2_preview(2)
+	await wait(0.4)
+	_check("world v2: van becomes the ambulance (2 floors, half-size shell, old van wheels gone)", f == 2 and v.v2 and v.v2_root.visible
+		and v.v2_root.scale == Vector2.ONE * Vehicle.V2_K and v.v2_shell.texture.get_size().y == 352.0 and v.wheels.is_empty())
+	_check("world v2: one v3 cell per main-body slot, old room views hidden", v.v2_cells.size() == Game.main_slots()
+		and v.room_views.filter(func(rv): return v.v2_cells.has(rv.slot) and rv.visible).is_empty())
+	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+	_check("world v2: the ambulance stands on the road line", absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5)
+	var taps := true
+	for slot in Game.main_slots():
+		if Game.is_annex(slot):
+			continue
+		var r := v.slot_global_rect(slot)
+		taps = taps and v.slot_at(r.get_center()) == Game.room_anchor(slot)
+		var c: RoomV3Cell = v.v2_cells[slot]
+		taps = taps and (c.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
+	_check("world v2: taps hit the v3 rooms (slot rects = the 72x48 cells)", taps)
+	Dev.rooms_v3_showcase(2)
+	await wait(0.6)
+	main.hud.panels.interior.close()
+	await wait(1.5)
+	var actors := 0
+	var did := -1
+	for c in v.v2_cells.values():
+		actors += (c as RoomV3Cell).actors.size()
+		for id in (c as RoomV3Cell).actors:
+			did = int(id)
+	_check("world v2: crew aboard walk in the v3 rooms", actors > 0)
+	_check("world v2: actor_for answers with the v3 crew actor", did < 0 or v.actor_for(did) is CrewV3Actor)
+	await shot("world_v2_f2")
+	f = Dev.world_v2_preview(5)
+	await wait(0.4)
+	_check("world v2: 5 floors use the 5-floor shell", f == 5 and v.v2_shell.texture.get_size().y == 688.0 and v.v2_cells.size() == 15)
+	await shot("world_v2_f5")
+	Dev.feature_set("world_v2", false)
+	await wait(0.3)
+	_check("world v2: switch off brings the old van back", not v.v2 and not v.v2_root.visible and not v.wheels.is_empty())
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Dev._vehicle_changed()
 	await wait(0.3)

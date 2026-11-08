@@ -1021,6 +1021,23 @@ func rooms_v3_open(slot: int = -1) -> bool:
 ## five_floors on), the ambulance shell switch on, then the v3 interior opens; returns the floors it has now
 func ambulance_v3_preview(n: int) -> int:
 	feature_set("ambulance_v3", true)
+	_van_floors(n)
+	act("ambulance v3 preview", {"floors": Game.floors()})
+	_vehicle_changed()
+	rooms_v3_open()
+	return Game.floors()
+
+
+## MV-715 world v2 phase 1: the van in the world as the ambulance with v3 rooms + crew, `n` floors (2-5); returns floors
+func world_v2_preview(n: int) -> int:
+	feature_set("world_v2", true)
+	_van_floors(n)
+	act("world v2 preview", {"floors": Game.floors()})
+	_vehicle_changed()
+	return Game.floors()
+
+
+func _van_floors(n: int) -> void:
 	set_tier("van")
 	Features.set_override("features", "five_floors", true)
 	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
@@ -1030,10 +1047,6 @@ func ambulance_v3_preview(n: int) -> int:
 	var old_main := Game.main_slots()
 	Game.s.body_slots = Data.ROOMS_PER_FLOOR * Game.target_floors()
 	Game.relayout_body(old_main, Game.main_slots())
-	act("ambulance v3 preview", {"floors": Game.floors()})
-	_vehicle_changed()
-	rooms_v3_open()
-	return Game.floors()
 
 
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
