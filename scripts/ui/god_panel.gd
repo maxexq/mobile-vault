@@ -299,9 +299,9 @@ func _tab_vehicle() -> void:
 		_b("เฟรมถัดไป", func(): Dev.rx_anim_step(), "green")], "แอนิเมชัน")
 	_head("CHASSIS", "เปลี่ยนรถทันที (ห้องที่ยังพอดีอยู่ครบ)")
 	var tb := []
-	for t in Data.TIER_ORDER:
+	for t in Game.tier_order():
 		var tid: String = t
-		tb.append(_b(str(Data.VEHICLES[t].th), func(): Dev.set_tier(tid), "yellow" if Game.tier() == tid else "gray"))
+		tb.append(_b(str(Game.vehicle_def_for(t).th), func(): Dev.set_tier(tid), "yellow" if Game.tier() == tid else "gray"))
 	_row(tb)
 	_row([_b("0", func(): Dev.set_trailers(0), "yellow" if Game.trailers() == 0 else "gray"), _b("1", func(): Dev.set_trailers(1), "yellow" if Game.trailers() == 1 else "gray"),
 		_b("2", func(): Dev.set_trailers(2), "yellow" if Game.trailers() == 2 else "gray")], "โบกี้พ่วง")
@@ -391,6 +391,9 @@ func _tab_vehicle() -> void:
 		_b("5 ชั้น", func(): Dev.world_v2_preview(5)),
 		_b("โลก v2: " + ("เปิด" if Features.on("world_v2") else "ปิด"), func(): Dev.feature_set("world_v2", not Features.on("world_v2")),
 		"green" if Features.on("world_v2") else "red")], "โลก v2")
+	_row([_b("ขับโร้ดเทรน", func(): Dev.road_train_preview()),
+		_b("รถ 2 คัน: " + ("เปิด" if Features.on("road_train") else "ปิด"), func(): Dev.feature_set("road_train", not Features.on("road_train")),
+		"green" if Features.on("road_train") else "red")], "โร้ดเทรน")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())
 	var ib := Dev.on("instant_build")
 	_row([_b("เสร็จทันที", func(): Dev.finish_construction(), "yellow"), _b("เร่ง 50%", func(): Dev.construction_progress(0.5)),

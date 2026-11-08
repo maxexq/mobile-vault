@@ -622,6 +622,11 @@ func _run() -> void:
 		await _world_v2_test()
 		_finish()
 		return
+	if "--only=road_train" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _road_train_test()
+		_finish()
+		return
 	if "--only=ambulance_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _ambulance_v3_test()
@@ -1381,6 +1386,7 @@ func _run() -> void:
 		main.hud.panels.expedition.close()
 	Expedition.skip_site()
 	await _encounter_test()
+	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
 	Meta.m().legacy = 9999
 	Meta.add_blueprint("bp_bus")
@@ -1412,6 +1418,7 @@ func _run() -> void:
 	await wait(1.6)
 	await shot("train_two_wagons_wide")
 	main.set_zoom_mode("auto")
+	Features.set_override("features", "road_train", null)
 	# ---- tester console (god mode) + trace log
 	_check("dev tools unlocked in debug builds", Dev.unlocked)
 	# release builds: the hidden 7-tap unlock on the VAULT chip (real input events through the GUI)
@@ -1575,6 +1582,7 @@ func _run() -> void:
 	await _rooms_v3_test()
 	await _ambulance_v3_test()
 	await _world_v2_test()
+	await _road_train_test()
 	await _raw_food_test()
 	await _pity_test()
 	await _boss_intro_test()
@@ -6621,6 +6629,7 @@ func _cozy_roof_test() -> void:
 
 
 func _exterior_mods_test() -> void:
+	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	var v: Vehicle = main.vehicle
 	var m: ExteriorModMotion = v.mod_motion
 	var state: Dictionary = Game.s.duplicate(true)
@@ -6771,6 +6780,7 @@ func _exterior_mods_test() -> void:
 	m.set_process(true)
 	v.set_xray(saved_view)
 	Game.weather_changed.emit(str(Game.s.weather))
+	Features.set_override("features", "road_train", null)
 
 
 ## MV-566: finer exterior mod art (*_fine) swaps in with the switch and keeps every size / anchor
@@ -8463,6 +8473,7 @@ func _hull_repair_test() -> void:
 ## up to 5 (vehf<n>_ shells, cab and wheels where they were); the Vault card / GOD show the next floor at half
 ## opacity on the vehicle; the trailer rooms move with the body when it grows; switch off = as before
 func _five_floors_test() -> void:
+	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	_no_events()
 	var keep_state: Dictionary = Game.s.duplicate(true)
 	var v: Vehicle = main.vehicle
@@ -8559,6 +8570,7 @@ func _five_floors_test() -> void:
 	Game.fit_body()
 	Dev._vehicle_changed()
 	await wait(0.3)
+	Features.set_override("features", "road_train", null)
 
 
 ## MV-545: the Vault upgrade never promises a room the vehicle has no space for, names the bigger vehicle, and every
@@ -12148,3 +12160,36 @@ func _world_v2_test() -> void:
 	Game.s = old_state
 	Dev._vehicle_changed()
 	await wait(0.3)
+## MV-721 (switch road_train): two vehicles only, the ambulance (van) and the road train (rig); bus / train saves
+## drive the road train, the road train research needs no bus, the GOD chassis row and the next-generation list show 2
+func _road_train_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "road_train", true)
+	_check("road train: the ladder is the ambulance and the road train", Game.tier_order() == ["van", "rig"])
+	Game.s.tier = "bus"
+	var bus_ok := Game.tier() == "rig"
+	Game.s.tier = "train"
+	_check("road train: bus and train saves drive the road train", bus_ok and Game.tier() == "rig")
+	_check("road train: named ROAD TRAIN, the van is Dr. Ren's ambulance", str(Game.vehicle_def().en) == "ROAD TRAIN" and str(Game.vehicle_def_for("van").en) == Data.VAN_AMBULANCE.en)
+	Game.s.tier = "van"
+	var mm := Meta.m()
+	mm.perks = {}
+	mm.legacy = 999
+	Meta.add_blueprint("bp_rig")
+	_check("road train: bus / train research hidden, road train researchable without the bus", Meta.perk_hidden("tier_bus") and Meta.perk_hidden("tier_train") 		and not Meta.can_buy("tier_bus", 999) and Meta.buy("tier_rig") and Meta.best_tier() == "rig" and not Meta.tier_unlocked("bus"))
+	var t := Dev.road_train_preview()
+	await wait(0.3)
+	_check("road train: GOD drives the road train in place", t == "rig" and Game.tier() == "rig" and main.vehicle.room_views.size() == Game.slot_count())
+	Dev.set_tier("bus")
+	_check("road train: GOD cannot pick a removed vehicle", Game.tier() == "rig")
+	await shot("road_train_rig")
+	Features.set_override("features", "road_train", false)
+	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Dev._vehicle_changed()
+	await wait(0.3)
+

@@ -371,7 +371,7 @@ func legacy_add(n: int) -> void:
 
 ## swap the chassis in place: keeps the rooms that still fit, trailers stay hitched
 func set_tier(t: String) -> void:
-	if not Data.VEHICLES.has(t) or t == Game.tier():
+	if not Game.tier_order().has(t) or t == Game.tier():
 		return
 	var old_main := Game.main_slots()
 	Game.s.tier = t
@@ -1047,6 +1047,15 @@ func _van_floors(n: int) -> void:
 	var old_main := Game.main_slots()
 	Game.s.body_slots = Data.ROOMS_PER_FLOOR * Game.target_floors()
 	Game.relayout_body(old_main, Game.main_slots())
+
+
+## MV-721: switch road_train on and drive the road train now (old rig slot); returns the tier in play
+func road_train_preview() -> String:
+	feature_set("road_train", true)
+	set_tier("rig")
+	act("road train preview", {"tier": Game.tier()})
+	_vehicle_changed()
+	return Game.tier()
 
 
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then

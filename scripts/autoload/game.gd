@@ -513,11 +513,29 @@ func beds_short_text(left: int) -> String:
 
 # ------------------------------------------------------------------ vehicle tier / layout
 func tier() -> String:
-	return str(s.get("tier", "van")) if not s.is_empty() else "rig"
+	var t := str(s.get("tier", "van")) if not s.is_empty() else "rig"
+	if Features.on("road_train") and (t == "bus" or t == "train"):
+		return "rig"      # MV-721: the bus and the armoured train are gone, their saves drive the road train
+	return t
 
 
 func vehicle_def() -> Dictionary:
-	return Data.VEHICLES.get(tier(), Data.VEHICLES.van)
+	return vehicle_def_for(tier())
+
+
+## MV-721: the vehicle ladder in play (switch road_train: ambulance + road train only)
+func tier_order() -> Array:
+	return Data.TIER_ORDER_2 if Features.on("road_train") else Data.TIER_ORDER
+
+
+func vehicle_def_for(t: String) -> Dictionary:
+	var d: Dictionary = Data.VEHICLES.get(t, Data.VEHICLES.van)
+	if Features.on("road_train"):
+		if t == "rig":
+			return d.merged(Data.ROAD_TRAIN, true)
+		if t == "van":
+			return d.merged(Data.VAN_AMBULANCE, true)
+	return d
 
 
 func floors() -> int:
@@ -649,8 +667,8 @@ func vault_hull_bonus() -> float:
 ## the next vehicle with more floors than this one ("" = none bigger)
 func bigger_vehicle() -> String:
 	var f := floors()
-	for t in Data.TIER_ORDER:
-		if int(Data.VEHICLES[t].floors) > f:
+	for t in tier_order():
+		if int(vehicle_def_for(t).floors) > f:
 			return t
 	return ""
 

@@ -55,14 +55,32 @@ func vehicle_name() -> String:
 ## best vehicle tier the research has unlocked (the next generation builds this)
 func best_tier() -> String:
 	var best := "van"
-	for t in Data.TIER_ORDER:
+	for t in Game.tier_order():
 		if t == "van" or perk(TIER_PERK[t]) > 0:
 			best = t
 	return best
 
 
 func tier_unlocked(t: String) -> bool:
+	if not Game.tier_order().has(t):
+		return false
 	return t == "van" or perk(TIER_PERK.get(t, "")) > 0
+
+
+## MV-721 (switch road_train): the bus and train research is hidden, the road train needs no bus first
+func perk_hidden(id: String) -> bool:
+	return Features.on("road_train") and id in ["tier_bus", "tier_train"]
+
+
+func perk_def(id: String) -> Dictionary:
+	var p: Dictionary = PERKS[id]
+	if Features.on("road_train") and id == "tier_rig":
+		p = p.duplicate()
+		p.erase("req")
+		p.th = Data.ROAD_TRAIN.th
+		p.en = Data.ROAD_TRAIN.en
+		p.desc = "รุ่นถัดไปออกเดินทางด้วยรถพ่วงยาว: หัวลากทหาร + พ่วงนำ ต่อพ่วงได้อีก 2 ตัว · ต้องมีพิมพ์เขียว"
+	return p
 
 
 func perk(id: String) -> int:
@@ -159,7 +177,9 @@ func perk_cost(id: String) -> int:
 func can_buy(id: String, legacy: int) -> bool:
 	if all_crew_on() and id in ["veterans", "training"]:
 		return false
-	var p: Dictionary = PERKS[id]
+	if perk_hidden(id):
+		return false
+	var p: Dictionary = perk_def(id)
 	if perk(id) >= int(p.max):
 		return false
 	if p.has("bp") and not has_blueprint(p.bp):

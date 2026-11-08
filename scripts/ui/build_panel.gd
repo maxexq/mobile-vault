@@ -122,7 +122,7 @@ static func vault_card_text(lv: int, next_b: String, new_rooms: String) -> Strin
 		var big := Game.bigger_vehicle()
 		rooms = Loc.t("ห้องเต็มรถแล้ว (การผลิต +%d%% แทน)") % roundi(Features.num("vault.prod_per_banked_room", 0.10) * 100.0)
 		if big != "":
-			rooms += Loc.t(" · เปลี่ยนเป็น%s (%d ชั้น) เพื่อใช้ห้องที่ปลดล็อกไว้") % [Loc.t(str(Data.VEHICLES[big].th)), int(Data.VEHICLES[big].floors)]
+			rooms += Loc.t(" · เปลี่ยนเป็น%s (%d ชั้น) เพื่อใช้ห้องที่ปลดล็อกไว้") % [Loc.t(str(Game.vehicle_def_for(big).th)), int(Game.vehicle_def_for(big).floors)]
 	var parts := []
 	if rooms != "":
 		parts.append(rooms)

@@ -26,6 +26,11 @@ const V3_SLOT_CELL := [[0, 2], [1, 2], [0, 3], [1, 3], [0, 1], [1, 1], [1, 0], [
 ##  weight / engine: tons vs. engine capacity (Haul autoload); hull: bonus hull points.
 ##  cab: the engine room inside the cab's bottom floor [x, y, w, h] (tools/art/engine_bay.py CAB).
 const TIER_ORDER := ["van", "bus", "rig", "train"]
+## MV-721 (switch road_train): only two vehicles, Dr. Ren's ambulance (id van) and the road train (id rig, the old
+## 18-wheeler slot so saves keep working). bus / train saves drive the road train. ROAD_TRAIN overrides the rig entry.
+const TIER_ORDER_2 := ["van", "rig"]
+const ROAD_TRAIN := {"th": "รถพ่วงยาว โร้ดเทรน", "en": "ROAD TRAIN", "names": ["OUTBACK", "LONG HAUL", "BIG DINGO"]}
+const VAN_AMBULANCE := {"th": "รถพยาบาลหมอเรน", "en": "DR. REN'S AMBULANCE", "names": ["TRIAGE-9", "MERCY RUN"]}
 const VEHICLES := {
 	"van": {"th": "รถตู้แคมป์ปิ้ง", "en": "CAMPER VAN", "floors": 2, "weight": 18.0, "engine": 40.0, "hull": 0.0,
 		"wheels": [[26, 284], [214, 284]], "rail": false, "headlight": [0, 213], "chimney": [250, 272], "trailer": "trailer",
