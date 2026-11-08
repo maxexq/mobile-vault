@@ -743,6 +743,7 @@ class EnemyActor extends Node2D:
 	var _grow := 0.0          # how far the centre moves back so the front edge stays put
 	var _right := 0.0         # sprite's right edge from the node (scaled)
 	var v2 := false           # MV-714: drawn with EnemiesV2 sheets
+	var boss_v2 := false      # MV-718: drawn with BossesV2 sheets (HD lore boss)
 	var _attacking := false
 
 	func height() -> float:
@@ -755,7 +756,7 @@ class EnemyActor extends Node2D:
 	## kept inside the fight zone behind the truck so a big boss never hangs off the right of the screen
 	func place(view: Vector2) -> Vector2:
 		var p := view + Vector2(_grow, 0)
-		if size > 1:
+		if size > 1 or boss_v2:
 			p.x = minf(p.x, CombatView.fight_right() - _right)
 		return p
 
@@ -773,6 +774,9 @@ class EnemyActor extends Node2D:
 		var sf: SpriteFrames
 		var sprite: String = e.sprite
 		spr.centered = false
+		if BossesV2.use_for(e):
+			_setup_boss_v2(e)
+			return
 		if EnemiesV2.use_for(e):
 			_setup_v2(e)
 			return
@@ -840,15 +844,39 @@ class EnemyActor extends Node2D:
 		spr.modulate = _base_mod
 		z_index = 5 if e.kind != "air" else 6
 
+	## MV-718: HD lore boss (BossesV2), shown at BossesV2.scale(); feet anchor on the simulated spot and, like the
+	## scaled old bosses, kept inside the fight zone so its back never hangs off the right of the screen
+	func _setup_boss_v2(e: Dictionary) -> void:
+		v2 = true
+		boss_v2 = true
+		var b := str(e.boss_v2)
+		var m := BossesV2.info(b)
+		var k := BossesV2.scale()
+		spr.sprite_frames = BossesV2.frames(b)
+		spr.offset = Vector2(-float(m.ax), -float(m.ay))
+		spr.scale = Vector2(k, k)
+		size = 1
+		_w = float(m.w) * k
+		_h = float(m.h) * k
+		_grow = 0.0
+		_right = (float(m.fw) - float(m.ax)) * k
+		position = place(position)
+		target = position
+		spr.play("walk")
+		spr.animation_finished.connect(_on_clip_done)
+		add_child(spr)
+		spr.modulate = _base_mod
+		z_index = 4     # behind the smaller mobs so they don't vanish inside it
+
 	## MV-714: play the attack clip once when this enemy hits (v2 art only), then back to the move loop
 	func attack() -> void:
 		if not v2 or spr == null:
 			return
 		_attacking = true
-		spr.play("attack")
+		spr.play(BossesV2.attack_clip() if boss_v2 else "attack")
 
 	func _on_clip_done() -> void:
-		if spr.animation == "attack":
+		if spr.animation == "attack" or spr.animation == "strike":
 			_attacking = false
 			spr.play("walk")
 

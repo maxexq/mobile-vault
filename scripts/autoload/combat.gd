@@ -119,6 +119,16 @@ const BOSSES := {
 	"tundra": {"th": "ไททันน้ำแข็ง", "en": "FROST TITAN", "base": "yeti", "sprite": "boss_titan", "kind": "melee", "mech": ["armor", "enrage"]},
 	"metro": {"th": "ผู้คุมจักรกล OVERSEER", "en": "OVERSEER MECH", "base": "sentry_bot", "sprite": "boss_overseer", "kind": "ranged", "mech": ["armor", "summon", "enrage"]},
 }
+## MV-704 (switch bosses_v2): the lore bosses that replace the old ones above, same base stats + mechanics, own
+## names and HD art (BossesV2, assets/bosses_v2/). Merged over BOSSES by boss_def().
+const BOSSES_V2 := {
+	"industrial": {"th": "หัวหน้าคนงาน", "en": "THE FOREMAN"},
+	"desert": {"th": "ราชาแก้ว", "en": "GLASS KING"},
+	"forest": {"th": "จ่าฝูงหลังป่า", "en": "MOSSBACK ALPHA"},
+	"swamp": {"th": "มารดาบึง", "en": "BOG MOTHER"},
+	"tundra": {"th": "ไททันห้องเย็น", "en": "CRYO TITAN"},
+	"metro": {"th": "ผู้คุมหมายเลข 9", "en": "WARDEN-9"},
+}
 ## roaming mutant bosses for the every-10th-wave fights (rotates; harder ones join further down the road)
 const WAVE_BOSSES := {
 	"acid_matron": {"th": "แม่พันธุ์กรด", "en": "ACID MATRON", "base": "bog_walker", "sprite": "boss_acid", "kind": "ranged", "mech": ["acid", "enrage"], "from": 0},
@@ -589,7 +599,7 @@ func _start_wave() -> void:
 		spawn_queue.append({"t": 0.5, "boss": "warlord", "lvl": lvl})
 		for i in 3:
 			spawn_queue.append({"t": 1.5 + i * 1.2, "mob": mobs[rng.randi() % mobs.size()], "lvl": lvl - 2})
-		Game.toast.emit("บอสด่านตรวจปรากฏตัว: %s!" % BOSSES[biome_id()].th, "bad")
+		Game.toast.emit("บอสด่านตรวจปรากฏตัว: %s!" % boss_def(biome_id()).th, "bad")
 	elif is_boss_wave(w):
 		wave_is_boss = true
 		var bid := pick_wave_boss(w)
@@ -626,7 +636,12 @@ func pick_wave_boss(w: int) -> String:
 func boss_def(id: String) -> Dictionary:
 	if WAVE_BOSSES.has(id):
 		return WAVE_BOSSES[id]
-	return BOSSES.get(id, BOSSES.industrial)
+	var key := id if BOSSES.has(id) else "industrial"
+	var d: Dictionary = BOSSES[key]
+	if Features.on("bosses_v2") and BOSSES_V2.has(key):
+		d = d.merged(BOSSES_V2[key], true)
+		d["v2"] = key
+	return d
 
 
 func mutation_chance() -> float:
@@ -662,6 +677,7 @@ func _spawn(q: Dictionary) -> void:
 		e.name = ("บอสด่านตรวจ: " if e.warlord else "") + bd.th
 		e.mob = bd.base
 		e.boss_sprite = bd.sprite
+		e.boss_v2 = str(bd.get("v2", ""))    # MV-718: biome of the HD art, "" = old sprite
 		e.en = bd.en
 		e.mech = (bd.get("mech", []) as Array).duplicate()
 		e.mech_t = 4.0

@@ -600,7 +600,7 @@ func _tab_fight() -> void:
 	_note("บอสด่าน MV-550: %s · HP ×%.1f โตตามอุปกรณ์ · ลูกเรือ ≤%.1f%% / รถ ≤%.1f%% ต่อครั้ง" % ["เปิด" if Features.on("warlord_progression") else "ปิด", Features.num("warlord.hp", 6.0), Features.num("warlord.hero_hit_cap", 0.02) * 100.0, Features.num("warlord.hull_hit_cap", 0.01) * 100.0])
 	var wave_balance := Features.on("roaming_boss_balance")
 	_note("สมดุลบอสเวฟ (MV-544) %s · HP ×%.1f / ดาเมจ ×%.1f · %s" % ["เปิด" if wave_balance else "ปิด", Features.num("boss.wave_hp", 8.0) if wave_balance else 12.0, Features.num("boss.wave_damage", 1.6) if wave_balance else 2.4, ("ความเสียหายรถต่อครั้ง ≤%d%% หลังคิดเกราะ" % int(round(Features.num("boss.hull_hit_cap", 0.12) * 100.0))) if wave_balance else "ความเสียหายพิเศษแบบเดิม"])
-	var bb := [_b("บอสด่าน: " + str(Combat.BOSSES[Combat.biome_id()].th), func(): Dev.spawn_boss("warlord"), "red", true)]
+	var bb := [_b("บอสด่าน: " + str(Combat.boss_def(Combat.biome_id()).th), func(): Dev.spawn_boss("warlord"), "red", true)]
 	for id in Combat.WAVE_BOSSES:
 		var bid: String = id
 		bb.append(_b(str(Combat.WAVE_BOSSES[id].th), func(): Dev.spawn_boss(bid), "gray", true))
@@ -617,6 +617,9 @@ func _tab_fight() -> void:
 	_row([_b("ศัตรูชุดใหม่ biome นี้", func(): Dev.enemies_v2_parade("biome"), "yellow", true), _b("อีลิทชุดใหม่", func(): Dev.enemies_v2_parade("elite"), "gray", true),
 		_b("ครบ 18 ตัว", func(): Dev.enemies_v2_parade("all"), "gray", true)],
 		"ศัตรูชุดใหม่ (MV-714) ขนาดพิกเซลเท่าลูกเรือ x%.2f · มีท่าเดิน + ท่าโจมตี%s" % [EnemiesV2.scale(), "" if Features.on("enemies_v2") else " · ปิดอยู่"])
+	_row([_b("บอสใหม่ biome นี้", func(): Dev.bosses_v2_preview("on"), "yellow", true), _b("บอสใหม่ ไม่มีเอฟเฟกต์", func(): Dev.bosses_v2_preview("strike"), "gray", true),
+		_b("บอสใหม่ครบ 6 ตัว", func(): Dev.bosses_v2_preview("all"), "gray", true), _b("บอสเดิม", func(): Dev.bosses_v2_preview("off"), "gray", true)],
+		"บอสชุดใหม่ (MV-718) x%.2f · ท่าโจมตี%s%s" % [BossesV2.scale(), "มีเอฟเฟกต์" if BossesV2.attack_clip() == "attack" else "ไม่มีเอฟเฟกต์", "" if BossesV2.on() else " · ปิดอยู่"])
 	_head("MOBS", "เรียกศัตรูทีละชนิด ×3")
 	var mb := []
 	for id in Combat.MOBS:
