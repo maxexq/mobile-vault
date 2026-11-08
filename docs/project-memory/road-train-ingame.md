@@ -14,3 +14,7 @@ description: MV-721 two vehicles only (ambulance van + road train rig, switch ro
 - Pending pick (card 2026-11-08): road train trailers 3 decks (27 rooms, recommended) vs 2 decks (21) vs old body 4-5.
 - Outside world: still the old rig art until world v2 (MV-602; the ambulance thread's Vehicle.v2 handles the van).
 Related: road-train-samples, ambulance-v3-ingame, world-v2-scale-plan.
+
+On the road (world v2): `Vehicle.v2_wanted()` also takes the rig when `road_train` is on (1-3 floors, `body_f<n>.png`),
+`v2_rt()` picks the RT_* cell grid, `V2_W_RT` 347, roof slab 48 px under the shell top, smoke (-9,-16) and headlight
+(-109,36) from cell (0,0). Trailers stay old art (phase 2). GOD `Dev.road_train_world(2|3)`.

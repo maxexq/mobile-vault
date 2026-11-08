@@ -12219,6 +12219,30 @@ func _road_train_test() -> void:
 			panel.close()
 	_check("road train: v3 interior draws the B-double shells, every room in its window (2/3 decks, 0/2 trailers)", shells_ok)
 	get_window().size = old_window
+	# on the road (world v2): the B-double body with v3 cells, standing on the road, taps on the cells
+	var v: Vehicle = main.vehicle
+	Dev.set_trailers(0)
+	var wf := Dev.road_train_world(2)
+	await wait(0.4)
+	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+	var world_ok := wf == 2 and v.v2 and v.v2_rt() and v.v2_shell.texture.resource_path.ends_with("road_train_v3/body_f2.png") \
+		and v.v2_cells.size() == Game.main_slots() and v.wheels.is_empty() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
+		and is_equal_approx(v.v2_extra(), Vehicle.V2_W_RT - Vehicle.MAIN_W)
+	for slot in Game.main_slots():
+		var cl := Game.slot_cell(slot)
+		var img := v.v2_shell.texture.get_image()
+		var wc: RoomV3Cell = v.v2_cells[slot]
+		var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
+		world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 \
+			and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and cl.y < 2
+	await shot("road_train_world_f2")
+	wf = Dev.road_train_world(3)
+	Dev.set_trailers(2)
+	await wait(0.4)
+	world_ok = world_ok and wf == 3 and v.v2 and v.v2_shell.texture.get_size().y == 492.0 and v.v2_cells.size() == 9
+	await shot("road_train_world_f3")
+	_check("road train: on the road (world v2) the B-double body carries the v3 rooms, on the road line, 2/3 decks", world_ok)
+	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
 	# an old 5-floor rig save becomes the 3-deck road train: rooms on removed floors move into empty cells, else scrap back

@@ -1058,6 +1058,22 @@ func road_train_preview() -> String:
 	return Game.tier()
 
 
+## MV-721: the road train on the road (world v2) with n body decks (2 or 3); returns the decks it got
+func road_train_world(n: int) -> int:
+	feature_set("road_train", true)
+	feature_set("world_v2", true)
+	set_tier("rig")
+	Features.set_override("features", "five_floors", true)
+	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
+		if Game.floors_at(lv) >= clampi(n, 2, 3) or lv == Data.MAX_VAULT_LEVEL:
+			Game.s.vault_level = lv
+			break
+	Game.fit_body()       # the body follows the Vault level, down as well as up
+	act("road train world", {"floors": Game.floors()})
+	_vehicle_changed()
+	return Game.floors()
+
+
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
 ## the v3 interior opens; returns how many rooms have v3 art now
 func rooms_v3_showcase(lv: int) -> int:

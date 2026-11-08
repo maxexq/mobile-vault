@@ -392,6 +392,7 @@ func _tab_vehicle() -> void:
 		_b("โลก v2: " + ("เปิด" if Features.on("world_v2") else "ปิด"), func(): Dev.feature_set("world_v2", not Features.on("world_v2")),
 		"green" if Features.on("world_v2") else "red")], "โลก v2")
 	_row([_b("ขับโร้ดเทรน", func(): Dev.road_train_preview()),
+		_b("บนถนน 2 ชั้น", func(): Dev.road_train_world(2)), _b("3 ชั้น", func(): Dev.road_train_world(3)),
 		_b("รถ 2 คัน: " + ("เปิด" if Features.on("road_train") else "ปิด"), func(): Dev.feature_set("road_train", not Features.on("road_train")),
 		"green" if Features.on("road_train") else "red")], "โร้ดเทรน")
 	_head("CONSTRUCTION", "งานก่อสร้าง (กำลังสร้าง %d ห้อง)" % Dev.constructing_count())

@@ -62,6 +62,9 @@ const V2_X := 0.0                 # the cab's bumper at the van's front
 const V2_W := 319.0               # 638 shell px: 39 px longer than the van, so everything behind it moves back
 const V2_CELL := Vector2(72, 48)
 const V2_STRIDE := 76.0
+## MV-721: under road_train the rig is the B-double road train (assets/vehicles/road_train_v3, InteriorV3Panel.RT_*):
+## the prime mover + lead trailer body, 694 shell px (347 here, 67 longer than the old rig). Same cell grid and K.
+const V2_W_RT := 347.0
 
 var body: Node2D
 var room_views: Array[RoomView] = []
@@ -126,6 +129,8 @@ static func roof_dy_for(n_floors: int) -> float:
 
 ## offset of the roof from the 4-floor roof (positive = lower)
 func roof_dy() -> float:
+	if v2_rt():
+		return v2_top() + 48.0 - ROOF_Y      # the road train's roof slab is 97 shell px under the shell top
 	if v2:
 		return v2_top() + 40.0 - ROOF_Y      # the ambulance roof deck is 80 shell px above the top floor's cells
 	return roof_dy_for(floors)
@@ -133,18 +138,36 @@ func roof_dy() -> float:
 
 ## MV-715: is the van drawn as the world v2 ambulance (switch world_v2, v3 art loaded, a shell for its floors)?
 static func v2_wanted() -> bool:
-	return Features.on("world_v2") and not Game.s.is_empty() and Game.tier() == "van" and V3Art.ok() \
-		and Game.floors() >= 1 and Game.floors() <= 5 \
+	if not Features.on("world_v2") or Game.s.is_empty() or not V3Art.ok() or Game.floors() < 1:
+		return false
+	if Game.tier() == "rig" and Features.on("road_train"):
+		return Game.floors() <= 3 and ResourceLoader.exists(InteriorV3Panel.RT_DIR + "body_f%d.png" % Game.floors())
+	return Game.tier() == "van" and Game.floors() <= 5 \
 		and ResourceLoader.exists(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % Game.floors())
+
+
+## MV-721: is the world v2 body the road train (else the ambulance)?
+func v2_rt() -> bool:
+	return v2 and tier == "rig"
+
+
+## the world v2 body's shell texture for the current floors
+func v2_shell_path() -> String:
+	if v2_rt():
+		return InteriorV3Panel.RT_DIR + "body_f%d.png" % floors
+	return InteriorV3Panel.AMB_DIR + "shell_f%d.png" % floors
 
 
 ## local y of the ambulance shell's top edge (its tyres stand on ROAD_Y)
 func v2_top() -> float:
-	return ROAD_Y + 1.0 - (240.0 + 112.0 * float(floors - 1)) * V2_K
+	return ROAD_Y + 1.0 - ((268.0 if v2_rt() else 240.0) + 112.0 * float(floors - 1)) * V2_K
 
 
 ## top-left of a main-body cell of the ambulance (floor 0 at the bottom)
 func v2_cell_pos(col: int, fl: int) -> Vector2:
+	if v2_rt():
+		return Vector2(V2_X + (InteriorV3Panel.RT_X0 + 152.0 * col) * V2_K,
+			v2_top() + (InteriorV3Panel.RT_Y0 + InteriorV3Panel.RT_FH * float(floors - 1 - fl)) * V2_K)
 	return Vector2(V2_X + (InteriorV3Panel.AMB_X0 + 152.0 * col) * V2_K,
 		v2_top() + (InteriorV3Panel.AMB_Y0 + InteriorV3Panel.AMB_FH * float(floors - 1 - fl)) * V2_K)
 
@@ -163,7 +186,9 @@ func rear_shift() -> float:
 
 
 func v2_extra() -> float:
-	return V2_W - MAIN_W if v2 else 0.0
+	if not v2:
+		return 0.0
+	return (V2_W_RT if v2_rt() else V2_W) - MAIN_W
 
 
 func length() -> float:
@@ -319,8 +344,8 @@ func rebuild() -> void:
 	smoke.position = Vector2(vd.chimney[0], vd.chimney[1])
 	headlight.position = Vector2(vd.headlight[0], vd.headlight[1])
 	if v2:                        # exhaust stack tip behind the cab, headlight at the bumper
-		smoke.position = v2_cell_pos(0, 0) + Vector2(-9, -22)
-		headlight.position = v2_cell_pos(0, 0) + Vector2(-71, 34)
+		smoke.position = v2_cell_pos(0, 0) + (Vector2(-9, -16) if v2_rt() else Vector2(-9, -22))
+		headlight.position = v2_cell_pos(0, 0) + (Vector2(-109, 36) if v2_rt() else Vector2(-71, 34))
 	tracks.position = Vector2(TRACKS_X.get(tier, 202), 284)
 	var rear := length()
 	dusts[0].position = Vector2(rear - 60, 298)
@@ -369,7 +394,7 @@ func _build_v2() -> void:
 		cab_view.visible = not v2
 	if not v2:
 		return
-	v2_shell.texture = load(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % floors)
+	v2_shell.texture = load(v2_shell_path())
 	v2_shell.position = Vector2(V2_X, v2_top()) / V2_K
 	for slot in Game.main_slots():
 		var c := RoomV3Cell.new()
