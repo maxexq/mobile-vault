@@ -464,6 +464,7 @@ func _tab_crew() -> void:
 	_row(bb)
 	_trait_odds()
 	_crew_roster()
+	_crew_portraits_v3()
 	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
 	for g in Inspection.GRADES:
 		var gid: String = g
@@ -560,6 +561,22 @@ func _crew_roster() -> void:
 		cell.add_child(top)
 		cell.add_child(UIKit.label(("★ " if r.cameo else "") + str(r.name), UIKit.FS_SMALL, UIKit.C_TEXT))
 		cell.add_child(_b("ขึ้นรถ", func(): Dev.spawn_roster(rid), "green"))
+		grid.add_child(cell)
+	_list.add_child(grid)
+
+
+## MV-722: the 11 approved v3 portraits, who of the current crew shows which one, and the switch
+func _crew_portraits_v3() -> void:
+	var on := Features.on("crew_portraits_v3")
+	_head("PORTRAITS v3", "รูปหน้าลูกเรือ v3 (MV-722) · สวิตช์ %s · ลูกเรือที่ใช้รูปใหม่ %d คน" % ["เปิด" if on else "ปิด", Dev.crew_portraits_v3_count()])
+	_row([_b("รูปหน้า v3: " + ("เปิด" if on else "ปิด"), func(): Dev.crew_portraits_v3(not on), "green" if on else "red")], "สวิตช์")
+	var grid := UIKit.flow(4)
+	grid.name = "PortraitV3Grid"
+	for cid in V3Art.CREW_IDS:
+		var cell := VBoxContainer.new()
+		cell.name = "pt_" + str(cid)
+		cell.add_child(UIKit.tex_rect(V3Art.portrait_tex(str(cid)), Vector2(64, 64)))
+		cell.add_child(UIKit.label(str(cid), UIKit.FS_SMALL, UIKit.C_TEXT))
 		grid.add_child(cell)
 	_list.add_child(grid)
 

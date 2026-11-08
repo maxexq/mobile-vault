@@ -49,7 +49,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/ren.png"
   },
   "clara": {
    "file": "clara.png",
@@ -95,7 +96,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/clara.png"
   },
   "bit": {
    "file": "bit.png",
@@ -141,7 +143,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/bit.png"
   },
   "wan": {
    "file": "wan.png",
@@ -187,7 +190,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/wan.png"
   },
   "sorn": {
    "file": "sorn.png",
@@ -233,7 +237,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/sorn.png"
   },
   "lin": {
    "file": "lin.png",
@@ -279,7 +284,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/lin.png"
   },
   "tham": {
    "file": "tham.png",
@@ -325,7 +331,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/tham.png"
   },
   "fah": {
    "file": "fah.png",
@@ -371,7 +378,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/fah.png"
   },
   "krai": {
    "file": "krai.png",
@@ -417,7 +425,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/krai.png"
   },
   "ploy": {
    "file": "ploy.png",
@@ -463,7 +472,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/ploy.png"
   },
   "noi": {
    "file": "noi.png",
@@ -509,7 +519,8 @@
      "n": 7,
      "fps": 10
     }
-   }
+   },
+   "portrait": "portraits/noi.png"
   }
  }
 }

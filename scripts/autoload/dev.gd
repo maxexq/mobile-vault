@@ -1039,6 +1039,22 @@ func rooms_v3_showcase(lv: int) -> int:
 	return n
 
 
+# ------------------------------------------------------------------ MV-722 crew portraits v3
+## switch crew_portraits_v3 on/off; panels open after this rebuild their portraits
+func crew_portraits_v3(on: bool) -> void:
+	feature_set("crew_portraits_v3", on)
+	Game.dwellers_changed.emit()
+
+
+## how many of the current crew show a v3 portrait right now
+func crew_portraits_v3_count() -> int:
+	var n := 0
+	for d in Game.s.dwellers:
+		if UIKit.portrait_v3(d) != null:
+			n += 1
+	return n
+
+
 func rooms_max() -> void:
 	for r in Game.s.rooms:
 		if r.type != "empty":

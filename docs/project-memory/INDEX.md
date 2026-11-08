@@ -100,7 +100,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [ambulance-drive-anim](ambulance-drive-anim.md): MV-646 ambulance drive anim 6 speed states, code wheels/shake/dust, PixelLab flag only (wheel takes failed), In Review
 - [art-audit-2026-10-30](art-audit-2026-10-30.md): MV-651 art audit Claude Doc, what still needs new graphics P0-P4 (world v2 MV-602 blocks rooms v3 + crew v2)
 - [dr-ren-25d-redraw](dr-ren-25d-redraw.md): MV-655 Dr. Ren 2.5D side view 10 options (gen-v2 64 canvas ~60 px), artifact Dr. Ren 2.5D Redraw, awaiting pick
-- [crew-portraits-v3](crew-portraits-v3.md): MV-708 64x64 bust portraits for all 11 ref v3 crew (gen-v2, ref = still), Claude picks, artifact Crew v3 Portraits, awaiting OK
+- [crew-portraits-v3](crew-portraits-v3.md): MV-708 v3 crew portraits 64x64 (v2 style, own outfit) all 11 APPROVED; in game via MV-722 (switch crew_portraits_v3)
 - [medic-sofa-sleep](medic-sofa-sleep.md): MV-668 Medic sleeps on Living Room L3 sofa preview (2 takes, 12 gens), artifact Medic Sofa Sleep, awaiting pick
 
 - [medic-25d-walk](medic-25d-walk.md): Dr. Ren/Medic 2.5D APPROVED set (still, walk W-3, eat, drink, work, construct, talk) in designs/medic-25d-walk/approved/, skin matched; rifle scene MV-671 DROPPED (Cancelled); 38 px rejected; artifact Medic 2.5D Walk

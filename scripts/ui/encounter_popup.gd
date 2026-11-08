@@ -56,7 +56,7 @@ func refresh() -> void:
 	for d in Expedition.team():
 		var who := UIKit.hbox(2)
 		team.add_child(who)
-		who.add_child(UIKit.portrait(d.variant))
+		who.add_child(UIKit.portrait(d.variant, false, d))
 		var hp_col := UIKit.C_GREEN if float(d.hp) > float(d.max_hp) * 0.4 else UIKit.C_RED
 		who.add_child(UIKit.label("%s %d%%" % [d.name, int(100.0 * float(d.hp) / float(d.max_hp))], UIKit.FS_SMALL, hp_col))
 	v.add_child(team)

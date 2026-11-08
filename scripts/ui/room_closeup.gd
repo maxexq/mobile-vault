@@ -238,7 +238,7 @@ func _build_workers(def: Dictionary) -> void:
 		var card := UIKit.panel()
 		var h := UIKit.hbox(4)
 		card.add_child(h)
-		h.add_child(UIKit.portrait(d.variant))
+		h.add_child(UIKit.portrait(d.variant, false, d))
 		var v := UIKit.vbox(1)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var role_tag: String = (" · " + Crew.ROLES[Crew.role(d)].th) if Crew.ROLES.has(Crew.role(d)) else ""

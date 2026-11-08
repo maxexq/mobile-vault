@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- New crew portraits: every crew member's face in menus and popups is now the detailed portrait of the new 2.5D character who plays them (MV-722)
 - New look inside the vehicle (v3 button): every room in its new detailed art by level, with idle animations and a red emergency lamp in a power-out, and the new 2.5D crew walking and working in their rooms; tap a room to see what is in it (MV-711)
 - Smoother web play: the economy works out room production with far less repeated work (no more small hitches on busy vehicles), the hull warning and HUD skip repeated per-frame work, and phones with very sharp screens draw at 2x by default (Settings → ความละเอียดจอ: ประหยัด / เต็ม) (MV-562)
 - Battery saver: the game drops to 30 fps while the vehicle is parked or you are looking into a room and nothing is happening, and the blur around a room close-up is drawn once instead of every frame (MV-604). Any touch, driving or fight brings the full frame rate back at once; a lower frame-rate setting is always kept.
