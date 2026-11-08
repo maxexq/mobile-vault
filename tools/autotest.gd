@@ -785,6 +785,11 @@ func _run() -> void:
 		await _rooms_x_test()
 		_finish()
 		return
+	if "--only=gunner_room" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _gunner_room_test()
+		_finish()
+		return
 	if "--only=saloon" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _saloon_test()
@@ -1598,6 +1603,7 @@ func _run() -> void:
 	await _stat_view_test()
 	await _rooms_x_test()
 	await _saloon_test()
+	await _gunner_room_test()
 	await _flagged_test()
 	await _flee_guard_test()
 	await _barks_test()
@@ -3560,7 +3566,7 @@ func _large_room_test() -> void:
 	Game.fit_body()       # MV-563: grow the fresh 2-floor van body to this rig at Vault Lv6
 	while Game.s.rooms.size() < Game.slot_count():
 		Game.s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
-	for i in range(1, Game.s.rooms.size()):
+	for i in range(0, Game.s.rooms.size()):   # MV-716: the default layout now has the purifier in slot 0
 		Game.s.rooms[i] = {"type": "empty", "level": 1, "job": {}, "build": {}}
 	for i in [3, 4, 5]:
 		Game.s.rooms[i] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
@@ -8065,6 +8071,120 @@ func _saloon_test() -> void:
 	_check("saloon: GOD starts, finishes and claims a supper", not gj.is_empty() and RoomX.jobs().is_empty() and int(Saloon.st().meals) >= 4)
 	_saloon_restore(keep_res, keep_rooms, keep_dw, keep_squad, keep_rx)
 	await wait(0.2)
+
+
+## MV-716 rear gunner post: registered under its own switch, 64x52 art + flash strip, default rear room of a new game
+## (switch off = the old layout), the crew on its gun shoot enemies in Combat (also in a power-out), RoomAnim "firing",
+## the v3 set (L1-L3, man_gun stand, shoot clip) and the GOD action.
+func _gunner_room_test() -> void:
+	_no_events()
+	if Game.active_event != "":
+		Game.cancel_event()
+		main.hud.event_popup.close()
+	var keep: Dictionary = Game.s.duplicate(true)
+	var T := RearGunner.TYPE
+	# --- registry + art
+	var def := Data.room_def(T)
+	_check("gunner_room: registered (Lv.%d, %s, %d scrap)" % [int(def.get("unlock", 0)), def.get("stat", ""), int(def.get("cost", 0))],
+		RoomX.is_rx(T) and str(def.get("feature", "")) == "gunner_room" and Data.room_art(T) == "room_rear_gunner")
+	var bg: Array = Atlas.regions.get("room_rear_gunner", [])
+	_check("gunner_room: room_rear_gunner is 64x52 in the atlas", bg.size() == 4 and int(bg[2]) == 64 and int(bg[3]) == 52)
+	var flash_ok := true
+	for f in 4:
+		var r: Array = Atlas.regions.get("fx_room_gunner_flash_%d" % f, [])
+		flash_ok = flash_ok and r.size() == 4 and int(r[2]) == 6 and int(r[3]) == 5
+	_check("gunner_room: muzzle flash strip = 4 frames 6x5", flash_ok)
+	Dev.feature_set("gunner_room", true)
+	_check("gunner_room: in the build menu while both switches are on", Data.buildable().has(T))
+	Dev.feature_set("gunner_room", false)
+	_check("gunner_room: switch off = not in the build menu", not Data.buildable().has(T))
+	# --- default layout of a new game
+	Dev.feature_set("gunner_room", null)
+	Game.setup_default_state()
+	var clara := {}
+	for d in Game.s.dwellers:
+		if str(d.get("lore", "")) == "clara":
+			clara = d
+	_check("gunner_room: a new game has it in the rear slot of the ground floor, purifier in front, Clara on water",
+		str(Game.s.rooms[2].type) == T and str(Game.s.rooms[0].type) == "water" and str(Game.s.rooms[1].type) == "kitchen"
+		and not clara.is_empty() and int(clara.room) == 0)
+	Dev.feature_set("gunner_room", false)
+	Game.setup_default_state()
+	_check("gunner_room: switch off = the old starting layout", str(Game.s.rooms[2].type) == "water" and str(Game.s.rooms[0].type) == "empty")
+	Dev.feature_set("gunner_room", null)
+	Game.setup_default_state()
+	Game.s.combat.threat = 0.0
+	# --- the gun: nobody on it = no gun, a crew member = a gun with damage
+	_check("gunner_room: an empty post has no gun", RearGunner.guns().is_empty() and RearGunner.dps() == 0.0)
+	var gunner := {}
+	for d in Game.s.dwellers:
+		if Game.squad_role(d) < 0 and int(d.room) != Data.CAB_SLOT:
+			gunner = d
+			break
+	_check("gunner_room: a crew member takes the gun", not gunner.is_empty() and Game.assign(gunner, 2))
+	var g := RearGunner.guns()
+	_check("gunner_room: one gun, %.1f dmg a shot" % (float(g[0].dmg) if g.size() > 0 else 0.0), g.size() == 1 and float(g[0].dmg) > 0.0 and RearGunner.dps() > 0.0)
+	var lv1 := float(g[0].dmg) if g.size() > 0 else 0.0
+	Game.s.rooms[2].level = 3
+	_check("gunner_room: Lv.3 hits harder", RearGunner.guns().size() == 1 and float(RearGunner.guns()[0].dmg) > lv1 * 1.5)
+	Game.s.rooms[2].level = 1
+	# --- in a fight: no squad, no turret, only the post shoots
+	Game.s.squad = [-1, -1, -1]
+	Game.s.van_gear.turret = null
+	Combat.rebuild_heroes()
+	var shots := [0]
+	var count := func(from_kind, _a, _b, _c, _d): if from_kind == "room_gun": shots[0] += 1
+	Combat.shot.connect(count)
+	var mobs: Array = Combat.BIOME_MOBS.get(Combat.biome_id(), Combat.BIOME_MOBS.industrial)
+	Combat.debug_spawn([{"t": 0.0, "mob": mobs[0], "lvl": 1, "no_mutate": true}], false)
+	var hurt := false
+	var firing := false
+	for i in 400:
+		Combat.tick(0.1)
+		firing = firing or RoomX.active(2, "firing")
+		for e in Combat.enemies:
+			if float(e.hp) < float(e.max):
+				hurt = true
+		if shots[0] >= 3 and hurt:
+			break
+	_check("gunner_room: the post shoots the chaser (%d shots)" % shots[0], shots[0] >= 1 and (hurt or Combat.enemies.is_empty()))
+	_check("gunner_room: the muzzle flash plays while they fire", firing)
+	await shot("gunner_room_fight")
+	# a power-out doesn't stop a manual gun
+	var before: int = shots[0]
+	Game.s.outage[str(2)] = 30.0
+	_check("gunner_room: the post is dark", Game.room_dark(2))
+	Combat.debug_spawn([{"t": 0.0, "mob": mobs[0], "lvl": 1, "no_mutate": true}], false)
+	for i in 400:
+		Combat.tick(0.1)
+		if shots[0] > before:
+			break
+	_check("gunner_room: still fires in a power-out", shots[0] > before)
+	Dev.feature_set("gunner_room", false)
+	_check("gunner_room: switch off = the gun is silent", RearGunner.guns().is_empty() and not RoomX.active(2, "firing"))
+	Dev.feature_set("gunner_room", null)
+	Combat.shot.disconnect(count)
+	Combat._clear_enemies()
+	# --- v3 set
+	var lv_ok := true
+	var stand_ok := true
+	for lv in 3:
+		var ld := V3Art.level(T, lv + 1)
+		lv_ok = lv_ok and not ld.is_empty() and ld.has("idle")
+		stand_ok = stand_ok and (ld.get("hotspots", []) as Array).any(func(h): return str(h.get("action", "")) == "man_gun" and (h as Dictionary).has("stand"))
+	_check("gunner_room: v3 set L1-L3 with the idle overlay", V3Art.has_room(T) and lv_ok)
+	_check("gunner_room: every level has a man_gun stand point", stand_ok)
+	var sf := V3Art.crew_frames(V3Art.crew_ids()[0]) if not V3Art.crew_ids().is_empty() else null
+	_check("gunner_room: the v3 crew have a shoot clip", sf != null and sf.has_animation("shoot"))
+	# --- GOD
+	var slot := Dev.gunner_demo(2)
+	_check("gunner_room: GOD demo puts crew on the gun (slot %d)" % slot, slot >= 0 and RearGunner.gunners(slot).size() >= 1)
+	Combat._clear_enemies()
+	Game.s = keep
+	Combat.rebuild_heroes()
+	Game.rooms_changed.emit()
+	Game.dwellers_changed.emit()
+	Game.resources_changed.emit()
 
 
 func _saloon_restore(res: Dictionary, rooms: Array, dw: Array, squad: Array, rx) -> void:

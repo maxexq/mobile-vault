@@ -34,6 +34,7 @@ const ROLES := [
 		"skill": "ปฐมพยาบาล", "skill_desc": "ทุก 12 วิ ฟื้นเลือดทุกคน 30% + ซ่อมตัวถัง · รักษาคนเจ็บหนักสุดทุก 3.5 วิ", "cd": 12.0},
 ]
 const DECK_X := 350.0
+const GUN_X := 340.0       # MV-716: the rear gunner room's firing hatch in combat space (rear of the main body)
 const SPAWN_X := 610.0
 const RANGE_SCALE := 0.75   # keeps the shoot-out inside the camera view
 const MIN_ROOF_RANGE := 195.0
@@ -111,6 +112,8 @@ const WAVE_BOSSES := {
 var enemies: Array = []          # runtime enemy dicts
 var heroes: Array = []           # runtime hero dicts, index = role slot
 var turret := {"t": 0.0}
+## MV-716 rear gunner rooms: shot timers per gunner ("slot:dweller id" -> seconds to the next shot)
+var room_guns := {}
 var wave_active := false
 var wave_is_boss := false
 var wave_is_warlord := false
@@ -272,7 +275,7 @@ func is_boss_wave(w: int) -> bool:
 
 
 func active() -> bool:
-	return Game.started and Game.closeup_slot < 0 and Game.active_event == "" and _has_squad()
+	return Game.started and Game.closeup_slot < 0 and Game.active_event == "" and (_has_squad() or not RearGunner.guns().is_empty())
 
 
 func _has_squad() -> bool:
@@ -412,7 +415,36 @@ func squad_dps() -> float:
 		var h: Dictionary = heroes[i]
 		if not h.is_empty():
 			t += float(h.st.dps)
-	return t + float(van_stats().turret_dps)
+	return t + float(van_stats().turret_dps) + RearGunner.dps()
+
+
+## MV-716: every crew member on a rear gunner room's gun shoots the closest enemy in range (RearGunner). The gun is
+## manual, so a power-out doesn't stop it; the shot leaves from the room's firing hatch (CombatView "room_gun").
+func _tick_room_guns(dt: float) -> void:
+	var guns := RearGunner.guns()
+	if guns.is_empty():
+		if not room_guns.is_empty():
+			room_guns.clear()
+		return
+	var live := {}
+	for g in guns:
+		var key := "%d:%d" % [int(g.slot), int(g.did)]
+		live[key] = true
+		var t := float(room_guns.get(key, rng.randf() * 0.5)) - dt
+		if t <= 0.0:
+			var tt := _targets_from(GUN_X, RearGunner.range_px(), 1, true)
+			if tt.is_empty():
+				t = 0.0
+			else:
+				t = 1.0 / maxf(0.2, RearGunner.aspd())
+				var e: Dictionary = tt[0]
+				var crit := rng.randf() < 0.05
+				shot.emit("room_gun", int(g.slot), "enemy", int(e.id), "bullet")
+				_damage_enemy(e, float(g.dmg) * (1.5 if crit else 1.0), crit, -1, true)
+		room_guns[key] = t
+	for k in room_guns.keys():
+		if not live.has(k):
+			room_guns.erase(k)
 
 
 func rebuild_heroes() -> void:
@@ -823,6 +855,8 @@ func tick(dt: float) -> void:
 					if float(vs.roof) > 0.0 and is_instance_valid(self) and float(e.hp) > 0.0:
 						shot.emit("roof", 0, "enemy", int(e.id), "turret")
 						_damage_enemy(e, float(vs.turret_dmg) * float(vs.roof), false, -1, true)
+	# --- MV-716: crew firing from the rear gunner room(s)
+	_tick_room_guns(dt)
 	# --- cleanup deaths
 	for e in enemies.duplicate():
 		if float(e.hp) <= 0.0:

@@ -308,6 +308,11 @@ func _on_shot(from_kind: String, from_id: int, to_kind: String, to_id: int, styl
 		"roof":
 			a = vehicle.mod_motion.roof_shot()
 			_casing(a)
+		"room_gun":
+			# MV-716: from the firing hatch of the rear gunner room (from_id = its slot), muzzle at room x59 y26 of 64x52
+			var r: Rect2 = vehicle.slot_global_rect(from_id)
+			a = r.position + Vector2(r.size.x * 59.0 / 64.0, r.size.y * 26.0 / 52.0)
+			_casing(a)
 		"enemy":
 			var en: EnemyActor = enemy_nodes.get(from_id)
 			if en == null:

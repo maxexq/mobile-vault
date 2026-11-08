@@ -73,6 +73,11 @@ func new_game() -> void:
 		toast.emit("โหมด: " + Modes.label(), "biome")
 
 
+## MV-716: where the starting purifier is (front slot when the rear gunner post takes the rear one)
+func _water_slot() -> int:
+	return 0 if RearGunner.on() else 2
+
+
 ## fresh state (also used as the live backdrop behind the title screen)
 func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = true) -> void:
 	var meta: Dictionary = s.get("meta", {}) if keep_meta else {}
@@ -104,6 +109,10 @@ func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = tru
 	s.body_slots = main_slots()
 	s.rooms[1].type = "kitchen"
 	s.rooms[2].type = "water"
+	if RearGunner.on():
+		# MV-716: the rear gunner post is the default rear room (ground floor, rear column); the purifier moves forward
+		s.rooms[0].type = "water"
+		s.rooms[RearGunner.DEFAULT_SLOT].type = RearGunner.TYPE
 	if keep_meta:
 		# MV-559: an existing whole crew needs no extra copies/recruits. Empty-crew recovery and rollback keep volunteers.
 		if recruit_volunteers:
@@ -121,7 +130,7 @@ func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = tru
 	var leo := _add_dweller({"name": "ลีโอ", "lore": "leo", "variant": "dw_scav_brown", "str": 4, "int": 3, "agi": 7, "room": -1, "lvl": 2})
 	_add_dweller({"name": "ต้น", "lore": "ton", "variant": "dw_jumpsuit_black", "str": 6, "int": 4, "agi": 3, "room": Data.CAB_SLOT, "lvl": 1, "role": "builder"})
 	_add_dweller({"name": "เชฟบ็อบ", "lore": "bob", "variant": "dw_chef_gray", "str": 3, "int": 4, "agi": 7, "room": 1, "lvl": 2})
-	_add_dweller({"name": "พยาบาลคลารา", "lore": "clara", "variant": "dw_medic_red", "str": 3, "int": 7, "agi": 4, "room": 2, "lvl": 2})
+	_add_dweller({"name": "พยาบาลคลารา", "lore": "clara", "variant": "dw_medic_red", "str": 3, "int": 7, "agi": 4, "room": _water_slot(), "lvl": 2})
 	# starter defence squad + gear (common)
 	s.squad = [int(leo.id), int(mark.id), -1]
 	leo.gear = {"weapon": Loot.roll_item("weapon", 1, 0, "hunting_rifle"), "backpack": Loot.roll_item("backpack", 1, 0, "school_bag")}
