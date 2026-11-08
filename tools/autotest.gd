@@ -9229,6 +9229,8 @@ func _perf_test() -> void:
 	Game.s.rooms = keep_rooms
 	Game.rooms_changed.emit()
 	# --- fixed-rate economy: alternating halves, fewer steps than frames, no game time lost
+	# a step resets the collected time, so on a slow runner (frames of 25-50 ms) it takes 2 frames: expect at least
+	# half the nominal sim_hz rate, not a fixed 20 (CI runners hit 36 frames / 18 steps in 1.5 s)
 	Features.set_override("features", "fixed_sim", true)
 	Game._flush_sim()
 	var w0: int = Game.sim_steps.world
@@ -9246,7 +9248,7 @@ func _perf_test() -> void:
 	Game._flush_sim()
 	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
 	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
-		and wn + cn >= mini(frames, 20))
+		and wn + cn >= mini(frames, int(elapsed * Features.num("perf.sim_hz", Game.SIM_HZ) / 2.0)))
 	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
 	Features.set_override("features", "fixed_sim", false)
 	w0 = Game.sim_steps.world
