@@ -48,7 +48,8 @@ func refresh() -> void:
 		return
 	var ev := Encounter.def(Encounter.current_id())
 	set_title("RADIO: %s / %s" % [ev.en, ev.th])
-	var v := media_layout(load("res://assets/events/%s.png" % ev.image), UIKit.C_GOLD)
+	var v := media_layout(EncArt.anim_texture(ev.image), UIKit.C_GOLD)
+	EncArt.animate(media.get_child(0))
 	var site_th: String = Expedition.site_def(str(Expedition.state().site)).th
 	v.add_child(UIKit.label(Loc.t("จุดพิเศษใน %s") % site_th, UIKit.FS_SMALL, UIKit.C_GOLD))
 	v.add_child(UIKit.wrap_label(ev.desc, UIKit.FS, UIKit.C_TEXT))
@@ -146,7 +147,7 @@ func _build_result() -> void:
 	var col := UIKit.C_RED if not ok else (UIKit.C_GOLD if quiet else UIKit.C_GREEN)
 	_outcome_col = col
 	var ev := Encounter.def(str(_result.get("id", Encounter.current_id())))
-	var v := media_layout(load("res://assets/events/%s.png" % ev.image), col)
+	var v := media_layout(EncArt.still(ev.image), col)
 	OutcomeKit.stamp(media, "MAYDAY" if not ok else ("ROGER" if quiet else "MISSION SUCCESS"),
 		Loc.t("ทีมเจอปัญหา") if not ok else (Loc.t("รับทราบ") if quiet else Loc.t("ภารกิจสำเร็จ")), col, not ok)
 	_static(media.get_child(0))

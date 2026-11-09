@@ -770,6 +770,8 @@ func _tab_world() -> void:
 		_row(encb, "จุดพิเศษ")
 		_note("ถ้ายังไม่มีทีมสำรวจ จะส่งทีมคุ้ยซากฟรีให้ก่อน · ห้ามซ้ำ 3 ครั้งล่าสุด: %s" % ", ".join(Encounter.recent().map(func(e): return str(Encounter.def(str(e)).get("th", e)))))
 		_row([_b("ล้างประวัติจุดพิเศษ", func(): Dev.encounter_recent_clear())])
+	_row([_b("ภาพจุดพิเศษ v2: " + ("เปิด" if Features.on("enc_art_v2") else "ปิด"), func(): Dev.enc_art_v2(not Features.on("enc_art_v2")),
+		"green" if Features.on("enc_art_v2") else "red")])
 	if not Expedition.active():
 		var sb := []
 		for id in Expedition.SITES:
