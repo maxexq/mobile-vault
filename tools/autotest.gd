@@ -13107,19 +13107,24 @@ func _road_train_test() -> void:
 	var rsp0 := v.amb.spin_frame()
 	await wait(0.4)
 	var units_ok := rt_anim and v.amb_on and v.amb.dir == AmbulanceMotion.RT_DIR and v.amb.tyres.size() == 6 \
-		and v.rt_units.size() == 2 and v.amb.shocks.size() == 3 and v.amb.legs.size() == 1
+		and v.rt_units.size() == 2 and v.amb.legs.size() == 1
 	for m in v.rt_units:
-		units_ok = units_ok and m.unit == "trailer" and m.tyres.size() == 3 and m.legs.size() == 1 and m.shocks.size() == 2
-	_check("road train: GOD drives it with animated tyres on every unit (6 + 3 + 3), landing legs and shock absorbers", units_ok)
+		units_ok = units_ok and m.unit == "trailer" and m.tyres.size() == 3 and m.legs.size() == 1
+	_check("road train: GOD drives it with animated tyres on every unit (6 + 3 + 3) and landing legs", units_ok)
 	_check("road train: tyres roll, legs cranked up while driving, headlight on", rsp0 != v.amb.spin_frame()
 		and v.amb.legs_down() == 0.0 and v.rt_units[0].legs_down() == 0.0 and v.amb.lamp_alpha("head") > 0.2)
-	var squeeze := false
-	v.amb.bump(AmbulanceMotion.ROAD_PX)
-	for i in 30:
-		await get_tree().process_frame
-		for sh in v.amb.shocks:
-			squeeze = squeeze or (sh as AmbulanceMotion.Shock).length != (sh as AmbulanceMotion.Shock).length0
-	_check("road train: a bump moves the shock absorbers", squeeze)
+	# MV-740: unbroken air lines: 4 hoses + a tow link between the 2 container trailers, each hose from the rear end post
+	# of the unit in front to the nose of the unit behind; no coupler caps while a trailer follows the lead trailer
+	var cp: RtCouplings = v.rt_couplings
+	var hoses_ok := cp != null and cp.visible and cp.hoses.size() == 4 and cp.links.size() == 1 and cp.caps.is_empty()
+	if hoses_ok:
+		var front: Sprite2D = v.v2_tshells[1]
+		var back: Sprite2D = v.v2_tshells[0]
+		for h in cp.hoses:
+			hoses_ok = hoses_ok and (h.a as Vector2).x < front.position.x + front.texture.get_width() \
+				and absf((h.b as Vector2).x - back.position.x) <= 1.0
+	_check("road train: air lines + tow link join the container trailers (no shock absorbers on the tyres)", hoses_ok
+		and not "shocks" in v.amb)
 	await shot("road_train_anim_drive")
 	Dev.road_train_anim("brake")
 	await wait(3.6)
@@ -13128,6 +13133,10 @@ func _road_train_test() -> void:
 	await shot("road_train_anim_parked")
 	Dev.road_train_anim("park")
 	v.debug_speed = -1.0
+	Dev.set_trailers(0)
+	await wait(0.3)
+	_check("road train: no trailer behind -> the lead trailer's air lines end in coupler heads", v.rt_couplings.visible
+		and v.rt_couplings.caps.size() == 2 and v.rt_couplings.hoses.is_empty())
 	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")

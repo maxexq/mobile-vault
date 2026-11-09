@@ -6,10 +6,12 @@ Run after designs/road-train/game/shell.py has written assets/vehicles/road_trai
 1) see-through pixel holes: every small transparent pocket inside the body (<= 14 px, not a room window) and every
    1-2 px slit below the roof line is filled from its neighbours; the cab windshield (keyed out with the background
    by shell.py) gets its glass back
-2) the lead trailer's rear (the body ends at x 694): the caged ladder had no outer rail and the step bar / air lines
-   ran off the edge -> outer rail + outline, air lines tucked in, bar capped
+2) the lead trailer's rear (the body ends at x 694): the caged ladder had no outer rail and the step bar ran off the
+   edge -> outer rail + outline, bar capped. The air lines stay: they run on into the trailer behind (with no trailer
+   the game caps their ends with couplers, scripts/world/rt_couplings.gd)
 3) the dark far-side landing leg shadow behind the near leg (stray dark pixels) is removed
-4) every room window gets a steel frame like the Decker bus (MV-739): 1 px black + 2 px riveted steel around the
+4) the container trailer's nose loses the lead trailer's ladder cage scraps that shell.py's cut left on it
+5) every room window gets a steel frame like the Decker bus (MV-739): 1 px black + 2 px riveted steel around the
    opening, and a soft inner shadow on its top / sides so the rooms sit inside the box instead of floating
 Coordinates are measured on the 2-deck shells; rows below the top deck shift 112 px per deck (the tractor and the
 chassis are bottom-aligned), so y = y2 + dy with dy = 112 * (decks - 2).
@@ -95,7 +97,7 @@ def holes(kind, n, im):
             continue                                                                # roof gear, bull bar, couplers
         avg_fill(px, pts, W, H); filled += len(pts)
     # 1-2 px slits below the roof line (open to the outside, so not pockets): both sides opaque
-    for _ in range(2):
+    for _ in range(4):
         add = []
         for y in range(roof + 4, H - 1):
             for x in range(1, W - 1):
@@ -135,11 +137,6 @@ def body_rear(im, n):
     for x in range(682, 694):                              # cap the cage on top
         if px[x, top + 1][3]:
             px[x, top] = OUT
-    for y in range(cage_bot + 1, cage_bot + 21):           # air lines running off the edge -> cut back to the post
-        for x in range(686, 694):
-            px[x, y] = (0, 0, 0, 0)
-        if px[685, y][3]:
-            px[685, y] = OUT
     for y in range(cage_bot + 21, H):                      # step bar: closed end
         if px[692, y][3]:
             px[693, y] = OUT
@@ -157,6 +154,15 @@ def leg_shadow(im, n):
             c = px[x, y]
             if c[3] and sum(c[:3]) <= 90 and not any(sum(px[a, y][:3]) > 90 and px[a, y][3] for a in range(x - 2, x)):
                 px[x, y] = (0, 0, 0, 0)
+
+
+def trailer_nose(im, n):
+    """the trailer canvas starts with a strip of the lead trailer's ladder cage + a 1 px edge line (shell.py cut the
+    B-double at x 694): they float in the air behind another container trailer -> cleared (the body has its own rail)"""
+    px = im.load(); dy = im.size[1] - 380
+    for y in range(99, 305 + dy):
+        for x in range(0, 9):
+            px[x, y] = (0, 0, 0, 0)
 
 
 def ring(px, x, y, d, tl, x0, y0, x1, y1):
@@ -202,6 +208,9 @@ def run(kind, n):
         cab_glass(im, n); leg_shadow(im, n)
         if n >= 2:                                         # (the 1-deck body has no rear ladder cage)
             body_rear(im, n)
+            f += holes(kind, n, im)                        # slits the new rail closed off between the air lines
+    else:
+        trailer_nose(im, n)
     frames(kind, n, im)
     im.save(p)
     print(kind, n, "filled", f)

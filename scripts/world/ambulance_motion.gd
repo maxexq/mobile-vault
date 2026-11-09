@@ -17,8 +17,7 @@ extends RefCounted
 ## flickers and drops a glyph now and then, brighter at night), the rear amber indicator and a headlight beam at night.
 ## MV-740: and the road train (dir RT_DIR, anchors from tools/art/road_train/anim.py): one instance per unit (unit ""
 ## = tractor + lead trailer, "trailer" = each container trailer), plus landing legs that crank up when driving and down
-## once fully stopped, shock absorbers between tandem tyres that stretch / squeeze with the body and the tyres, roof
-## clearance lamps, a searchlight and a blinking mast tip on the trailers.
+## once fully stopped, roof clearance lamps, a searchlight and a blinking mast tip on the trailers.
 
 const DIR := "res://assets/vehicles/ambulance_v3/"
 const DK_DIR := "res://assets/vehicles/decker_v3/"
@@ -48,7 +47,6 @@ var behind: Node2D                 # road train: in the v2 root under every shel
 var legs: Array[Sprite2D] = []
 var leg_down := 1.0                # 1 = feet on the road, 0 = cranked up
 var _stopped_t := 0.0
-var shocks: Array[Node2D] = []
 var under: Node2D                  # behind the body, scale V2_K
 var wells: Node2D
 var over: Node2D                   # in the v2 root, over the shell
@@ -263,16 +261,6 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 			behind.add_child(leg)
 			legs.append(leg)
 			li += 1
-	for sh in f.get("shocks", []):
-		var sk := Shock.new()
-		sk.position = origin + Vector2(float(sh[0]), float(sh[1]))
-		sk.length0 = float(sh[2]) - float(sh[1])
-		sk.length = sk.length0
-		for j in f.wheels.size():
-			if absf(float(f.wheels[j][0]) - float(sh[0])) < 30.0:
-				sk.tyres.append(j)
-		over.add_child(sk)
-		shocks.append(sk)
 	if f.has("head"):
 		_glow("head", origin + _v(f.head), 9.0, Color(1.0, 0.86, 0.55))
 	if f.has("marker"):
@@ -352,7 +340,6 @@ func clear() -> void:
 	over = null
 	behind = null
 	legs.clear()
-	shocks.clear()
 	tyres.clear()
 	sign_lit = null
 	sign_dead = null
@@ -454,7 +441,6 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 		_lamp("roof%d" % i, dark * 0.7 if engine_on or force_brake else 0.0)
 	_tick_sign(delta, engine_on, dark, hazard)
 	_tick_legs(delta, moving)
-	_tick_shocks(body_y)
 	# flag: a slow breeze parked, snapping in the headwind when driving
 	if flag == null:
 		return
@@ -523,46 +509,6 @@ func _tick_legs(delta: float, moving: bool) -> void:
 		leg.position.y = float(leg.get_meta("y0")) - roundf(LEG_LIFT * (1.0 - leg_down))
 
 
-## the shocks hang from the chassis (they ride with the body) and push on the axle beam (it stays on the road and hops
-## with the tyres either side), so they squeeze when a tyre hops and stretch when the body lifts
-func _tick_shocks(body_y: float) -> void:
-	if shocks.is_empty():
-		return
-	var k := under.scale.y
-	for i in shocks.size():
-		var s := shocks[i] as Shock
-		var hop := 0.0
-		for j in s.tyres:                         # the tyres either side of this shock
-			hop = maxf(hop, float(tyres[j].get_meta("y0")) - tyres[j].position.y)
-		var want := s.length0 - roundf(body_y / k) - hop
-		if not is_equal_approx(want, s.length):
-			s.length = want
-			s.queue_redraw()
-
-
 func legs_down() -> float:
 	return leg_down if not legs.is_empty() else -1.0
 
-
-## a shock absorber in side view: steel body hanging from the chassis eye, chrome rod down to the axle eye
-class Shock extends Node2D:
-	var length0 := 24.0
-	var length := 24.0
-	var tyres: Array[int] = []
-
-	func _draw() -> void:
-		var dark := Color("141214")
-		var steel := Color("58544a")
-		var hi := Color("8a8470")
-		var rod := Color("aaa48e")
-		var l := maxf(8.0, length)
-		var body := floorf(length0 * 0.5)
-		draw_rect(Rect2(-2, -1, 5, 3), dark)                       # top eye
-		draw_rect(Rect2(-1, 0, 3, 1), steel)
-		draw_rect(Rect2(-2, 2, 5, body), dark)                     # damper body
-		draw_rect(Rect2(-1, 2, 3, body - 1), steel)
-		draw_rect(Rect2(-1, 2, 1, body - 1), hi)
-		draw_rect(Rect2(-1, 2 + body, 3, l - body - 4), dark)       # rod
-		draw_rect(Rect2(0, 2 + body, 1, l - body - 4), rod)
-		draw_rect(Rect2(-2, l - 2, 5, 3), dark)                    # axle eye
-		draw_rect(Rect2(-1, l - 1, 3, 1), steel)

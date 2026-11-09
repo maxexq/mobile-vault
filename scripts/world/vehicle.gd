@@ -129,7 +129,8 @@ var v2_cells: Dictionary = {}    # slot -> RoomV3Cell
 var _v2_tick := 0.0
 var amb := AmbulanceMotion.new()  # MV-726 wheels / suspension / lights / flag on the world v2 ambulance
 var amb_on := false
-var rt_units: Array[AmbulanceMotion] = []  # MV-740: the road train's container trailers (wheels, legs, shocks, lamps)
+var rt_units: Array[AmbulanceMotion] = []  # MV-740: the road train's container trailers (wheels, legs, lamps)
+var rt_couplings: RtCouplings              # MV-740: air lines + tow links between the road train's units
 var debug_speed := -1.0           # GOD MODE / autotest: speed factor to show (>= 0), the game's own speed otherwise
 var _night := 0.0
 
@@ -469,6 +470,7 @@ func _build_v2() -> void:
 		amb_on = true
 		v2_shell.texture = AmbulanceMotion.cut_shell(floors, amb_dir())
 		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K, amb_dir())
+	_build_rt_couplings()
 	for rv in room_views:
 		if v2_cells.has(rv.slot):
 			rv.visible = false
@@ -509,6 +511,24 @@ func _build_v2_trailers() -> void:
 			m.build(tf, sp.position, _wheels_root, v2_root, V2_K, AmbulanceMotion.RT_DIR, "trailer")
 			m.set_meta("lead", (unit_x(u) - V2_X) + 0.0)
 			rt_units.append(m)
+
+
+## MV-740: air lines between the container trailers (and coupler heads on the lead trailer when nothing is behind it),
+## over every shell
+func _build_rt_couplings() -> void:
+	if rt_couplings == null:
+		rt_couplings = RtCouplings.new()
+		rt_couplings.name = "RoadTrainCouplings"
+		v2_root.add_child(rt_couplings)
+	rt_couplings.visible = v2_rt()
+	if not v2_rt():
+		return
+	v2_root.move_child(rt_couplings, v2_root.get_child_count() - 1)
+	var pos: Array = []
+	for i in range(v2_tshells.size() - 1, -1, -1):     # v2_tshells is rearmost first
+		pos.append(v2_tshells[i].position)
+	var th := v2_tshells[0].texture.get_height() if not v2_tshells.is_empty() else 0
+	rt_couplings.setup(v2_shell.position, float(v2_shell.texture.get_height()), pos, float(th))
 
 
 ## MV-726: the ambulance's own wheels / suspension / lights / flag (switch vehicle_anim; anchors from anim.json)
@@ -1055,6 +1075,8 @@ func _process(delta: float) -> void:
 		for m in rt_units:
 			m.tick(delta, _speed * AmbulanceMotion.ROAD_PX, accel, engine, _night, body.position.y,
 				Combat.wave_active, EngineBay.state_key() == "broken")
+	if rt_couplings and rt_couplings.visible:
+		rt_couplings.set_sway(clampf(-body.position.y, 0.0, 1.0))     # the air lines bounce with the road
 	var sun := Game.sun_level()
 	var az := clampf((float(Game.s.tod) - 0.25) / 0.5, 0.0, 1.0)
 	var frame := 2

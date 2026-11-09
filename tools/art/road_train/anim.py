@@ -4,7 +4,7 @@
 Same format as tools/ambulance_anim.py (read by AmbulanceMotion with dir RT_DIR), written next to the shells:
   anim.json       "floors" = the body (tractor + lead trailer) per deck count, "trailer" = the container trailer per
                   deck count; each: wheel centres, landing legs (the inner leg + foot that cranks up / down),
-                  shock absorbers (between tandem tyres), headlight, tail / clearance lamps, searchlight, mast tip
+                  headlight, tail / clearance lamps, searchlight, mast tip
   wheel_spin.png  24-frame strip (47x47 each) of one tyre rolling west (the cab faces west)
 Run after designs/road-train/game/shell.py + tools/art/road_train/cleanup.py; the autotest checks anim.json against
 the shell sizes. Code only, no PixelLab.
@@ -21,11 +21,9 @@ CY = 22.5                          # tyre centre row = shell height - CY (contac
 # 2-deck shell px; rows of the chassis shift with the deck count (bottom-aligned), roof rows stay
 BODY = {"wheels": (80.0, 252.0, 303.5, 556.5, 600.5, 643.5),
         "legs": [(336, 367, 22, 13)],              # lead trailer landing leg: inner leg + foot under the housing
-        "shocks": [(1, 2), (3, 4), (4, 5)],          # between these tyres
         "head": (17.0, 320.0), "roof_lamps": [(325.0, 101.0), (432.5, 101.0), (562.5, 101.0), (671.0, 101.0)]}
 TRAILER = {"wheels": (331.5, 377.5, 421.5),
            "legs": [(109, 365, 20, 15)],
-           "shocks": [(0, 1), (1, 2)],
            "tails": [(487.0, 296.5), (486.5, 342.5)], "search": (147.0, 41.0), "mast": (32.0, 1.0)}
 
 
@@ -34,7 +32,6 @@ def unit(kind, n, d):
     dy = H - 380                                   # chassis rows move with the deck count
     s = {"size": [W, H], "wheels": [[x, H - CY] for x in d["wheels"]], "wheel_r": R,
          "legs": [[x, y + dy, w, h] for x, y, w, h in d["legs"]],
-         "shocks": [[(d["wheels"][a] + d["wheels"][b]) / 2, H - CY - R - 1, H - CY] for a, b in d["shocks"]],
          "tails": [[x, y + dy] for x, y in d.get("tails", [])]}
     if "head" in d:
         s["head"] = [d["head"][0], d["head"][1] + dy]
