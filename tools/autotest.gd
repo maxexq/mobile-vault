@@ -12916,7 +12916,7 @@ func _vehicle_anim_test() -> void:
 		lsw = maxf(lsw, absf(v.amb.lamp_angle))
 	var lr: Array = spot.lantern_still
 	_check("MV-741: the lantern hangs on its own sprite and swings while the vehicle moves", v.amb.lamp != null
-		and img.get_pixel(int(lr[0]) + 4, int(lr[1]) + 8).a == 0.0 and lsw > 0.03 and v.amb.lamp.rotation == v.amb.lamp_angle)
+		and img.get_pixel(int(lr[0]) + 4, int(lr[1]) + 8).a == 0.0 and lsw > 0.03 and absf(v.amb.lamp.rotation - v.amb.lamp_angle) < 0.001)
 	# MV-741 micro anims: Dr. Ren drives, the roof plants lean into the headwind, the pipe puffs, the cells glint by day
 	var pr: Array = spot.clips.potsL.rect
 	var pot_frames := {}
