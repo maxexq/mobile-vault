@@ -19,13 +19,16 @@ const BLINK := 0.36                # s per indicator half-cycle
 const SIGNAL_SEC := 2.9            # indicator time after pulling out / before stopping
 const BEACON_CYCLE := 0.9          # roof bar: L flash flash, R flash flash
 const FLAG_FRAMES := 8
-const WELL := Color("141214")      # dark wheel well behind each tyre (rides with the body)
+const WELL := Color("141214")
+const LAMP_W := 4.6                # lantern pendulum: rad/s natural frequency
+const LAMP_DAMP := 1.1             # 1/s      # dark wheel well behind each tyre (rides with the body)
 
 static var _meta: Dictionary = {}
 static var _shells: Dictionary = {}        # floors -> ImageTexture (tyres + flag cloth cut out)
 static var _flag_frames: Dictionary = {}   # floors -> Array[ImageTexture]
 static var _spin: Array[AtlasTexture] = []
 static var _glow_tex: GradientTexture2D
+static var _lamp_src: Dictionary = {}      # floors -> Image of the lantern cut out of the shell (lantern_still rect)
 
 var vehicle: Node2D
 var floors := 0
@@ -46,9 +49,13 @@ var _flag_i := 0
 var _was_moving := false
 var _lantern := 1.0
 var _lantern_t := 0.0
-var flame: Sprite2D                # MV-741: the lantern's PixelLab flame flicker over its glass (anim.json lantern_*)
+var flame: Sprite2D                # MV-741: the whole lantern, cut from the shell, with the PixelLab flame flicker
 var flame_frames: Array[ImageTexture] = []
 var _flame_i := 0
+var lamp: Node2D                   # MV-741: pivot at the lantern's bail: it swings while the vehicle moves
+var lamp_angle := 0.0              # radians, + = the lantern swings forward (west, the way the cab faces)
+var _lamp_vel := 0.0
+var _lamp_kick_t := 0.0
 ## GOD MODE / autotest overrides
 var force_beacon := false
 var force_brake := false
@@ -88,6 +95,11 @@ static func cut_shell(n: int) -> Texture2D:
 				if x >= 0 and y >= 0 and x < img.get_width() and y < img.get_height() \
 						and Vector2(x + 0.5, y + 0.5).distance_to(c) <= r:
 					img.set_pixel(x, y, Color(0, 0, 0, 0))
+	if f.has("lantern_still"):                 # MV-741: the lantern swings on its own sprite
+		var lr: Array = f.lantern_still
+		var rect := Rect2i(int(lr[0]), int(lr[1]), int(lr[2]), int(lr[3]))
+		_lamp_src[n] = img.get_region(rect)
+		img.fill_rect(rect, Color(0, 0, 0, 0))
 	var fr: Array = f.flag
 	var cloth := img.get_region(Rect2i(fr[0], fr[1], fr[2], fr[3]))
 	img.fill_rect(Rect2i(fr[0], fr[1], fr[2], fr[3]), Color(0, 0, 0, 0))
@@ -201,31 +213,73 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 		i += 1
 
 
-## MV-741: one texture per PixelLab flicker frame, covering only the lantern's glass pixels (lantern_px)
+## MV-741: the lantern as its own sprite hanging from `lamp` (pivot = the top of its bail): one texture per PixelLab
+## flicker frame (the frame's colours on the glass pixels lantern_px). Without lantern_still in anim.json only the
+## glass is drawn over the shell and nothing swings.
 func _build_flame(f: Dictionary, origin: Vector2) -> void:
 	flame_frames.clear()
 	_flame_i = 0
+	lamp_angle = 0.0
+	_lamp_vel = 0.0
 	if not f.has("lantern_px") or (f.lantern_px as Array).is_empty():
 		return
-	var lo := Vector2i(100000, 100000)
-	var hi := Vector2i(-1, -1)
-	for q in f.lantern_px:
-		lo = Vector2i(mini(lo.x, int(q[0])), mini(lo.y, int(q[1])))
-		hi = Vector2i(maxi(hi.x, int(q[0])), maxi(hi.y, int(q[1])))
+	var at := Vector2i.ZERO
+	var base: Image
+	if f.has("lantern_still") and _lamp_src.has(floors):
+		var lr: Array = f.lantern_still
+		at = Vector2i(int(lr[0]), int(lr[1]))
+		base = _lamp_src[floors]
+	else:
+		var lo := Vector2i(100000, 100000)
+		var hi := Vector2i(-1, -1)
+		for q in f.lantern_px:
+			lo = Vector2i(mini(lo.x, int(q[0])), mini(lo.y, int(q[1])))
+			hi = Vector2i(maxi(hi.x, int(q[0])), maxi(hi.y, int(q[1])))
+		at = lo
+		base = Image.create_empty(hi.x - lo.x + 1, hi.y - lo.y + 1, false, Image.FORMAT_RGBA8)
 	for cols in f.lantern_frames:
-		var img := Image.create_empty(hi.x - lo.x + 1, hi.y - lo.y + 1, false, Image.FORMAT_RGBA8)
+		var img := base.duplicate() as Image
 		var k := 0
 		for q in f.lantern_px:
-			img.set_pixel(int(q[0]) - lo.x, int(q[1]) - lo.y, Color.html(str(cols[k])))
+			img.set_pixel(int(q[0]) - at.x, int(q[1]) - at.y, Color.html(str(cols[k])))
 			k += 1
 		flame_frames.append(ImageTexture.create_from_image(img))
+	var pivot := Vector2(at) if not f.has("lantern_pivot") else _v(f.lantern_pivot)
+	lamp = Node2D.new()
+	lamp.name = "Lantern"
+	lamp.position = origin + pivot
+	over.add_child(lamp)
+	over.move_child(lamp, 0)                   # under the additive glows
 	flame = Sprite2D.new()
 	flame.name = "LanternFlame"
 	flame.centered = false
-	flame.position = origin + Vector2(lo)
+	flame.position = Vector2(at) - pivot
 	flame.texture = flame_frames[0]
-	over.add_child(flame)
-	over.move_child(flame, 0)                  # under the additive glows
+	lamp.add_child(flame)
+	var g: Sprite2D = glows.get("lantern")
+	if g:
+		g.set_meta("arm", _v(f.lantern) - pivot)    # the glow rides with the glass
+		g.set_meta("pivot", origin + pivot)
+
+
+## MV-741: a pendulum on the bail: it leans back when the vehicle pulls away, forward when it brakes, rocks on the
+## road (random kicks, more at speed + every bump) and settles parked
+func _tick_lamp(delta: float, speed_px: float, accel: float) -> void:
+	if lamp == null:
+		return
+	var sp := clampf(speed_px / ROAD_PX, 0.0, 1.5)
+	var rest := clampf(accel * 1.2, -0.22, 0.22)               # accel > 0: the lantern lags east (negative angle)
+	rest = -rest
+	_lamp_kick_t -= delta
+	if sp > 0.05 and _lamp_kick_t <= 0.0:
+		_lamp_kick_t = randf_range(0.35, 0.9)
+		_lamp_vel += randf_range(-0.7, 0.7) * sp
+	_lamp_vel += (-LAMP_W * LAMP_W * (lamp_angle - rest) - LAMP_DAMP * _lamp_vel) * delta
+	lamp_angle = clampf(lamp_angle + _lamp_vel * delta, -0.35, 0.35)
+	lamp.rotation = lamp_angle
+	var g: Sprite2D = glows.get("lantern")
+	if g and g.has_meta("arm"):
+		g.position = (g.get_meta("pivot") as Vector2) + (g.get_meta("arm") as Vector2).rotated(lamp_angle)
 
 
 func flame_frame() -> int:
@@ -260,6 +314,7 @@ func clear() -> void:
 	hops.clear()
 	hop_left.clear()
 	glows.clear()
+	lamp = null
 	flame = null
 	flame_frames.clear()
 	floors = 0
@@ -287,6 +342,7 @@ func bump(speed_px: float) -> void:
 		var d := (tyres[i].position.x - x0) * under.scale.x            # world px behind the front axle
 		hops[i] = d / speed_px
 		hop_left[i] = 0.0
+	_lamp_vel += (0.9 if randf() < 0.5 else -0.9)     # MV-741: a bump rocks the lantern
 
 
 ## per frame. speed_px = road speed (world px/s), accel in speed-factor/s, body_y = the body's bounce (world px)
@@ -319,6 +375,7 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	elif accel < -0.05:
 		want = -2.0
 	lurch = move_toward(lurch, want, delta * 12.0)
+	_tick_lamp(delta, speed_px, accel)
 	var lx := roundf(lurch)
 	(over.get_parent() as Node2D).position.x = lx * under.scale.x
 	wells.position = Vector2(lx, body_y / under.scale.y)

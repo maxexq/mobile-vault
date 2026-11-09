@@ -12903,6 +12903,14 @@ func _vehicle_anim_test() -> void:
 	var g1 := v.amb.flag_frame()
 	await wait(0.13)
 	_check("vehicle anim: driving rolls the tyres and waves the flag", f1 != v.amb.spin_frame() and g1 != v.amb.flag_frame())
+	# MV-741: the lantern is cut out of the shell and swings from its bail while driving
+	var lsw := 0.0
+	for i in 30:
+		await wait(0.05)
+		lsw = maxf(lsw, absf(v.amb.lamp_angle))
+	var lr: Array = spot.lantern_still
+	_check("MV-741: the lantern hangs on its own sprite and swings while the vehicle moves", v.amb.lamp != null
+		and img.get_pixel(int(lr[0]) + 4, int(lr[1]) + 8).a == 0.0 and lsw > 0.03 and v.amb.lamp.rotation == v.amb.lamp_angle)
 	_check("vehicle anim: headlight lens + tail lamps on while driving", v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1)
 	var y_before: Array = v.amb.tyres.map(func(t): return t.global_position.y)
 	v.amb.bump(90.0)

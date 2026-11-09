@@ -83,7 +83,7 @@ def one(n):
     return {"size": [W, H], "wheels": wheels(im), "wheel_r": WHEEL_R,
             "head": head["c"], "marker": marker["c"], "bar_l": [bx + bw / 4, by + bh / 2], "bar_r": [bx + bw * 3 / 4, by + bh / 2],
             "bar": bar["rect"], "lantern": lantern["c"], "tails": [t["c"] for t in tails], "mast": tip,
-            "flag": big(cloth)["rect"], **lantern_flicker(im, lantern["c"])}
+            "flag": big(cloth)["rect"], **lantern_flicker(im, lantern["c"]), **lantern_hang(im)}
 
 
 LANTERN_PL = os.path.join(ROOT, "tools", "art", "ambulance", "lantern_pl.png")   # MV-741 PixelLab flicker, 8 x 18x22
@@ -112,6 +112,21 @@ def lantern_flicker(im, c):
     hi, lo = max(glow), min(glow)
     glow = [round(0.55 + 0.45 * (g - lo) / (hi - lo if hi > lo else 1), 3) for g in glow]
     return {"lantern_px": glass, "lantern_frames": frames, "lantern_glow": glow}
+
+
+LANTERN_STILL = os.path.join(ROOT, "tools", "art", "ambulance", "lantern_still.png")
+
+
+def lantern_hang(im):
+    """MV-741 swing: where cleanup.swap_lantern hung the approved lantern: its rect and the pivot (top of its bail)"""
+    if not os.path.exists(LANTERN_STILL):
+        return {}
+    st = Image.open(LANTERN_STILL).convert("RGBA"); sp = st.load(); px = im.load()
+    for y0 in range(55, 110):
+        for x0 in range(98, 120):
+            if all(px[x0 + x, y0 + y] == sp[x, y] for y in range(st.height) for x in range(st.width) if sp[x, y][3]):
+                return {"lantern_still": [x0, y0, st.width, st.height], "lantern_pivot": [x0 + 4.5, y0]}
+    return {}
 
 
 def spin_strip():

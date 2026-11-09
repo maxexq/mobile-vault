@@ -190,11 +190,31 @@ def lantern(im):
     return cx, cy
 
 
+def swap_lantern(im, still=os.path.join(HERE, "lantern_still.png")):
+    """(Parames 20:14 "swing it while driving") every shell gets the same approved lantern (lantern_still.png, 9x16,
+    bail on top) hung right under its bracket, so AmbulanceMotion can cut it out and swing it from the bail.
+    The bracket's underside is known per art: 1-2 floor shells (f1 art) 9 rows above the glass centre, 3-5 floor
+    shells (f3 art, smaller old lantern) 7 rows above. Returns the still's top-left in the shell."""
+    px = im.load(); st = Image.open(still).convert("RGBA"); sp = st.load()
+    pts = [(x, y) for y in range(60, 110) for x in range(100, 126) if px[x, y][3] and YEL(px[x, y])]
+    cx = (min(p[0] for p in pts) + max(p[0] for p in pts) + 1) // 2
+    cy = (min(p[1] for p in pts) + max(p[1] for p in pts) + 1) // 2
+    floors = (im.height - 240) // 112 + 1
+    y0 = cy - (9 if floors <= 2 else 7); x0 = cx - 4
+    for y in range(y0, cy + 9):                     # the old lantern goes
+        for x in range(cx - 5, cx + 5): px[x, y] = (0, 0, 0, 0)
+    for y in range(st.height):
+        for x in range(st.width):
+            if sp[x, y][3]: px[x0 + x, y0 + y] = sp[x, y]
+    return x0, y0
+
+
 def clean_shell(path, front):
     im = Image.open(path).convert("RGBA")
     solar(im)
     im = ghost_arc(im)
     lantern(im)
+    swap_lantern(im)
     top = im.height - front.height
     holes = fill_holes(im, front, top)
     im, strays = drop_strays(im)
