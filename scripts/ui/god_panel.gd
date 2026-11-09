@@ -391,6 +391,17 @@ func _tab_vehicle() -> void:
 	_row([_b("ห้อง v3: " + ("เปิด" if Features.on("rooms_v3") else "ปิด"), func(): Dev.feature_set("rooms_v3", not Features.on("rooms_v3")),
 		"green" if Features.on("rooms_v3") else "red"), _b("ห้องรอตรวจ: " + ("ใช้" if Features.on("rooms_v3_review") else "ไม่ใช้"),
 		func(): Dev.feature_set("rooms_v3_review", not Features.on("rooms_v3_review")), "green" if Features.on("rooms_v3_review") else "red")], "สวิตช์")
+	_note("เงาใต้เท้าลูกเรือ x%.2f (tune crew_v3.shadow) · กลางเงาทึบ %d%% · ย้อมสีลูกเรือ %.2f (tune crew_v3.grade)" % [CrewV3Actor.shadow_k(),
+		roundi(CrewV3Actor.shadow_alpha() * 100.0), CrewV3Actor.grade_k()])
+	_row([_b("เงาเข้ม x1.5", func(): Dev.crew_v3_shadow(1.5)), _b("เงาอ่อน x0.5", func(): Dev.crew_v3_shadow(0.5)),
+		_b("ไม่มีเงา", func(): Dev.crew_v3_shadow(0.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_shadow(-1.0), "gray")], "เงาลูกเรือ")
+	_row([_b("สีแบบเดิม (เข้ม)", func(): Dev.crew_v3_grade(1.0)), _b("ย้อม 0.5", func(): Dev.crew_v3_grade(0.5)),
+		_b("สีสไปรต์ล้วน", func(): Dev.crew_v3_grade(0.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_grade(-1.0), "gray")], "สีลูกเรือ")
+	_row([_b("สว่าง x1 (สีเดิม)", func(): Dev.crew_v3_lift(1.0)), _b("สว่าง x1.25", func(): Dev.crew_v3_lift(1.25)), _b("สว่าง x1.5", func(): Dev.crew_v3_lift(1.5)),
+		_b("ค่าเริ่มต้น", func(): Dev.crew_v3_lift(-1.0), "gray")], "ความสว่างลูกเรือ (%.2f)" % CrewV3Actor.lift_k())
+
+
+
 	_row([_b("รถพยาบาล 1 ชั้น", func(): Dev.ambulance_v3_preview(1)), _b("2 ชั้น", func(): Dev.ambulance_v3_preview(2)),
 		_b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)), _b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)),
 		_b("รถพยาบาล: " + ("เปิด" if Features.on("ambulance_v3") else "ปิด"), func(): Dev.feature_set("ambulance_v3", not Features.on("ambulance_v3")),
