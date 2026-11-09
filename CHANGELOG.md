@@ -10,6 +10,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Added
 - Two vehicles only: Dr. Ren's ambulance and the new road train (prime mover + lead trailer, 2-3 decks, red container trailers); the armoured bus and train are gone, their saves drive the road train and keep their rooms (MV-721)
+- The defence squad now fights from inside the rear gunner room: a gunner, a loader and a spotter (the spotter joins as the Mobile Vault grows); nobody shoots from the roof or the rear wall any more and enemies can only hit the vehicle. Only one gunner room, and only at the rear of the vehicle (MV-727)
 - The ambulance on the road comes alive: its tyres roll with the speed and hop over bumps one axle after another while the body rides on its springs, it rocks when pulling out and braking, and it has working lights (headlight, tail and brake lights, a blinking marker when it pulls out or over, the red light bar flashing during raids, a flickering lantern at night) and a flag waving in the wind (MV-726)
 - Rear gunner post: a new room at the back of the vehicle where the crew shoot the monsters and bosses chasing you through a firing hatch, even in a power-out; new games start with it in the rear slot (MV-716)
 - New monster art: every ordinary enemy in all 6 biomes is redrawn with more detail, a walk and an attack animation; each biome now has a flyer (new snow owl on the Frozen Highway and a HELIOS hunter drone in the Signal Metropolis, the forest hornet now flies) (MV-714)
