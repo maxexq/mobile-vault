@@ -718,6 +718,11 @@ func _run() -> void:
 		await _web_perf_test()
 		_finish()
 		return
+	if "--only=threat" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _threat_test()
+		_finish()
+		return
 	if "--only=battery" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _battery_test()
@@ -3469,6 +3474,7 @@ func _loot_tabs_test() -> void:
 func _threat_test() -> void:
 	_no_events()
 	_ensure_squad()     # earlier groups may have sent the squad away; the pacing check needs a crew fighting
+	var pinned := _pin_squad()
 	Settings.set_value("pacing", "threat")
 	Combat.reset_wave(1)
 	Threat.reset()
@@ -3585,6 +3591,7 @@ func _threat_test() -> void:
 	Threat.reset()
 	Game.s.combat.threat = 0.0
 	_check("threat: save keeps the meter", Game.s.combat.has("threat") and Game.s.combat.has("raid_kpm") and Game.s.combat.has("fight_share"))
+	_unpin_squad(pinned)
 	print("[autotest] threat checks done: %d failed total" % _fails)
 
 
@@ -8840,13 +8847,75 @@ func _five_floors_test() -> void:
 ## an empty squad gets a gunner and a loader who are aboard and willing (a squad that is already there stays as it is;
 ## the room squad has no turret firing on its own, so an empty squad means nobody shoots)
 func _ensure_squad() -> void:
-	if int(Game.s.squad[0]) >= 0 or int(Game.s.squad[1]) >= 0 or int(Game.s.squad[2]) >= 0:
-		return
+	# MV-727: the squad shoots from the gunner room, so the room must exist (an earlier group may have rebuilt the
+	# rear slot) and two shooters must be in it, or the pacing numbers depend on what earlier groups left behind
+	if RearGunner.squad_on() and RearGunner.post() < 0 and Game.s.rooms.size() > RearGunner.DEFAULT_SLOT:
+		Game.s.rooms[RearGunner.DEFAULT_SLOT] = {"type": RearGunner.TYPE, "level": 1, "job": {}, "build": {}}
+		Game.rooms_changed.emit()
 	for i in mini(2, Combat.slots_unlocked()):
+		var cur := int(Game.s.squad[i])
+		var who: Dictionary = Game.dweller_by_id(cur) if cur >= 0 else {}
+		if not who.is_empty() and not Game.is_away(who):
+			continue
 		for d in Game.s.dwellers:
 			if not Game.is_away(d) and Game.squad_role(d) < 0 and not Crew.refuses(d) and int(d.room) != Data.CAB_SLOT:
 				Game.set_squad(i, int(d.id))
 				break
+	RearGunner.sync_squad()
+	Combat.rebuild_heroes()
+	print("[autotest] threat squad: room_mode=%s post=%d squad=%s dps=%.1f" % [RearGunner.room_mode(), RearGunner.post(),
+		str(Game.s.squad), Combat.squad_dps()])
+
+
+## MV-727: the pacing numbers depend on how strong the squad is, and earlier groups leave anything from a bare
+## crew member to a +15 gear set in it. Give the two shooters the new-game Leo / Mark stats + starter gear and a
+## Lv1 gunner room for the test, and put everything back afterwards.
+func _pin_squad() -> Dictionary:
+	var saved := {"squad": (Game.s.squad as Array).duplicate(), "crew": [], "room": {}}
+	var p := RearGunner.post()
+	if p >= 0:
+		saved.room = {"slot": p, "level": Game.s.rooms[p].level}
+		Game.s.rooms[p].level = 1
+	var starter := [
+		{"str": 4, "int": 3, "agi": 7, "lvl": 2, "gear": {"weapon": Loot.roll_item("weapon", 1, 0, "hunting_rifle")}},
+		{"str": 7, "int": 3, "agi": 4, "lvl": 3, "gear": {"weapon": Loot.roll_item("weapon", 1, 0, "pipe_wrench"),
+			"armor": Loot.roll_item("armor", 1, 0, "leather_jacket"), "helmet": Loot.roll_item("helmet", 1, 0, "hard_hat")}}]
+	for i in 3:
+		var d := Game.dweller_by_id(int(Game.s.squad[i]))
+		if i >= starter.size() or d.is_empty():
+			Game.s.squad[i] = -1
+			continue
+		var keep := {"id": int(d.id)}
+		for k in starter[i]:
+			keep[k] = (d.get(k) as Variant)
+			if keep[k] is Dictionary:
+				keep[k] = (keep[k] as Dictionary).duplicate(true)
+			d[k] = starter[i][k]
+		saved.crew.append(keep)
+	# sync_squad pulls anyone else working in the gunner room into a free squad slot: send them out for the test
+	saved["moved"] = []
+	for d in Game.s.dwellers:
+		if p >= 0 and int(d.room) == p and int(d.id) != int(Game.s.squad[0]) and int(d.id) != int(Game.s.squad[1]):
+			saved.moved.append(int(d.id))
+			d.room = -1
+	RearGunner.sync_squad()
+	Combat.rebuild_heroes()
+	print("[autotest] threat squad pinned: squad=%s dps=%.1f" % [str(Game.s.squad), Combat.squad_dps()])
+	return saved
+
+
+func _unpin_squad(saved: Dictionary) -> void:
+	for keep in saved.crew:
+		var d := Game.dweller_by_id(int(keep.id))
+		for k in keep:
+			if k != "id":
+				d[k] = keep[k]
+	if not (saved.room as Dictionary).is_empty():
+		Game.s.rooms[int(saved.room.slot)].level = saved.room.level
+		for id in saved.moved:
+			Game.dweller_by_id(int(id)).room = int(saved.room.slot)
+	Game.s.squad = saved.squad
+	RearGunner.sync_squad()
 	Combat.rebuild_heroes()
 
 
