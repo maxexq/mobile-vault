@@ -8449,6 +8449,7 @@ func _saloon_test() -> void:
 	cu.close()
 	await wait(0.3)
 	# --- GOD
+	Game.s["outage"] = {}       # a random short circuit (Game._tick_outages) on the Saloon would pause its job
 	Dev.saloon_clear_cd()
 	var gj := Dev.saloon_supper()
 	Dev.rx_finish_jobs()
