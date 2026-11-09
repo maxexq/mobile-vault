@@ -1242,6 +1242,17 @@ func decker_preview(n: int, on_road := true) -> int:
 	return Game.floors()
 
 
+## MV-739: the Decker on the road with its micro animations (switch vehicle_anim): rolling tyres, suspension, lights,
+## the flickering "9 DEPOT" sign and tail-pipe puffs; mode as vehicle_anim(). False when they are not up.
+func decker_anim(mode := "drive") -> bool:
+	feature_set("vehicle_anim", true)
+	decker_preview(Game.floors() if Game.tier() == "bus" else 2)
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or not v.amb_on or not v.v2_dk():
+		return false
+	return vehicle_anim(mode)
+
+
 ## MV-736: the Decker (its decks now, else 2) in the v3 interior
 func decker_interior() -> bool:
 	decker_preview(Game.floors() if Game.tier() == "bus" else 2, false)

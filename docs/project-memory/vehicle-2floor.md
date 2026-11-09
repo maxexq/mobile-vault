@@ -16,3 +16,7 @@ Related: [[vehicles-flat-2d]], [[road-train-approved-set]], [[ambulance-v3-ingam
 - 2026-11-09 17:37 Parames PICKED A (Decker bus) -> approved/decker_2deck_{1x,2x} + README. 3-deck upgrade = deck3.py (scrap
   corrugated 3rd deck inserted under the roof, rows >=56 shift 112; L s1 + R s1 picked, ~75 gens) -> approved/decker_3deck. Page v2.
   Next: card asks how players get it (unlock); in-game plan = id decker, switch decker, shell_f2/f3 like ambulance v3, GOD, autotest.
+- 2026-11-09 MV-739 Parames fixes on PR #216 (code only, 0 gens): headlight plate removed, stray pixels under chassis/wheels
+  removed, steel frame around every room window (tools/art/decker/cleanup.py, rerun after shell.py), micro animations via
+  AmbulanceMotion dir DK_DIR (tools/art/decker/anim.py -> anim.json + wheel_spin.png): tyres, lights, beam, 9 DEPOT sign flicker,
+  tail-pipe puffs. Dev.decker_anim + GOD ขับ+ไฟ/เบรก.
