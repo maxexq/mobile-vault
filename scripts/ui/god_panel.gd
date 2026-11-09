@@ -423,6 +423,8 @@ func _tab_crew() -> void:
 	_row([_b("สุข 100", func(): Dev.happy_all(100.0)), _b("สุข 20", func(): Dev.happy_all(20.0)), _b("สุข 0", func(): Dev.happy_all(0.0), "red")], "ทุกคน")
 	_row([_b("หมา", func(): Dev.add_pet("dog")), _b("แมว", func(): Dev.add_pet("cat")), _b("ไก่", func(): Dev.add_pet("hen")), _b("ล้าง", func(): Dev.clear_pets())],
 		"สัตว์เลี้ยง %d" % (Game.s.get("pets", []) as Array).size())
+	_row([_b("ครบ 9 พันธุ์", func(): Dev.pets_v3_all(), "green"), _b("ย้ายห้อง", func(): Dev.pets_v3_hop())],
+		"สัตว์ v3 (MV-733) %s" % ("เปิด" if PetsV3.on() else "ปิด · สวิตช์ pets_v3"))
 	_head("BARKS", "พูดตามสถานการณ์ (MV-427)")
 	var m = get_tree().current_scene
 	_note("สวิตช์ barks %s · เว้นซ้ำ %.0f วิ · ล่าสุด: %s" % ["เปิด" if Features.on("barks") else "ปิด", Features.num("barks.cooldown", 12.0),

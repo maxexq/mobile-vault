@@ -1,0 +1,143 @@
+{
+ "note": "MV-733 / MV-601 approved realistic pets. Frame 32x24, feet at (16, 24) = bottom centre, facing east; frame 0 still, 1..n walk. Made by tools/pets_v3_import.py",
+ "frame": [
+  32,
+  24
+ ],
+ "kinds": {
+  "dog": [
+   "dog_mutt",
+   "dog_shepherd",
+   "dog_terrier"
+  ],
+  "cat": [
+   "cat_ginger",
+   "cat_tabby",
+   "cat_black"
+  ],
+  "hen": [
+   "hen_brown",
+   "hen_white",
+   "rooster"
+  ]
+ },
+ "pets": {
+  "dog_mutt": {
+   "kind": "dog",
+   "file": "dog_mutt.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    20,
+    20
+   ],
+   "speed": 14.0
+  },
+  "dog_shepherd": {
+   "kind": "dog",
+   "file": "dog_shepherd.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    24,
+    20
+   ],
+   "speed": 14.0
+  },
+  "dog_terrier": {
+   "kind": "dog",
+   "file": "dog_terrier.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    16,
+    18
+   ],
+   "speed": 14.0
+  },
+  "cat_ginger": {
+   "kind": "cat",
+   "file": "cat_ginger.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    15,
+    15
+   ],
+   "speed": 11.0
+  },
+  "cat_tabby": {
+   "kind": "cat",
+   "file": "cat_tabby.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    17,
+    15
+   ],
+   "speed": 11.0
+  },
+  "cat_black": {
+   "kind": "cat",
+   "file": "cat_black.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    17,
+    16
+   ],
+   "speed": 11.0
+  },
+  "hen_brown": {
+   "kind": "hen",
+   "file": "hen_brown.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    16,
+    16
+   ],
+   "speed": 6.0
+  },
+  "hen_white": {
+   "kind": "hen",
+   "file": "hen_white.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    13,
+    14
+   ],
+   "speed": 6.0
+  },
+  "rooster": {
+   "kind": "hen",
+   "file": "rooster.png",
+   "walk": {
+    "n": 8,
+    "fps": 12
+   },
+   "size": [
+    18,
+    19
+   ],
+   "speed": 6.0
+  }
+ }
+}
