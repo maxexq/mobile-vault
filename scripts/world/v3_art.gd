@@ -10,6 +10,11 @@ const DIR := "res://assets/v3/"
 const CELL := Vector2(144, 96)
 const CREW_SCALE := 2.0 / 3.0      # crew ref v3 rule: room x3, crew x2 on screen
 const FEET := Vector2(-32, -64)    # frame offset: 64x64 canvas, feet on the bottom row
+## MV-734 (Parames 2026-11-09, option C): in the world view one v3 room pixel is one rendered pixel, so crew at 2/3
+## got 0.67 px per sprite pixel and nearest sampling dropped every third row and column ("the crew look blurry").
+## There the crew are drawn at full pixel size (1 sprite px = 1 room px, ~60 room px tall); the interior view, where
+## a room pixel is several screen pixels, keeps 2/3. Switch crew_world_full.
+const CREW_SCALE_WORLD := 1.0
 ## which v3 character plays a recruit variant: the named crew roster keep a fixed look; everyone else gets a stable
 ## pick from their id (the 2.5D crew are 11 people, the old variants many more)
 const CREW_IDS := ["ren", "clara", "bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi"]

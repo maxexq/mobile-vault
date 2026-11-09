@@ -166,6 +166,21 @@ func crew_v3_grade(k: float) -> void:
 	Features.set_override("tune", "crew_v3.grade", null if k < 0.0 else k)
 
 
+## MV-734: world-view crew size: true = full pixel size (sharp), false = 2/3 (drops every third row / column),
+## null = back to the build's value. Returns how many world crew are now drawn at full size.
+func crew_world_full(v: Variant) -> int:
+	Trace.rec("god", "crew world full %s" % [v])
+	Features.set_override("features", "crew_world_full", v)
+	var m = get_tree().current_scene
+	if m == null or m.get("vehicle") == null:
+		return 0
+	var n := 0
+	for c in m.vehicle.v2_cells.values():
+		for a in (c as RoomV3Cell).actors.values():
+			n += 1 if (a as CrewV3Actor).full else 0
+	return n
+
+
 ## MV-562: compare smoothness with the per-step / per-frame caches on and off
 func perf_cache_switch(v: bool) -> void:
 	feature_set("perf_cache", v)
