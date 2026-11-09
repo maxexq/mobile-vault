@@ -62,9 +62,13 @@ func _build_squad() -> void:
 	set_title(Loc.t("SQUAD W%d DPS%d / ทีมป้องกันรถบ้าน") % [Combat.wave(), int(Combat.squad_dps())])
 	if Features.on("squad_auto_pick"):
 		_list.add_child(_auto_pick_button())
+	if Combat.room_mode():
+		# MV-727: the squad is the crew of the rear gunner room; no roof deck reserve
+		_list.add_child(UIKit.wrap_label(Loc.t("ทีมป้องกันประจำห้องยิงท้ายรถ ทุกคนยิงออกทางช่องท้ายรถ ศัตรูโจมตีได้แค่ตัวรถ · อัปเลเวลห้องให้ยิงแรงขึ้น"), UIKit.FS_SMALL, UIKit.C_GOLD))
 	for i in Combat.ROLES.size():
 		_list.add_child(_role_card(i))
-	_list.add_child(_deck_card())
+	if not Combat.room_mode():
+		_list.add_child(_deck_card())
 	_list.add_child(UIKit.wrap_label(Loc.t("ศัตรูไล่ตามจากท้ายรถเป็นเวฟ · ทุก 10 เวฟมีบอส · ท้ายแต่ละพื้นที่มีบอสด่านตรวจ · ของดรอปเข้าคลังอัตโนมัติ · กระเป๋าดี = ศัตรูดรอปเสบียง"), UIKit.FS_SMALL))
 
 
@@ -87,7 +91,7 @@ func _auto_pick_button() -> Button:
 
 
 func _role_card(i: int) -> Control:
-	var role: Dictionary = Combat.ROLES[i]
+	var role: Dictionary = Combat.role(i)
 	var locked := i >= Combat.slots_unlocked()
 	var did := int(Game.s.squad[i])
 	var d := Game.dweller_by_id(did) if did >= 0 else {}
@@ -95,7 +99,7 @@ func _role_card(i: int) -> Control:
 	var v := UIKit.vbox(3)
 	p.add_child(v)
 	var hh := UIKit.hbox(4)
-	hh.add_child(UIKit.icon_rect({"gunner": "rifle", "bruiser": "fist", "medic": "heal"}[role.id], 16))
+	hh.add_child(UIKit.icon_rect({"gunner": "rifle", "bruiser": "fist", "medic": "heal", "loader": "scrap", "spotter": "explore"}.get(role.id, "rifle"), 16))
 	hh.add_child(UIKit.label(role.en, UIKit.FP, UIKit.C_GOLD, true))
 	hh.add_child(UIKit.label("%s · %s" % [role.th, role.stat.to_upper()], UIKit.FS_SMALL, UIKit.C_DIM))
 	v.add_child(hh)
@@ -110,7 +114,7 @@ func _role_card(i: int) -> Control:
 		v.add_child(add)
 		v.add_child(UIKit.wrap_label(Loc.t("สกิล: %s — %s") % [role.skill, role.skill_desc], UIKit.FS_SMALL))
 		return p
-	var st := Combat.hero_stats(d, i)
+	var st := Combat.hero_stats(d, 0 if Combat.room_mode() else i)
 	var dh := UIKit.hbox(4)
 	dh.add_child(UIKit.portrait(d.variant))
 	var info := UIKit.vbox(1)
@@ -132,6 +136,9 @@ func _role_card(i: int) -> Control:
 	var stats := "HP%d ATK%.0f %.1f/S DEF%.0f CRIT%d%% DODGE%d%% DPS%d" % [st.hp, st.dmg, st.aspd, st.def, int(st.crit), int(st.get("dodge", 0)), int(st.dps)]
 	if role.id == "medic":
 		stats += " HEAL%d" % int(st.heal)
+	if Combat.room_mode():
+		var g: Dictionary = RearGunner.shooters().get(i, {})
+		stats = "ATK%.0f %.1f/S CRIT%d%% RANGE%d DPS%d" % [float(g.get("dmg", 0)), float(g.get("aspd", 0)), int(g.get("crit", 0)), int(g.get("range", 0)), int(g.get("dps", 0))]
 	var sl := UIKit.label(stats, UIKit.FP, UIKit.C_TEXT, true)
 	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sl.custom_minimum_size.x = 100
@@ -211,7 +218,7 @@ func _build_chooser() -> void:
 	if choosing == DECK:
 		_build_deck_chooser()
 		return
-	var role: Dictionary = Combat.ROLES[choosing]
+	var role: Dictionary = Combat.role(choosing)
 	set_title(Loc.t("SELECT %s / เลือก%s") % [role.stat.to_upper(), role.th])
 	var back := UIKit.button(Loc.t("< กลับ"), "gray")
 	back.pressed.connect(func():
@@ -239,7 +246,7 @@ func _build_chooser() -> void:
 		h.add_child(UIKit.tex_rect(Atlas.tex("pt_" + d.variant), Vector2(20, 20)))
 		var where := Loc.t("ว่าง")
 		if cur >= 0:
-			where = Combat.ROLES[cur].th
+			where = Combat.role(cur).th
 		elif int(d.room) >= 0:
 			where = Data.room_def(Game.room(int(d.room)).type).th
 		var l := UIKit.label("%s Lv%d %s%d (%s)" % [d.name, d.lvl, st.to_upper(), d[st], where], UIKit.FS_SMALL)
@@ -265,7 +272,7 @@ func _build_vault() -> void:
 	sl.custom_minimum_size.x = 100
 	sp.add_child(sl)
 	_list.add_child(sp)
-	var desc := {"turret": Loc.t("ยิงศัตรูอัตโนมัติจากผนังท้ายรถ"), "plating": Loc.t("เพิ่มตัวถังสูงสุด ลดความเสียหาย"), "engine": Loc.t("เครื่องยนต์ในห้องเครื่องหน้ารถ (แตะห้องเครื่องเพื่อดูรายละเอียด)"), "spikes": Loc.t("ทำดาเมจศัตรูที่ประชิดท้ายรถ")}
+	var desc := {"turret": Loc.t("ปืนที่ติดในช่องยิงของห้องยิงท้ายรถ (มือปืนเป็นคนยิง)") if RearGunner.squad_on() else Loc.t("ยิงศัตรูอัตโนมัติจากผนังท้ายรถ"), "plating": Loc.t("เพิ่มตัวถังสูงสุด ลดความเสียหาย"), "engine": Loc.t("เครื่องยนต์ในห้องเครื่องหน้ารถ (แตะห้องเครื่องเพื่อดูรายละเอียด)"), "spikes": Loc.t("ทำดาเมจศัตรูที่ประชิดท้ายรถ")}
 	for slot in Loot.VAN_SLOTS:
 		var it := Loot.van_equipped(slot)
 		var p := UIKit.panel(UIKit.C_BG2, Loot.rar_color(it).darkened(0.3) if not it.is_empty() else UIKit.C_LINE_DARK)
@@ -319,7 +326,7 @@ func _build_deck_chooser() -> void:
 		if on:
 			where = Loc.t("บนดาดฟ้า")
 		elif role >= 0:
-			where = Combat.ROLES[role].th
+			where = Combat.role(role).th
 		elif int(d.room) >= 0:
 			where = Data.room_def(Game.room(int(d.room)).type).th
 		var l := UIKit.label("%s Lv%d (%s)" % [d.name, d.lvl, where], UIKit.FS_SMALL)
