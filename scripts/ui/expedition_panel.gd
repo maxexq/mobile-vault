@@ -243,7 +243,7 @@ func _build_active() -> void:
 		mark.color = ExpeditionFeed.MARK[i % ExpeditionFeed.MARK.size()]
 		mark.custom_minimum_size = Vector2(3, 24)
 		h.add_child(mark)
-		h.add_child(UIKit.portrait(d.variant))
+		h.add_child(UIKit.portrait(d.variant, false, d))
 		var v := UIKit.vbox(0)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_child(UIKit.label("%s Lv%d" % [d.name, d.lvl], UIKit.FS_SMALL))

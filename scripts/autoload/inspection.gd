@@ -101,8 +101,9 @@ func queue() -> Array:
 	return st().queue
 
 
+## MV-719: with the strangers switch off nobody knocks: anyone already waiting stays hidden (and keeps their place)
 func pending() -> bool:
-	return not queue().is_empty()
+	return Features.on("strangers") and not queue().is_empty()
 
 
 func current() -> Dictionary:
@@ -111,7 +112,7 @@ func current() -> Dictionary:
 
 ## MV-244: the vehicle is parked for someone at the door who flagged it down
 func halting() -> bool:
-	if not Features.on("stop_for_strangers"):
+	if not Features.on("strangers") or not Features.on("stop_for_strangers"):
 		return false
 	for c in queue():
 		if bool(c.get("halt", false)):
@@ -397,7 +398,7 @@ var _reveal: Array = []
 func tick(dt: float, offline: bool) -> void:
 	if not Game.s.has("insp"):
 		return
-	if not offline:
+	if not offline and Features.on("strangers"):
 		for c in queue().duplicate():
 			c.wait = float(c.wait) - dt
 			if float(c.wait) <= 0.0:

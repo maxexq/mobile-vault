@@ -78,6 +78,8 @@ var _boss_was := false
 var _view_box: HBoxContainer
 var _xray_btn: Button
 var _zoom_btn: Button
+var _fit_btn: Button             # MV-723 free camera: back to the AUTO framing
+var _fit_lit := false
 var _god_btn: Button
 var _interior_btn: Button
 var tutorial_overlay: TutorialOverlay
@@ -89,7 +91,18 @@ var _legal_start := -1
 var offline_summary: OfflineSummary
 var _settings_btn: Button
 signal zoom_pressed
+signal fit_pressed
 signal xray_toggled(on: bool)
+
+
+## MV-723: the FIT button shows with switch free_cam and lights up while the view is zoomed / panned by hand
+func sync_fit_btn(moved: bool) -> void:
+	var on := Features.on("free_cam")
+	if _fit_btn.visible != on:
+		_fit_btn.visible = on
+	if moved != _fit_lit:
+		_fit_lit = moved
+		UIKit.style_button(_fit_btn, "yellow" if moved else "gray")
 
 
 func _ready() -> void:
@@ -121,6 +134,16 @@ func _ready() -> void:
 	_zoom_btn.tooltip_text = Loc.t("ซูม: อัตโนมัติ / กว้าง / ปกติ")
 	_zoom_btn.pressed.connect(func(): zoom_pressed.emit())
 	_view_box.add_child(_zoom_btn)
+	_fit_btn = UIKit.button("FIT", "gray")
+	_fit_btn.name = "CamFitButton"
+	_fit_btn.custom_minimum_size = Vector2(30, 22)
+	_fit_btn.add_theme_font_override("font", UIKit.font_pixel)
+	_fit_btn.add_theme_font_size_override("font_size", UIKit.FP)
+	_fit_btn.tooltip_text = Loc.t("ปรับมุมกล้องอัตโนมัติ: จัดรถให้พอดีจอ (ซูม 2 นิ้ว / ล้อเมาส์ ลากเลื่อนได้อิสระ)")
+	_fit_btn.pressed.connect(func(): fit_pressed.emit())
+	_view_box.add_child(_fit_btn)
+	sync_fit_btn(false)
+	Features.changed.connect(func(): sync_fit_btn(_fit_lit))     # the switch shows / hides it at once
 	_interior_btn = UIKit.button("v3", "gray")
 	_interior_btn.name = "InteriorV3Button"
 	_interior_btn.custom_minimum_size = Vector2(30, 22)
