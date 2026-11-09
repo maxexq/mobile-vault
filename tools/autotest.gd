@@ -13187,7 +13187,7 @@ func _decker_test() -> void:
 		var img: Image = (load(InteriorV3Panel.DK_DIR + "shell_f%d.png" % d) as Texture2D).get_image()
 		img.decompress()
 		var dy: int = 112 * (int(d) - 2)
-		for y in range(253, 282):
+		for y in range(253, 276):
 			for x in range(0, 9):
 				clean_ok = clean_ok and img.get_pixel(x, y + dy).a == 0.0
 		for y in range(331 + dy, img.get_height()):
@@ -13204,7 +13204,7 @@ func _decker_test() -> void:
 				and img.get_pixel(cx + 72, cy).a > 0.3 and img.get_pixel(cx + 72, cy + 48).a < 0.1
 		for x in range(300, 480):             # roof rail band and the gap between the cables / chassis: see-through
 			clean_ok = clean_ok and img.get_pixel(x, 30).is_equal_approx(Color8(46, 44, 48)) == false
-		clean_ok = clean_ok and img.get_pixel(12, 268 + dy).get_luminance() > 0.8      # MV-739 code-drawn headlight lens
+		clean_ok = clean_ok and img.get_pixel(16, 264 + dy).get_luminance() > 0.7      # MV-739 PixelLab headlight lens
 	_check("decker: no plate over the headlight, no stray pixels under the chassis / around the tyres (2 and 3 decks)", clean_ok)
 	_check("decker: every room window has a frame (black edge outside, inner shadow lip, clear middle)", frame_ok)
 	# MV-739: micro animations on the road (switch vehicle_anim): tyres roll with the speed, lights, flickering sign

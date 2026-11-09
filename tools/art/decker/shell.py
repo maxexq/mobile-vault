@@ -1,5 +1,6 @@
 # MV-736 Decker (double-decker bus, tier "bus" under switch decker): game shells from the approved PixelLab art
-# (claude.ai project designs/vehicle-2floor/approved/decker_{2,3}deck_1x.png). Background -> transparent, every room
+# (claude.ai project designs/vehicle-2floor/approved/decker_{2,3}deck_1x.png; since MV-739 round 3 the copies with the
+# PixelLab front + headlight in designs/vehicle-2floor/front/out/). Background -> transparent, every room
 # cell (144x96 at x 104 + 152*col, y 56 + 112*row) cut out so the v3 RoomV3Cell rooms show through, like ambulance_v3.
 #   python3 tools/art/decker/shell.py <decker_2deck_1x.png> <decker_3deck_1x.png>  -> assets/vehicles/decker_v3/
 import json,os,sys

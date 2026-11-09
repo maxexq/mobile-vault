@@ -26,7 +26,7 @@ HEAD = lambda p: sum(p[:3]) > 500
 def one(n):
     im = Image.open(os.path.join(DIR, f"shell_f{n}.png")).convert("RGBA"); W, H = im.size; D = H - 344
     big = lambda bs: max(bs, key=lambda b: b["n"])
-    head = big(amb.blobs(im, HEAD, (9, 262 + D, 16, 280 + D)))      # the code-drawn lamp (cleanup.py)
+    head = big(amb.blobs(im, HEAD, (13, 256 + D, 21, 272 + D)))     # the PixelLab lamp (front/, round 3)
     marker = big(amb.blobs(im, AMBER, (588, 244 + D, 596, 256 + D)))
     tails = [b for b in amb.blobs(im, REDL, (588, 257 + D, 596, 272 + D)) if b["n"] >= 4]
     # destination sign: the amber glyphs (sign never moves: it sits above the top deck)

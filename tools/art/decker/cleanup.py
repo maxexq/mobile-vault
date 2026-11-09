@@ -17,6 +17,8 @@ D=os.path.join(os.path.dirname(os.path.abspath(__file__)),"../../../assets/vehic
 WHEELS=((62.5,310.0),(452.5,310.0),(504.5,310.0)); R=23.0
 OUT=(8,8,10,255)
 BGC=(46,44,48)
+import sys
+CODE_LAMP="--code-lamp" in sys.argv
 def in_wheel(x,y):
     return any((x+.5-cx)**2+(y+.5-cy)**2<=R*R for cx,cy in WHEELS)
 X0,Y0,FH,CW,CH=104,56,112,144,96
@@ -70,12 +72,51 @@ def headlight(px,dy):
                 c=(255,252,232,255) if (lx==0 and ly<=1) else ((236,228,184,255) if ly<4 else (204,192,146,255))
             px[x,y+dy]=c
     px[x0+w-1,y0+h+dy]=OUT                       # mounting bolt shadow under the housing
+# 5) MV-739 round 3 (stray check, designs/vehicle-2floor/stray-check): outside the room windows and the sign,
+#    (a) backdrop-tinted fringe pixels (within 20 of the backdrop colour) touching a see-through pixel are cleared,
+#    (b) pixels left with 3+ open sides (1 px spikes / specks) are cleared, twice,
+#    (c) bits no longer connected to the bus are cleared,
+#    (d) backdrop colour still inside the body (behind the front window mesh, a few in the mid band) becomes dark glass.
+GLASS=(30,32,40,255)
+def strays(px,W,H,dy,floors):
+    cl=[(X0+152*c,Y0+FH*r,X0+152*c+CW,Y0+FH*r+CH) for r in range(floors) for c in range(3)]
+    skip=lambda x,y: any(a<=x<c and b<=y<d for a,b,c,d in cl) or (18<=y<=38 and 22<=x<=76)
+    opn=lambda x,y: not(0<=x<W and 0<=y<H) or px[x,y][3]==0
+    dist=lambda p: sum(abs(a-b) for a,b in zip(p[:3],BGC))
+    for _ in range(4):                           # fringe peels one ring per pass
+        hit=[(x,y) for y in range(H) for x in range(W) if px[x,y][3] and not skip(x,y) and dist(px[x,y])<=20
+             and any(opn(x+a,y+b) for a,b in ((1,0),(-1,0),(0,1),(0,-1)))]
+        for x,y in hit: px[x,y]=(0,0,0,0)
+    for _ in range(2):
+        hit=[(x,y) for y in range(H) for x in range(W) if px[x,y][3] and not skip(x,y)
+             and sum(opn(x+a,y+b) for a,b in ((1,0),(-1,0),(0,1),(0,-1)))>=3]
+        for x,y in hit: px[x,y]=(0,0,0,0)
+    seen=bytearray(W*H); comps=[]
+    for y in range(H):
+        for x in range(W):
+            if px[x,y][3]==0 or seen[y*W+x]: continue
+            st=[(x,y)]; seen[y*W+x]=1; pts=[]
+            while st:
+                a,b=st.pop(); pts.append((a,b))
+                for c,d in ((a+1,b),(a-1,b),(a,b+1),(a,b-1),(a+1,b+1),(a-1,b-1),(a+1,b-1),(a-1,b+1)):
+                    if 0<=c<W and 0<=d<H and not seen[d*W+c] and px[c,d][3]:
+                        seen[d*W+c]=1; st.append((c,d))
+            comps.append(pts)
+    comps.sort(key=len,reverse=True)
+    for c in comps[1:]:
+        for x,y in c: px[x,y]=(0,0,0,0)
+    for y in range(H):
+        for x in range(W):
+            if px[x,y][3] and not skip(x,y) and dist(px[x,y])<=6: px[x,y]=GLASS
 def clean(path,dy,floors):
     im=Image.open(path).convert("RGBA"); W,H=im.size; px=im.load(); clear=(0,0,0,0)
-    # 1) headlight plate: columns 0..8, rows 253..281 (the bumper starts at 282)
-    for y in range(253,282):
-        for x in range(0,9): px[x,y+dy]=clear
-    headlight(px,dy)
+    # 1) the front end + headlight are PixelLab art again since round 3 (designs/vehicle-2floor/front, picked s4):
+    #    shell.py reads front/out/decker_{2,3}deck_1x.png. headlight() below is the round-2 code lamp, kept for
+    #    reference / fallback (python3 cleanup.py --code-lamp) when the shells are built from the old approved art.
+    if CODE_LAMP:
+        for y in range(253,282):
+            for x in range(0,9): px[x,y+dy]=clear
+        headlight(px,dy)
     # 2) under the chassis / wheels
     for y in range(301,344):
         for x in range(W):
@@ -88,6 +129,7 @@ def clean(path,dy,floors):
             p=px[x,y]
             if p[3]==0 or sum(abs(a-b) for a,b in zip(p[:3],BGC))>6: continue
             if (y<56 and not (18<=y<=38 and 22<=x<=76)) or y2>=286: px[x,y]=clear
+    strays(px,W,H,dy,floors)
     frame(px,W,H,dy,floors)
     im.save(path)
 if __name__=="__main__":
