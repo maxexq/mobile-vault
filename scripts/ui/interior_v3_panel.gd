@@ -284,7 +284,7 @@ func _rebuild() -> void:
 	if amb_shell.visible:
 		amb_shell.texture = load(str(shell_spec(Game.tier()).dir) + "shell_f%d.png" % Game.floors())
 		amb_shell.position = Vector2(0.0, _unit_top(-1))
-		attach_nose(amb_shell)
+		attach_nose(amb_shell, dk())
 	world.move_child(amb_shell, world.get_child_count() - 1)     # the shell's lip and decks over the room edges
 	for i in range(rt_shells.size() - 1, -1, -1):                 # road train: rear units first, the body on top
 		world.move_child(rt_shells[i], world.get_child_count() - 1)

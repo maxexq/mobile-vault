@@ -13141,6 +13141,8 @@ func _decker_test() -> void:
 		Dev.rooms_v3_open()
 		await wait(0.4)
 		var tex := panel.amb_shell.texture
+		var nose := panel.amb_shell.get_node_or_null("Nose") as Sprite2D
+		_fold("decker: no ambulance nose in the interior", nose == null or not nose.visible, str(d))
 		shells_ok = shells_ok and panel.dk() and panel.amb() and panel.amb_shell.visible and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
 		var img := tex.get_image()
 		for slot in Game.main_slots():
@@ -13154,6 +13156,7 @@ func _decker_test() -> void:
 			shells_ok = shells_ok and cp.is_equal_approx(want) and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1
 		await shot("decker_interior_f%d" % d)
 		panel.close()
+	_fold_flush()
 	_check("decker: v3 interior draws the bus shell, every room in its window (2 and 3 decks)", shells_ok)
 	get_window().size = old_window
 	var v: Vehicle = main.vehicle
@@ -13161,6 +13164,8 @@ func _decker_test() -> void:
 	for d in [2, 3]:
 		Dev.decker_preview(d)
 		await wait(0.4)
+		var nose := v.v2_shell.get_node_or_null("Nose") as Sprite2D
+		_fold("decker: no ambulance nose on the road", nose == null or not nose.visible, str(d))
 		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
 		world_ok = world_ok and v.v2 and v.v2_dk() and (v.v2_shell.texture.resource_path.ends_with("decker_v3/shell_f%d.png" % d) \
 			or (v.amb_on and v.amb.dir == AmbulanceMotion.DK_DIR and v.amb.floors == d)) \
@@ -13172,6 +13177,7 @@ func _decker_test() -> void:
 			var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
 			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
 		await shot("decker_world_f%d" % d)
+	_fold_flush()
 	_check("decker: on the road (world v2) the bus carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
 	# MV-739: shell clean-up (plate in front of the headlight, stray pixels under the chassis / around the tyres) and
 	# a steel frame around every room window
