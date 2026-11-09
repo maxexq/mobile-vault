@@ -661,6 +661,11 @@ func _run() -> void:
 		await _rooms_v3_test()
 		_finish()
 		return
+	if "--only=pets_v3" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _pets_v3_test()
+		_finish()
+		return
 	if "--only=crew_portraits_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _crew_portraits_v3_test()
@@ -1695,6 +1700,7 @@ func _run() -> void:
 	await _parallax_v2_test()
 	await _rooms_v3_test()
 	await _crew_portraits_v3_test()
+	await _pets_v3_test()
 
 
 
@@ -6220,6 +6226,113 @@ func _crew_portraits_v3_test() -> void:
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	await wait(0.2)
+
+
+## MV-733: the approved realistic pets (MV-601) in the v3 room cells (switch pets_v3)
+func _pets_v3_cells(cells: Dictionary) -> Array:
+	var out := []
+	for slot in cells:
+		for a in (cells[slot] as RoomV3Cell).pets.values():
+			out.append(a)
+	return out
+
+
+func _pets_v3_test() -> void:
+	var old_window := get_window().size
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "rooms_v3", true)
+	Features.set_override("features", "rooms_v3_review", true)
+	Features.set_override("features", "pets_v3", true)
+	get_window().size = Vector2i(405, 720)
+	var sheets_ok := true
+	for b in PetsV3.breeds():
+		var t := PetsV3.sheet(str(b))
+		sheets_ok = sheets_ok and t != null and t.get_size() == Vector2(32 * (1 + int(PetsV3.info(b).walk.n)), 24)
+	_check("pets v3: 9 approved breeds (3 dogs, 3 cats, 3 chickens), every sheet loads", PetsV3.ok() and PetsV3.breeds().size() == 9
+		and PetsV3.breeds("dog").size() == 3 and PetsV3.breeds("cat").size() == 3 and PetsV3.breeds("hen").size() == 3 and sheets_ok)
+	var any := {"kind": "cat", "name": "ทดสอบ"}
+	_check("pets v3: story pets keep their look, other names a stable breed of their kind",
+		PetsV3.breed_of({"kind": "dog", "name": "ข้าวตัง"}) == "dog_mutt" and PetsV3.breed_of({"kind": "cat", "name": "ส้มจี๊ด"}) == "cat_ginger"
+		and PetsV3.breed_of({"kind": "hen", "name": "ไข่ดาว"}) == "hen_brown" and PetsV3.breed_of(any) == PetsV3.breed_of(any.duplicate())
+		and PetsV3.breeds("cat").has(PetsV3.breed_of(any)) and PetsV3.breed_of({"kind": "dog", "name": "x", "breed": "dog_terrier"}) == "dog_terrier")
+	var adopt_ok := true
+	for ev in Data.EVENTS.values():
+		for ch in ev.get("choices", []):
+			if str(ch.get("action", "")) == "adopt":
+				adopt_ok = adopt_ok and PetsV3.breeds(str(ch.pet.kind)).has(str(ch.pet.get("breed", "")))
+	_check("pets v3: the adoption events name a v3 breed", adopt_ok)
+	Dev.rooms_v3_showcase(2)
+	Dev.clear_pets()
+	Dev.add_pet("dog")
+	Dev.add_pet("dog")
+	_check("pets v3: GOD dog twice = two different dog breeds", Game.s.pets.size() == 2 and str(Game.s.pets[0].breed) != str(Game.s.pets[1].breed))
+	Dev.clear_pets()
+	PetsV3.reset()
+	Dev.pets_v3_all()
+	var breeds := {}
+	for p in Game.s.pets:
+		breeds[PetsV3.breed_of(p)] = true
+	_check("pets v3: GOD all = one pet of each of the 9 breeds", Game.s.pets.size() == 9 and breeds.size() == 9)
+	await wait(1.0)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var actors := _pets_v3_cells(panel.cells)
+	var one_room_each := actors.size() == 9
+	var seen := {}
+	var draw_ok := true
+	for a in actors:
+		var pa := a as PetV3Actor
+		seen[pa.idx] = true
+		draw_ok = draw_ok and pa.spr.scale == Vector2.ONE and pa.spr.texture == PetsV3.sheet(pa.breed) and pa.breed == PetsV3.breed_of(Game.s.pets[pa.idx])
+	_check("pets v3: every pet is in exactly one v3 room of the interior, drawn 1:1 with its breed", one_room_each and seen.size() == 9 and draw_ok)
+	var rooms_ok := true
+	for i in Game.s.pets.size():
+		rooms_ok = rooms_ok and PetsV3.rooms().has(PetsV3.slot_of(i))
+	_check("pets v3: pets only stand in built rooms", rooms_ok and not PetsV3.rooms().is_empty())
+	var start := {}
+	for a in actors:
+		start[a] = (a as PetV3Actor).position
+	await wait(2.0)
+	var moved := false
+	for a in actors:
+		if is_instance_valid(a) and (a as PetV3Actor).position.distance_to(start[a]) > 1.0:
+			moved = true
+	_check("pets v3: pets trot around their room", moved)
+	await shot("pets_v3_interior")
+	var v: Vehicle = main.vehicle
+	if v.v2:
+		_check("pets v3: the world v2 ambulance shows the same pets, old pets hidden", _pets_v3_cells(v.v2_cells).size() == 9 and not v.pets_root.visible)
+	var rooms := PetsV3.rooms()
+	var to := int(rooms[0]) if PetsV3.slot_of(0) != int(rooms[0]) else int(rooms[-1])
+	PetsV3.put(0, to)
+	await wait(1.2)
+	var arrived := false
+	for a in (panel.cells[to] as RoomV3Cell).pets.values():
+		arrived = arrived or (a as PetV3Actor).idx == 0
+	_check("pets v3: a pet that hops to another room shows up there", arrived and PetsV3.pets_in(to).any(func(p): return int(p.i) == 0))
+	Dev.blackout(true)
+	panel.refresh()
+	await wait(0.2)
+	var dim_ok := true
+	for a in _pets_v3_cells(panel.cells):
+		dim_ok = dim_ok and (a as PetV3Actor).spr.modulate == RoomV3Cell.DARK
+	_check("pets v3: pets go dim in a power-out", dim_ok)
+	Game.s.res.power = 50.0
+	panel.refresh()
+	Features.set_override("features", "pets_v3", false)
+	await wait(1.2)
+	_check("pets v3: switch off = no v3 pets in the cells", _pets_v3_cells(panel.cells).is_empty() and PetsV3.pets_in(to).is_empty())
+	if v.v2:
+		_check("pets v3: switch off brings back the old pets layer", v.pets_root.visible)
+	panel.close()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	PetsV3.reset()
+	Game.rooms_changed.emit()
+	Game.pets_changed.emit()
+	get_window().size = old_window
+	await wait(0.3)
 
 
 ## MV-711: v3 rooms + ref v3 crew in the v3 interior view (switches rooms_v3 / rooms_v3_review)
