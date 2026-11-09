@@ -48,6 +48,11 @@
      "row": 7,
      "n": 7,
      "fps": 10
+    },
+    "shoot": {
+     "row": 8,
+     "n": 7,
+     "fps": 10
     }
    },
    "portrait": "portraits/ren.png"
@@ -93,6 +98,11 @@
     },
     "carrywalk": {
      "row": 7,
+     "n": 7,
+     "fps": 10
+    },
+    "shoot": {
+     "row": 8,
      "n": 7,
      "fps": 10
     }
@@ -142,6 +152,11 @@
      "row": 7,
      "n": 7,
      "fps": 10
+    },
+    "shoot": {
+     "row": 8,
+     "n": 7,
+     "fps": 10
     }
    },
    "portrait": "portraits/bit.png"
@@ -187,6 +202,11 @@
     },
     "carrywalk": {
      "row": 7,
+     "n": 7,
+     "fps": 10
+    },
+    "shoot": {
+     "row": 8,
      "n": 7,
      "fps": 10
     }
@@ -236,6 +256,11 @@
      "row": 7,
      "n": 7,
      "fps": 10
+    },
+    "shoot": {
+     "row": 8,
+     "n": 7,
+     "fps": 10
     }
    },
    "portrait": "portraits/sorn.png"
@@ -281,6 +306,11 @@
     },
     "carrywalk": {
      "row": 7,
+     "n": 7,
+     "fps": 10
+    },
+    "shoot": {
+     "row": 8,
      "n": 7,
      "fps": 10
     }
@@ -330,6 +360,11 @@
      "row": 7,
      "n": 7,
      "fps": 10
+    },
+    "shoot": {
+     "row": 8,
+     "n": 7,
+     "fps": 10
     }
    },
    "portrait": "portraits/tham.png"
@@ -375,6 +410,11 @@
     },
     "carrywalk": {
      "row": 7,
+     "n": 7,
+     "fps": 10
+    },
+    "shoot": {
+     "row": 8,
      "n": 7,
      "fps": 10
     }
@@ -424,6 +464,11 @@
      "row": 7,
      "n": 7,
      "fps": 10
+    },
+    "shoot": {
+     "row": 8,
+     "n": 7,
+     "fps": 10
     }
    },
    "portrait": "portraits/krai.png"
@@ -471,6 +516,11 @@
      "row": 7,
      "n": 7,
      "fps": 10
+    },
+    "shoot": {
+     "row": 8,
+     "n": 7,
+     "fps": 10
     }
    },
    "portrait": "portraits/ploy.png"
@@ -516,6 +566,11 @@
     },
     "carrywalk": {
      "row": 7,
+     "n": 7,
+     "fps": 10
+    },
+    "shoot": {
+     "row": 8,
      "n": 7,
      "fps": 10
     }

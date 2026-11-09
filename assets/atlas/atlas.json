@@ -5183,6 +5183,30 @@
 22,
 16
 ],
+"fx_room_gunner_flash_0": [
+2039,
+57,
+6,
+5
+],
+"fx_room_gunner_flash_1": [
+2039,
+63,
+6,
+5
+],
+"fx_room_gunner_flash_2": [
+2032,
+67,
+6,
+5
+],
+"fx_room_gunner_flash_3": [
+2039,
+69,
+6,
+5
+],
 "fx_room_saloon_steam_0": [
 917,
 2804,
@@ -7797,6 +7821,12 @@
 1395,
 2131,
 196,
+52
+],
+"room_rear_gunner": [
+1967,
+67,
+64,
 52
 ],
 "room_refinery": [

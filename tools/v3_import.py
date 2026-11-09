@@ -31,6 +31,8 @@ ROOMS = {
     "radio":       dict(status="review", ticket="MV-623", files=[RP + "radio_v3/final/radio_L%d.png"], hot=RP + "radio_v3/hotspots.json", idle=RP + "radio_v3/rad3_L%d_idle.gif"),
     "refinery":    dict(status="review", ticket="MV-626", files=[RP + "distill_v3/final/refinery_L%d.png"], hot=RP + "distill_v3/hotspots.json", idle=RP + "distill_v3/ds3_L%d_idle.gif"),
     "workshop":    dict(status="review", ticket="MV-624", files=[RP + "workshop_v3/final/workshop_L%d.png"], hot=RP + "workshop_v3/hotspots.json", idle=RP + "workshop_v3/ws3_L%d_idle.gif"),
+    # MV-716: rear gunner post (MV-705 art), the default rear room; idle overlay from the crew-free idle render (_room.gif)
+    "rear_gunner": dict(status="approved", ticket="MV-705", files=[RP + "gunner_v3/final/gunner_L%d.png"], hot=RP + "gunner_v3/final/hotspots.json", idle=RP + "gunner_v3/gunner3_L%d_idle_room.gif"),
 }
 EMPTY = dict(status="review", ticket="MV-621", files=[RP + "empty3/final/empty_stage%d.png"], hot=RP + "empty3/hotspots.json", idle=RP + "empty3/em3_s%d_idle.gif")
 
@@ -40,8 +42,8 @@ for _c in ("bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi"):
     CREW[_c] = "lore-crew-3/approved/" + _c
 # MV-722: approved v3 portraits (MV-708, 64x64 busts, v2 portrait style) -> assets/v3/portraits/<id>.png
 PORTRAITS = "crew-portraits-v3/approved"
-CLIPS = ["idle", "walk", "work", "construct", "eat", "drink", "talk", "carrywalk"]
-CLIP_FPS = {"idle": 6, "walk": 10, "work": 8, "construct": 8, "eat": 6, "drink": 6, "talk": 6, "carrywalk": 10}
+CLIPS = ["idle", "walk", "work", "construct", "eat", "drink", "talk", "carrywalk", "shoot"]   # shoot: MV-716 gunner post
+CLIP_FPS = {"idle": 6, "walk": 10, "work": 8, "construct": 8, "eat": 6, "drink": 6, "talk": 6, "carrywalk": 10, "shoot": 10}
 IDLE_FRAMES = 36          # idle overlay frames kept (of 96-144), played at IDLE_FPS
 IDLE_COLS = 6
 
