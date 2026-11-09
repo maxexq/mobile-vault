@@ -28,6 +28,8 @@ const WELL := Color("141214")      # dark wheel well behind each tyre (rides wit
 static var _meta: Dictionary = {}         # dir -> anim.json
 static var _shells: Dictionary = {}        # dir + floors -> ImageTexture (tyres + flag cloth cut out)
 static var _flag_frames: Dictionary = {}   # dir + floors -> Array[ImageTexture]
+static var _swing_frames: Dictionary = {}  # dir + floors -> Array (per swing rect) of Array[ImageTexture]
+const SWING_STEPS := 9                     # frames from -2 to +2 px at the cable's lowest point
 static var _spin: Dictionary = {}          # dir -> Array[AtlasTexture]
 static var _glow_tex: GradientTexture2D
 
@@ -51,6 +53,9 @@ var _flag_i := 0
 var _was_moving := false
 var _lantern := 1.0
 var _lantern_t := 0.0
+var swings: Array[Sprite2D] = []   # Decker: loose cables under the floor
+var _swing_ph := 0.0
+var _swing_kick := 0.0
 var sign_lit: Sprite2D             # Decker: the destination sign's glyphs, additive
 var sign_dead: Sprite2D            # Decker: covers one glyph while it drops out
 var _sign := 1.0
@@ -98,6 +103,12 @@ static func cut_shell(n: int, d := DIR) -> Texture2D:
 						and Vector2(x + 0.5, y + 0.5).distance_to(c) <= r:
 					img.set_pixel(x, y, Color(0, 0, 0, 0))
 	_flag_frames[key] = []
+	var sw: Array = []
+	for q in f.get("swing", []):
+		var rect := Rect2i(int(q[0]), int(q[1]), int(q[2]), int(q[3]))
+		sw.append(_swing_set(img.get_region(rect)))
+		img.fill_rect(rect, Color(0, 0, 0, 0))
+	_swing_frames[key] = sw
 	if f.has("flag"):
 		var fr: Array = f.flag
 		var cloth := img.get_region(Rect2i(fr[0], fr[1], fr[2], fr[3]))
@@ -105,6 +116,25 @@ static func cut_shell(n: int, d := DIR) -> Texture2D:
 		_flag_frames[key] = _wave_frames(cloth)
 	_shells[key] = ImageTexture.create_from_image(img)
 	return _shells[key]
+
+
+## loose cables: SWING_STEPS frames, every pixel shifted sideways by s * its depth below the attach row (s = -2..2),
+## 3 px padding left and right
+static func _swing_set(src: Image) -> Array:
+	var out: Array = []
+	var w := src.get_width()
+	var h := src.get_height()
+	for i in SWING_STEPS:
+		var sv := -2.0 + 4.0 * float(i) / float(SWING_STEPS - 1)
+		var im := Image.create_empty(w + 6, h, false, Image.FORMAT_RGBA8)
+		for y in h:
+			var dx := int(round(sv * float(y + 1) / float(h)))
+			for x in w:
+				var c := src.get_pixel(x, y)
+				if c.a > 0.0:
+					im.set_pixel(x + 3 + dx, y, c)
+		out.append(ImageTexture.create_from_image(im))
+	return out
 
 
 ## Decker: the sign's glyph pixels alone (white, tinted amber by modulate) and the sign's unlit face colour
@@ -228,6 +258,16 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 		_glow("lantern", origin + _v(f.lantern), 12.0, Color(1.0, 0.7, 0.3))
 	if f.has("mast"):
 		_glow("mast", origin + _v(f.mast), 5.0, Color(1.0, 0.25, 0.2))
+	var ri := 0
+	for q in f.get("swing", []):
+		var sp := Sprite2D.new()
+		sp.centered = false
+		sp.position = origin + Vector2(float(q[0]) - 3.0, float(q[1]))
+		sp.texture = (_swing_frames[dir + str(n)][ri] as Array)[SWING_STEPS / 2]
+		sp.set_meta("i", ri)
+		over.add_child(sp)
+		swings.append(sp)
+		ri += 1
 	if f.has("sign"):
 		_build_sign(f, origin)
 		var beam := _glow("beam", origin + _v(f.head) + Vector2(-26, 2), 1.0, Color(1.0, 0.88, 0.6))
@@ -288,6 +328,7 @@ func clear() -> void:
 	under = null
 	over = null
 	tyres.clear()
+	swings.clear()
 	sign_lit = null
 	sign_dead = null
 	flag = null
@@ -314,6 +355,7 @@ func _lamp(id: String, a: float) -> void:
 func bump(speed_px: float) -> void:
 	if tyres.is_empty() or speed_px < 1.0:
 		return
+	_swing_kick = 1.4
 	var x0 := tyres[0].position.x
 	for i in tyres.size():
 		var d := (tyres[i].position.x - x0) * under.scale.x            # world px behind the front axle
@@ -381,6 +423,7 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_lamp("lantern", dark * 0.8 * _lantern)
 	_lamp("mast", 0.9 if fmod(_t, 1.6) < 0.22 else 0.0)
 	_lamp("beam", dark * 0.5 if engine_on else 0.0)
+	_tick_swing(delta, speed_px, engine_on)
 	_tick_sign(delta, engine_on, dark, hazard)
 	# flag: a slow breeze parked, snapping in the headwind when driving
 	if flag == null:
@@ -419,6 +462,26 @@ func _tick_sign(delta: float, engine_on: bool, dark: float, hazard: bool) -> voi
 	sign_lit.visible = a > 0.01
 	if not engine_on:
 		sign_dead.visible = false
+
+
+## loose cables sway: a lazy swing parked with the engine idling, more on the road, a kick at every bump
+func _tick_swing(delta: float, speed_px: float, engine_on: bool) -> void:
+	if swings.is_empty():
+		return
+	var sp := clampf(speed_px / ROAD_PX, 0.0, 1.5)
+	_swing_ph += delta * (2.2 + 2.5 * sp)
+	_swing_kick = move_toward(_swing_kick, 0.0, delta * 1.5)
+	var amp := (0.5 if engine_on else 0.25) + 0.9 * sp + _swing_kick
+	var sv := clampf(amp * sin(_swing_ph), -2.0, 2.0)
+	var fi := clampi(int(round((sv + 2.0) / 4.0 * float(SWING_STEPS - 1))), 0, SWING_STEPS - 1)
+	for s in swings:
+		s.texture = (_swing_frames[dir + str(floors)][int(s.get_meta("i"))] as Array)[fi]
+
+
+func swing_frame() -> int:
+	if swings.is_empty():
+		return -1
+	return (_swing_frames[dir + str(floors)][0] as Array).find(swings[0].texture)
 
 
 func sign_alpha() -> float:

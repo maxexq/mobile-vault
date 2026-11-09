@@ -26,7 +26,7 @@ HEAD = lambda p: sum(p[:3]) > 500
 def one(n):
     im = Image.open(os.path.join(DIR, f"shell_f{n}.png")).convert("RGBA"); W, H = im.size; D = H - 344
     big = lambda bs: max(bs, key=lambda b: b["n"])
-    head = big(amb.blobs(im, HEAD, (13, 266 + D, 20, 280 + D)))
+    head = big(amb.blobs(im, HEAD, (9, 262 + D, 16, 280 + D)))      # the code-drawn lamp (cleanup.py)
     marker = big(amb.blobs(im, AMBER, (588, 244 + D, 596, 256 + D)))
     tails = [b for b in amb.blobs(im, REDL, (588, 257 + D, 596, 272 + D)) if b["n"] >= 4]
     # destination sign: the amber glyphs (sign never moves: it sits above the top deck)
@@ -42,7 +42,9 @@ def one(n):
     return {"size": [W, H], "wheels": [[x, H - WHEEL_DY + 0.0] for x in WHEEL_X], "wheel_r": amb.WHEEL_R,
             "head": head["c"], "marker": marker["c"], "tails": [t["c"] for t in tails],
             "sign": [cols[0], sy0, cols[-1] + 1 - cols[0], sy1 - sy0], "glyphs": [[a, b - a] for a, b in glyphs],
-            "exhaust": [589.0, 303.0 + D]}
+            "exhaust": [589.0, 303.0 + D],
+            # loose cables hanging under the floor: rows below the attach row swing (AmbulanceMotion "swing")
+            "swing": [[100, 300 + D, 166, 14]]}
 
 
 def spin_strip():
