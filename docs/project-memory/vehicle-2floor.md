@@ -16,3 +16,7 @@ Related: [[vehicles-flat-2d]], [[road-train-approved-set]], [[ambulance-v3-ingam
 - 2026-11-09 17:37 Parames PICKED A (Decker bus) -> approved/decker_2deck_{1x,2x} + README. 3-deck upgrade = deck3.py (scrap
   corrugated 3rd deck inserted under the roof, rows >=56 shift 112; L s1 + R s1 picked, ~75 gens) -> approved/decker_3deck. Page v2.
   Next: card asks how players get it (unlock); in-game plan = id decker, switch decker, shell_f2/f3 like ambulance v3, GOD, autotest.
+- 2026-11-09 Parames: concept C (Bastion 42-B) becomes ANOTHER vehicle too (MV-738). Picked "เลือก 1 ใน 2": one tier_bus research
+  unlocks Decker + Bastion, the next generation picks one. approved/bastion_2deck_{1x,2x}.png = C with cab "43-B" hand-fixed to
+  42-B (no gens). In game behind switch `bastion` (id bastion, Data.BASTION, tools/art/bastion/shell.py, 3rd deck = top deck
+  repeated in code), branch mv-738-bastion stacked on mv-736-decker.

@@ -209,6 +209,9 @@ func _build_crew() -> void:
 			refresh())
 		vh.add_child(tb)
 	_list.add_child(vh)
+	var pick_txt := str(Game.vehicle_def_for(tier_pick).get("pick", ""))
+	if Game.bastion_on() and pick_txt != "" and Meta.tier_unlocked("bastion"):
+		_list.add_child(UIKit.wrap_label(Loc.t(pick_txt), UIKit.FS_SMALL, UIKit.C_TEXT))     # MV-738: Decker vs Bastion
 	var go := UIKit.button(Loc.t("สร้างพาหนะคันใหม่!"), "red", "hammer")
 	go.name = "NextGenerationButton"
 	go.pressed.connect(_request_next_generation)
