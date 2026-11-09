@@ -55,7 +55,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/ren.png"
+   "portrait": "portraits/ren.png",
+   "portrait_moods": {
+    "happy": "portraits/ren_happy.png",
+    "stressed": "portraits/ren_stressed.png",
+    "injured": "portraits/ren_injured.png"
+   }
   },
   "clara": {
    "file": "clara.png",
@@ -107,7 +112,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/clara.png"
+   "portrait": "portraits/clara.png",
+   "portrait_moods": {
+    "happy": "portraits/clara_happy.png",
+    "stressed": "portraits/clara_stressed.png",
+    "injured": "portraits/clara_injured.png"
+   }
   },
   "bit": {
    "file": "bit.png",
@@ -159,7 +169,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/bit.png"
+   "portrait": "portraits/bit.png",
+   "portrait_moods": {
+    "happy": "portraits/bit_happy.png",
+    "stressed": "portraits/bit_stressed.png",
+    "injured": "portraits/bit_injured.png"
+   }
   },
   "wan": {
    "file": "wan.png",
@@ -211,7 +226,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/wan.png"
+   "portrait": "portraits/wan.png",
+   "portrait_moods": {
+    "happy": "portraits/wan_happy.png",
+    "stressed": "portraits/wan_stressed.png",
+    "injured": "portraits/wan_injured.png"
+   }
   },
   "sorn": {
    "file": "sorn.png",
@@ -263,7 +283,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/sorn.png"
+   "portrait": "portraits/sorn.png",
+   "portrait_moods": {
+    "happy": "portraits/sorn_happy.png",
+    "stressed": "portraits/sorn_stressed.png",
+    "injured": "portraits/sorn_injured.png"
+   }
   },
   "lin": {
    "file": "lin.png",
@@ -315,7 +340,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/lin.png"
+   "portrait": "portraits/lin.png",
+   "portrait_moods": {
+    "happy": "portraits/lin_happy.png",
+    "stressed": "portraits/lin_stressed.png",
+    "injured": "portraits/lin_injured.png"
+   }
   },
   "tham": {
    "file": "tham.png",
@@ -367,7 +397,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/tham.png"
+   "portrait": "portraits/tham.png",
+   "portrait_moods": {
+    "happy": "portraits/tham_happy.png",
+    "stressed": "portraits/tham_stressed.png",
+    "injured": "portraits/tham_injured.png"
+   }
   },
   "fah": {
    "file": "fah.png",
@@ -419,7 +454,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/fah.png"
+   "portrait": "portraits/fah.png",
+   "portrait_moods": {
+    "happy": "portraits/fah_happy.png",
+    "stressed": "portraits/fah_stressed.png",
+    "injured": "portraits/fah_injured.png"
+   }
   },
   "krai": {
    "file": "krai.png",
@@ -471,7 +511,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/krai.png"
+   "portrait": "portraits/krai.png",
+   "portrait_moods": {
+    "happy": "portraits/krai_happy.png",
+    "stressed": "portraits/krai_stressed.png",
+    "injured": "portraits/krai_injured.png"
+   }
   },
   "ploy": {
    "file": "ploy.png",
@@ -523,7 +568,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/ploy.png"
+   "portrait": "portraits/ploy.png",
+   "portrait_moods": {
+    "happy": "portraits/ploy_happy.png",
+    "stressed": "portraits/ploy_stressed.png",
+    "injured": "portraits/ploy_injured.png"
+   }
   },
   "noi": {
    "file": "noi.png",
@@ -575,7 +625,12 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/noi.png"
+   "portrait": "portraits/noi.png",
+   "portrait_moods": {
+    "happy": "portraits/noi_happy.png",
+    "stressed": "portraits/noi_stressed.png",
+    "injured": "portraits/noi_injured.png"
+   }
   }
  }
 }

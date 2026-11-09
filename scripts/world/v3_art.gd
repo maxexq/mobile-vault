@@ -106,10 +106,15 @@ static func crew_for(d: Dictionary) -> String:
 	return CREW_IDS[absi(id * 7 + v.hash()) % CREW_IDS.size()]
 
 
-## MV-722: the character's approved 64x64 bust portrait (MV-708), null when it has none
-static func portrait_tex(cid: String) -> Texture2D:
+## MV-722: the character's approved 64x64 bust portrait (MV-708), null when it has none.
+## MV-735: `mood` = "happy" / "stressed" / "injured" picks that face (falls back to the neutral one when missing)
+const PORTRAIT_MOODS := ["happy", "stressed", "injured"]
+static func portrait_tex(cid: String, mood: String = "") -> Texture2D:
 	_load()
-	var f := str((_crew.get(cid, {}) as Dictionary).get("portrait", ""))
+	var e := _crew.get(cid, {}) as Dictionary
+	var f := str(e.get("portrait", ""))
+	if mood != "":
+		f = str((e.get("portrait_moods", {}) as Dictionary).get(mood, f))
 	if f == "":
 		return null
 	var p := DIR + f

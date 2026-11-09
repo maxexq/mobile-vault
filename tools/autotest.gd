@@ -671,6 +671,11 @@ func _run() -> void:
 		await _crew_portraits_v3_test()
 		_finish()
 		return
+	if "--only=crew_portrait_moods" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _crew_portrait_moods_test()
+		_finish()
+		return
 
 
 
@@ -1700,6 +1705,7 @@ func _run() -> void:
 	await _parallax_v2_test()
 	await _rooms_v3_test()
 	await _crew_portraits_v3_test()
+	await _crew_portrait_moods_test()
 	await _pets_v3_test()
 
 
@@ -6225,6 +6231,57 @@ func _crew_portraits_v3_test() -> void:
 	off.free()
 	Features.layers.dev = overrides
 	Features.changed.emit()
+	await wait(0.2)
+
+
+## MV-735: v3 portraits change face with the crew member's state (switch crew_portrait_moods)
+func _crew_portrait_moods_test() -> void:
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var keep: Array = Game.s.dwellers.duplicate(true)
+	var art_ok := true
+	for cid in V3Art.CREW_IDS:
+		var n := V3Art.portrait_tex(str(cid))
+		for m in V3Art.PORTRAIT_MOODS:
+			var t := V3Art.portrait_tex(str(cid), m)
+			art_ok = art_ok and t != null and t != n and t.get_size() == Vector2(64, 64)
+	_check("portrait moods: all 11 characters have happy / stressed / injured 64x64 faces", art_ok)
+	Features.set_override("features", "crew_portraits_v3", true)
+	Features.set_override("features", "crew_portrait_moods", true)
+	var size := (Game.s.dwellers as Array).size()
+	for m in ["injured", "stressed", "happy", ""]:
+		Dev.portrait_mood_preview(m)
+		var same := true
+		for d in Game.s.dwellers:
+			same = same and UIKit.portrait_mood(d) == m and UIKit.portrait_v3(d) == V3Art.portrait_tex(V3Art.crew_for(d), m)
+		_check("portrait moods: whole crew '%s' -> that face (%s)" % [m, Dev.portrait_mood_counts()], same and int(Dev.portrait_mood_counts()[m]) == size)
+	var d: Dictionary = Game.s.dwellers[0]
+	d.happy = 100.0
+	d.hp = float(d.max_hp) * 0.1
+	_check("portrait moods: low HP wins over high happiness", UIKit.portrait_mood(d) == "injured")
+	d.hp = float(d.max_hp)
+	d.happy = 90.0
+	d.mood = "depressed"
+	var dep := UIKit.portrait_mood(d)
+	d.mood = ""
+	_check("portrait moods: depressed shows stressed when morale v2 is on (%s)" % dep, dep == ("stressed" if Crew.v2() else "happy"))
+	Dev.portrait_mood_preview("injured")
+	main.hud.open_panel("dwellers")
+	main.hud.panels.dwellers.manage(int(Game.s.dwellers[0].id))
+	await wait(0.5)
+	var card_ok := false
+	for n in main.hud.panels.dwellers.find_children("*", "TextureRect", true, false):
+		if (n as TextureRect).texture == V3Art.portrait_tex(V3Art.crew_for(Game.s.dwellers[0]), "injured"):
+			card_ok = true
+	_check("portrait moods: crew card shows the injured face", card_ok)
+	await shot("crew_portrait_moods_injured")
+	main.hud.panels.dwellers.close()
+	await wait(0.3)
+	Dev.crew_portrait_moods(false)
+	_check("portrait moods: switch off = neutral face", UIKit.portrait_mood(d) == "" and UIKit.portrait_v3(d) == V3Art.portrait_tex(V3Art.crew_for(d)))
+	Game.s.dwellers = keep
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.dwellers_changed.emit()
 	await wait(0.2)
 
 

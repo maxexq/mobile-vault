@@ -347,11 +347,29 @@ static func portrait(variant: String, big: bool = false, d: Dictionary = {}) -> 
 	return p
 
 
-## MV-722: the v3 portrait for crew member `d` (null when the switch is off, `d` is empty or the art is missing)
+## MV-722: the v3 portrait for crew member `d` (null when the switch is off, `d` is empty or the art is missing).
+## MV-735: with crew_portrait_moods on, the face follows portrait_mood(d)
 static func portrait_v3(d: Dictionary) -> Texture2D:
 	if d.is_empty() or not Features.on("crew_portraits_v3"):
 		return null
-	return V3Art.portrait_tex(V3Art.crew_for(d))
+	return V3Art.portrait_tex(V3Art.crew_for(d), portrait_mood(d))
+
+
+## MV-735: which face crew member `d` shows: "injured" (HP below portrait.injured_hp of max), else "stressed"
+## (depressed / broken, or happiness below portrait.stressed_happy), else "happy" (happiness from portrait.happy_happy),
+## else "" = neutral. Always "" with the switch crew_portrait_moods off.
+static func portrait_mood(d: Dictionary) -> String:
+	if d.is_empty() or not Features.on("crew_portrait_moods"):
+		return ""
+	var mx := maxf(1.0, float(d.get("max_hp", 100.0)))
+	if float(d.get("hp", mx)) < mx * Features.num("portrait.injured_hp", 0.4):
+		return "injured"
+	var h := float(d.get("happy", 75.0))
+	if Crew.is_depressed(d) or Crew.is_broken(d) or h < Features.num("portrait.stressed_happy", 30.0):
+		return "stressed"
+	if h >= Features.num("portrait.happy_happy", 80.0):
+		return "happy"
+	return ""
 
 
 static func button(text: String, color_key: String = "green", icon_name: String = "", min_w: int = 0) -> Button:

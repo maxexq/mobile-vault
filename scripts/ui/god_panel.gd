@@ -537,6 +537,19 @@ func _crew_portraits_v3() -> void:
 		cell.add_child(UIKit.label(str(cid), UIKit.FS_SMALL, UIKit.C_TEXT))
 		grid.add_child(cell)
 	_list.add_child(grid)
+	_crew_portrait_moods()
+
+
+## MV-735: mood faces (happy / stressed / injured) for each v3 portrait, the switch, and a whole-crew preview
+func _crew_portrait_moods() -> void:
+	var on := Features.on("crew_portrait_moods")
+	var c := Dev.portrait_mood_counts()
+	_head("สีหน้า v3", "สีหน้าลูกเรือ (MV-735) · สวิตช์ %s · ปกติ %d ยิ้ม %d เครียด %d บาดเจ็บ %d" % ["เปิด" if on else "ปิด",
+		int(c[""]), int(c.happy), int(c.stressed), int(c.injured)])
+	_row([_b("สีหน้า: " + ("เปิด" if on else "ปิด"), func(): Dev.crew_portrait_moods(not on), "green" if on else "red")], "สวิตช์")
+	_row([_b("ปกติ", func(): Dev.portrait_mood_preview("")), _b("ยิ้ม", func(): Dev.portrait_mood_preview("happy")),
+		_b("เครียด", func(): Dev.portrait_mood_preview("stressed")), _b("บาดเจ็บ", func(): Dev.portrait_mood_preview("injured"))], "ทั้งทีม")
+	_note("ดูหน้าจริงในหน้าลูกเรือ / ทีม หลังกดปุ่มทั้งทีม (MV-720: ไม่มีกริดรูปใน GOD)")
 
 
 func _tab_fight() -> void:

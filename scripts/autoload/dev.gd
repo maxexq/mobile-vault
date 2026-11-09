@@ -1252,6 +1252,44 @@ func crew_portraits_v3(on: bool) -> void:
 	Game.dwellers_changed.emit()
 
 
+## MV-735: switch crew_portrait_moods on/off (portraits follow happiness / morale / HP)
+func crew_portrait_moods(on: bool) -> void:
+	feature_set("crew_portrait_moods", on)
+	Game.dwellers_changed.emit()
+
+
+## MV-735: put the whole crew in the state that shows `mood` ("happy" / "stressed" / "injured" / "" = neutral)
+## by setting HP and happiness (morale stage cleared), so every portrait can be checked in its panels
+func portrait_mood_preview(mood: String) -> void:
+	for d in Game.s.dwellers:
+		var mx := float(d.max_hp)
+		d.mood = ""
+		match mood:
+			"injured":
+				d.hp = maxf(1.0, mx * Features.num("portrait.injured_hp", 0.4) * 0.5)
+				d.happy = 60.0
+			"stressed":
+				d.hp = mx
+				d.happy = maxf(0.0, Features.num("portrait.stressed_happy", 30.0) - 10.0)
+			"happy":
+				d.hp = mx
+				d.happy = 100.0
+			_:
+				d.hp = mx
+				d.happy = 60.0
+	Trace.rec("god", "portrait mood preview %s" % (mood if mood != "" else "neutral"))
+	Game.dwellers_changed.emit()
+
+
+## MV-735: how many of the crew show each face right now {"": n, "happy": n, ...}
+func portrait_mood_counts() -> Dictionary:
+	var c := {"": 0, "happy": 0, "stressed": 0, "injured": 0}
+	for d in Game.s.dwellers:
+		var m := UIKit.portrait_mood(d)
+		c[m] = int(c.get(m, 0)) + 1
+	return c
+
+
 ## how many of the current crew show a v3 portrait right now
 func crew_portraits_v3_count() -> int:
 	var n := 0
