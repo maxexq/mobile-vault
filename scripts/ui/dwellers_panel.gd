@@ -84,7 +84,7 @@ func _where(d: Dictionary) -> Array:
 		var left := maxf(0.0, float(d.away_until) - Time.get_unix_time_from_system())
 		return ["EXPEDITION %dM%02dS" % [int(left) / 60, int(left) % 60], UIKit.C_ORANGE]
 	if Game.squad_role(d) >= 0:
-		return [Combat.ROLES[Game.squad_role(d)].en, UIKit.C_RED]
+		return [Combat.role(Game.squad_role(d)).en, UIKit.C_RED]
 	if Game.is_deck(d):
 		return ["ROOF DECK", UIKit.C_RED]
 	if int(d.room) >= 0:
@@ -303,7 +303,7 @@ func _build_manage(d: Dictionary) -> void:
 	var sq := UIKit.flow(3)
 	var cur_role := Game.squad_role(d)
 	for i in Combat.ROLES.size():
-		var role: Dictionary = Combat.ROLES[i]
+		var role: Dictionary = Combat.role(i)
 		var locked := i >= Combat.slots_unlocked()
 		var b := UIKit.button(("%s (Lv.%d)" % [role.th, role.unlock]) if locked else role.th, "yellow" if cur_role == i else "green")
 		b.disabled = locked or cur_role == i

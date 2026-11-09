@@ -131,6 +131,8 @@ func next_cost(id: String) -> Dictionary:
 
 ## a mod whose feature is switched off (Features) can't be installed or upgraded
 func enabled(id: String) -> bool:
+	if id == "roof_turret" and RearGunner.squad_on():
+		return false      # MV-727: the squad fights from the rear gunner room, no roof gun
 	return Features.on(id) if Features.FEATURES.has(id) else true
 
 

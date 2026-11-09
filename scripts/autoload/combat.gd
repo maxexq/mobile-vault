@@ -198,7 +198,19 @@ func wave() -> int:
 	return int(cs().wave)
 
 
+## MV-727: the squad fights from the rear gunner room (RearGunner); a save without one keeps the roof squad
+func room_mode() -> bool:
+	return not Game.s.is_empty() and RearGunner.room_mode()
+
+
+## the role in a squad slot: the gunner room's GUNNER / LOADER / SPOTTER, or the old roof roles
+func role(i: int) -> Dictionary:
+	return RearGunner.ROOM_ROLES[i] if room_mode() else ROLES[i]
+
+
 func slots_unlocked() -> int:
+	if room_mode():
+		return RearGunner.roles_open()
 	var n := 0
 	for r in ROLES:
 		if int(Game.s.vault_level) >= int(r.unlock):
@@ -423,7 +435,7 @@ func van_stats() -> Dictionary:
 		v.aa = bool(b.get("aa", false))
 	var ram := Mods.level("spike_ram")
 	v.thorns = (v.thorns + 2.0 * ram * pow(1.12, maxf(0.0, enemy_level() - 1.0) * 0.5)) * (1.0 + 0.4 * ram)
-	v.roof = [0.0, 0.4, 0.7, 1.0][clampi(Mods.level("roof_turret"), 0, 3)]
+	v.roof = [0.0, 0.4, 0.7, 1.0][clampi(Mods.level("roof_turret"), 0, 3)] if not room_mode() else 0.0   # MV-727: no roof gun
 	if t.is_empty() and v.roof > 0.0:
 		# a bare roof turret still plinks away
 		v.turret_dmg = 4.0 * pow(1.12, enemy_level() - 1.0)
@@ -448,6 +460,8 @@ func squad_dps() -> float:
 		var h: Dictionary = heroes[i]
 		if not h.is_empty():
 			t += float(h.st.dps)
+	if room_mode():
+		return RearGunner.squad_dps()
 	return t + float(van_stats().turret_dps) + RearGunner.dps()
 
 
@@ -480,6 +494,84 @@ func _tick_room_guns(dt: float) -> void:
 			room_guns.erase(k)
 
 
+## MV-727: with the squad inside the gunner room the hull takes every hit the roof crew used to soak, so it takes less
+func hull_take() -> float:
+	return Features.num("gunner.hull_take", 0.2) if room_mode() else 1.0
+
+
+## MV-727: the squad inside the rear gunner room fires out of the rear hatch (RearGunner.shooters): everyone with
+## their own weapon, the gunner on the mounted gun (+ turret part) with the barrage skill. Shots leave from the hatch
+## (CombatView "room_gun").
+func _tick_room_squad(dt: float) -> void:
+	var sh := RearGunner.shooters()
+	for i in heroes.size():
+		var h: Dictionary = heroes[i]
+		if h.is_empty() or not sh.has(i):
+			continue
+		var g: Dictionary = sh[i]
+		h.atk_t = float(h.atk_t) - dt
+		if h.atk_t <= 0.0:
+			var tt := _gun_targets(g, int(g.splash))
+			if not tt.is_empty():
+				h.atk_t = 1.0 / maxf(0.2, float(g.aspd))
+				for e in tt:
+					_gun_hit(g, e, 1.0, i)
+		if i == 1:
+			_tick_grenade(h, g, dt)
+		if i != 0:
+			continue
+		h.skill_t = float(h.skill_t) - dt
+		if h.skill_t <= 0.0:
+			var pool := _gun_targets(g, 99)
+			if pool.is_empty():
+				h.skill_t = 0.5
+			else:
+				var pw := 1.4 if h.st.get("signature", false) else 1.0
+				skill_cast.emit(0, "volley")
+				for k in 5:
+					_gun_hit(g, pool[rng.randi() % pool.size()], 0.7 * pw, 0)
+				h.skill_t = float(RearGunner.ROOM_ROLES[0].cd) * (0.8 if h.st.get("signature", false) else 1.0)
+
+
+## the LOADER's skill (the old rear bruiser's slam, MV-727): every 9 s a grenade out of the hatch hits everything at
+## the rear for 150 % and stuns it 1.5 s
+func _tick_grenade(h: Dictionary, g: Dictionary, dt: float) -> void:
+	h.skill_t = float(h.skill_t) - dt
+	if h.skill_t > 0.0:
+		return
+	var near := []
+	for e in enemies:
+		if e.kind != "air" and float(e.x) <= DECK_X + 90.0 and not e.get("burrowed", false):
+			near.append(e)
+	if near.is_empty():
+		h.skill_t = 0.5
+		return
+	var pw := 1.4 if h.st.get("signature", false) else 1.0
+	skill_cast.emit(1, "slam")     # same ground blast at the rear as the old bruiser slam
+	for e in near:
+		_gun_hit(g, e, 1.5 * pw, 1)
+		e.stun = 1.5
+	h.skill_t = float(RearGunner.ROOM_ROLES[1].cd) * (0.8 if h.st.get("signature", false) else 1.0)
+
+
+func _gun_targets(g: Dictionary, n: int) -> Array:
+	var tt := _targets_from(GUN_X, float(g.range), n, true)
+	if bool(g.aa):
+		var air := enemies.filter(func(x): return x.kind == "air" and float(x.x) - GUN_X <= float(g.range) * 1.3)
+		if not air.is_empty():
+			tt = air.slice(0, n)
+	return tt
+
+
+func _gun_hit(g: Dictionary, e: Dictionary, mult: float, slot: int = 0) -> void:
+	if float(e.hp) <= 0.0:
+		return
+	var crit := rng.randf() * 100.0 < float(g.crit)
+	var dmg := float(g.dmg) * mult * (float(g.critd) / 100.0 if crit else 1.0) * (2.0 if bool(g.aa) and e.kind == "air" else 1.0)
+	shot.emit("room_gun", RearGunner.post(), "enemy", int(e.id), "bullet")
+	_damage_enemy(e, dmg, crit, slot, true)
+
+
 func rebuild_heroes() -> void:
 	if Game.s.is_empty():
 		return
@@ -494,7 +586,7 @@ func rebuild_heroes() -> void:
 		if d.is_empty() or Game.is_away(d):
 			heroes.append({})
 			continue
-		var st := hero_stats(d, i)
+		var st := hero_stats(d, 0 if room_mode() else i)
 		var prev: Dictionary = old[i] if i < old.size() else {}
 		var h := {"slot": i, "did": did, "st": st, "max": st.hp, "hp": st.hp, "atk_t": rng.randf_range(0.0, 0.5), "skill_t": float(ROLES[i].cd) * 0.6, "heal_t": 3.5, "alive": true, "sub": sub.has(i)}
 		if not prev.is_empty() and int(prev.did) == did:
@@ -781,6 +873,8 @@ func _process(delta: float) -> void:
 func tick(dt: float) -> void:
 	_clock += dt
 	warlord_cd = maxf(0.0, warlord_cd - dt)
+	if RearGunner.sync_squad():
+		Game.squad_changed.emit()
 	if heroes.is_empty() or heroes.size() != ROLES.size():
 		rebuild_heroes()
 	# --- wave flow: classic = back-to-back waves, otherwise the threat director decides
@@ -833,14 +927,18 @@ func tick(dt: float) -> void:
 		if target >= 0:
 			_damage_hero(target, float(e.dmg), e)
 		else:
-			_damage_van(e, float(e.dmg) * 0.35, false, float(vs.def))
+			# MV-727: in room mode melee blows land on the armoured rear wall of the gunner room
+			var wall := Features.num("gunner.melee_take", 0.5) if room_mode() and e.kind == "melee" else 1.0
+			_damage_van(e, float(e.dmg) * 0.35 * wall, false, float(vs.def))
 		# thorns: melee contact with the van's spikes / bruiser parry
 	if float(vs.thorns) > 0.0:
 		for e in enemies:
 			if e.kind == "melee" and float(e.x) <= MELEE_STOP + 12.0:
 				_damage_enemy(e, float(vs.thorns) * dt, false, -1, false)
-	# --- heroes
-	for i in heroes.size():
+	# --- heroes (MV-727: in room mode they're inside the gunner room, see _tick_room_squad)
+	if room_mode():
+		_tick_room_squad(dt)
+	for i in (0 if room_mode() else heroes.size()):
 		var h: Dictionary = heroes[i]
 		if h.is_empty() or not h.alive:
 			continue
@@ -873,8 +971,8 @@ func tick(dt: float) -> void:
 				var low := _lowest_hero()
 				if low >= 0:
 					_heal_hero(low, float(st.heal))
-	# --- turret
-	if float(vs.turret_dps) > 0.0:
+	# --- turret (MV-727: in room mode it is the gun mounted in the gunner room's hatch)
+	if float(vs.turret_dps) > 0.0 and not room_mode():
 		turret.t = float(turret.t) - dt
 		if turret.t <= 0.0:
 			var tt := _targets_from(TURRET_POS.x, float(vs.turret_range), int(vs.turret_splash), true)
@@ -897,7 +995,8 @@ func tick(dt: float) -> void:
 						shot.emit("roof", 0, "enemy", int(e.id), "turret")
 						_damage_enemy(e, float(vs.turret_dmg) * float(vs.roof), false, -1, true)
 	# --- MV-716: crew firing from the rear gunner room(s)
-	_tick_room_guns(dt)
+	if not room_mode():
+		_tick_room_guns(dt)
 	# --- cleanup deaths
 	for e in enemies.duplicate():
 		if float(e.hp) <= 0.0:
@@ -987,6 +1086,8 @@ func current_boss() -> Dictionary:
 
 
 func _alive(slot: int) -> bool:
+	if room_mode():
+		return false      # MV-727: nobody outside to hit: enemies go for the hull
 	return slot < heroes.size() and not heroes[slot].is_empty() and heroes[slot].alive
 
 
@@ -1027,6 +1128,7 @@ func van_hit_damage(e: Dictionary, raw: float, special: bool = false, defense: f
 	defense = float(van_stats().def) if defense < 0.0 else defense
 	var red := defense / (defense + def_k(float(e.lvl)))
 	var damage := raw * (1.0 - red)
+	damage *= hull_take()
 	if checkpoint:
 		damage = minf(damage, Game.hull_max() * Features.num("warlord.hull_hit_cap", 0.01))
 	elif balanced:
@@ -1211,7 +1313,7 @@ func _on_kill(e: Dictionary) -> void:
 		if not h.is_empty() and h.alive:
 			var d := Game.dweller_by_id(int(h.did))
 			if not d.is_empty():
-				Game.give_xp(d, xp, ROLES[int(h.slot)].stat)
+				Game.give_xp(d, xp, role(int(h.slot)).stat)
 	var rd := Game.deck_dweller()
 	if not rd.is_empty() and sub.is_empty():
 		Game.give_xp(rd, xp * DECK_RESERVE_XP, Game._best_stat(rd))
@@ -1335,7 +1437,7 @@ func offline_rewards(sec: float) -> Dictionary:
 		if did >= 0:
 			var d := Game.dweller_by_id(did)
 			if not d.is_empty():
-				Game.give_xp(d, xp, ROLES[i].stat, true)
+				Game.give_xp(d, xp, role(i).stat, true)
 	var rd := Game.deck_dweller()
 	if not rd.is_empty():
 		Game.give_xp(rd, xp * DECK_RESERVE_XP, Game._best_stat(rd), true)
