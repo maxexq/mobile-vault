@@ -20,6 +20,6 @@ metadata:
   Pro inpaint-v3 take s2 (tools/art/ambulance/solar_pl.png, 10 gens/take, 30 spent); Parames PICKED B 20:09 (in PR).
   Roof-mods thread's solar_covers sit on the side band (x296-436,y63-92), not the tank. PR #219 first commit CI autotest green.
 - 20:14 Parames APPROVED + saved ("เซฟเลย โคมไฟ ดีมาก"): /mnt/project-files/designs/ambulance-fix/approved/README.md. RULE: vehicle lamps have no baked backplate/halo; light = code additive glow.
-- 20:14 swing: cleanup.swap_lantern puts the same approved lantern_still.png (9x16) under the bracket on all shells (pivot cy-9 for 1-2 floors, cy-7 for 3-5); anim.json lantern_still/lantern_pivot; AmbulanceMotion.lamp pendulum (LAMP_W 4.6, damp 1.1, max 0.35 rad), cut from the shell only when vehicle_anim is on.
+- 20:14 swing: cleanup.swap_lantern puts the same approved lantern_still.png (9x16) under the bracket on all shells (pivot cy-9 for 1-2 floors, cy-7 for 3-5); anim.json lantern_still/lantern_pivot; AmbulanceMotion.lamp pendulum APPROVED 20:21 (LAMP_W 4.6, damp 1.1, max 0.35 rad), cut from the shell only when vehicle_anim is on.
 - 2026-11-09: downloading Godot 4.7.2 in the cloud was blocked by the auto-mode classifier this session (despite standing OK).
 Related: [[ambulance-v3-ingame]], [[vehicle-upgrade-icons]], [[vehicle-anim]], [[vehicle-2floor]].
