@@ -209,12 +209,23 @@ def swap_lantern(im, still=os.path.join(HERE, "lantern_still.png")):
     return x0, y0
 
 
+def bake_driver(im, strip=os.path.join(D, "driver.png")):
+    """Dr. Ren at the wheel (driver.py, approved A2 'still' frame 0) in the cab glass, so every view has a driver;
+    AmbulanceMotion animates over it when vehicle_anim is on"""
+    if not os.path.exists(strip):
+        return
+    st = Image.open(strip).convert("RGBA")
+    cell = st.crop((0, 26 * 3, 30, 26 * 4))          # row 3 = still
+    im.alpha_composite(cell, (87, im.height - 139))
+
+
 def clean_shell(path, front):
     im = Image.open(path).convert("RGBA")
     solar(im)
     im = ghost_arc(im)
     lantern(im)
     swap_lantern(im)
+    bake_driver(im)
     top = im.height - front.height
     holes = fill_holes(im, front, top)
     im, strays = drop_strays(im)

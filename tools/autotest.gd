@@ -12911,6 +12911,21 @@ func _vehicle_anim_test() -> void:
 	var lr: Array = spot.lantern_still
 	_check("MV-741: the lantern hangs on its own sprite and swings while the vehicle moves", v.amb.lamp != null
 		and img.get_pixel(int(lr[0]) + 4, int(lr[1]) + 8).a == 0.0 and lsw > 0.03 and v.amb.lamp.rotation == v.amb.lamp_angle)
+	# MV-741 micro anims: Dr. Ren drives, the roof plants lean into the headwind, the pipe puffs, the cells glint by day
+	var pp: Array = spot.plant_px[0]
+	var puffed := false
+	var glinted := false
+	v.amb._glint_wait = 0.0
+	for i in 16:
+		await wait(0.05)
+		puffed = puffed or not v.amb.puffs.is_empty()
+		glinted = glinted or (v.amb.glint != null and v.amb.glint.visible)
+	_check("MV-741: Dr. Ren drives the ambulance (driver.png 'drive' loop over the cab glass)", v.amb.driver != null
+		and v.amb.driver_state == "drive" and (AmbulanceMotion.driver_frames().drive as Array).has(v.amb.driver.texture))
+	_check("MV-741: the roof plants are cut out of the shell and lean into the headwind while driving", v.amb.plant != null
+		and img.get_pixel(int(pp[0]), int(pp[1])).a == 0.0 and v.amb.plant_frame >= AmbulanceMotion.PLANT_FRAMES)
+	_check("MV-741: the copper pipe puffs smoke and the solar cells glint by day", puffed
+		and (glinted or v._night > 0.6) and v.amb.glint != null)
 	_check("vehicle anim: headlight lens + tail lamps on while driving", v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1)
 	var y_before: Array = v.amb.tyres.map(func(t): return t.global_position.y)
 	v.amb.bump(90.0)
@@ -12950,6 +12965,8 @@ func _vehicle_anim_test() -> void:
 	var f2 := v.amb.spin_frame()
 	await wait(0.3)
 	_check("vehicle anim: parked tyres stand still", f2 == v.amb.spin_frame())
+	_check("MV-741: parked, the plants only sway in the breeze and Dr. Ren idles at the wheel",
+		v.amb.plant_frame < AmbulanceMotion.PLANT_FRAMES and v.amb.driver_state == "idle")
 	v.amb.force_beacon = false
 	v.debug_speed = -1.0
 	_check("vehicle anim: GOD MODE actions drive it", Dev.vehicle_anim("fast") and v.debug_speed > 1.0 and Dev.vehicle_anim("park"))

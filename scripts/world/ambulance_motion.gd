@@ -21,7 +21,12 @@ const BEACON_CYCLE := 0.9          # roof bar: L flash flash, R flash flash
 const FLAG_FRAMES := 8
 const WELL := Color("141214")
 const LAMP_W := 4.6                # lantern pendulum: rad/s natural frequency
-const LAMP_DAMP := 1.1             # 1/s      # dark wheel well behind each tyre (rides with the body)
+const LAMP_DAMP := 1.1             # 1/s
+const PLANT_FRAMES := 8            # per set: frames 0..7 = parked breeze, 8..15 = headwind while driving
+const GLINT_FRAMES := 12
+const PUFF_LIFE := 1.8             # s
+const PUFF_MAX := 7
+const DRIVER_AT := Vector2(87, 139)  # cab glass: x, shell height - y (driver.py)      # dark wheel well behind each tyre (rides with the body)
 
 static var _meta: Dictionary = {}
 static var _shells: Dictionary = {}        # floors -> ImageTexture (tyres + flag cloth cut out)
@@ -29,6 +34,10 @@ static var _flag_frames: Dictionary = {}   # floors -> Array[ImageTexture]
 static var _spin: Array[AtlasTexture] = []
 static var _glow_tex: GradientTexture2D
 static var _lamp_src: Dictionary = {}      # floors -> Image of the lantern cut out of the shell (lantern_still rect)
+static var _plants: Dictionary = {}        # floors -> {"at": Vector2i, "frames": Array[ImageTexture]} (MV-741 leaf sway)
+static var _glints: Dictionary = {}        # floors -> {"at": Vector2i, "frames": Array[ImageTexture]} (MV-741 solar glint)
+static var _driver: Dictionary = {}        # state -> Array[AtlasTexture] (MV-741 Dr. Ren at the wheel)
+static var _puff_tex: Array[ImageTexture] = []
 
 var vehicle: Node2D
 var floors := 0
@@ -57,6 +66,20 @@ var lamp_angle := 0.0              # radians, + = the lantern swings forward (we
 var _lamp_vel := 0.0
 var _lamp_kick_t := 0.0
 ## GOD MODE / autotest overrides
+var plant: Sprite2D                # MV-741 roof garden leaves (cut out of the shell), sway frames
+var plant_frame := 0
+var _plant_t := 0.0
+var glint: Sprite2D                # MV-741 sun glint sweeping the solar cells by day (additive)
+var glint_frame := -1              # -1 = no sweep running
+var _glint_wait := 2.0
+var _glint_t := 0.0
+var pipe_at := Vector2.ZERO
+var puffs: Array[Sprite2D] = []    # MV-741 smoke puffs from the copper pipe on the tank
+var _puff_wait := 0.5
+var driver: Sprite2D               # MV-741 Dr. Ren at the wheel: drive / chill / idle / still loops
+var driver_state := ""
+var _driver_i := 0
+var _driver_t := 0.0
 var force_beacon := false
 var force_brake := false
 
@@ -100,6 +123,10 @@ static func cut_shell(n: int) -> Texture2D:
 		var rect := Rect2i(int(lr[0]), int(lr[1]), int(lr[2]), int(lr[3]))
 		_lamp_src[n] = img.get_region(rect)
 		img.fill_rect(rect, Color(0, 0, 0, 0))
+	if f.has("plant_px"):                      # MV-741: the leaves sway on their own sprite
+		_plants[n] = _plant_frames(img, f)
+	if f.has("solar_px"):
+		_glints[n] = _glint_frames(f.solar_px)
 	var fr: Array = f.flag
 	var cloth := img.get_region(Rect2i(fr[0], fr[1], fr[2], fr[3]))
 	img.fill_rect(Rect2i(fr[0], fr[1], fr[2], fr[3]), Color(0, 0, 0, 0))
@@ -126,6 +153,101 @@ static func _wave_frames(cloth: Image) -> Array:
 					im.set_pixel(x, y + 2 + dy, c)
 		out.append(ImageTexture.create_from_image(im))
 	return out
+
+
+## MV-741: the leaf pixels (plant_px = [x, y, clump]) cut out of `img`; 2 x PLANT_FRAMES frames where every leaf row
+## shifts sideways by whole pixels, more the higher it is above its clump's base (plant_base). Set 1 = a parked breeze
+## around the rest pose, set 2 = leaning east into the headwind and fluttering. Each clump has its own phase.
+static func _plant_frames(img: Image, f: Dictionary) -> Dictionary:
+	var lo := Vector2i(100000, 100000)
+	var hi := Vector2i(-1, -1)
+	var cols: Array[Color] = []
+	for q in f.plant_px:
+		var x := int(q[0])
+		var y := int(q[1])
+		lo = Vector2i(mini(lo.x, x), mini(lo.y, y))
+		hi = Vector2i(maxi(hi.x, x), maxi(hi.y, y))
+		cols.append(img.get_pixel(x, y))
+	for q in f.plant_px:
+		img.set_pixel(int(q[0]), int(q[1]), Color(0, 0, 0, 0))
+	var at := lo - Vector2i(2, 0)
+	var size := hi - lo + Vector2i(6, 1)
+	var bases: Array = f.plant_base
+	var out: Array[ImageTexture] = []
+	for pass_i in 2:
+		var lean := 0.0 if pass_i == 0 else 1.0
+		var amp := 0.75 if pass_i == 0 else 1.0
+		for i in PLANT_FRAMES:
+			var im := Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBA8)
+			var k := 0
+			for q in f.plant_px:
+				var c := int(q[2])
+				var h := clampf((float(bases[c]) - float(q[1])) / 12.0, 0.0, 1.0)
+				var ph := TAU * float(i) / float(PLANT_FRAMES) + float(c) * 1.7
+				var dx := int(round(h * (lean + amp * sin(ph))))
+				im.set_pixel(int(q[0]) + dx - at.x, int(q[1]) - at.y, cols[k])
+				k += 1
+			out.append(ImageTexture.create_from_image(im))
+	return {"at": at, "frames": out}
+
+
+## MV-741: GLINT_FRAMES frames of a bright diagonal band sweeping west to east over the solar cell glass (solar_px)
+static func _glint_frames(px: Array) -> Dictionary:
+	var lo := Vector2i(100000, 100000)
+	var hi := Vector2i(-1, -1)
+	for q in px:
+		lo = Vector2i(mini(lo.x, int(q[0])), mini(lo.y, int(q[1])))
+		hi = Vector2i(maxi(hi.x, int(q[0])), maxi(hi.y, int(q[1])))
+	var size := hi - lo + Vector2i.ONE
+	var out: Array[ImageTexture] = []
+	for i in GLINT_FRAMES:
+		var im := Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBA8)
+		var pos := -12.0 + (float(size.x) + 24.0) * float(i) / float(GLINT_FRAMES - 1)
+		for q in px:
+			var x := int(q[0]) - lo.x
+			var y := int(q[1]) - lo.y
+			var d := absf(float(x) + float(y) * 0.7 - pos)
+			if d < 1.5:
+				im.set_pixel(x, y, Color(1, 1, 0.92, 0.85))
+			elif d < 4.0:
+				im.set_pixel(x, y, Color(0.8, 0.9, 1.0, 0.35))
+		out.append(ImageTexture.create_from_image(im))
+	return {"at": lo, "frames": out}
+
+
+## MV-741: driver.png rows = drive, chill, idle, still (driver.py); {} when the strip is not there
+static func driver_frames() -> Dictionary:
+	if _driver.is_empty() and ResourceLoader.exists(DIR + "driver.png") and FileAccess.file_exists(DIR + "driver.json"):
+		var j: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(DIR + "driver.json"))
+		var strip: Texture2D = load(DIR + "driver.png")
+		var sz := Vector2(float(j.size[0]), float(j.size[1]))
+		var row := 0
+		for st in ["drive", "chill", "idle", "still"]:
+			var arr: Array[AtlasTexture] = []
+			for i in int(j.states.get(st, 0)):
+				var a := AtlasTexture.new()
+				a.atlas = strip
+				a.region = Rect2(Vector2(sz.x * i, sz.y * row), sz)
+				arr.append(a)
+			_driver[st] = arr
+			row += 1
+		_driver["fps"] = float(j.get("fps", 8))
+	return _driver
+
+
+## MV-741: small grey pixel puffs, radius 1..3
+static func puff_tex() -> Array[ImageTexture]:
+	if _puff_tex.is_empty():
+		for r in [1, 2, 3]:
+			var s: int = r * 2 + 1
+			var im := Image.create_empty(s, s, false, Image.FORMAT_RGBA8)
+			for y in s:
+				for x in s:
+					var d := Vector2(x - r, y - r).length()
+					if d <= float(r) + 0.25:
+						im.set_pixel(x, y, Color(0.62, 0.6, 0.57, 1.0) if y < r else Color(0.48, 0.46, 0.44, 1.0))
+			_puff_tex.append(ImageTexture.create_from_image(im))
+	return _puff_tex
 
 
 static func spin_frames() -> Array[AtlasTexture]:
@@ -206,11 +328,121 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 	_glow("bar_r", origin + _v(f.bar_r), 11.0, Color(1.0, 0.12, 0.1))
 	_glow("lantern", origin + _v(f.lantern), 12.0, Color(1.0, 0.7, 0.3))
 	_build_flame(f, origin)
+	_build_roof(f, origin)
 	_glow("mast", origin + _v(f.mast), 5.0, Color(1.0, 0.25, 0.2))
 	var i := 0
 	for p in f.tails:
 		_glow("tail%d" % i, origin + _v(p) + Vector2(1, 0), 7.0, Color(1.0, 0.1, 0.08))
 		i += 1
+
+
+## MV-741 micro anims: the swaying leaves, the solar glint, the pipe puffs and Dr. Ren at the wheel
+func _build_roof(f: Dictionary, origin: Vector2) -> void:
+	plant_frame = 0
+	glint_frame = -1
+	puffs.clear()
+	if _plants.has(floors):
+		plant = Sprite2D.new()
+		plant.name = "RoofPlants"
+		plant.centered = false
+		plant.position = origin + Vector2(_plants[floors].at)
+		plant.texture = (_plants[floors].frames as Array)[0]
+		over.add_child(plant)
+		over.move_child(plant, 0)
+	if _glints.has(floors):
+		glint = Sprite2D.new()
+		glint.name = "SolarGlint"
+		glint.centered = false
+		glint.position = origin + Vector2(_glints[floors].at)
+		glint.visible = false
+		var m := CanvasItemMaterial.new()
+		m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		glint.material = m
+		over.add_child(glint)
+	if f.get("pipe") != null:
+		pipe_at = origin + _v(f.pipe)
+	var d := driver_frames()
+	if not d.is_empty() and not (d.still as Array).is_empty():
+		driver = Sprite2D.new()
+		driver.name = "Driver"
+		driver.centered = false
+		driver.position = origin + Vector2(DRIVER_AT.x, float(f.size[1]) - DRIVER_AT.y)
+		driver.texture = (d.still as Array)[0]
+		driver_state = "still"
+		over.add_child(driver)
+		over.move_child(driver, 0)
+
+
+func _tick_roof(delta: float, speed_px: float, engine_on: bool, accel: float, dark: float) -> void:
+	var sp := clampf(speed_px / ROAD_PX, 0.0, 1.5)
+	if plant:                                  # leaves: slow breeze parked, quick flutter leaning east in the headwind
+		_plant_t -= delta
+		if _plant_t <= 0.0:
+			var driving := sp > 0.15
+			_plant_t = 1.0 / (2.5 if not driving else 5.0 + 6.0 * sp)
+			var i := (plant_frame + 1) % PLANT_FRAMES
+			plant_frame = i + (PLANT_FRAMES if driving else 0)
+			plant.texture = (_plants[floors].frames as Array)[plant_frame]
+	if glint:                                  # a sun glint runs over the cells every few seconds by day
+		var day := 1.0 - dark
+		if glint_frame < 0:
+			_glint_wait -= delta
+			if _glint_wait <= 0.0 and day > 0.4:
+				glint_frame = 0
+				_glint_t = 0.0
+		if glint_frame >= 0:
+			_glint_t += delta
+			var i := int(_glint_t * 22.0)
+			if i >= GLINT_FRAMES:
+				glint_frame = -1
+				glint.visible = false
+				_glint_wait = randf_range(4.0, 8.0)
+			else:
+				glint_frame = i
+				glint.texture = (_glints[floors].frames as Array)[i]
+				glint.modulate.a = day
+				glint.visible = true
+	if pipe_at != Vector2.ZERO:                # puffs while the engine runs, faster when pulling away
+		_puff_wait -= delta
+		if engine_on and _puff_wait <= 0.0:
+			_puff_wait = randf_range(0.25, 0.5) if accel > 0.05 else randf_range(0.7, 1.4)
+			if puffs.size() < PUFF_MAX:
+				var p := Sprite2D.new()
+				p.texture = puff_tex()[0]
+				p.set_meta("t", 0.0)
+				p.set_meta("pos", pipe_at + Vector2(randf_range(-0.5, 0.5), 0))
+				over.add_child(p)
+				puffs.append(p)
+		for p in puffs.duplicate():
+			var t: float = float(p.get_meta("t")) + delta
+			if t >= PUFF_LIFE:
+				puffs.erase(p)
+				p.queue_free()
+				continue
+			var pos: Vector2 = p.get_meta("pos") + Vector2(2.0 + 14.0 * sp, -9.0 + 4.0 * t) * delta
+			p.set_meta("t", t)
+			p.set_meta("pos", pos)
+			p.position = pos.round()
+			p.texture = puff_tex()[mini(2, int(t / PUFF_LIFE * 3.0))]
+			p.modulate = Color(1.0 - 0.45 * dark, 1.0 - 0.45 * dark, 1.0 - 0.45 * dark, 0.75 * (1.0 - t / PUFF_LIFE))
+	if driver:                                 # Dr. Ren: hands on the wheel at speed, relaxed slow, idles parked
+		var st := "still"
+		if engine_on:
+			st = "drive" if speed_px > ROAD_PX * 0.5 else ("chill" if speed_px > 1.0 else "idle")
+		var d := driver_frames()
+		var frames: Array = d.get(st, [])
+		if frames.is_empty():
+			return
+		if st != driver_state:
+			driver_state = st
+			_driver_i = 0
+			_driver_t = 0.0
+			driver.texture = frames[0]
+		_driver_t += delta
+		if _driver_t >= 1.0 / float(d.fps):
+			_driver_t = 0.0
+			_driver_i = (_driver_i + 1) % frames.size()
+			driver.texture = frames[_driver_i]
 
 
 ## MV-741: the lantern as its own sprite hanging from `lamp` (pivot = the top of its bail): one texture per PixelLab
@@ -316,6 +548,12 @@ func clear() -> void:
 	glows.clear()
 	lamp = null
 	flame = null
+	plant = null
+	glint = null
+	driver = null
+	driver_state = ""
+	puffs.clear()
+	pipe_at = Vector2.ZERO
 	flame_frames.clear()
 	floors = 0
 
@@ -410,6 +648,7 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	# MV-741: the lantern is always lit: a faint warm glow by day, full after dark
 	_lamp("lantern", (0.15 + 0.7 * dark) * _lantern if not flame_frames.is_empty() else dark * 0.8 * _lantern)
 	_lamp("mast", 0.9 if fmod(_t, 1.6) < 0.22 else 0.0)
+	_tick_roof(delta, speed_px, engine_on, accel, dark)
 	# flag: a slow breeze parked, snapping in the headwind when driving
 	_flag_t -= delta
 	if _flag_t <= 0.0:

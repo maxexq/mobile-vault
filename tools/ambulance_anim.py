@@ -83,7 +83,48 @@ def one(n):
     return {"size": [W, H], "wheels": wheels(im), "wheel_r": WHEEL_R,
             "head": head["c"], "marker": marker["c"], "bar_l": [bx + bw / 4, by + bh / 2], "bar_r": [bx + bw * 3 / 4, by + bh / 2],
             "bar": bar["rect"], "lantern": lantern["c"], "tails": [t["c"] for t in tails], "mast": tip,
-            "flag": big(cloth)["rect"], **lantern_flicker(im, lantern["c"]), **lantern_hang(im)}
+            "flag": big(cloth)["rect"], **lantern_flicker(im, lantern["c"]), **lantern_hang(im), **roof_bits(im)}
+
+
+TERRA = lambda p: p[3] and p[0] > 95 and p[0] - p[2] > 45 and p[1] < 125           # flower pots
+GREEN = lambda p: p[3] and p[1] > p[0] + 8 and p[1] > p[2] + 8 and p[1] > 60
+DARK = lambda p: p[3] and p[0] + p[1] + p[2] < 150
+GARDENS = [(138, 223), (457, 584)]      # the pot rows left of the doghouses and right of the tank (between the mast)
+PANEL = lambda p: p[3] and p[2] > p[0] + 15 and p[2] > 50                          # solar cell glass
+
+
+def roof_bits(im):
+    """MV-741 micro anims (Parames 20:22): the roof plants (leaf pixels above the pot rims, as clumps that sway from
+    their own base), the solar cell glass (a glint sweeps it by day) and the copper pipe's mouth (puffs)"""
+    px = im.load(); W, H = im.size
+    leaf = set()
+    for x0, x1 in GARDENS:
+        rim = {x: next((y for y in range(30, 90) if TERRA(px[x, y])), None) for x in range(x0, x1)}
+        rs = sorted(r for r in rim.values() if r); top = rs[len(rs) // 2] + 2
+        lim = {x: min(r, top) for x, r in rim.items() if r}
+        g = {(x, y) for x in lim for y in range(36, lim[x]) if GREEN(px[x, y])}
+        out = {(x + dx, y + dy) for x, y in g for dx in (-1, 0, 1) for dy in (-1, 0, 1)} - g
+        leaf |= g | {(x, y) for x, y in out if x in lim and 36 <= y < lim[x] and DARK(px[x, y])}
+    clump, bases = {}, []
+    for p0 in sorted(leaf):
+        if p0 in clump:
+            continue
+        st, pts = [p0], []
+        while st:
+            q = st.pop()
+            if q in clump or q not in leaf:
+                continue
+            clump[q] = len(bases); pts.append(q)
+            st += [(q[0] + dx, q[1] + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
+        bases.append(max(y for _, y in pts) + 1)
+    plant = [[x, y, clump[(x, y)]] for x, y in sorted(leaf, key=lambda q: (q[1], q[0]))]
+    solar = [[x, y] for y in range(0, 30) for x in range(290, 452) if PANEL(px[x, y])]
+    pipe = None
+    for y in range(0, 20):
+        xs = [x for x in range(448, 472) if px[x, y][3]]
+        if len(xs) >= 6:
+            pipe = [(min(xs) + max(xs) + 1) / 2, y - 0.5]; break
+    return {"plant_px": plant, "plant_base": bases, "solar_px": solar, "pipe": pipe}
 
 
 LANTERN_PL = os.path.join(ROOT, "tools", "art", "ambulance", "lantern_pl.png")   # MV-741 PixelLab flicker, 8 x 18x22
@@ -172,7 +213,8 @@ if __name__ == "__main__":
         if os.path.exists(os.path.join(DIR, f"shell_f{n}.png")):
             meta["floors"][str(n)] = one(n)
             f = meta["floors"][str(n)]
-            print(n, f["size"], len(f["wheels"]), "wheels,", len(f["tails"]), "tails, flag", f["flag"], "lantern", f["lantern"])
-    json.dump(meta, open(os.path.join(DIR, "anim.json"), "w"), indent=1)
+            print(n, f["size"], len(f["wheels"]), "wheels,", len(f["tails"]), "tails, flag", f["flag"], "lantern", f["lantern"],
+                  "plants", len(f["plant_px"]), "/", len(f["plant_base"]), "solar", len(f["solar_px"]), "pipe", f["pipe"])
+    json.dump(meta, open(os.path.join(DIR, "anim.json"), "w"), separators=(",", ":"))
     spin_strip()
     print("wrote anim.json + wheel_spin.png")
