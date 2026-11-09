@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- New art for all 21 road events: bigger detailed scenes in the colours of each road and its weather, and every event now plays its short story in the event window (the threat, what happens, how it ends); the result screen shows how it ended (MV-730)
 - Free camera: pinch or scroll to zoom through every sharp pixel level around your fingers, drag to look around in any direction, and tap FIT to snap back to the automatic view (MV-723)
 - New art for all six expedition special encounters: bigger detailed scenes where the team's flashlight sweeps in from the left onto the find, with HELP letters, toxic fumes, falling dust and pebbles (MV-717)
 - New crew portraits: every crew member's face in menus and popups is now the detailed portrait of the new 2.5D character who plays them (MV-722)

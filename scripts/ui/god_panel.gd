@@ -664,6 +664,8 @@ func _tab_world() -> void:
 	_note("ห้ามหนีตอนรถออกตัวไม่ได้ (MV-243): สวิตช์ flee_guard %s · ตอนนี้: %s" % ["เปิด" if Features.on("flee_guard") else "ปิด",
 		Game.drive_block() if Game.drive_block() != "" else "รถออกตัวได้"])
 	_row([_b("หมาป่าตอนรถจอดรอ 45 วิ", func(): Dev.event_flee_stuck(), "red", true)], "หนีไม่ได้")
+	_row([_b("ภาพอีเว้นต์ v2: " + ("เปิด" if Features.on("event_art_v2") else "ปิด"), func(): Dev.event_art_v2(not Features.on("event_art_v2")),
+		"green" if Features.on("event_art_v2") else "red")], "ภาพ (MV-730)")
 	var eb := []
 	for id in Data.EVENTS:
 		var eid: String = id
