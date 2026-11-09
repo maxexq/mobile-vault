@@ -13166,7 +13166,8 @@ func _decker_test() -> void:
 		Dev.decker_preview(d)
 		await wait(0.4)
 		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
-		world_ok = world_ok and v.v2 and v.v2_dk() and v.v2_shell.texture.resource_path.ends_with("decker_v3/shell_f%d.png" % d) \
+		world_ok = world_ok and v.v2 and v.v2_dk() and (v.v2_shell.texture.resource_path.ends_with("decker_v3/shell_f%d.png" % d) \
+			or (v.amb_on and v.amb.dir == AmbulanceMotion.DK_DIR and v.amb.floors == d)) \
 			and v.v2_cells.size() == Game.main_slots() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
 			and is_equal_approx(v.v2_extra(), Vehicle.V2_W_DK - Vehicle.MAIN_W)
 		var img := v.v2_shell.texture.get_image()
@@ -13176,6 +13177,50 @@ func _decker_test() -> void:
 			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
 		await shot("decker_world_f%d" % d)
 	_check("decker: on the road (world v2) the bus carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
+	# MV-739: shell clean-up (plate in front of the headlight, stray pixels under the chassis / around the tyres) and
+	# a steel frame around every room window
+	var clean_ok := true
+	var frame_ok := true
+	for d in [2, 3]:
+		var img: Image = (load(InteriorV3Panel.DK_DIR + "shell_f%d.png" % d) as Texture2D).get_image()
+		img.decompress()
+		var dy: int = 112 * (int(d) - 2)
+		for y in range(253, 282):
+			for x in range(0, 9):
+				clean_ok = clean_ok and img.get_pixel(x, y + dy).a == 0.0
+		for y in range(331 + dy, img.get_height()):
+			for x in img.get_width():
+				var near := false
+				for wx in [62.5, 452.5, 504.5]:
+					near = near or Vector2(x + 0.5, y + 0.5).distance_to(Vector2(wx, 310.0 + dy)) <= 23.0
+				clean_ok = clean_ok and (near or img.get_pixel(x, y).a == 0.0)
+		var spec2: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.DK_DIR + "shell.json"))
+		for cc in spec2.floors[str(d)].cells:
+			var cx := int(cc.x)
+			var cy := int(cc.y)
+			frame_ok = frame_ok and img.get_pixel(cx + 72, cy - 1).v < 0.06 and img.get_pixel(cx - 1, cy + 48).v < 0.06 \
+				and img.get_pixel(cx + 72, cy).a > 0.3 and img.get_pixel(cx + 72, cy + 48).a < 0.1
+	_check("decker: no plate over the headlight, no stray pixels under the chassis / around the tyres (2 and 3 decks)", clean_ok)
+	_check("decker: every room window has a frame (black edge outside, inner shadow lip, clear middle)", frame_ok)
+	# MV-739: micro animations on the road (switch vehicle_anim): tyres roll with the speed, lights, flickering sign
+	var anim_ok := Dev.decker_anim("drive")
+	await wait(0.6)
+	var sp0 := v.amb.spin_frame()
+	var sign_seen := false
+	for i in 10:
+		await wait(0.1)
+		sign_seen = sign_seen or v.amb.sign_alpha() > 0.1
+	_check("decker: GOD drives the Decker with its own animated tyres (3 axles), its sign lit", anim_ok and v.amb_on
+		and v.amb.dir == AmbulanceMotion.DK_DIR and v.amb.tyres.size() == 3 and sign_seen)
+	_check("decker: tyres roll and the headlight / tail lamps are on while driving", sp0 != v.amb.spin_frame()
+		and v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1 and v.amb.flag == null)
+	await shot("decker_anim_drive")
+	Dev.decker_anim("brake")
+	await wait(1.6)
+	_check("decker: braking to a stop lights the brake lamp", v.amb.lamp_alpha("tail0") > 0.7)
+	Dev.decker_anim("park")
+	await wait(0.4)
+	v.debug_speed = -1.0
 	Features.set_override("features", "decker", false)
 	_check("decker: switch off = 2 vehicles again, a Decker save drives the road train, research hidden",
 		Game.tier_order() == ["van", "rig"] and Game.tier() == "rig" and Meta.perk_hidden("tier_bus"))

@@ -394,6 +394,7 @@ func _tab_vehicle() -> void:
 		"green" if Features.on("road_train") else "red")], "โร้ดเทรน")
 	_row([_b("ขับ Decker 2 ชั้น", func(): Dev.decker_preview(2)), _b("3 ชั้น", func(): Dev.decker_preview(3)),
 		_b("ภายใน", func(): Dev.decker_interior()),
+		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),
 		_b("Decker: " + ("เปิด" if Features.on("decker") else "ปิด"), func(): Dev.feature_set("decker", not Features.on("decker")),
 		"green" if Features.on("decker") else "red")], "รถบัส 2 ชั้น")
 	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
