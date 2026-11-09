@@ -90,6 +90,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [new-rooms-10-ideas](new-rooms-10-ideas.md): MV-628 10 new room ideas ranked (pen, quarantine, nav, training, cryo, brig, power, vault, shrine, drones), pen first, awaiting pick
 - [rear-gunner-offcenter](rear-gunner-offcenter.md): MV-629 rear gunner room off-center one-point test; v2 gen ignores off-center guide, use code scaffold + inpaint-v3, awaiting verdict
 - [rear-gunner-v3](rear-gunner-v3.md): MV-705 rear gunner room v3 (crew shoot from inside, no turret) L1-L3 + anim + hotspots fmt 2 (man_gun/spot_targets/load_ammo), page Rear Gunner Room v3, In Review
+- [rear-gunner-ingame](rear-gunner-ingame.md): MV-716 rear gunner post in game = default rear room (RoomX rear_gunner, switch gunner_room), crew shoot from the rear hatch, tools/atlas_insert.py
 - [chicken-coop-v3](chicken-coop-v3.md): MV-630 chicken coop v3 APPROVED (option C tyre pen), saved pen_v3/approved/: L1-L3 + 3 egg stages + anim + hotspots, Done
 - [quarantine-room-v3](quarantine-room-v3.md): MV-631 quarantine & decon v3 L1-L3, human side + animal side in one room, anim + hotspots fmt 2, APPROVED + saved quar_v3/approved/, Done
 - [training-room-v3](training-room-v3.md): MV-633 training room v3 L1-L3 (Claude picks) + anim + hotspots fmt 2 (new actions lift_weights/hit_bag/spar_dummy/pull_ups), APPROVED + saved train_v3/approved/, Done
@@ -152,3 +153,5 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [strategic-depth-plan](strategic-depth-plan.md): Theorycraft/community-depth roadmap for Mobile Vault (A1-A4, B1-B4, C1-C4) in Claude Doc, decisions pending
 - [water-room-v3](water-room-v3.md): MV-618 water purifier redone per Room guide v3 (one-point, L1-L3 single cell, Claude picked all), states + hotspots format 2 done, In Review; files designs/room-redesign-preview/water_v3/
 - [workshop-v3](workshop-v3.md): MV-624 workshop (โรงช่าง) per Room guide v3, L1-L3 single cell, anim, hotspots fmt 2 (new actions salvage_parts/repair_hull), Claude picked all, In Review; files workshop_v3/
+- [ambulance-v3-ingame](ambulance-v3-ingame.md): MV-715 ambulance replaces the van: v3 interior shell (switch ambulance_v3) done, outside world v2 picked, next
+- [vehicle-anim](vehicle-anim.md): MV-726 ambulance on the road: rolling tyres, suspension hops, lights, flag (switch vehicle_anim, code only); rerun tools/ambulance_anim.py after shell rebuilds
