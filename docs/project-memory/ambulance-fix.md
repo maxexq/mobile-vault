@@ -26,5 +26,10 @@ metadata:
   still frame. ambulance_anim.roof_bits -> anim.json plant_px/plant_base (leaves above pot rims, x138-223 + 457-584), solar_px,
   pipe (459,5.5). AmbulanceMotion: driver state by speed/engine, leaves sway (breeze parked / lean east driving), glint by day, puffs.
   Rebuild order: checkout staging shells -> driver.py -> cleanup.py -> ambulance_anim.py. Previews designs/ambulance-fix/micro_*.gif.
+- 20:32 round 3 "pl new flag, pots, birdhouses, mast + anim": Pro inpaint-v3 (15 takes, 150 gens) -> Parames PICKED 20:41 flag 3,
+  potsL 2, birds 1, potsR 2, mast 3; animate-with-text-v3 (27 takes) flag s1, potsL s2, potsR a s1 + b s3, birds s1 (sparrow);
+  mast PL anims broke the wires -> code blink only. Sources designs/ambulance-fix/roof2/ (parts.py, gen.py, anim.py, compose.py);
+  repo tools/art/ambulance/roof/ (stills + strips + roof.json masks). cleanup.roof_parts runs LAST (after window frames);
+  ambulance_anim template-matches each still -> anim.json clips; AmbulanceMotion clips replace the code flag wave + leaf shear.
 - 2026-11-09: downloading Godot 4.7.2 in the cloud was blocked by the auto-mode classifier this session (despite standing OK).
 Related: [[ambulance-v3-ingame]], [[vehicle-upgrade-icons]], [[vehicle-anim]], [[vehicle-2floor]].
