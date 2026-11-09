@@ -455,6 +455,7 @@ func _build_v2() -> void:
 		return
 	v2_shell.texture = load(v2_shell_path())
 	v2_shell.position = Vector2(V2_X, v2_top()) / V2_K
+	InteriorV3Panel.attach_nose(v2_shell, v2_rt())   # MV-731 bumper tip + tow hook in front of the shell
 	_build_v2_trailers()
 	for slot in Game.main_slots():
 		var c := RoomV3Cell.new()
