@@ -1263,6 +1263,11 @@ func ren_guide(on: bool) -> void:
 	feature_set("ren_guide", on)
 
 
+## MV-735: switch ren_guide_point on/off (Dr. Ren points his hand at the tutorial target, raised finger on tips)
+func ren_guide_point(on: bool) -> void:
+	feature_set("ren_guide_point", on)
+
+
 ## MV-735: put the whole crew in the state that shows `mood` ("happy" / "stressed" / "injured" / "" = neutral)
 ## by setting HP and happiness (morale stage cleared), so every portrait can be checked in its panels
 func portrait_mood_preview(mood: String) -> void:

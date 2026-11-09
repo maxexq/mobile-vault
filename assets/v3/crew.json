@@ -67,7 +67,11 @@
     "thinking": "portraits/ren_thinking.png",
     "talking": "portraits/ren_talking.png",
     "tired": "portraits/ren_tired.png",
-    "sick": "portraits/ren_sick.png"
+    "sick": "portraits/ren_sick.png",
+    "point_left": "portraits/ren_point_left.png",
+    "point_right": "portraits/ren_point_right.png",
+    "point_up": "portraits/ren_point_up.png",
+    "finger_up": "portraits/ren_finger_up.png"
    }
   },
   "clara": {

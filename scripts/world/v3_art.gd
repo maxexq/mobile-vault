@@ -111,6 +111,8 @@ static func crew_for(d: Dictionary) -> String:
 const PORTRAIT_MOODS := ["happy", "stressed", "injured"]
 ## Dr. Ren's extra faces (MV-735) for events and the tutorial
 const PORTRAIT_MOODS_EXTRA := ["surprised", "angry", "sad", "scared", "thinking", "talking", "tired", "sick"]
+## Dr. Ren's explaining poses with a hand (MV-735): point at a tutorial target, or a raised finger for tips
+const PORTRAIT_POSES := ["point_left", "point_right", "point_up", "finger_up"]
 static func has_portrait_mood(cid: String, mood: String) -> bool:
 	_load()
 	return mood == "" or ((_crew.get(cid, {}) as Dictionary).get("portrait_moods", {}) as Dictionary).has(mood)

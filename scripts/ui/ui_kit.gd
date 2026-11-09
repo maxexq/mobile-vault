@@ -363,7 +363,8 @@ static func portrait_v3(d: Dictionary, ctx: String = "") -> Texture2D:
 
 ## MV-735: faces only some characters have (Dr. Ren's extra set) fall back to the shared happy / stressed / injured / neutral
 const MOOD_FALLBACK := {"surprised": "", "angry": "stressed", "sad": "stressed", "scared": "stressed", "thinking": "",
-	"talking": "", "tired": "stressed", "sick": "stressed"}
+	"talking": "", "tired": "stressed", "sick": "stressed", "point_left": "talking", "point_right": "talking",
+	"point_up": "talking", "finger_up": "talking"}
 static func mood_face(cid: String, m: String) -> String:
 	var seen := 0
 	while m != "" and not V3Art.has_portrait_mood(cid, m) and seen < 4:

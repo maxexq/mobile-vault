@@ -119,6 +119,7 @@ func _process(d: float) -> void:
 	_update_target()
 	_update_bar()
 	_place_card()
+	_point_face()
 	queue_redraw()
 
 
@@ -191,6 +192,15 @@ func _frame_slot(slot: int) -> void:
 	var b: Vector2 = main.world_to_screen(r.end)
 	_target = Rect2(a.floor(), (b - a).ceil()).grow(PAD)
 	_has_target = true
+
+
+## MV-735: Dr. Ren points his hand at the highlighted target (only redraws the face when the pose changes)
+func _point_face() -> void:
+	if not _face.has_meta("guide_mood"):
+		return
+	var want := Tutorial.guide_point(Tutorial.guide_face(str(Tutorial.current().id)), _target, _has_target, _face.get_global_rect())
+	if UIKit.mood_face("ren", want) != str(_face.get_meta("guide_mood")):
+		UIKit.set_guide_mood(_face, want)
 
 
 ## keep the card away from the thing it points at: top when the target is low, otherwise bottom

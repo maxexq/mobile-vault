@@ -6320,6 +6320,25 @@ func _crew_portrait_moods_test() -> void:
 	for k in Tutorial.TIPS:
 		faces_ok = faces_ok and V3Art.has_portrait_mood("ren", Tutorial.guide_face(str(k)))
 	_check("ren guide: every tutorial step and tip has a Dr. Ren face", faces_ok)
+	var poses_ok := true
+	for m in V3Art.PORTRAIT_POSES:
+		poses_ok = poses_ok and V3Art.has_portrait_mood("ren", m) and UIKit.mood_face("clara", m) == UIKit.mood_face("clara", "talking")
+	_check("ren guide: Dr. Ren has the 4 explaining poses (others fall back to talking)", poses_ok)
+	Dev.ren_guide_point(true)
+	var fr := Rect2(100, 400, 64, 64)
+	_check("ren guide point: target above = point_up, far above-left = point_left, beside right = point_right, below = face",
+		Tutorial.guide_point("talking", Rect2(110, 40, 40, 20), true, fr) == "point_up"
+		and Tutorial.guide_point("talking", Rect2(-300, 40, 40, 20), true, fr) == "point_left"
+		and Tutorial.guide_point("thinking", Rect2(400, 410, 40, 40), true, fr) == "point_right"
+		and Tutorial.guide_point("talking", Rect2(110, 600, 40, 40), true, fr) == "talking")
+	var keep_ok := Tutorial.guide_point("angry", Rect2(110, 40, 40, 20), true, fr) == "angry" \
+		and Tutorial.guide_point("talking", Rect2(), false, fr) == "talking"
+	Dev.ren_guide_point(false)
+	_check("ren guide point: angry face, no target or switch off keep the face",
+		keep_ok and Tutorial.guide_point("talking", Rect2(110, 40, 40, 20), true, fr) == "talking")
+	Dev.ren_guide_point(true)
+	UIKit.set_guide_mood(gp, Tutorial.guide_face("skills"))
+	_check("ren guide: skills tip = raised-finger pose", (gp.get_child(0) as TextureRect).texture == V3Art.portrait_tex("ren", "finger_up"))
 	Dev.ren_guide(false)
 	UIKit.set_guide_mood(gp, "angry")
 	_check("ren guide: off = Sgt. Mark's 40 px portrait", not gp.has_meta("guide_mood") and Tutorial.guide_name() == "SGT.MARK"

@@ -46,8 +46,8 @@ const REN_WELCOME := "ยินดีต้อนรับครับ ผู้
 const GUIDE_FACE := {"welcome": "talking", "resources": "thinking", "tap_room": "happy", "closeup": "talking",
 	"open_build": "happy", "pick_room": "thinking", "place_room": "talking", "construct": "tired", "crew": "happy",
 	"crew_info": "thinking", "combat": "angry", "travel": "scared", "done": "happy",
-	"map": "thinking", "squad": "angry", "solar": "talking", "inventory": "happy", "log": "sad", "garage": "thinking",
-	"skills": "happy", "expedition": "talking", "nextgen": "sad", "door": "scared"}
+	"map": "thinking", "squad": "angry", "solar": "finger_up", "inventory": "happy", "log": "sad", "garage": "finger_up",
+	"skills": "finger_up", "expedition": "talking", "nextgen": "sad", "door": "scared"}
 
 
 func guide_name() -> String:
@@ -56,6 +56,25 @@ func guide_name() -> String:
 
 func guide_face(id: String) -> String:
 	return str(GUIDE_FACE.get(id, "talking"))
+
+
+## MV-735: calm faces that may turn into a pointing pose (Dr. Ren points his hand at the highlighted target)
+const GUIDE_POINTABLE := ["talking", "thinking", "happy", "finger_up"]
+## Dr. Ren's pose for face `face` when the step highlights `target` and his portrait sits at `face_rect` (global):
+## target above him = point_up (point_left / point_right when it is far to the side), beside him = point_left /
+## point_right, below him or no target = the face itself. Needs switch ren_guide_point; tune tutorial.point_side (px).
+func guide_point(face: String, target: Rect2, has_target: bool, face_rect: Rect2) -> String:
+	if not has_target or not Features.on("ren_guide") or not Features.on("ren_guide_point") or not GUIDE_POINTABLE.has(face):
+		return face
+	var dx := target.get_center().x - face_rect.get_center().x
+	var side := Features.num("tutorial.point_side", 120.0)
+	if target.end.y <= face_rect.position.y:
+		if absf(dx) < side:
+			return "point_up"
+		return "point_left" if dx < 0.0 else "point_right"
+	if target.position.y < face_rect.end.y:
+		return "point_left" if dx < 0.0 else "point_right"
+	return face
 const START_SCRAP := 120.0
 
 ## CONTEXTUAL TIPS (MV-150): the first time a system's window opens, Sgt. Mark explains it once (TipCard). Systems
