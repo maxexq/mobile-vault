@@ -715,12 +715,17 @@ func gunner_demo(mobs: int = 4) -> int:
 		Game.s.rooms[RearGunner.DEFAULT_SLOT] = {"type": RearGunner.TYPE, "level": 1, "job": {}, "build": {}}
 		slot = RearGunner.DEFAULT_SLOT
 	if slot < 0:
-		slot = rx_build(RearGunner.TYPE)
+		for i in Game.s.rooms.size():     # MV-727: a gunner room only goes into a rear slot
+			if Game.is_slot_unlocked(i) and str(Game.s.rooms[i].type) == "empty" and RearGunner.build_block(i) == "":
+				Game.s.rooms[i] = {"type": RearGunner.TYPE, "level": 1, "job": {}, "build": {}}
+				slot = i
+				break
 	if slot < 0:
+		Game.toast.emit("ไม่มีช่องท้ายรถว่าง", "warn")
 		return -1
 	var pool := (Game.s.dwellers as Array).filter(func(d): return not Game.is_away(d) and Game.squad_role(d) < 0 and int(d.room) != slot)
 	pool.sort_custom(func(a, b): return float(a.agi) > float(b.agi))
-	var need := maxi(0, 2 - RearGunner.gunners(slot).size())
+	var need := maxi(0, (RearGunner.roles_open() if RearGunner.squad_on() else 2) - RearGunner.gunners(slot).size())
 	for d in pool.slice(0, need):
 		Game.assign(d, slot)
 	Game.rooms_changed.emit()
@@ -732,6 +737,45 @@ func gunner_demo(mobs: int = 4) -> int:
 		Combat.debug_spawn(q, false)
 	act("gunner demo", {"slot": slot, "gunners": RearGunner.gunners(slot).size(), "mobs": mobs})
 	return slot
+
+
+## MV-727: the room squad at full strength: gunner room Lv3 (built in a rear slot if missing) + gunner, loader, spotter
+## picked by stats. Returns how many squad slots are filled.
+func room_squad_full() -> int:
+	feature_set("room_squad", true)
+	var slot := RearGunner.post()
+	if slot < 0:
+		slot = gunner_demo(0)
+	if slot < 0:
+		return 0
+	Game.s.rooms[slot].level = 3
+	Game.s.rooms[slot].build = {}
+	Game.s.vault_level = maxi(int(Game.s.vault_level), 2)      # the spotter slot opens at Mobile Vault Lv2
+	Game.rooms_changed.emit()
+	for i in 3:
+		if int(Game.s.squad[i]) >= 0:
+			continue
+		var best := {}
+		for d in Game.s.dwellers:
+			if Game.is_away(d) or Game.squad_role(d) >= 0 or Crew.refuses(d):
+				continue
+			if best.is_empty() or Combat.role_fit(d, i) > Combat.role_fit(best, i):
+				best = d
+		if not best.is_empty():
+			Game.set_squad(i, int(best.id))
+	var n := 0
+	for did in Game.s.squad:
+		n += 1 if int(did) >= 0 else 0
+	act("room squad full", {"slot": slot, "squad": Game.s.squad, "dps": Combat.squad_dps()})
+	return n
+
+
+## MV-727: flip between the room squad and the old roof squad (null = back to the config)
+func room_squad_toggle() -> void:
+	feature_set("room_squad", not Features.on("room_squad"))
+	Combat.rebuild_heroes()
+	Game.squad_changed.emit()
+	Game.rooms_changed.emit()
 
 
 ## level the first rear gunner post up by one (1..3), done at once

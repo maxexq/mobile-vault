@@ -135,7 +135,7 @@ func _build_planner() -> void:
 			var rh := UIKit.hbox(2)
 			rh.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			rh.add_child(UIKit.icon_rect("sword", 10))
-			rh.add_child(UIKit.label(Loc.t("อยู่ในทีมป้องกันรถ · %s") % Combat.ROLES[role].th, UIKit.FS_SMALL, UIKit.C_ORANGE))
+			rh.add_child(UIKit.label(Loc.t("อยู่ในทีมป้องกันรถ · %s") % Combat.role(role).th, UIKit.FS_SMALL, UIKit.C_ORANGE))
 			tv.add_child(rh)
 		tv.add_child(UIKit.label(" · ".join(tags), UIKit.FS_SMALL, UIKit.C_DIM))
 		bh.add_child(tv)
@@ -157,7 +157,7 @@ func _build_planner() -> void:
 	for id in picked:
 		var pr := Game.squad_role(Game.dweller_by_id(int(id)))
 		if pr >= 0:
-			leaving.append(Combat.ROLES[pr].th)
+			leaving.append(Combat.role(pr).th)
 	if not leaving.is_empty():
 		_list.add_child(UIKit.wrap_label(Loc.t("ช่องทีมป้องกันรถ (%s) จะว่างทันทีที่ออกเดินทาง — เลือกคนใหม่ได้ที่เมนู Squad") % ", ".join(leaving), UIKit.FS_SMALL, UIKit.C_ORANGE))
 	# supplies
