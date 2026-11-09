@@ -12913,9 +12913,24 @@ func _road_train_test() -> void:
 	wf = Dev.road_train_world(3)
 	Dev.set_trailers(2)
 	await wait(0.4)
-	world_ok = world_ok and wf == 3 and v.v2 and v.v2_shell.texture.get_size().y == 492.0 and v.v2_cells.size() == 9
+	world_ok = world_ok and wf == 3 and v.v2 and v.v2_shell.texture.get_size().y == 492.0
 	await shot("road_train_world_f3")
 	_check("road train: on the road (world v2) the B-double body carries the v3 rooms, on the road line, 2/3 decks", world_ok)
+	# MV-721: the trailers behind it are the 2D red container shells, nose on the unit in front, no old drawbar / wheels
+	var tr_ok := v.v2_rt_trailers() and v.v2_tshells.size() == 2 and v.wheels.is_empty() and v.v2_cells.size() == Game.slot_count()
+	for k in v.v2_tshells.size():
+		var tsp: Sprite2D = v.v2_tshells[k]
+		var tb := (tsp.position.y + tsp.texture.get_size().y) * Vehicle.V2_K
+		tr_ok = tr_ok and absf(tb - (Vehicle.ROAD_Y + 1.0)) < 0.5
+	tr_ok = tr_ok and is_equal_approx(v.unit_x(0), Vehicle.V2_X + Vehicle.V2_W_RT) and is_equal_approx(v.unit_x(1) - v.unit_x(0), Vehicle.V2_TW_RT)
+	for slot in range(Game.main_slots(), Game.slot_count()):
+		var tc: RoomV3Cell = v.v2_cells[slot]
+		var own: Sprite2D = v.v2_tshells[v.v2_tshells.size() - 1 - Game.slot_unit(slot)]
+		var tlp := tc.position - own.position + Vector2(72, 48)
+		_fold("road train: trailer cell sits in its container window", own.texture.get_image().get_pixel(int(tlp.x), int(tlp.y)).a < 0.1
+			and (tc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and v.cell_size(slot) == Vehicle.V2_CELL, str(slot))
+	_fold_flush()
+	_check("road train: on the road the trailers are the container shells on the road line, no gap, no old trailer wheels", tr_ok)
 	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
