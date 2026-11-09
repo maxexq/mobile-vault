@@ -119,6 +119,7 @@ func setup(v: Vehicle) -> void:
 	Combat.skill_cast.connect(_on_skill)
 	Combat.loot_dropped.connect(_on_loot)
 	Combat.heroes_changed.connect(_sync_heroes)
+	Game.rooms_changed.connect(_sync_heroes)     # MV-727: room mode starts when the gunner room is built
 	Combat.supply_found.connect(_on_supply)
 	Combat.boss_event.connect(_on_boss_event)
 	Combat.tagged_in.connect(_on_tagged_in)
@@ -141,7 +142,7 @@ func _sync_vault_parts() -> void:
 		spikes.visible = false
 		return
 	var t := Loot.van_equipped("turret")
-	turret.visible = not t.is_empty()
+	turret.visible = not t.is_empty() and not Combat.room_mode()    # MV-727: the turret is the gun in the gunner room
 	if turret.visible:
 		turret.texture = Atlas.tex("turret_" + str(Loot.base(t).get("sprite", "mg")))
 		turret.modulate = Color.WHITE.lerp(Loot.rar_color(t), 0.25)
@@ -154,8 +155,11 @@ func _sync_heroes() -> void:
 	rear_shift = vehicle.rear_shift()
 	spikes.position = Vehicle.SPIKES_POS + Vector2(rear_shift, 0)
 	turret.position = turret_view()
+	_sync_vault_parts()
 	for i in Combat.ROLES.size():
 		var h: Dictionary = Combat.heroes[i] if i < Combat.heroes.size() else {}
+		if Combat.room_mode():
+			h = {}        # MV-727: the squad is inside the rear gunner room (drawn by the room), nobody on the roof
 		var node: HeroActor = hero_nodes[i]
 		if h.is_empty():
 			if node:

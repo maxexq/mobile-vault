@@ -622,6 +622,8 @@ func _sync_large_rooms() -> void:
 func set_build_highlight(on: bool, room_type: String = "") -> void:
 	for rv in room_views:
 		rv.build_highlight = on and Game.is_slot_unlocked(rv.slot) and Game.s.rooms[rv.slot].type == "empty"
+		if room_type == RearGunner.TYPE and RearGunner.build_block(rv.slot) != "":
+			rv.build_highlight = false     # MV-727: the gunner room only goes into a rear slot
 		rv.preview_type = room_type if rv.build_highlight else ""
 		rv.queue_redraw()
 	if on:
@@ -710,7 +712,7 @@ func _refresh_mods() -> void:
 	if ram > 0:
 		_mod_sprite("mod_spike_ram_%d" % mini(ram, 3), Vector2(-20, 242))
 	var tur := Mods.level("roof_turret")
-	if tur > 0:
+	if tur > 0 and not Combat.room_mode():     # MV-727: no roof gun with the room squad
 		_mod_sprite("mod_roof_turret_%d" % mini(tur, 3), Vector2(200, ROOF_Y + dy - 18))
 	var deck := Mods.level("roof_deck")
 	if deck > 0:

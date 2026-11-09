@@ -60,6 +60,7 @@
     "map_blueprint_caches": false,
     "world_map_detail": true,
     "gunner_room": true,
+    "room_squad": true,
     "rooms_expansion": true,
     "stop_for_strangers": true,
     "flee_guard": true,
