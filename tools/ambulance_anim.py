@@ -83,7 +83,35 @@ def one(n):
     return {"size": [W, H], "wheels": wheels(im), "wheel_r": WHEEL_R,
             "head": head["c"], "marker": marker["c"], "bar_l": [bx + bw / 4, by + bh / 2], "bar_r": [bx + bw * 3 / 4, by + bh / 2],
             "bar": bar["rect"], "lantern": lantern["c"], "tails": [t["c"] for t in tails], "mast": tip,
-            "flag": big(cloth)["rect"]}
+            "flag": big(cloth)["rect"], **lantern_flicker(im, lantern["c"])}
+
+
+LANTERN_PL = os.path.join(ROOT, "tools", "art", "ambulance", "lantern_pl.png")   # MV-741 PixelLab flicker, 8 x 18x22
+PL_W, PL_C = 18, (8.5, 13.0)                                                         # frame width, glass centre in a frame
+WARM = lambda p: p[3] and p[0] > 150 and p[0] - p[2] > 40
+
+
+def lantern_flicker(im, c):
+    """MV-741: the PixelLab flame frames mapped onto this shell's lantern glass (aligned on the glass centre).
+    Returns {lantern_px: [[x, y]...], lantern_frames: [[hex...] per frame], lantern_glow: [0..1 per frame]}"""
+    if not os.path.exists(LANTERN_PL):
+        return {}
+    px = im.load(); cx, cy = c
+    glass = [[x, y] for y in range(int(cy) - 8, int(cy) + 8) for x in range(int(cx) - 6, int(cx) + 7)
+             if WARM(px[x, y]) and (x + .5 - cx) ** 2 + (y + .5 - cy) ** 2 <= 49]
+    strip = Image.open(LANTERN_PL).convert("RGBA"); sp = strip.load(); n = strip.width // PL_W
+    frames, glow = [], []
+    for i in range(n):
+        cols, lum = [], 0.0
+        for x, y in glass:
+            fx = int(round(PL_C[0] + (x + .5 - cx) - .5)) + i * PL_W; fy = int(round(PL_C[1] + (y + .5 - cy) - .5))
+            q = sp[fx, fy] if 0 <= fx - i * PL_W < PL_W and 0 <= fy < strip.height else (0, 0, 0, 0)
+            q = q if q[3] else px[x, y]
+            cols.append("%02x%02x%02x" % q[:3]); lum += 0.3 * q[0] + 0.59 * q[1] + 0.11 * q[2]
+        frames.append(cols); glow.append(lum / max(1, len(glass)))
+    hi, lo = max(glow), min(glow)
+    glow = [round(0.55 + 0.45 * (g - lo) / (hi - lo if hi > lo else 1), 3) for g in glow]
+    return {"lantern_px": glass, "lantern_frames": frames, "lantern_glow": glow}
 
 
 def spin_strip():

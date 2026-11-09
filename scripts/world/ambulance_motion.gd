@@ -46,6 +46,9 @@ var _flag_i := 0
 var _was_moving := false
 var _lantern := 1.0
 var _lantern_t := 0.0
+var flame: Sprite2D                # MV-741: the lantern's PixelLab flame flicker over its glass (anim.json lantern_*)
+var flame_frames: Array[ImageTexture] = []
+var _flame_i := 0
 ## GOD MODE / autotest overrides
 var force_beacon := false
 var force_brake := false
@@ -190,11 +193,43 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 	_glow("bar_l", origin + _v(f.bar_l), 11.0, Color(1.0, 0.12, 0.1))
 	_glow("bar_r", origin + _v(f.bar_r), 11.0, Color(1.0, 0.12, 0.1))
 	_glow("lantern", origin + _v(f.lantern), 12.0, Color(1.0, 0.7, 0.3))
+	_build_flame(f, origin)
 	_glow("mast", origin + _v(f.mast), 5.0, Color(1.0, 0.25, 0.2))
 	var i := 0
 	for p in f.tails:
 		_glow("tail%d" % i, origin + _v(p) + Vector2(1, 0), 7.0, Color(1.0, 0.1, 0.08))
 		i += 1
+
+
+## MV-741: one texture per PixelLab flicker frame, covering only the lantern's glass pixels (lantern_px)
+func _build_flame(f: Dictionary, origin: Vector2) -> void:
+	flame_frames.clear()
+	_flame_i = 0
+	if not f.has("lantern_px") or (f.lantern_px as Array).is_empty():
+		return
+	var lo := Vector2i(100000, 100000)
+	var hi := Vector2i(-1, -1)
+	for q in f.lantern_px:
+		lo = Vector2i(mini(lo.x, int(q[0])), mini(lo.y, int(q[1])))
+		hi = Vector2i(maxi(hi.x, int(q[0])), maxi(hi.y, int(q[1])))
+	for cols in f.lantern_frames:
+		var img := Image.create_empty(hi.x - lo.x + 1, hi.y - lo.y + 1, false, Image.FORMAT_RGBA8)
+		var k := 0
+		for q in f.lantern_px:
+			img.set_pixel(int(q[0]) - lo.x, int(q[1]) - lo.y, Color.html(str(cols[k])))
+			k += 1
+		flame_frames.append(ImageTexture.create_from_image(img))
+	flame = Sprite2D.new()
+	flame.name = "LanternFlame"
+	flame.centered = false
+	flame.position = origin + Vector2(lo)
+	flame.texture = flame_frames[0]
+	over.add_child(flame)
+	over.move_child(flame, 0)                  # under the additive glows
+
+
+func flame_frame() -> int:
+	return _flame_i
 
 
 func _v(a: Array) -> Vector2:
@@ -225,6 +260,8 @@ func clear() -> void:
 	hops.clear()
 	hop_left.clear()
 	glows.clear()
+	flame = null
+	flame_frames.clear()
 	floors = 0
 
 
@@ -307,8 +344,14 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_lantern_t -= delta
 	if _lantern_t <= 0.0:
 		_lantern_t = randf_range(0.08, 0.22)
-		_lantern = randf_range(0.7, 1.0)
-	_lamp("lantern", dark * 0.8 * _lantern)
+		if flame_frames.is_empty():
+			_lantern = randf_range(0.7, 1.0)
+		else:                                  # MV-741: next flame frame; the glow follows that frame's brightness
+			_flame_i = (_flame_i + 1) % flame_frames.size()
+			flame.texture = flame_frames[_flame_i]
+			_lantern = float((spot(floors).get("lantern_glow", []) as Array)[_flame_i])
+	# MV-741: the lantern is always lit: a faint warm glow by day, full after dark
+	_lamp("lantern", (0.15 + 0.7 * dark) * _lantern if not flame_frames.is_empty() else dark * 0.8 * _lantern)
 	_lamp("mast", 0.9 if fmod(_t, 1.6) < 0.22 else 0.0)
 	# flag: a slow breeze parked, snapping in the headwind when driving
 	_flag_t -= delta

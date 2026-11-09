@@ -12929,6 +12929,15 @@ func _vehicle_anim_test() -> void:
 		marker_seen = marker_seen or v.amb.lamp_alpha("marker") > 0.5
 	_check("vehicle anim: the raid light bar flashes left then right", bl and br)
 	_check("vehicle anim: the amber marker blinks after pulling over", marker_seen)
+	# MV-741: the roof lantern's PixelLab flame flickers over its glass and its glow follows the flame, day or night
+	var fl_seen := {}
+	var lit := true
+	for i in 20:
+		await wait(0.05)
+		fl_seen[v.amb.flame_frame()] = true
+		lit = lit and v.amb.lamp_alpha("lantern") > 0.05
+	_check("MV-741: the lantern flame flickers (PixelLab frames over the glass) and always glows", v.amb.flame != null
+		and v.amb.flame_frames.size() == (spot.lantern_frames as Array).size() and fl_seen.size() >= 3 and lit)
 	await shot("vehicle_anim_beacon")
 	var f2 := v.amb.spin_frame()
 	await wait(0.3)

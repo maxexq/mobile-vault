@@ -11,6 +11,12 @@ Run from anywhere AFTER tools/art/ambulance_front/apply_front.py, then rerun too
 2) stray pixels: specks of <= 3 px that touch nothing (dust over the roof garden / tank, dots under the cab) go.
 3) room frames: every room opening gets the same frame as the Decker (MV-739): 1 px black lip + 2 px riveted
    steel around the opening and a soft inner shadow on its top / sides, so the rooms sit inside the body.
+4) (Parames 19:55-19:56) roof + lantern:
+   - solar: the edge-on rail over the water tank becomes the PixelLab array solar_pl.png (Pro inpaint-v3 take s2 of
+     the 256x64 crop at shell (286,0); only x 296..447, y 2..27 is used, its sky keyed out). Same spot on 1-5 floors.
+   - the orange ghost arc (and the dash under it) floating left of the tank pipe is removed.
+   - the lantern loses the dark brown disc behind it (it read as a box / dead glow) and hangs from a hook; its light
+     is the game's additive glow + the PixelLab flame flicker (lantern_pl.png, tools/ambulance_anim.py).
 The rear (x >= 592) is not touched apart from frames, so the pup trailer's tow plate (x 600-621) still lines up.
 """
 import os, sys
@@ -127,8 +133,68 @@ def blend(px, x, y, al):
     if px[x, y][3] == 0: px[x, y] = (8, 6, 6, al)
 
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+SKY = (46, 44, 48)
+
+
+def solar(im, take=os.path.join(HERE, "solar_pl.png"), x0=286):
+    tp = Image.open(take).convert("RGB").load(); sp = im.load()
+    for y in range(2, 28):
+        for x in range(296, 448):
+            p = tp[x - x0, y]
+            sky = sum(abs(a - b) for a, b in zip(p, SKY)) <= 18 or min(p) >= 190
+            sp[x, y] = (0, 0, 0, 0) if sky else p + (255,)
+
+
+def ghost_arc(im, box=(266, 28, 290, 48)):
+    a = np.array(im)[:, :, 3] > 0
+    lab, k = nd.label(a, structure=EIGHT)
+    sub = lab[box[1]:box[3], box[0]:box[2]]
+    ids = [i for i in np.unique(sub) if i and (lab == i).sum() <= 60]
+    arr = np.array(im); arr[np.isin(lab, ids)] = 0
+    return Image.fromarray(arr).copy()
+
+
+YEL = lambda p: p[0] > 200 and p[1] > 160 and p[2] < 170 and p[0] - p[2] > 50
+PLATE = lambda p: 140 < sum(p[:3]) < 215 and max(p[:3]) - min(p[:3]) < 40
+
+
+def lantern(im):
+    """removes the brown disc behind the roof lantern: flood from the sky through plate-coloured pixels (the lantern's
+    black outline stops it), then the disc's own dark rim, then a hook up to the bracket"""
+    px = im.load()
+    pts = [(x, y) for y in range(60, 110) for x in range(100, 126) if px[x, y][3] and YEL(px[x, y])]
+    cx = sum(p[0] for p in pts) / len(pts) + 0.5; cy = sum(p[1] for p in pts) / len(pts) + 0.5
+    inside = lambda x, y: (x + .5 - cx) ** 2 + (y + .5 - cy) ** 2 <= 13 ** 2 and y >= cy - 8 and x < 124
+    st = [(x, y) for y in range(int(cy) - 14, int(cy) + 15) for x in range(int(cx) - 14, int(cx) + 15) if inside(x, y) and px[x, y][3] == 0]
+    seen = set()
+    while st:
+        x, y = st.pop()
+        if (x, y) in seen or not inside(x, y): continue
+        seen.add((x, y)); p = px[x, y]
+        if p[3] and not (PLATE(p) and not p[1] > p[0] + 8): continue
+        px[x, y] = (0, 0, 0, 0); st += [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+    for _ in range(2):                                  # the disc's dark rim: pixels left mostly alone in the sky
+        kill = []
+        for y in range(int(cy) - 13, int(cy) + 14):
+            for x in range(int(cx) - 13, 124):
+                if not inside(x, y) or not px[x, y][3] or px[x, y][1] > px[x, y][0] + 8: continue
+                empty = sum(1 for dx in (-1, 0, 1) for dy in (-1, 0, 1) if (dx or dy) and px[x + dx, y + dy][3] == 0)
+                if empty >= 5: kill.append((x, y))
+        for q in kill: px[q] = (0, 0, 0, 0)
+    hx = int(cx)                                        # hook: lantern top up to the bracket
+    top = next(y for y in range(int(cy) - 12, int(cy)) if px[hx, y][3] and inside(hx, y))
+    y = top - 1
+    while y > top - 6 and px[hx, y][3] == 0:
+        px[hx, y] = (14, 12, 10, 255); y -= 1
+    return cx, cy
+
+
 def clean_shell(path, front):
     im = Image.open(path).convert("RGBA")
+    solar(im)
+    im = ghost_arc(im)
+    lantern(im)
     top = im.height - front.height
     holes = fill_holes(im, front, top)
     im, strays = drop_strays(im)
