@@ -396,10 +396,15 @@ func _offline_summary_test() -> void:
 		_check("offline summary: window and sticky continue fit %s" % str(viewport_size), bounds.encloses(panel.box.get_global_rect()) and panel.box.get_global_rect().encloses(panel.continue_button.get_global_rect()))
 		await shot("offline_summary_%dx%d" % [viewport_size.x, viewport_size.y])
 	var pos := panel.continue_button.get_global_rect().get_center()
+	# the economy keeps running while the window is up (resizes + screenshots above take ~1.5 s, long enough for a
+	# production tick or a raid to change supplies): take the "no rewards granted again" snapshot right before the tap
+	snapshot = JSON.stringify(Game.s.res)
 	await _finger(0, pos, true)
 	await _finger(0, pos, false)
+	var res_after := JSON.stringify(Game.s.res)
 	await wait(0.2)
-	_check("offline summary: real finger dismisses and releases gesture", not panel.is_open and main._touches.is_empty() and JSON.stringify(Game.s.res) == snapshot)
+	_check("offline summary: real finger dismisses and releases gesture", not panel.is_open and main._touches.is_empty())
+	_check("offline summary: dismissing grants nothing again", res_after == snapshot)
 	Dev.offline_summary_preview()
 	var esc := InputEventKey.new()
 	esc.keycode = KEY_ESCAPE
