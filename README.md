@@ -561,6 +561,9 @@ vehicle and the 64x52 rooms in the world stay as they are until the v3 vehicle s
   (`shell.json`: cell x = 146 + col x 152, y = 88 + row x 112 from the top floor). Trailers stand behind it on the
   same road line. Shells come from `designs/dr-ren-ambulance/mf/shell.py`. The outside world keeps the old van until
   world v2 (MV-602). GOD → รถ → รถพยาบาล v3: 1 / 2 / 3 / 4 floors + switch. Autotest: `--only=ambulance_v3`.
+  **Flat front (MV-731):** the front is the approved flat 2D side view (steel bumper bar + tow hook, headlight lens, no
+  hood nub), pasted onto every shell by `tools/art/ambulance_front/apply_front.py`; the bumper tip and hook stick out
+  12 px in front of the 638 px shell as `nose.png`, a child sprite of the shell (`InteriorV3Panel.attach_nose`).
 - **World v2 phase 1 (MV-715, switch `world_v2`):** on the road the van is the same ambulance with the v3 rooms and
   v3 crew, drawn at half size (`Vehicle.V2_K`; with `world_2x` every v3 pixel is still a screen pixel). Cells are
   72x48 at x 73 + 76·col, floors 56 apart (= `FLOOR_H`); the ambulance is 319 px long (39 more than the van), so
