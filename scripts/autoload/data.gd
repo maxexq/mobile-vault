@@ -17,7 +17,8 @@ const MAX_SLOTS := 27             # 5-floor body + 2 trailers
 ## MV-563 (switch five_floors): the body grows with the Mobile Vault level, from the vehicle's START_FLOORS by one
 ## floor at each FLOOR_GAIN_LEVELS level (tune vault.floor_gain_1..3) up to BODY_FLOORS
 const BODY_FLOORS := 5
-const START_FLOORS := {"van": 2, "bus": 3, "rig": 4, "train": 5}
+## MV-715 (Parames 2026-11-08): Dr. Ren's ambulance (van) starts with one floor and grows by upgrades
+const START_FLOORS := {"van": 1, "bus": 3, "rig": 4, "train": 5}
 const FLOOR_GAIN_LEVELS := [2, 4, 6]
 ## v3 -> v4 save migration: old slot index -> (column, floor)
 const V3_SLOT_CELL := [[0, 2], [1, 2], [0, 3], [1, 3], [0, 1], [1, 1], [1, 0], [0, 0], [2, 0], [2, 1], [2, 2], [2, 3],
@@ -501,7 +502,7 @@ func room_art(t: String) -> String:
 ## machines give none
 const MEAT_MOBS := {
 	"rad_rat": 0.5, "scorpion": 0.8, "vulture": 0.6, "rad_wolf": 1.0, "mutant_bug": 0.4,
-	"frost_wolf": 1.0, "yeti": 1.6, "toxic_toad": 0.6, "mosquito": 0.2, "mutant_ape": 1.4,
+	"frost_wolf": 1.0, "yeti": 1.6, "toxic_toad": 0.6, "mosquito": 0.2, "mutant_ape": 1.4, "frost_owl": 0.6,
 }
 const MEAT_PER_KILL := 0.6       # x the table above (boss x12, elite x3)
 const RAW_KEYS := ["crops", "meat"]

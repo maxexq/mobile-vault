@@ -34,6 +34,7 @@ const ROLES := [
 		"skill": "ปฐมพยาบาล", "skill_desc": "ทุก 12 วิ ฟื้นเลือดทุกคน 30% + ซ่อมตัวถัง · รักษาคนเจ็บหนักสุดทุก 3.5 วิ", "cd": 12.0},
 ]
 const DECK_X := 350.0
+const GUN_X := 340.0       # MV-716: the rear gunner room's firing hatch in combat space (rear of the main body)
 const SPAWN_X := 610.0
 const RANGE_SCALE := 0.75   # keeps the shoot-out inside the camera view
 const MIN_ROOF_RANGE := 195.0
@@ -63,6 +64,9 @@ const MOBS := {
 	"gang_scav": {"th": "แก๊งเมืองร้าง", "sprite": "dw_raider_red", "hp": 38.0, "dmg": 7.0, "spd": 26.0, "cd": 1.3, "kind": "ranged", "range": 150.0},
 	"sentry_bot": {"th": "หุ่นยามติดปืน", "sprite": "en_sentry", "hp": 52.0, "dmg": 7.0, "spd": 20.0, "cd": 1.4, "kind": "ranged", "range": 160.0},
 	"mutant_ape": {"th": "ลิงกลายพันธุ์", "sprite": "en_ape", "hp": 70.0, "dmg": 10.0, "spd": 34.0, "cd": 1.3, "kind": "melee"},
+	# MV-714: the flyers of the tundra and the metro in the v2 rosters (old sprites only for the switch-off / feed)
+	"frost_owl": {"th": "นกฮูกหิมะกลายพันธุ์", "sprite": "en_vulture", "tint": "c8dcea", "hp": 22.0, "dmg": 5.5, "spd": 46.0, "cd": 1.2, "kind": "air", "range": 50.0},
+	"hunter_drone": {"th": "โดรนล่าเฮลิออส", "sprite": "en_drone", "tint": "6a7a8a", "hp": 26.0, "dmg": 6.5, "spd": 40.0, "cd": 1.3, "kind": "air", "range": 120.0},
 	# ---- mutations: appear further down the road and force a different loadout
 	"runner": {"th": "ซอมบี้วิ่งเร็ว", "sprite": "en_runner", "hp": 18.0, "dmg": 4.0, "spd": 72.0, "cd": 0.7, "kind": "melee", "mutant": true},
 	"spitter": {"th": "ซอมบี้พ่นกรด", "sprite": "en_spitter", "hp": 30.0, "dmg": 4.0, "spd": 22.0, "cd": 1.8, "kind": "ranged", "range": 150.0, "mech": ["acid"], "mutant": true},
@@ -84,6 +88,26 @@ const BIOME_MOBS := {
 	"swamp": ["toxic_toad", "mosquito", "bog_walker", "toxic_toad"],
 	"metro": ["gang_scav", "sentry_bot", "mutant_ape", "gang_scav"],
 }
+## MV-714 (switch enemies_v2): 3 monsters per biome with 1 flyer each, drawn at crew v3 density. The forest bug is
+## now a flying hornet; the tundra and the metro swap their human raiders for a flyer (snow owl, HELIOS hunter drone)
+const BIOME_MOBS_V2 := {
+	"industrial": ["rad_rat", "rad_rat", "scav_raider", "rust_drone"],
+	"desert": ["scorpion", "scorpion", "sand_raider", "vulture"],
+	"forest": ["rad_wolf", "mutant_bug", "mutant_bug", "vine_crawler"],
+	"tundra": ["frost_wolf", "frost_owl", "yeti", "frost_wolf"],
+	"swamp": ["toxic_toad", "mosquito", "bog_walker", "toxic_toad"],
+	"metro": ["sentry_bot", "hunter_drone", "mutant_ape", "sentry_bot"],
+}
+const V2_KIND := {"mutant_bug": "air"}
+
+
+## this biome's mob roster (v2 when the switch is on)
+func biome_mobs(biome: String = "") -> Array:
+	var b := biome if biome != "" else biome_id()
+	var table: Dictionary = BIOME_MOBS_V2 if Features.on("enemies_v2") else BIOME_MOBS
+	return table.get(b, table.industrial)
+
+
 ## bosses have their own native-size sprites (no upscaling -> true pixel art)
 ## mech: enrage (<30% hp faster & harder) | armor (-50% dmg taken above 60% hp) | summon (calls adds) |
 ##       acid (corrodes the hull & armour) | solar (dives at the solar panels) | burrow (dives underground,
@@ -95,6 +119,16 @@ const BOSSES := {
 	"swamp": {"th": "ราชินีหนองพิษ", "en": "BOG QUEEN", "base": "bog_walker", "sprite": "boss_bogqueen", "kind": "ranged", "mech": ["acid", "summon"]},
 	"tundra": {"th": "ไททันน้ำแข็ง", "en": "FROST TITAN", "base": "yeti", "sprite": "boss_titan", "kind": "melee", "mech": ["armor", "enrage"]},
 	"metro": {"th": "ผู้คุมจักรกล OVERSEER", "en": "OVERSEER MECH", "base": "sentry_bot", "sprite": "boss_overseer", "kind": "ranged", "mech": ["armor", "summon", "enrage"]},
+}
+## MV-704 (switch bosses_v2): the lore bosses that replace the old ones above, same base stats + mechanics, own
+## names and HD art (BossesV2, assets/bosses_v2/). Merged over BOSSES by boss_def().
+const BOSSES_V2 := {
+	"industrial": {"th": "หัวหน้าคนงาน", "en": "THE FOREMAN"},
+	"desert": {"th": "ราชาแก้ว", "en": "GLASS KING"},
+	"forest": {"th": "จ่าฝูงหลังป่า", "en": "MOSSBACK ALPHA"},
+	"swamp": {"th": "มารดาบึง", "en": "BOG MOTHER"},
+	"tundra": {"th": "ไททันห้องเย็น", "en": "CRYO TITAN"},
+	"metro": {"th": "ผู้คุมหมายเลข 9", "en": "WARDEN-9"},
 }
 ## roaming mutant bosses for the every-10th-wave fights (rotates; harder ones join further down the road)
 const WAVE_BOSSES := {
@@ -111,6 +145,8 @@ const WAVE_BOSSES := {
 var enemies: Array = []          # runtime enemy dicts
 var heroes: Array = []           # runtime hero dicts, index = role slot
 var turret := {"t": 0.0}
+## MV-716 rear gunner rooms: shot timers per gunner ("slot:dweller id" -> seconds to the next shot)
+var room_guns := {}
 var wave_active := false
 var wave_is_boss := false
 var wave_is_warlord := false
@@ -272,7 +308,7 @@ func is_boss_wave(w: int) -> bool:
 
 
 func active() -> bool:
-	return Game.started and Game.closeup_slot < 0 and Game.active_event == "" and _has_squad()
+	return Game.started and Game.closeup_slot < 0 and Game.active_event == "" and (_has_squad() or not RearGunner.guns().is_empty())
 
 
 func _has_squad() -> bool:
@@ -412,7 +448,36 @@ func squad_dps() -> float:
 		var h: Dictionary = heroes[i]
 		if not h.is_empty():
 			t += float(h.st.dps)
-	return t + float(van_stats().turret_dps)
+	return t + float(van_stats().turret_dps) + RearGunner.dps()
+
+
+## MV-716: every crew member on a rear gunner room's gun shoots the closest enemy in range (RearGunner). The gun is
+## manual, so a power-out doesn't stop it; the shot leaves from the room's firing hatch (CombatView "room_gun").
+func _tick_room_guns(dt: float) -> void:
+	var guns := RearGunner.guns()
+	if guns.is_empty():
+		if not room_guns.is_empty():
+			room_guns.clear()
+		return
+	var live := {}
+	for g in guns:
+		var key := "%d:%d" % [int(g.slot), int(g.did)]
+		live[key] = true
+		var t := float(room_guns.get(key, rng.randf() * 0.5)) - dt
+		if t <= 0.0:
+			var tt := _targets_from(GUN_X, RearGunner.range_px(), 1, true)
+			if tt.is_empty():
+				t = 0.0
+			else:
+				t = 1.0 / maxf(0.2, RearGunner.aspd())
+				var e: Dictionary = tt[0]
+				var crit := rng.randf() < 0.05
+				shot.emit("room_gun", int(g.slot), "enemy", int(e.id), "bullet")
+				_damage_enemy(e, float(g.dmg) * (1.5 if crit else 1.0), crit, -1, true)
+		room_guns[key] = t
+	for k in room_guns.keys():
+		if not live.has(k):
+			room_guns.erase(k)
 
 
 func rebuild_heroes() -> void:
@@ -554,7 +619,7 @@ func _clear_enemies() -> void:
 
 func _start_wave() -> void:
 	var w := wave()
-	var mobs: Array = BIOME_MOBS.get(biome_id(), BIOME_MOBS.industrial)
+	var mobs: Array = biome_mobs()
 	spawn_queue.clear()
 	wave_is_warlord = false
 	wave_is_boss = false
@@ -566,7 +631,7 @@ func _start_wave() -> void:
 		spawn_queue.append({"t": 0.5, "boss": "warlord", "lvl": lvl})
 		for i in 3:
 			spawn_queue.append({"t": 1.5 + i * 1.2, "mob": mobs[rng.randi() % mobs.size()], "lvl": lvl - 2})
-		Game.toast.emit("บอสด่านตรวจปรากฏตัว: %s!" % BOSSES[biome_id()].th, "bad")
+		Game.toast.emit("บอสด่านตรวจปรากฏตัว: %s!" % boss_def(biome_id()).th, "bad")
 	elif is_boss_wave(w):
 		wave_is_boss = true
 		var bid := pick_wave_boss(w)
@@ -603,7 +668,12 @@ func pick_wave_boss(w: int) -> String:
 func boss_def(id: String) -> Dictionary:
 	if WAVE_BOSSES.has(id):
 		return WAVE_BOSSES[id]
-	return BOSSES.get(id, BOSSES.industrial)
+	var key := id if BOSSES.has(id) else "industrial"
+	var d: Dictionary = BOSSES[key]
+	if Features.on("bosses_v2") and BOSSES_V2.has(key):
+		d = d.merged(BOSSES_V2[key], true)
+		d["v2"] = key
+	return d
 
 
 func mutation_chance() -> float:
@@ -639,6 +709,7 @@ func _spawn(q: Dictionary) -> void:
 		e.name = ("บอสด่านตรวจ: " if e.warlord else "") + bd.th
 		e.mob = bd.base
 		e.boss_sprite = bd.sprite
+		e.boss_v2 = str(bd.get("v2", ""))    # MV-718: biome of the HD art, "" = old sprite
 		e.en = bd.en
 		e.mech = (bd.get("mech", []) as Array).duplicate()
 		e.mech_t = 4.0
@@ -679,6 +750,8 @@ func _spawn(q: Dictionary) -> void:
 	e.spd = float(def.spd) * (0.7 if e.boss else 1.0) * rng.randf_range(0.9, 1.1)
 	e.cd = float(def.cd) * (1.3 if e.boss else 1.0)
 	e.kind = "air" if e.get("boss_air", false) else def.kind
+	if not e.boss and V2_KIND.has(str(e.mob)) and Features.on("enemies_v2"):
+		e.kind = V2_KIND[str(e.mob)]
 	e.range = float(def.get("range", 0.0)) * RANGE_SCALE
 	e.sprite = e.get("boss_sprite", def.sprite)
 	e.x = SPAWN_X + rng.randf_range(0, 30)
@@ -823,6 +896,8 @@ func tick(dt: float) -> void:
 					if float(vs.roof) > 0.0 and is_instance_valid(self) and float(e.hp) > 0.0:
 						shot.emit("roof", 0, "enemy", int(e.id), "turret")
 						_damage_enemy(e, float(vs.turret_dmg) * float(vs.roof), false, -1, true)
+	# --- MV-716: crew firing from the rear gunner room(s)
+	_tick_room_guns(dt)
 	# --- cleanup deaths
 	for e in enemies.duplicate():
 		if float(e.hp) <= 0.0:
@@ -876,6 +951,7 @@ func _tick_mechanics(dt: float) -> void:
 		if e.mech_t > 0.0:
 			continue
 		e.mech_t = 9.0 if not e.get("enraged", false) else 6.0
+		# boss adds keep the balance-tested pre-v2 rosters (MV-714: the v2 metro roster failed the warlord bench)
 		var mobs: Array = BIOME_MOBS.get(biome_id(), BIOME_MOBS.industrial)
 		if mech.has("summon") and enemies.size() < 9:
 			for i in 2:
