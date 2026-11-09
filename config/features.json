@@ -96,6 +96,7 @@
     "parallax_v2": true,
     "world_2x": true,
     "rooms_v3": true,
+    "road_train": true,
     "ambulance_v3": true,
     "world_v2": true,
     "vehicle_anim": true,

@@ -401,7 +401,7 @@ func legacy_add(n: int) -> void:
 
 ## swap the chassis in place: keeps the rooms that still fit, trailers stay hitched
 func set_tier(t: String) -> void:
-	if not Data.VEHICLES.has(t) or t == Game.tier():
+	if not Game.tier_order().has(t) or t == Game.tier():
 		return
 	var old_main := Game.main_slots()
 	Game.s.tier = t
@@ -1181,6 +1181,31 @@ func _van_floors(n: int) -> void:
 	var old_main := Game.main_slots()
 	Game.s.body_slots = Data.ROOMS_PER_FLOOR * n      # 5 floors is past the van's own ladder (1 + 3 Vault floors)
 	Game.relayout_body(old_main, Game.main_slots())
+
+
+## MV-721: switch road_train on and drive the road train now (old rig slot); returns the tier in play
+func road_train_preview() -> String:
+	feature_set("road_train", true)
+	set_tier("rig")
+	act("road train preview", {"tier": Game.tier()})
+	_vehicle_changed()
+	return Game.tier()
+
+
+## MV-721: the road train on the road (world v2) with n body decks (2 or 3); returns the decks it got
+func road_train_world(n: int) -> int:
+	feature_set("road_train", true)
+	feature_set("world_v2", true)
+	set_tier("rig")
+	Features.set_override("features", "five_floors", true)
+	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
+		if Game.floors_at(lv) >= clampi(n, 2, 3) or lv == Data.MAX_VAULT_LEVEL:
+			Game.s.vault_level = lv
+			break
+	Game.fit_body()       # the body follows the Vault level, down as well as up
+	act("road train world", {"floors": Game.floors()})
+	_vehicle_changed()
+	return Game.floors()
 
 
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
