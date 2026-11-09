@@ -309,7 +309,9 @@ def clean_shell(path, front):
     frame(im, rects)
     pipe_knob(im)
     tail_hoods(im)
-    roof_parts(im)                           # last: the window frames must not paint over the pot rows
+    roof_parts(im)                           # the window frames must not paint over the pot rows
+    from pinholes import clean as pinholes
+    pinholes(im)                             # last: no see-through pocket of <= 4 px anywhere (Parames 21:14)
     im.save(path)
     return holes, strays, len(rects)
 
