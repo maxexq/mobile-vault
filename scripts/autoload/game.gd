@@ -559,6 +559,13 @@ func decker_on() -> bool:
 	return Features.on("decker") and Features.on("road_train")
 
 
+## MV-744: the Decker's status sign keeps spirits up a little (switch decker_sign, tune decker_sign.happy)
+func decker_sign_happy() -> float:
+	if not Features.on("decker_sign") or not decker_on() or tier() != "bus":
+		return 0.0
+	return Features.num("decker_sign.happy", 3.0)
+
+
 func vehicle_def_for(t: String) -> Dictionary:
 	var d: Dictionary = Data.VEHICLES.get(t, Data.VEHICLES.van)
 	if Features.on("road_train"):
@@ -1530,7 +1537,7 @@ func _sim_crew_body(dt: float, offline: bool) -> void:
 			has_quarters = true
 	# MV-113: everything below is the same for every crew member this tick: work it out once, not per person
 	var first_q := _first_quarters()
-	var env_base := Env.happy_base()
+	var env_base := Env.happy_base() + decker_sign_happy()
 	var freeze := Env.freeze_power()
 	var pets_bonus := 6.0 * minf(2.0, float((s.get("pets", []) as Array).size()))
 	var low_food: bool = float(res.food) < cap("food") * 0.1

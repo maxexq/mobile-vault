@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- The Decker bus's 9 DEPOT sign is now a status board: it flashes RAID! and runs HULL / WATER / FOOD / FUEL / POWER LOW warnings, scrolls cheerful lines that lift the crew's mood a little, and the bus honks its air horn leaving a stop and winds a siren before a raid (MV-744)
 - Dr. Ren's ambulance tows new pup trailers: a cream box with red stripes on a centred twin axle, hooked on with a heavy steel drawbar, safety chains and air lines (MV-737)
 - Sharper crew on the vehicle: the new crew are drawn at full pixel size in the main view, so faces and outlines no longer lose pixels (MV-734)
 - New pets: 3 dogs, 3 cats and 3 chickens in their real size, trotting around the rooms of Dr. Ren's ambulance and hopping from room to room, preferring rooms with people (MV-733)

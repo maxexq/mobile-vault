@@ -401,6 +401,14 @@ func _tab_vehicle() -> void:
 		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),
 		_b("Decker: " + ("เปิด" if Features.on("decker") else "ปิด"), func(): Dev.feature_set("decker", not Features.on("decker")),
 		"green" if Features.on("decker") else "red")], "รถบัส 2 ชั้น")
+	_row([_b("ป้าย: RAID!", func(): Dev.decker_sign("RAID!", "raid"), "red"),
+		_b("WATER LOW", func(): Dev.decker_sign("WATER LOW", "warn")), _b("ให้กำลังใจ", func(): Dev.decker_sign()),
+		_b("แตรลม", func(): Dev.decker_horn("air_horn")), _b("ไซเรน", func(): Dev.decker_horn("bus_siren")),
+		_b("ป้ายสถานะ: " + ("เปิด" if Features.on("decker_sign") else "ปิด"),
+		func(): Dev.feature_set("decker_sign", not Features.on("decker_sign")), "green" if Features.on("decker_sign") else "red"),
+		_b("แตร: " + ("เปิด" if Features.on("decker_horn") else "ปิด"),
+		func(): Dev.feature_set("decker_horn", not Features.on("decker_horn")), "green" if Features.on("decker_horn") else "red")],
+		"ป้าย+แตร Decker")
 	_row([_b("ขับ", func(): Dev.vehicle_anim("drive"), "green"), _b("เร็ว", func(): Dev.vehicle_anim("fast")),
 		_b("เบรกจอด", func(): Dev.vehicle_anim("brake")), _b("ดับเครื่อง", func(): Dev.vehicle_anim("park")),
 		_b("หลุม", func(): Dev.vehicle_anim("bump")), _b("ไซเรน", func(): Dev.vehicle_anim("beacon"), "yellow"),
