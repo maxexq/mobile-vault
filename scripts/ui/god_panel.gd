@@ -396,6 +396,11 @@ func _tab_vehicle() -> void:
 		_b("บนถนน 2 ชั้น", func(): Dev.road_train_world(2)), _b("3 ชั้น", func(): Dev.road_train_world(3)),
 		_b("รถ 2 คัน: " + ("เปิด" if Features.on("road_train") else "ปิด"), func(): Dev.feature_set("road_train", not Features.on("road_train")),
 		"green" if Features.on("road_train") else "red")], "โร้ดเทรน")
+	_row([_b("ขับ Decker 2 ชั้น", func(): Dev.decker_preview(2)), _b("3 ชั้น", func(): Dev.decker_preview(3)),
+		_b("ภายใน", func(): Dev.decker_interior()),
+		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),
+		_b("Decker: " + ("เปิด" if Features.on("decker") else "ปิด"), func(): Dev.feature_set("decker", not Features.on("decker")),
+		"green" if Features.on("decker") else "red")], "รถบัส 2 ชั้น")
 	_row([_b("ขับ", func(): Dev.vehicle_anim("drive"), "green"), _b("เร็ว", func(): Dev.vehicle_anim("fast")),
 		_b("เบรกจอด", func(): Dev.vehicle_anim("brake")), _b("ดับเครื่อง", func(): Dev.vehicle_anim("park")),
 		_b("หลุม", func(): Dev.vehicle_anim("bump")), _b("ไซเรน", func(): Dev.vehicle_anim("beacon"), "yellow"),

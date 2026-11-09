@@ -684,6 +684,11 @@ func _run() -> void:
 		await _world_v2_test()
 		_finish()
 		return
+	if "--only=decker" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _decker_test()
+		_finish()
+		return
 	if "--only=ambulance_pup" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _ambulance_pup_test()
@@ -1718,6 +1723,7 @@ func _run() -> void:
 	await _ambulance_v3_test()
 	await _world_v2_test()
 	await _road_train_test()
+	await _decker_test()
 	await _ambulance_pup_test()
 	await _vehicle_anim_test()
 	await _raw_food_test()
@@ -13173,6 +13179,7 @@ func _road_train_test() -> void:
 	var old_state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	Features.set_override("features", "road_train", true)
+	Features.set_override("features", "decker", false)     # MV-736: the Decker joins the ladder in _decker_test
 	_check("road train: the ladder is the ambulance and the road train", Game.tier_order() == ["van", "rig"])
 	Game.s.tier = "bus"
 	var bus_ok := Game.tier() == "rig"
@@ -13293,6 +13300,142 @@ func _road_train_test() -> void:
 
 
 
+
+
+## MV-736 (switch decker): the Decker double-decker bus is the third vehicle (id bus) between the ambulance and the road
+## train, researched with tier_bus, starts with 2 decks and gets the scrap 3rd deck at the first floor-gain Vault level
+func _decker_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "road_train", true)
+	Features.set_override("features", "decker", true)
+	_check("decker: the ladder is ambulance, Decker, road train", Game.tier_order() == ["van", "bus", "rig"])
+	Game.s.tier = "bus"
+	_check("decker: a bus save drives the Decker, named DECKER BUS", Game.tier() == "bus" and str(Game.vehicle_def().en) == "DECKER BUS")
+	Game.s.tier = "van"
+	var mm := Meta.m()
+	mm.perks = {}
+	mm.legacy = 999
+	Meta.add_blueprint("bp_bus")
+	_check("decker: researched with tier_bus (shown, no other vehicle first), unlocks the bus for the next generation",
+		not Meta.perk_hidden("tier_bus") and str(Meta.perk_def("tier_bus").en) == "DECKER BUS" and Meta.buy("tier_bus") and Meta.tier_unlocked("bus") and Meta.best_tier() == "bus")
+	Features.set_override("features", "five_floors", true)
+	Game.s.tier = "bus"
+	_check("decker: 2 decks at the start, 3 from the first floor-gain level, never more", Game.floors_at(1) == 2 and Game.floors_at(Data.FLOOR_GAIN_LEVELS[0]) == 3 and Game.floors_at(6) == 3)
+	Game.s.tier = "van"
+	var n := Dev.decker_preview(2, false)
+	await wait(0.3)
+	_check("decker: GOD drives the Decker with 2 decks (6 rooms) in place", n == 2 and Game.tier() == "bus" and Game.main_slots() == 6 and main.vehicle.room_views.size() == Game.slot_count())
+	var old_window := get_window().size
+	get_window().size = Vector2i(405, 720)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.DK_DIR + "shell.json"))
+	var shells_ok := true
+	for d in [2, 3]:
+		Dev.decker_preview(d, false)
+		Dev.rooms_v3_open()
+		await wait(0.4)
+		var tex := panel.amb_shell.texture
+		var nose := panel.amb_shell.get_node_or_null("Nose") as Sprite2D
+		_fold("decker: no ambulance nose in the interior", nose == null or not nose.visible, str(d))
+		shells_ok = shells_ok and panel.dk() and panel.amb() and panel.amb_shell.visible and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
+		var img := tex.get_image()
+		for slot in Game.main_slots():
+			var c := Game.slot_cell(slot)
+			var want := Vector2.ZERO
+			for cc in spec.floors[str(d)].cells:
+				if int(cc.floor) == c.y and int(cc.col) == c.x:
+					want = panel.amb_shell.position + Vector2(float(cc.x), float(cc.y))
+			var cp := (panel.cells[slot] as RoomV3Cell).position
+			var lp := cp - panel.amb_shell.position + Vector2(72, 48)
+			shells_ok = shells_ok and cp.is_equal_approx(want) and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1
+		await shot("decker_interior_f%d" % d)
+		panel.close()
+	_fold_flush()
+	_check("decker: v3 interior draws the bus shell, every room in its window (2 and 3 decks)", shells_ok)
+	get_window().size = old_window
+	var v: Vehicle = main.vehicle
+	var world_ok := true
+	for d in [2, 3]:
+		Dev.decker_preview(d)
+		await wait(0.4)
+		var nose := v.v2_shell.get_node_or_null("Nose") as Sprite2D
+		_fold("decker: no ambulance nose on the road", nose == null or not nose.visible, str(d))
+		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+		world_ok = world_ok and v.v2 and v.v2_dk() and (v.v2_shell.texture.resource_path.ends_with("decker_v3/shell_f%d.png" % d) \
+			or (v.amb_on and v.amb.dir == AmbulanceMotion.DK_DIR and v.amb.floors == d)) \
+			and v.v2_cells.size() == Game.main_slots() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
+			and is_equal_approx(v.v2_extra(), Vehicle.V2_W_DK - Vehicle.MAIN_W)
+		var img := v.v2_shell.texture.get_image()
+		for slot in Game.main_slots():
+			var wc: RoomV3Cell = v.v2_cells[slot]
+			var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
+			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
+		await shot("decker_world_f%d" % d)
+	_fold_flush()
+	_check("decker: on the road (world v2) the bus carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
+	# MV-739: shell clean-up (plate in front of the headlight, stray pixels under the chassis / around the tyres) and
+	# a steel frame around every room window
+	var clean_ok := true
+	var frame_ok := true
+	for d in [2, 3]:
+		var img: Image = (load(InteriorV3Panel.DK_DIR + "shell_f%d.png" % d) as Texture2D).get_image()
+		img.decompress()
+		var dy: int = 112 * (int(d) - 2)
+		for y in range(253, 276):
+			for x in range(0, 9):
+				clean_ok = clean_ok and img.get_pixel(x, y + dy).a == 0.0
+		for y in range(331 + dy, img.get_height()):
+			for x in img.get_width():
+				var near := false
+				for wx in [62.5, 452.5, 504.5]:
+					near = near or Vector2(x + 0.5, y + 0.5).distance_to(Vector2(wx, 310.0 + dy)) <= 23.0
+				clean_ok = clean_ok and (near or img.get_pixel(x, y).a == 0.0)
+		var spec2: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.DK_DIR + "shell.json"))
+		for cc in spec2.floors[str(d)].cells:
+			var cx := int(cc.x)
+			var cy := int(cc.y)
+			frame_ok = frame_ok and img.get_pixel(cx + 72, cy - 1).v < 0.06 and img.get_pixel(cx - 1, cy + 48).v < 0.06 \
+				and img.get_pixel(cx + 72, cy).a > 0.3 and img.get_pixel(cx + 72, cy + 48).a < 0.1
+		for x in range(300, 480):             # roof rail band and the gap between the cables / chassis: see-through
+			clean_ok = clean_ok and img.get_pixel(x, 30).is_equal_approx(Color8(46, 44, 48)) == false
+		clean_ok = clean_ok and img.get_pixel(16, 264 + dy).get_luminance() > 0.7      # MV-739 PixelLab headlight lens
+	_check("decker: no plate over the headlight, no stray pixels under the chassis / around the tyres (2 and 3 decks)", clean_ok)
+	_check("decker: every room window has a frame (black edge outside, inner shadow lip, clear middle)", frame_ok)
+	# MV-739: micro animations on the road (switch vehicle_anim): tyres roll with the speed, lights, flickering sign
+	var anim_ok := Dev.decker_anim("drive")
+	await wait(0.6)
+	var sp0 := v.amb.spin_frame()
+	var sign_seen := false
+	for i in 10:
+		await wait(0.1)
+		sign_seen = sign_seen or v.amb.sign_alpha() > 0.1
+	_check("decker: GOD drives the Decker with its own animated tyres (3 axles), its sign lit", anim_ok and v.amb_on
+		and v.amb.dir == AmbulanceMotion.DK_DIR and v.amb.tyres.size() == 3 and sign_seen)
+	_check("decker: tyres roll and the headlight / tail lamps are on while driving", sp0 != v.amb.spin_frame()
+		and v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1 and v.amb.flag == null)
+	var sw_seen := {}
+	for i in 12:
+		await wait(0.08)
+		sw_seen[v.amb.swing_frame()] = true
+	_check("decker: the loose cables under the floor swing while driving (%d frames seen)" % sw_seen.size(),
+		v.amb.swings.size() == 1 and sw_seen.size() >= 3)
+	await shot("decker_anim_drive")
+	Dev.decker_anim("brake")
+	await wait(1.6)
+	_check("decker: braking to a stop lights the brake lamp", v.amb.lamp_alpha("tail0") > 0.7)
+	Dev.decker_anim("park")
+	await wait(0.4)
+	v.debug_speed = -1.0
+	Features.set_override("features", "decker", false)
+	_check("decker: switch off = 2 vehicles again, a Decker save drives the road train, research hidden",
+		Game.tier_order() == ["van", "rig"] and Game.tier() == "rig" and Meta.perk_hidden("tier_bus"))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Dev._vehicle_changed()
+	await wait(0.3)
 
 
 ## MV-718: HD lore bosses replace the old biome bosses (names + art), walk / attack / strike clips

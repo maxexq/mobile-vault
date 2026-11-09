@@ -23,7 +23,14 @@ const AMB_W := 638.0           # shell width; cells at x 146 + col * 152, y 88 +
 const AMB_X0 := 146.0
 const AMB_Y0 := 88.0
 const AMB_FH := 112.0
-const AMB_LIFT := 40.0         # trailers stand on the road: their bottom sits this far above the shell's bottom
+const AMB_LIFT := 40.0
+## MV-736 (switch decker): the Decker double-decker bus (tier bus) has its own shells with the same cell grid, 2-3 decks:
+## assets/vehicles/decker_v3/shell_f<n>.png (640 x 232 + 112 * n), cells at x 104 + col * 152, y 56 + row * 112.
+## Built by tools/art/decker/shell.py from the approved art. amb() covers both shells (see shell_spec).
+const DK_DIR := "res://assets/vehicles/decker_v3/"
+const DK_W := 640.0
+const DK_X0 := 104.0
+const DK_Y0 := 56.0         # trailers stand on the road: their bottom sits this far above the shell's bottom
 ## MV-721 (switch road_train): the road train (tier rig) is the approved B-double v2: prime mover + lead trailer as
 ## the main body (body_f<n>.png, 1-3 decks) and the red container for every trailer (trailer_f<n>.png), all drawn
 ## on one road line; cells at x 226 / 20 + col * 152, y 116 + row * 112 (row 0 = top deck). designs/road-train/game/shell.py
@@ -156,7 +163,8 @@ func cell_pos(slot: int) -> Vector2:
 	var floors := _unit_floors(unit)
 	var top := _unit_top(unit)
 	if unit < 0 and amb():
-		return Vector2(AMB_X0 + c.x * (V3Art.CELL.x + WALL), top + AMB_Y0 + float(floors - 1 - c.y) * AMB_FH)
+		var sp := shell_spec(Game.tier())
+		return Vector2(float(sp.x0) + c.x * (V3Art.CELL.x + WALL), top + float(sp.y0) + float(floors - 1 - c.y) * AMB_FH)
 	if unit >= 0 and pup():
 		return Vector2(_unit_x(unit) + PUP_CX0 + c.x * (V3Art.CELL.x + WALL), top + PUP_CY0 + float(floors - 1 - c.y) * AMB_FH)
 	if rt():
@@ -168,8 +176,21 @@ func cell_pos(slot: int) -> Vector2:
 
 ## MV-715: the main body is the ambulance shell (switch ambulance_v3, first vehicle, 1-5 floors)
 func amb() -> bool:
-	return Features.on("ambulance_v3") and Game.tier() == "van" and Game.floors() >= 1 and Game.floors() <= 5 \
+	return dk() or Features.on("ambulance_v3") and Game.tier() == "van" and Game.floors() >= 1 and Game.floors() <= 5 \
 		and ResourceLoader.exists(AMB_DIR + "shell_f%d.png" % Game.floors())
+
+
+## MV-736: the main body is the Decker shell (switch decker, tier bus, 2-3 decks)
+func dk() -> bool:
+	return Game.decker_on() and Game.tier() == "bus" and Game.floors() >= 2 and Game.floors() <= 3 \
+		and ResourceLoader.exists(DK_DIR + "shell_f%d.png" % Game.floors())
+
+
+## shell art of a body drawn as one sprite: dir, width, first cell x0 / y0, height at 1 floor (+112 per floor)
+static func shell_spec(t: String) -> Dictionary:
+	if t == "bus":
+		return {"dir": DK_DIR, "w": DK_W, "x0": DK_X0, "y0": DK_Y0, "base": 232.0}
+	return {"dir": AMB_DIR, "w": AMB_W, "x0": AMB_X0, "y0": AMB_Y0, "base": 240.0}
 
 
 ## MV-721: the road train shells (switch road_train, tier rig, body 1-3 decks, trailers 2-3 decks)
@@ -180,7 +201,7 @@ func rt() -> bool:
 
 ## MV-737: the ambulance's trailers are the pup shell (switch ambulance_pup, trailers of 2 floors)
 func pup() -> bool:
-	return Features.on("ambulance_pup") and amb() and Game.trailers() > 0 and _unit_floors(0) == 2 \
+	return Features.on("ambulance_pup") and amb() and not dk() and Game.trailers() > 0 and _unit_floors(0) == 2 \
 		and ResourceLoader.exists(PUP_DIR + "pup_f2.png")
 
 
@@ -206,7 +227,7 @@ static func attach_nose(shell: Sprite2D, hide := false) -> void:
 
 
 func _amb_h() -> float:
-	return 240.0 + AMB_FH * float(Game.floors() - 1)
+	return float(shell_spec(Game.tier()).base) + AMB_FH * float(Game.floors() - 1)
 
 
 func _unit_w() -> float:
@@ -216,7 +237,7 @@ func _unit_w() -> float:
 func _main_w() -> float:
 	if rt():
 		return RT_W
-	return AMB_W if amb() else _unit_w()
+	return float(shell_spec(Game.tier()).w) if amb() else _unit_w()
 
 
 ## left edge of a unit (-1 = main body, 0.. = trailers)
@@ -290,9 +311,9 @@ func _rebuild() -> void:
 			rt_shells.append(sp)
 	amb_shell.visible = amb()
 	if amb_shell.visible:
-		amb_shell.texture = load(AMB_DIR + "shell_f%d.png" % Game.floors())
+		amb_shell.texture = load(str(shell_spec(Game.tier()).dir) + "shell_f%d.png" % Game.floors())
 		amb_shell.position = Vector2(0.0, _unit_top(-1))
-		attach_nose(amb_shell)
+		attach_nose(amb_shell, dk())
 	world.move_child(amb_shell, world.get_child_count() - 1)     # the shell's lip and decks over the room edges
 	for sp in pup_shells:
 		sp.queue_free()
@@ -334,7 +355,7 @@ func _fit_once() -> bool:
 func refresh() -> void:
 	if Game.s.is_empty():
 		return
-	var shape := "%d/%d/%d/%s/%s/%s" % [Game.floors(), Game.trailers(), Game.slot_count(), amb(), rt(), pup()]
+	var shape := "%d/%d/%d/%s/%s/%s/%s" % [Game.floors(), Game.trailers(), Game.slot_count(), amb(), rt(), pup(), Game.tier()]
 	if shape != _shape or cells.is_empty():
 		_rebuild()
 		_shape = shape
