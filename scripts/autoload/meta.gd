@@ -69,6 +69,8 @@ func tier_unlocked(t: String) -> bool:
 
 ## MV-721 (switch road_train): the bus and train research is hidden, the road train needs no bus first
 func perk_hidden(id: String) -> bool:
+	if id == "tier_bus" and Game.decker_on():
+		return false      # MV-736: the bus research is the Decker's
 	return Features.on("road_train") and id in ["tier_bus", "tier_train"]
 
 
@@ -80,6 +82,11 @@ func perk_def(id: String) -> Dictionary:
 		p.th = Data.ROAD_TRAIN.th
 		p.en = Data.ROAD_TRAIN.en
 		p.desc = "รุ่นถัดไปออกเดินทางด้วยรถพ่วงยาว: หัวลากทหาร + พ่วงนำ ต่อพ่วงได้อีก 2 ตัว · ต้องมีพิมพ์เขียว"
+	elif id == "tier_bus" and Game.decker_on():
+		p = p.duplicate()
+		p.th = Data.DECKER.th
+		p.en = Data.DECKER.en
+		p.desc = "รุ่นถัดไปออกเดินทางด้วยรถบัส 2 ชั้น: 6 ห้องตั้งแต่เริ่ม ได้ชั้นที่ 3 เมื่ออัป Vault · ต้องมีพิมพ์เขียว"
 	return p
 
 

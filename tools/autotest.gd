@@ -679,6 +679,11 @@ func _run() -> void:
 		await _world_v2_test()
 		_finish()
 		return
+	if "--only=decker" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _decker_test()
+		_finish()
+		return
 	if "--only=road_train" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _road_train_test()
@@ -1707,6 +1712,7 @@ func _run() -> void:
 	await _ambulance_v3_test()
 	await _world_v2_test()
 	await _road_train_test()
+	await _decker_test()
 	await _vehicle_anim_test()
 	await _raw_food_test()
 	await _pity_test()
@@ -12953,6 +12959,7 @@ func _road_train_test() -> void:
 	var old_state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	Features.set_override("features", "road_train", true)
+	Features.set_override("features", "decker", false)     # MV-736: the Decker joins the ladder in _decker_test
 	_check("road train: the ladder is the ambulance and the road train", Game.tier_order() == ["van", "rig"])
 	Game.s.tier = "bus"
 	var bus_ok := Game.tier() == "rig"
@@ -13073,6 +13080,82 @@ func _road_train_test() -> void:
 
 
 
+
+
+## MV-736 (switch decker): the Decker double-decker bus is the third vehicle (id bus) between the ambulance and the road
+## train, researched with tier_bus, starts with 2 decks and gets the scrap 3rd deck at the first floor-gain Vault level
+func _decker_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "road_train", true)
+	Features.set_override("features", "decker", true)
+	_check("decker: the ladder is ambulance, Decker, road train", Game.tier_order() == ["van", "bus", "rig"])
+	Game.s.tier = "bus"
+	_check("decker: a bus save drives the Decker, named DECKER BUS", Game.tier() == "bus" and str(Game.vehicle_def().en) == "DECKER BUS")
+	Game.s.tier = "van"
+	var mm := Meta.m()
+	mm.perks = {}
+	mm.legacy = 999
+	Meta.add_blueprint("bp_bus")
+	_check("decker: researched with tier_bus (shown, no other vehicle first), unlocks the bus for the next generation",
+		not Meta.perk_hidden("tier_bus") and str(Meta.perk_def("tier_bus").en) == "DECKER BUS" and Meta.buy("tier_bus") and Meta.tier_unlocked("bus") and Meta.best_tier() == "bus")
+	Features.set_override("features", "five_floors", true)
+	Game.s.tier = "bus"
+	_check("decker: 2 decks at the start, 3 from the first floor-gain level, never more", Game.floors_at(1) == 2 and Game.floors_at(Data.FLOOR_GAIN_LEVELS[0]) == 3 and Game.floors_at(6) == 3)
+	Game.s.tier = "van"
+	var n := Dev.decker_preview(2, false)
+	await wait(0.3)
+	_check("decker: GOD drives the Decker with 2 decks (6 rooms) in place", n == 2 and Game.tier() == "bus" and Game.main_slots() == 6 and main.vehicle.room_views.size() == Game.slot_count())
+	var old_window := get_window().size
+	get_window().size = Vector2i(405, 720)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.DK_DIR + "shell.json"))
+	var shells_ok := true
+	for d in [2, 3]:
+		Dev.decker_preview(d, false)
+		Dev.rooms_v3_open()
+		await wait(0.4)
+		var tex := panel.amb_shell.texture
+		shells_ok = shells_ok and panel.dk() and panel.amb() and panel.amb_shell.visible and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
+		var img := tex.get_image()
+		for slot in Game.main_slots():
+			var c := Game.slot_cell(slot)
+			var want := Vector2.ZERO
+			for cc in spec.floors[str(d)].cells:
+				if int(cc.floor) == c.y and int(cc.col) == c.x:
+					want = panel.amb_shell.position + Vector2(float(cc.x), float(cc.y))
+			var cp := (panel.cells[slot] as RoomV3Cell).position
+			var lp := cp - panel.amb_shell.position + Vector2(72, 48)
+			shells_ok = shells_ok and cp.is_equal_approx(want) and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1
+		await shot("decker_interior_f%d" % d)
+		panel.close()
+	_check("decker: v3 interior draws the bus shell, every room in its window (2 and 3 decks)", shells_ok)
+	get_window().size = old_window
+	var v: Vehicle = main.vehicle
+	var world_ok := true
+	for d in [2, 3]:
+		Dev.decker_preview(d)
+		await wait(0.4)
+		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+		world_ok = world_ok and v.v2 and v.v2_dk() and v.v2_shell.texture.resource_path.ends_with("decker_v3/shell_f%d.png" % d) \
+			and v.v2_cells.size() == Game.main_slots() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
+			and is_equal_approx(v.v2_extra(), Vehicle.V2_W_DK - Vehicle.MAIN_W)
+		var img := v.v2_shell.texture.get_image()
+		for slot in Game.main_slots():
+			var wc: RoomV3Cell = v.v2_cells[slot]
+			var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
+			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
+		await shot("decker_world_f%d" % d)
+	_check("decker: on the road (world v2) the bus carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
+	Features.set_override("features", "decker", false)
+	_check("decker: switch off = 2 vehicles again, a Decker save drives the road train, research hidden",
+		Game.tier_order() == ["van", "rig"] and Game.tier() == "rig" and Meta.perk_hidden("tier_bus"))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Dev._vehicle_changed()
+	await wait(0.3)
 
 
 ## MV-718: HD lore bosses replace the old biome bosses (names + art), walk / attack / strike clips
