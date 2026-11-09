@@ -625,6 +625,14 @@ func _run() -> void:
 		await _rooms_v3_test()
 		_finish()
 		return
+	if "--only=crew_portraits_v3" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _crew_portraits_v3_test()
+		_finish()
+		return
+
+
+
 	if "--only=world_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _world_v2_test()
@@ -1613,6 +1621,10 @@ func _run() -> void:
 	await _desert_background_test()
 	await _parallax_v2_test()
 	await _rooms_v3_test()
+	await _crew_portraits_v3_test()
+
+
+
 	await _ambulance_v3_test()
 	await _world_v2_test()
 	await _vehicle_anim_test()
@@ -5978,6 +5990,54 @@ func _industrial_background_test() -> void:
 
 
 ## MV-710: approved 5-layer parallax v2 backgrounds for every biome.
+## MV-722: crew portraits use the approved v3 busts of the v3 person who plays them (switch crew_portraits_v3)
+func _crew_portraits_v3_test() -> void:
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var all_ok := true
+	for cid in V3Art.CREW_IDS:
+		var t := V3Art.portrait_tex(str(cid))
+		all_ok = all_ok and t != null and t.get_size() == Vector2(64, 64)
+	_check("portraits v3: all 11 characters have a 64x64 portrait", all_ok)
+	var d: Dictionary = Game.s.dwellers[0]
+	Features.set_override("features", "crew_portraits_v3", true)
+	var small := UIKit.portrait(str(d.variant), false, d)
+	var big := UIKit.portrait(str(d.variant), true, d)
+	var tr_s := small.get_child(0) as TextureRect
+	var tr_b := big.get_child(0) as TextureRect
+	_check("portraits v3: on = the v3 bust of V3Art.crew_for(d), 32 px slot / 64 px big",
+		str(small.get_meta("v3_crew", "")) == V3Art.crew_for(d) and tr_s.texture == V3Art.portrait_tex(V3Art.crew_for(d))
+		and tr_s.custom_minimum_size == Vector2(32, 32) and tr_b.custom_minimum_size == Vector2(64, 64))
+	_check("portraits v3: without the crew member (tutorial art) the old portrait stays",
+		not UIKit.portrait("dw_army_brown", true).has_meta("v3_crew"))
+	_check("portraits v3: Dev count = whole crew", Dev.crew_portraits_v3_count() == (Game.s.dwellers as Array).size())
+	main.hud.open_panel("dwellers")
+	main.hud.panels.dwellers.manage(int(d.id))
+	await wait(0.5)
+	var found := false
+	for n in main.hud.panels.dwellers.find_children("*", "PanelContainer", true, false):
+		if (n as Node).has_meta("v3_crew"):
+			found = true
+	_check("portraits v3: crew card shows the v3 portrait", found)
+	await shot("crew_portraits_v3")
+	main.hud.panels.dwellers.close()
+	await wait(0.3)
+	main.hud.open_panel("squad")
+	await wait(0.5)
+	await shot("crew_portraits_v3_squad")
+	main.hud.panels.squad.close()
+	await wait(0.3)
+	Dev.crew_portraits_v3(false)
+	var off := UIKit.portrait(str(d.variant), false, d)
+	_check("portraits v3: off = old 20x20 portrait", not off.has_meta("v3_crew") and (off.get_child(0) as TextureRect).custom_minimum_size == Vector2(20, 20)
+		and Dev.crew_portraits_v3_count() == 0)
+	small.free()
+	big.free()
+	off.free()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	await wait(0.2)
+
+
 ## MV-711: v3 rooms + ref v3 crew in the v3 interior view (switches rooms_v3 / rooms_v3_review)
 func _rooms_v3_test() -> void:
 	var old_window := get_window().size
@@ -9610,6 +9670,8 @@ func _perf_test() -> void:
 	Game.s.rooms = keep_rooms
 	Game.rooms_changed.emit()
 	# --- fixed-rate economy: alternating halves, fewer steps than frames, no game time lost
+	# a step resets the collected time, so on a slow runner (frames of 25-50 ms) it takes 2 frames: expect at least
+	# half the nominal sim_hz rate, not a fixed 20 (CI runners hit 36 frames / 18 steps in 1.5 s)
 	Features.set_override("features", "fixed_sim", true)
 	Game._flush_sim()
 	var w0: int = Game.sim_steps.world
@@ -9627,7 +9689,7 @@ func _perf_test() -> void:
 	Game._flush_sim()
 	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
 	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
-		and wn + cn >= mini(frames, 20))
+		and wn + cn >= mini(frames, int(elapsed * Features.num("perf.sim_hz", Game.SIM_HZ) / 2.0)))
 	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
 	Features.set_override("features", "fixed_sim", false)
 	w0 = Game.sim_steps.world

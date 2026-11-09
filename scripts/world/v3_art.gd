@@ -101,6 +101,18 @@ static func crew_for(d: Dictionary) -> String:
 	return CREW_IDS[absi(id * 7 + v.hash()) % CREW_IDS.size()]
 
 
+## MV-722: the character's approved 64x64 bust portrait (MV-708), null when it has none
+static func portrait_tex(cid: String) -> Texture2D:
+	_load()
+	var f := str((_crew.get(cid, {}) as Dictionary).get("portrait", ""))
+	if f == "":
+		return null
+	var p := DIR + f
+	if not _tex.has(p):
+		_tex[p] = load(p) if ResourceLoader.exists(p) else null
+	return _tex[p]
+
+
 static func crew_frames(cid: String) -> SpriteFrames:
 	_load()
 	if _frames.has(cid):

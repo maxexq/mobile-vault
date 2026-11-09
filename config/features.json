@@ -101,7 +101,8 @@
     "world_v2": true,
     "vehicle_anim": true,
     "rooms_v3_review": true,
-    "enc_art_v2": true
+    "enc_art_v2": true,
+    "crew_portraits_v3": true
   },
   "events": {},
   "tune": {
