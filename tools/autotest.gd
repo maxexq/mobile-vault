@@ -12985,8 +12985,6 @@ func _ambulance_pup_test() -> void:
 	_check("ambulance pup: on the road the trailers are the pup shells on the road line, behind the ambulance, no old trailer art", road_ok)
 	await shot("ambulance_pup_world")
 	var panel: InteriorV3Panel = main.hud.panels.interior
-	var old_window := get_window().size
-	get_window().size = Vector2i(405, 720)
 	Dev.ambulance_pup_preview(2, true)
 	await wait(0.4)
 	var in_ok: bool = panel.amb() and panel.pup() and panel.pup_shells.size() == 2
@@ -13007,7 +13005,6 @@ func _ambulance_pup_test() -> void:
 		and absf(panel._unit_top(-1) + panel._amb_h() - panel._world_h()) < 0.5
 	await shot("ambulance_pup_interior")
 	panel.close()
-	get_window().size = old_window
 	_check("ambulance pup: v3 interior draws the pups behind the ambulance, both on the road line", in_ok)
 	Dev.feature_set("ambulance_pup", false)
 	await wait(0.3)
