@@ -3130,9 +3130,17 @@ func _event_art_v2_test() -> void:
 	_check("event art v2: GOD toggle turns it back on", Features.on("event_art_v2"))
 	pop.refresh()
 	await wait(0.1)
-	pop._resolve(Data.EVENTS["rogue_bot"].choices.size() - 1)
+	var pick := 0     # a choice that needs no defenders, so the window really moves on to the result
+	var chs: Array = Data.EVENTS["rogue_bot"].choices
+	for i in chs.size():
+		if str(chs[i].action) != "fight":
+			pick = i
+			break
+	pop._resolve(pick)
 	await wait(0.4)
-	_check("event art v2: result shows the 320x160 outcome still", (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(320, 160))
+	_check("event art v2: result shows the 320x160 outcome still", pop._outcome_ok != -1
+		and not ((pop.media.get_child(0) as TextureRect).texture is AtlasTexture)
+		and (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(320, 160))
 	await shot("event_art_v2_robot_result")
 	pop.close()
 	await wait(0.3)
