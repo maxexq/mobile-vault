@@ -536,6 +536,8 @@ func beds_short_text(left: int) -> String:
 # ------------------------------------------------------------------ vehicle tier / layout
 func tier() -> String:
 	var t := str(s.get("tier", "van")) if not s.is_empty() else "rig"
+	if Features.on("road_train") and t == "bus" and decker_on():
+		return "bus"      # MV-736: the bus slot is the Decker
 	if Features.on("road_train") and (t == "bus" or t == "train"):
 		return "rig"      # MV-721: the bus and the armoured train are gone, their saves drive the road train
 	return t
@@ -547,7 +549,14 @@ func vehicle_def() -> Dictionary:
 
 ## MV-721: the vehicle ladder in play (switch road_train: ambulance + road train only)
 func tier_order() -> Array:
-	return Data.TIER_ORDER_2 if Features.on("road_train") else Data.TIER_ORDER
+	if Features.on("road_train"):
+		return Data.TIER_ORDER_3 if decker_on() else Data.TIER_ORDER_2
+	return Data.TIER_ORDER
+
+
+## MV-736: the Decker double-decker bus is in play (switch decker, only with road_train)
+func decker_on() -> bool:
+	return Features.on("decker") and Features.on("road_train")
 
 
 func vehicle_def_for(t: String) -> Dictionary:
@@ -557,6 +566,8 @@ func vehicle_def_for(t: String) -> Dictionary:
 			return d.merged(Data.ROAD_TRAIN, true)
 		if t == "van":
 			return d.merged(Data.VAN_AMBULANCE, true)
+		if t == "bus" and decker_on():
+			return d.merged(Data.DECKER, true)
 	return d
 
 
@@ -594,6 +605,12 @@ func floors_at(lv: int) -> int:
 		if lv >= int(Features.num("vault.floor_gain_1", float(Data.FLOOR_GAIN_LEVELS[0]))):
 			d += 1
 		return mini(d, Data.RT_DECKS[1])
+	if decker_on() and tier() == "bus":
+		# MV-736: the Decker starts with 2 decks, the scrap 3rd deck at the first floor-gain Vault level, never taller
+		var k := int(Data.DK_DECKS[0])
+		if lv >= int(Features.num("vault.floor_gain_1", float(Data.FLOOR_GAIN_LEVELS[0]))):
+			k += 1
+		return mini(k, int(Data.DK_DECKS[1]))
 	var n := int(Data.START_FLOORS.get(tier(), vehicle_def().floors))
 	if test_van_floors > 0 and tier() == "van":
 		n = test_van_floors
@@ -621,6 +638,8 @@ func fit_body(keep_used := false) -> bool:
 		if Features.on("road_train") and tier() == "rig":
 			# MV-721: the road train is never taller than its 3 decks; rooms above move down or refund (_rehome_room)
 			new_main = mini(old, Data.ROOMS_PER_FLOOR * int(Data.RT_DECKS[1]))
+		elif decker_on() and tier() == "bus":
+			new_main = mini(old, Data.ROOMS_PER_FLOOR * int(Data.DK_DECKS[1]))     # MV-736: the Decker tops out at 3 decks
 	s.body_slots = new_main
 	if old == new_main or s.rooms.size() < old:
 		return false

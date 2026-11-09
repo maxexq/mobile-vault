@@ -1240,6 +1240,42 @@ func road_train_world(n: int) -> int:
 	return Game.floors()
 
 
+## MV-736: switch decker on and drive the Decker double-decker bus with n decks (2 or 3); on_road = world v2 too.
+## Returns the decks it got.
+func decker_preview(n: int, on_road := true) -> int:
+	feature_set("road_train", true)
+	feature_set("decker", true)
+	if on_road:
+		feature_set("world_v2", true)
+	set_tier("bus")
+	Features.set_override("features", "five_floors", true)
+	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
+		if Game.floors_at(lv) >= clampi(n, 2, 3) or lv == Data.MAX_VAULT_LEVEL:
+			Game.s.vault_level = lv
+			break
+	Game.fit_body()
+	act("decker preview", {"floors": Game.floors()})
+	_vehicle_changed()
+	return Game.floors()
+
+
+## MV-739: the Decker on the road with its micro animations (switch vehicle_anim): rolling tyres, suspension, lights,
+## the flickering "9 DEPOT" sign and tail-pipe puffs; mode as vehicle_anim(). False when they are not up.
+func decker_anim(mode := "drive") -> bool:
+	feature_set("vehicle_anim", true)
+	decker_preview(Game.floors() if Game.tier() == "bus" else 2)
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or not v.amb_on or not v.v2_dk():
+		return false
+	return vehicle_anim(mode)
+
+
+## MV-736: the Decker (its decks now, else 2) in the v3 interior
+func decker_interior() -> bool:
+	decker_preview(Game.floors() if Game.tier() == "bus" else 2, false)
+	return rooms_v3_open()
+
+
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
 ## the v3 interior opens; returns how many rooms have v3 art now
 func rooms_v3_showcase(lv: int) -> int:

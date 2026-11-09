@@ -30,6 +30,10 @@ const TIER_ORDER := ["van", "bus", "rig", "train"]
 ## MV-721 (switch road_train): only two vehicles, Dr. Ren's ambulance (id van) and the road train (id rig, the old
 ## 18-wheeler slot so saves keep working). bus / train saves drive the road train. ROAD_TRAIN overrides the rig entry.
 const TIER_ORDER_2 := ["van", "rig"]
+## MV-736 (switch decker, with road_train): the Decker double-decker bus (id bus) joins between the two
+const TIER_ORDER_3 := ["van", "bus", "rig"]
+const DK_DECKS := [2, 3]          # Decker: starts with 2 decks, the scrap 3rd deck at the first floor-gain Vault level
+const DECKER := {"th": "รถบัส 2 ชั้น เด็คเกอร์", "en": "DECKER BUS", "names": ["9 DEPOT", "NIGHT ROUTE"], "floors": 2}
 const RT_DECKS := [2, 3]          # road train lead trailer (= main body): decks at Vault 1, most decks
 const ROAD_TRAIN := {"th": "รถพ่วงยาว โร้ดเทรน", "en": "ROAD TRAIN", "names": ["OUTBACK", "LONG HAUL", "BIG DINGO"], "floors": 2}
 const VAN_AMBULANCE := {"th": "รถพยาบาลหมอเรน", "en": "DR. REN'S AMBULANCE", "names": ["TRIAGE-9", "MERCY RUN"]}
