@@ -160,3 +160,4 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [ambulance-v3-ingame](ambulance-v3-ingame.md): MV-715 ambulance replaces the van: v3 interior shell (switch ambulance_v3) done, outside world v2 picked, next
 - [road-train-ingame](road-train-ingame.md): MV-721 two vehicles (ambulance + road train, switch road_train), B-double shells in the v3 interior, body 2-3 decks; on the road too (container trailers); RULE vehicles flat 2D
 - [vehicle-anim](vehicle-anim.md): MV-726 ambulance on the road: rolling tyres, suspension hops, lights, flag (switch vehicle_anim, code only); rerun tools/ambulance_anim.py after shell rebuilds
+- [ambulance-fix](ambulance-fix.md): MV-741 Dr. Ren ambulance clean-up (code only): cab holes refilled, strays removed, room windows framed (tools/art/ambulance/cleanup.py)
