@@ -520,6 +520,7 @@ func _build_v2_pups() -> void:
 				continue
 			var c := RoomV3Cell.new()
 			c.slot = slot
+			c.world_view = true      # MV-734: pup crew use the same pixel size as the main vehicle
 			var cell := Game.slot_cell(slot)
 			c.position = v2_trailer_cell_pos(u, cell.x, cell.y) / V2_K
 			v2_root.add_child(c)

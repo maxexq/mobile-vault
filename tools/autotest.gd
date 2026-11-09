@@ -12999,6 +12999,7 @@ func _ambulance_pup_test() -> void:
 		and is_equal_approx(v.length(), v.unit_x(1) + InteriorV3Panel.PUP_REAR * Vehicle.V2_K)
 	for slot in range(Game.main_slots(), Game.slot_count()):
 		var tc: RoomV3Cell = v.v2_cells[slot]
+		road_ok = road_ok and tc.world_view
 		var own: Sprite2D = v.v2_tshells[Game.slot_unit(slot)]
 		var tlp := tc.position - own.position + Vector2(72, 48)
 		_fold("ambulance pup: on the road each trailer cell sits in its pup window", own.texture.get_image().get_pixel(int(tlp.x), int(tlp.y)).a < 0.1
@@ -13019,6 +13020,7 @@ func _ambulance_pup_test() -> void:
 			if int(cc.floor) == c.y and int(cc.col) == c.x:
 				want = sp.position + Vector2(float(cc.x), float(cc.y))
 		var cell: RoomV3Cell = panel.cells[slot]
+		in_ok = in_ok and not cell.world_view
 		var lp := cell.position - sp.position + Vector2(72, 48)
 		_fold("ambulance pup: in the v3 interior each trailer room sits in its pup window", cell.position.is_equal_approx(want)
 			and sp.texture.get_image().get_pixel(int(lp.x), int(lp.y)).a < 0.1, str(slot))
