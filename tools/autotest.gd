@@ -12864,12 +12864,6 @@ func _road_train_test() -> void:
 			and (tc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and v.cell_size(slot) == Vehicle.V2_CELL, str(slot))
 	_fold_flush()
 	_check("road train: on the road the trailers are the container shells on the road line, no gap, no old trailer wheels", tr_ok)
-	var tr_win := get_window().size
-	get_window().size = Vector2i(1280, 640)      # wide: the whole convoy in one shot
-	await wait(0.8)
-	await shot("road_train_world_trailers")
-	get_window().size = tr_win
-	await wait(0.3)
 	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
