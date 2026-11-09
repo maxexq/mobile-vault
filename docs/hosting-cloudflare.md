@@ -7,6 +7,10 @@ and the Vercel host names in `config/environments.json` stay until the cutover b
 
 - Pages project **apocarlypse-mobile-vault**, Git integration (Cloudflare builds every push to every branch).
 - Output directory `web/` (the committed Godot export; nothing is built).
+- **`web/index.pck` must stay under 25 MiB too (MV-736):** textures import as WebP lossless with
+  `rendering/textures/webp_compression/compression_method=6` and `lossless_compression_factor=100` (project.godot), same
+  pixels as the default but ~40 % smaller (pck 25.07 -> 18.76 MiB on 2026-11-09). Check `ls -l web/index.pck` after an
+  export; the Cloudflare Pages check fails above 26,214,400 bytes.
 - **The engine is too big for Pages:** `web/index.wasm` is ~39.5 MB, the Pages limit is 25 MiB per file. The build
   command deletes it, and `functions/index.wasm.js` serves it from the R2 bucket bound as `ENGINE` at the same URL
   (`/index.wasm`, `application/wasm`, ETag / 304, cached 1 day). The object key is `r2_key` in
