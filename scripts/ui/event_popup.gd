@@ -1,6 +1,7 @@
 class_name EventPopup
 extends ModalPanel
-## Random-event decision terminal (blinking red alarm frame, 160x80 illustration shown at x2,
+## Random-event decision terminal (blinking red alarm frame, 160x80 illustration shown at x2, or the
+## 320x160 story animation with event_art_v2 (EventArt, MV-730),
 ## danger skulls, choices, defender selection for fights, outcome + logbook unlocks).
 
 var event_id := ""
@@ -9,6 +10,7 @@ var _selected: Array = []
 var _t := 0.0
 var _alarm: StyleBoxFlat
 var _outcome_ok := -1   # -1 deciding, 0 failed, 1 survived
+var _art_t0 := 0        # Time.get_ticks_msec() when the event opened: the story animation runs from here
 
 ## fired when the outcome screen opens (hook for a good/bad stinger once sfx exist)
 signal outcome_shown(ok: bool)
@@ -29,6 +31,7 @@ func _on_backdrop_tap() -> void:
 
 func show_event(id: String) -> void:
 	event_id = id
+	_art_t0 = Time.get_ticks_msec()
 	_outcome_ok = -1
 	_choice = -1
 	_selected = []
@@ -101,7 +104,8 @@ func refresh() -> void:
 	clear_body()
 	var ev: Dictionary = Data.EVENTS[event_id]
 	set_title("ALERT: %s / %s" % [ev.en, ev.th])
-	var v := media_layout(load("res://assets/events/%s.png" % ev.image), UIKit.C_GOLD)
+	var v := media_layout(EventArt.anim_texture(ev.image), UIKit.C_GOLD)
+	EventArt.animate(media.get_child(0), _art_t0)
 	v.add_child(UIKit.wrap_label(ev.desc, UIKit.FS, UIKit.C_TEXT))
 	var dh := UIKit.hbox(3)
 	var danger := Game.event_danger(event_id)
@@ -311,7 +315,7 @@ func _show_outcome(res: Dictionary, ch: Dictionary, choice: Dictionary) -> void:
 	set_title(Loc.t("OUTCOME / ผลลัพธ์"))
 	var col := UIKit.C_GREEN if res.ok else UIKit.C_RED
 	var ev: Dictionary = Data.EVENTS[event_id]
-	var v := media_layout(load("res://assets/events/%s.png" % ev.image), col)
+	var v := media_layout(EventArt.still(ev.image), col)
 	var st := stamp_text(choice, res.ok)
 	OutcomeKit.stamp(media, str(st[0]), str(st[1]), col, not res.ok)
 	var l := UIKit.wrap_label(res.text, UIKit.FS_BIG, col)

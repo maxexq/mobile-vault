@@ -2041,6 +2041,12 @@ func encounter_anywhere(id: String) -> void:
 	encounter(id)
 
 
+## MV-730: new 320x160 road event art with the story animation (switch event_art_v2); open any event to see it
+func event_art_v2(on: bool) -> void:
+	feature_set("event_art_v2", on)
+	act("road event art v2 " + ("on" if on else "off"))
+
+
 ## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2); open an encounter to see it
 func enc_art_v2(on: bool) -> void:
 	feature_set("enc_art_v2", on)
