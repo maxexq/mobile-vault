@@ -679,6 +679,11 @@ func _run() -> void:
 		await _world_v2_test()
 		_finish()
 		return
+	if "--only=ambulance_pup" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _ambulance_pup_test()
+		_finish()
+		return
 	if "--only=road_train" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _road_train_test()
@@ -1707,6 +1712,7 @@ func _run() -> void:
 	await _ambulance_v3_test()
 	await _world_v2_test()
 	await _road_train_test()
+	await _ambulance_pup_test()
 	await _vehicle_anim_test()
 	await _raw_food_test()
 	await _pity_test()
@@ -13070,6 +13076,70 @@ func _world_v2_test() -> void:
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state
+	Dev._vehicle_changed()
+	await wait(0.3)
+## MV-737 (switch ambulance_pup): the ambulance's trailers are the approved pup shell, in the v3 interior and on the
+## road (world v2): every trailer cell in its own window, shells on the road line, tow plates riding on the unit in front
+func _ambulance_pup_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var v: Vehicle = main.vehicle
+	var n := Dev.ambulance_pup_preview(2)
+	await wait(0.4)
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.PUP_DIR + "pup.json"))
+	var tex_ok: bool = ResourceLoader.exists(InteriorV3Panel.PUP_DIR + "pup_f2.png") and int(spec.size[0]) == int(InteriorV3Panel.PUP_W) \
+		and int(spec.size[1]) == int(InteriorV3Panel.PUP_H) and int(spec.rear) == int(InteriorV3Panel.PUP_REAR) and spec.cells.size() == Data.TRAILER_SLOTS
+	_check("ambulance pup: the pup shell fits the trailer grid (3 rooms x 2 floors) and its pup.json", tex_ok)
+	var road_ok: bool = n == 2 and Game.tier() == "van" and v.v2 and v.v2_pup_trailers() and not v.v2_rt_trailers() \
+		and v.v2_tshells.size() == 2 and v.v2_cells.size() == Game.slot_count() and v.wheels.is_empty()
+	for k in v.v2_tshells.size():
+		var tsp: Sprite2D = v.v2_tshells[k]
+		road_ok = road_ok and tsp.texture.resource_path.ends_with("ambulance_pup/pup_f2.png") \
+			and absf((tsp.position.y + tsp.texture.get_size().y) * Vehicle.V2_K - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
+			and tsp.get_index() > v.v2_shell.get_index()          # the tow plate sits on the ambulance's rear
+	road_ok = road_ok and is_equal_approx(v.unit_x(0), Vehicle.V2_X + InteriorV3Panel.PUP_X0 * Vehicle.V2_K) \
+		and is_equal_approx(v.unit_x(1) - v.unit_x(0), InteriorV3Panel.PUP_STEP * Vehicle.V2_K) \
+		and is_equal_approx(v.length(), v.unit_x(1) + InteriorV3Panel.PUP_REAR * Vehicle.V2_K)
+	for slot in range(Game.main_slots(), Game.slot_count()):
+		var tc: RoomV3Cell = v.v2_cells[slot]
+		road_ok = road_ok and tc.world_view
+		var own: Sprite2D = v.v2_tshells[Game.slot_unit(slot)]
+		var tlp := tc.position - own.position + Vector2(72, 48)
+		_fold("ambulance pup: on the road each trailer cell sits in its pup window", own.texture.get_image().get_pixel(int(tlp.x), int(tlp.y)).a < 0.1
+			and (tc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and v.cell_size(slot) == Vehicle.V2_CELL, str(slot))
+	_fold_flush()
+	_check("ambulance pup: on the road the trailers are the pup shells on the road line, behind the ambulance, no old trailer art", road_ok)
+	await shot("ambulance_pup_world")
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	Dev.ambulance_pup_preview(2, true)
+	await wait(0.4)
+	var in_ok: bool = panel.amb() and panel.pup() and panel.pup_shells.size() == 2
+	for slot in range(Game.main_slots(), Game.slot_count()):
+		var u := Game.slot_unit(slot)
+		var c := Game.slot_cell(slot)
+		var sp: Sprite2D = panel.pup_shells[u]
+		var want := Vector2.ZERO
+		for cc in spec.cells:
+			if int(cc.floor) == c.y and int(cc.col) == c.x:
+				want = sp.position + Vector2(float(cc.x), float(cc.y))
+		var cell: RoomV3Cell = panel.cells[slot]
+		in_ok = in_ok and not cell.world_view
+		var lp := cell.position - sp.position + Vector2(72, 48)
+		_fold("ambulance pup: in the v3 interior each trailer room sits in its pup window", cell.position.is_equal_approx(want)
+			and sp.texture.get_image().get_pixel(int(lp.x), int(lp.y)).a < 0.1, str(slot))
+	_fold_flush()
+	in_ok = in_ok and absf(panel._unit_top(0) + InteriorV3Panel.PUP_H - panel._world_h()) < 0.5 \
+		and absf(panel._unit_top(-1) + panel._amb_h() - panel._world_h()) < 0.5
+	await shot("ambulance_pup_interior")
+	panel.close()
+	_check("ambulance pup: v3 interior draws the pups behind the ambulance, both on the road line", in_ok)
+	Dev.feature_set("ambulance_pup", false)
+	await wait(0.3)
+	_check("ambulance pup: switch off brings back the old trailers", not v.v2_pup_trailers() and not panel.pup() and v.v2_tshells.is_empty())
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
 	Dev._vehicle_changed()
 	await wait(0.3)
 ## MV-721 (switch road_train): two vehicles only, the ambulance (van) and the road train (rig); bus / train saves
