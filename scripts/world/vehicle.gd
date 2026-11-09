@@ -393,7 +393,7 @@ func rebuild() -> void:
 		smoke.position = v2_cell_pos(0, 0) + (Vector2(-9, -16) if v2_rt() else Vector2(-9, -22))
 		headlight.position = v2_cell_pos(0, 0) + (Vector2(-109, 36) if v2_rt() else Vector2(-71, 34))
 		if v2_dk():               # MV-736: rear engine: exhaust over the rear grille, headlight at the flat front
-			smoke.position = v2_cell_pos(2, 0) + Vector2(86, 30)
+			smoke.position = v2_cell_pos(2, 0) + Vector2(91, 77)   # MV-739: the tail pipe under the rear bumper
 			headlight.position = v2_cell_pos(0, 0) + Vector2(-45, 51)
 	tracks.position = Vector2(TRACKS_X.get(tier, 202), 284)
 	var rear := length()
@@ -464,8 +464,8 @@ func _build_v2() -> void:
 	v2_root.move_child(v2_shell, v2_root.get_child_count() - 1)
 	if amb_wanted():
 		amb_on = true
-		v2_shell.texture = AmbulanceMotion.cut_shell(floors)
-		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K)
+		v2_shell.texture = AmbulanceMotion.cut_shell(floors, amb_dir())
+		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K, amb_dir())
 	for rv in room_views:
 		if v2_cells.has(rv.slot):
 			rv.visible = false
@@ -503,7 +503,14 @@ func _build_v2_trailers() -> void:
 
 ## MV-726: the ambulance's own wheels / suspension / lights / flag (switch vehicle_anim; anchors from anim.json)
 func amb_wanted() -> bool:
+	if v2_dk():                   # MV-739: the Decker bus gets the same wheels / suspension / lights + its sign
+		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.DK_DIR)
 	return v2 and tier == "van" and Features.on("vehicle_anim") and AmbulanceMotion.ok(floors)   # the road train (MV-721) has its own shells
+
+
+## anchors / spin strip set for the current world v2 body
+func amb_dir() -> String:
+	return AmbulanceMotion.DK_DIR if v2_dk() else AmbulanceMotion.DIR
 
 
 ## atlas region of a main shell ("veh" / "ext") of this tier with n floors: its own shell, or the grown one
