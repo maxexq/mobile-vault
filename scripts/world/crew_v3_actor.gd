@@ -53,6 +53,7 @@ func setup(d: Dictionary, room_mode: String, level_data: Dictionary, index: int)
 	_mat.shader = BLEND
 	spr.material = _mat
 	add_child(spr)
+	Features.changed.connect(_tunes_changed)
 	set_room(room_mode, level_data)
 	position = Vector2(clampf(24.0 + index * 30.0, 10.0, 134.0), _walk_y())
 	_enter(State.ACT if mode != "rest" and randf() < 0.6 else State.IDLE)
@@ -74,6 +75,13 @@ func set_room(room_mode: String, level_data: Dictionary) -> void:
 	# the shadow takes the room's own deepest tone (a warm brown in most rooms) instead of pure black
 	var dk := V3Art.color_of(level_data.get("dark", [12, 10, 9]))
 	_shadow_col = Color(maxf(dk.r, 0.05), maxf(dk.g, 0.04), maxf(dk.b, 0.035))
+	_tunes_changed()
+
+
+## crew_v3.grade / lift / shadow tunes (MV-724) changed: re-apply the shader values and redraw the shadow
+func _tunes_changed() -> void:
+	_mat.set_shader_parameter("grade", grade_k())
+	_mat.set_shader_parameter("lift", lift_k())
 	queue_redraw()
 
 
@@ -114,6 +122,8 @@ func _enter(st: State) -> void:
 				_act = "construct"
 			elif mode == "rest":
 				_act = ["talk", "eat", "drink", "idle"][randi() % 4]
+			elif pick[2] == "man_gun":
+				_act = "shoot"      # MV-716: at the rear gunner post's gun the crew aim and fire (approved shoot clip)
 			else:
 				_act = "work"
 			timer = randf_range(4.0, 8.0)
@@ -121,13 +131,13 @@ func _enter(st: State) -> void:
 			_play("carrywalk" if mode == "build" and randf() < 0.5 else "walk")
 
 
-## [position, face] of the next place to go: a stand point of the room's stations, or a spot on the walkway
+## [position, face, action] of the next place to go: a stand point of the room's stations, or a spot on the walkway
 func _pick_target() -> Array:
 	if not stands.is_empty() and (mode != "rest" or randf() < 0.5):
 		var h: Dictionary = stands[randi() % stands.size()]
 		var s: Array = h.stand
-		return [Vector2(float(s[0]) + randf_range(-2, 2), float(s[1])), str(h.get("face", ""))]
-	return [Vector2(randf_range(12, 132), _walk_y()), ""]
+		return [Vector2(float(s[0]) + randf_range(-2, 2), float(s[1])), str(h.get("face", "")), str(h.get("action", ""))]
+	return [Vector2(randf_range(12, 132), _walk_y()), "", ""]
 
 
 func _process(delta: float) -> void:
@@ -139,6 +149,7 @@ func _process(delta: float) -> void:
 			var step := SPEED * delta
 			if to.length() <= step:
 				position = target
+				queue_redraw()          # last shadow snap at the stop spot
 				state = State.ACT
 				_play(_act)
 				if face != "":
@@ -151,10 +162,9 @@ func _process(delta: float) -> void:
 			timer -= delta
 			if timer <= 0.0:
 				_enter(State.ACT if randf() < (0.8 if mode != "rest" else 0.5) else State.IDLE)
-	_mat.set_shader_parameter("grade", grade_k())
-	_mat.set_shader_parameter("lift", lift_k())
-	_mat.set_shader_parameter("light", lerpf(0.95, 0.65, clampf(absf(position.x - lamp_x) / 72.0, 0.0, 1.0)))
-	queue_redraw()
+	if state == State.WALK:         # the lamp light and the pixel-snapped shadow only change while walking
+		_mat.set_shader_parameter("light", lerpf(0.95, 0.65, clampf(absf(position.x - lamp_x) / 72.0, 0.0, 1.0)))
+		queue_redraw()
 
 
 func _draw() -> void:
