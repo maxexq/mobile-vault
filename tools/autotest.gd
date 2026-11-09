@@ -9651,12 +9651,14 @@ func _battery_test() -> void:
 	Features.set_override("features", "idle_fps", true)
 	Game.s.traveling = false
 	Threat.reset()
-	Combat.enemies = []
+	Combat._clear_enemies()  # MV-727: also empties spawn_queue, or a queued mob walks in during the wait
 	await wait(1.6)          # the road brakes to a stop
+	Combat._clear_enemies()
 	main._last_input_t = 10.0
 	await get_tree().process_frame
 	await get_tree().process_frame
-	_check("battery: parked, quiet, untouched = %d fps (road %.2f px/s)" % [Engine.max_fps, main.background.current_speed_px()],
+	_check("battery: parked, quiet, untouched = %d fps (road %.2f px/s, enemies %d, shake %.2f)" % [Engine.max_fps,
+		main.background.current_speed_px(), Combat.enemies.size(), main._shake],
 		main.is_calm() and Engine.max_fps == 30)
 	main._last_input_t = 0.0
 	await get_tree().process_frame
