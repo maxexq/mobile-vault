@@ -487,6 +487,12 @@ func _run() -> void:
 	# read at boot: the trace keeps only the last Trace.MAX entries, and a full run pushes "start" out before the env check
 	_trace_start_env = Trace.entries.any(func(e): return str(e.msg) == "start" and str(e.get("data", {}).get("env", "")) == "dev")
 	Save.wipe()
+	# MV-721: the older tests were written for the 4-vehicle ladder (bus, train, 4-5 floor rig). Pin road_train off
+	# in the build layer, under every dev override, so clear_overrides() keeps it; _road_train_test turns it on.
+	var bl: Dictionary = Features.layers.build
+	if not bl.has("features"):
+		bl["features"] = {}
+	bl.features["road_train"] = false
 	if "--only=legal" not in OS.get_cmdline_user_args():
 		_legal_test_fixture()
 	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
@@ -661,6 +667,11 @@ func _run() -> void:
 	if "--only=world_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _world_v2_test()
+		_finish()
+		return
+	if "--only=road_train" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _road_train_test()
 		_finish()
 		return
 	if "--only=vehicle_anim" in OS.get_cmdline_user_args():
@@ -1475,6 +1486,7 @@ func _run() -> void:
 	Expedition.skip_site()
 	await _encounter_test()
 	await _enc_art_v2_test()
+	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
 	Meta.m().legacy = 9999
 	Meta.add_blueprint("bp_bus")
@@ -1506,6 +1518,7 @@ func _run() -> void:
 	await wait(1.6)
 	await shot("train_two_wagons_wide")
 	main.set_zoom_mode("auto")
+	Features.set_override("features", "road_train", null)
 	# ---- tester console (god mode) + trace log
 	_check("dev tools unlocked in debug builds", Dev.unlocked)
 	# release builds: the hidden 7-tap unlock on the VAULT chip (real input events through the GUI)
@@ -1681,6 +1694,7 @@ func _run() -> void:
 
 	await _ambulance_v3_test()
 	await _world_v2_test()
+	await _road_train_test()
 	await _vehicle_anim_test()
 	await _raw_food_test()
 	await _pity_test()
@@ -4627,8 +4641,11 @@ func _features_test() -> void:
 	# (MV-546) rides on the world map, so it ships off with it
 	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers"]  # strangers: door screening paused (MV-719)
 	var all_on := true
+	var pin: Dictionary = Features.layers.build.get("features", {})
+	pin.erase("road_train")         # the run's MV-721 test pin is not what ships
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
+	pin["road_train"] = false
 	_check("features: every switch on by default (except %s, off)" % ", ".join(ships_off), all_on)
 	_check("features: tune falls back to the code constant", Features.num("threat.rate_scale", Threat.RATE_SCALE) == Threat.RATE_SCALE)
 	var base: Array = Data.biome(0).events
@@ -6815,6 +6832,7 @@ func _cozy_roof_test() -> void:
 
 
 func _exterior_mods_test() -> void:
+	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	var v: Vehicle = main.vehicle
 	var m: ExteriorModMotion = v.mod_motion
 	var state: Dictionary = Game.s.duplicate(true)
@@ -6965,6 +6983,7 @@ func _exterior_mods_test() -> void:
 	m.set_process(true)
 	v.set_xray(saved_view)
 	Game.weather_changed.emit(str(Game.s.weather))
+	Features.set_override("features", "road_train", null)
 
 
 ## MV-566: finer exterior mod art (*_fine) swaps in with the switch and keeps every size / anchor
@@ -8878,6 +8897,7 @@ func _hull_repair_test() -> void:
 ## up to 5 (vehf<n>_ shells, cab and wheels where they were); the Vault card / GOD show the next floor at half
 ## opacity on the vehicle; the trailer rooms move with the body when it grows; switch off = as before
 func _five_floors_test() -> void:
+	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	_no_events()
 	var keep_state: Dictionary = Game.s.duplicate(true)
 	var v: Vehicle = main.vehicle
@@ -8974,6 +8994,7 @@ func _five_floors_test() -> void:
 	Game.fit_body()
 	Dev._vehicle_changed()
 	await wait(0.3)
+	Features.set_override("features", "road_train", null)
 
 
 ## MV-545: the Vault upgrade never promises a room the vehicle has no space for, names the bigger vehicle, and every
@@ -12746,6 +12767,114 @@ func _world_v2_test() -> void:
 	Game.s = old_state
 	Dev._vehicle_changed()
 	await wait(0.3)
+## MV-721 (switch road_train): two vehicles only, the ambulance (van) and the road train (rig); bus / train saves
+## drive the road train, the road train research needs no bus, the GOD chassis row and the next-generation list show 2
+func _road_train_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "road_train", true)
+	_check("road train: the ladder is the ambulance and the road train", Game.tier_order() == ["van", "rig"])
+	Game.s.tier = "bus"
+	var bus_ok := Game.tier() == "rig"
+	Game.s.tier = "train"
+	_check("road train: bus and train saves drive the road train", bus_ok and Game.tier() == "rig")
+	_check("road train: named ROAD TRAIN, the van is Dr. Ren's ambulance", str(Game.vehicle_def().en) == "ROAD TRAIN" and str(Game.vehicle_def_for("van").en) == Data.VAN_AMBULANCE.en)
+	Game.s.tier = "van"
+	var mm := Meta.m()
+	mm.perks = {}
+	mm.legacy = 999
+	Meta.add_blueprint("bp_rig")
+	_check("road train: bus / train research hidden, road train researchable without the bus", Meta.perk_hidden("tier_bus") and Meta.perk_hidden("tier_train") 		and not Meta.can_buy("tier_bus", 999) and Meta.buy("tier_rig") and Meta.best_tier() == "rig" and not Meta.tier_unlocked("bus"))
+	var t := Dev.road_train_preview()
+	await wait(0.3)
+	_check("road train: GOD drives the road train in place", t == "rig" and Game.tier() == "rig" and main.vehicle.room_views.size() == Game.slot_count())
+	Dev.set_tier("bus")
+	_check("road train: GOD cannot pick a removed vehicle", Game.tier() == "rig")
+	await shot("road_train_rig")
+	# the body is the lead trailer: 2 decks at Vault 1, 3 from the first floor-gain level, never more
+	Features.set_override("features", "five_floors", true)
+	_check("road train: body decks 2 -> 3 with the Vault, never 4", Game.floors_at(1) == 2 and Game.floors_at(Data.FLOOR_GAIN_LEVELS[0]) == 3 and Game.floors_at(6) == 3)
+	var old_window := get_window().size
+	get_window().size = Vector2i(405, 720)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var shells_ok := true
+	for lv in [1, 6]:
+		for trailers in [0, 2]:
+			Dev.set_vault(lv)
+			Dev.set_trailers(trailers)
+			Dev.rooms_v3_open()
+			await wait(0.4)
+			shells_ok = shells_ok and panel.rt() and panel.rt_shells.size() == 1 + trailers
+			var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.RT_DIR + "shell.json"))
+			for slot in Game.slot_count():
+				var unit := Game.slot_unit(slot)
+				var c := Game.slot_cell(slot)
+				var sp: Sprite2D = panel.rt_shells[unit + 1]
+				var key := "body" if unit < 0 else "trailer"
+				var fl := str(Game.floors() if unit < 0 else Data.TRAILER_SLOTS / Data.ROOMS_PER_FLOOR)
+				var want := Vector2.ZERO
+				for cc in spec[key][fl].cells:
+					if int(cc.floor) == c.y and int(cc.col) == c.x:
+						want = sp.position + Vector2(float(cc.x), float(cc.y))
+				shells_ok = shells_ok and (panel.cells[slot] as RoomV3Cell).position.is_equal_approx(want)
+				# the window over the cell is cut out
+				var img := sp.texture.get_image()
+				var lp := (panel.cells[slot] as RoomV3Cell).position - sp.position + Vector2(72, 48)
+				shells_ok = shells_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1
+			if lv == 6 and trailers == 2:
+				await shot("road_train_interior_v3")
+			panel.close()
+	_check("road train: v3 interior draws the B-double shells, every room in its window (2/3 decks, 0/2 trailers)", shells_ok)
+	get_window().size = old_window
+	# on the road (world v2): the B-double body with v3 cells, standing on the road, taps on the cells
+	var v: Vehicle = main.vehicle
+	Dev.set_trailers(0)
+	var wf := Dev.road_train_world(2)
+	await wait(0.4)
+	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+	var world_ok := wf == 2 and v.v2 and v.v2_rt() and v.v2_shell.texture.resource_path.ends_with("road_train_v3/body_f2.png") \
+		and v.v2_cells.size() == Game.main_slots() and v.wheels.is_empty() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
+		and is_equal_approx(v.v2_extra(), Vehicle.V2_W_RT - Vehicle.MAIN_W)
+	for slot in Game.main_slots():
+		var cl := Game.slot_cell(slot)
+		var img := v.v2_shell.texture.get_image()
+		var wc: RoomV3Cell = v.v2_cells[slot]
+		var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
+		world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 \
+			and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and cl.y < 2
+	await shot("road_train_world_f2")
+	wf = Dev.road_train_world(3)
+	Dev.set_trailers(2)
+	await wait(0.4)
+	world_ok = world_ok and wf == 3 and v.v2 and v.v2_shell.texture.get_size().y == 492.0 and v.v2_cells.size() == 9
+	await shot("road_train_world_f3")
+	_check("road train: on the road (world v2) the B-double body carries the v3 rooms, on the road line, 2/3 decks", world_ok)
+	Features.set_override("features", "world_v2", false)
+	Features.set_override("features", "road_train", false)
+	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
+	# an old 5-floor rig save becomes the 3-deck road train: rooms on removed floors move into empty cells, else scrap back
+	Dev.set_trailers(0)
+	Dev.set_vault(6)
+	Game.fit_body()
+	var n5 := Game.main_slots()
+	for i in range(1, n5):
+		Game.s.rooms[i] = {"type": "kitchen" if i < 9 and i != 5 else "empty", "level": 1, "job": {}, "build": {}}
+	Game.s.rooms[n5 - 1] = {"type": "kitchen", "level": 2, "job": {}, "build": {}}
+	Game.s.rooms[n5 - 2] = {"type": "kitchen", "level": 1, "job": {}, "build": {}}
+	Game.s.dwellers[0].room = n5 - 1
+	var scrap0 := float(Game.s.res.scrap)
+	Features.set_override("features", "road_train", true)
+	Game.fit_body(true)      # the load path: keep_used never keeps more than the road train's 3 decks
+	_check("road train: an old 5-floor rig keeps its rooms (moved into an empty cell, crew with it), the rest refunded", n5 == 15 and Game.main_slots() == 9 			and str(Game.s.rooms[5].type) == "kitchen" and int(Game.s.rooms[5].level) == 2 and int(Game.s.dwellers[0].room) == 5 			and is_equal_approx(float(Game.s.res.scrap), scrap0 + float(Data.ROOMS.kitchen.cost)))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Dev._vehicle_changed()
+	await wait(0.3)
+
+
+
 
 
 

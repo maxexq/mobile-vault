@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Two vehicles only: Dr. Ren's ambulance and the new road train (prime mover + lead trailer, 2-3 decks, red container trailers); the armoured bus and train are gone, their saves drive the road train and keep their rooms (MV-721)
 - Free camera: pinch or scroll to zoom through every sharp pixel level around your fingers, drag to look around in any direction, and tap FIT to snap back to the automatic view (MV-723)
 - New art for all six expedition special encounters: bigger detailed scenes where the team's flashlight sweeps in from the left onto the find, with HELP letters, toxic fumes, falling dust and pebbles (MV-717)
 - New crew portraits: every crew member's face in menus and popups is now the detailed portrait of the new 2.5D character who plays them (MV-722)

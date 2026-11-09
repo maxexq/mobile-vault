@@ -122,7 +122,9 @@ func _build_perks() -> void:
 	for id in Meta.PERKS:
 		if Meta.all_crew_on() and id in ["veterans", "training"]:
 			continue
-		var p: Dictionary = Meta.PERKS[id]
+		if Meta.perk_hidden(id):
+			continue
+		var p: Dictionary = Meta.perk_def(id)
 		var lv := Meta.perk(id)
 		var card := UIKit.panel(UIKit.C_BG2, UIKit.C_GOLD if lv > 0 else UIKit.C_LINE_DARK)
 		var h := UIKit.hbox(4)
@@ -196,10 +198,10 @@ func _build_crew() -> void:
 	if tier_pick == "":
 		tier_pick = Meta.best_tier()
 	var vh := UIKit.flow(3)
-	for t in Data.TIER_ORDER:
+	for t in Game.tier_order():
 		if not Meta.tier_unlocked(t):
 			continue
-		var vd: Dictionary = Data.VEHICLES[t]
+		var vd: Dictionary = Game.vehicle_def_for(t)
 		var tb := UIKit.button(Loc.t("%s (%d ห้อง)") % [vd.th, int(vd.floors) * 3], "yellow" if t == tier_pick else "gray")
 		var tid: String = t
 		tb.pressed.connect(func():

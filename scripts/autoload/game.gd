@@ -535,11 +535,29 @@ func beds_short_text(left: int) -> String:
 
 # ------------------------------------------------------------------ vehicle tier / layout
 func tier() -> String:
-	return str(s.get("tier", "van")) if not s.is_empty() else "rig"
+	var t := str(s.get("tier", "van")) if not s.is_empty() else "rig"
+	if Features.on("road_train") and (t == "bus" or t == "train"):
+		return "rig"      # MV-721: the bus and the armoured train are gone, their saves drive the road train
+	return t
 
 
 func vehicle_def() -> Dictionary:
-	return Data.VEHICLES.get(tier(), Data.VEHICLES.van)
+	return vehicle_def_for(tier())
+
+
+## MV-721: the vehicle ladder in play (switch road_train: ambulance + road train only)
+func tier_order() -> Array:
+	return Data.TIER_ORDER_2 if Features.on("road_train") else Data.TIER_ORDER
+
+
+func vehicle_def_for(t: String) -> Dictionary:
+	var d: Dictionary = Data.VEHICLES.get(t, Data.VEHICLES.van)
+	if Features.on("road_train"):
+		if t == "rig":
+			return d.merged(Data.ROAD_TRAIN, true)
+		if t == "van":
+			return d.merged(Data.VAN_AMBULANCE, true)
+	return d
 
 
 func floors() -> int:
@@ -570,6 +588,12 @@ func base_floors() -> int:
 
 
 func floors_at(lv: int) -> int:
+	if Features.on("road_train") and tier() == "rig":
+		# MV-721: the road train's body is the lead trailer: 2 decks, a 3rd at the first floor-gain Vault level, never taller
+		var d := Data.RT_DECKS[0]
+		if lv >= int(Features.num("vault.floor_gain_1", float(Data.FLOOR_GAIN_LEVELS[0]))):
+			d += 1
+		return mini(d, Data.RT_DECKS[1])
 	var n := int(Data.START_FLOORS.get(tier(), vehicle_def().floors))
 	if test_van_floors > 0 and tier() == "van":
 		n = test_van_floors
@@ -594,6 +618,9 @@ func fit_body(keep_used := false) -> bool:
 	# MV-715: the van now starts with 1 floor; a save that already has a floor with rooms or crew on it keeps it
 	if keep_used and new_main < old and _body_part_used(new_main, mini(old, s.rooms.size())):
 		new_main = old
+		if Features.on("road_train") and tier() == "rig":
+			# MV-721: the road train is never taller than its 3 decks; rooms above move down or refund (_rehome_room)
+			new_main = mini(old, Data.ROOMS_PER_FLOOR * int(Data.RT_DECKS[1]))
 	s.body_slots = new_main
 	if old == new_main or s.rooms.size() < old:
 		return false
@@ -618,11 +645,12 @@ func relayout_body(old_main: int, new_main: int) -> void:
 	var main_part := rooms.slice(0, old_main)
 	var trailer_part := rooms.slice(old_main)
 	while main_part.size() > new_main:
-		main_part.pop_back()
+		var lost: Dictionary = main_part.pop_back()
 		var idx := main_part.size()
+		var to := _rehome_room(main_part, new_main, lost) if Features.on("road_train") else -1
 		for d in s.dwellers:
 			if int(d.room) == idx:
-				d.room = -1
+				d.room = to
 	while main_part.size() < new_main:
 		main_part.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	# dwellers working in trailers move with their rooms (the cab crew, slot Data.CAB_SLOT, stays put)
@@ -634,6 +662,21 @@ func relayout_body(old_main: int, new_main: int) -> void:
 	s.rooms = main_part
 	s.body_slots = new_main
 	_unl_key = -1
+
+
+## MV-721: a smaller body (an old 4-5 floor rig save becoming the 2-3 deck road train) keeps its rooms: a room on a
+## removed floor moves into an empty cell of the body that stays (crew with it); with no empty cell left its build
+## cost comes back as scrap. Returns the new slot, or -1.
+func _rehome_room(main_part: Array, new_main: int, room: Dictionary) -> int:
+	var t := str(room.get("type", "empty"))
+	if t == "empty" or not Data.ROOMS.has(t):
+		return -1
+	for i in mini(main_part.size(), new_main):
+		if i != Data.ENGINE_SLOT and str(main_part[i].get("type", "")) == "empty" and (main_part[i].get("build", {}) as Dictionary).is_empty():
+			main_part[i] = room
+			return i
+	s.res.scrap = float(s.res.get("scrap", 0.0)) + float(int(Data.ROOMS[t].get("cost", 0)) * maxi(1, int(room.get("level", 1))))
+	return -1
 
 
 func trailers() -> int:
@@ -696,8 +739,8 @@ func vault_hull_bonus() -> float:
 ## the next vehicle with more floors than this one ("" = none bigger)
 func bigger_vehicle() -> String:
 	var f := floors()
-	for t in Data.TIER_ORDER:
-		if int(Data.VEHICLES[t].floors) > f:
+	for t in tier_order():
+		if int(vehicle_def_for(t).floors) > f:
 			return t
 	return ""
 
