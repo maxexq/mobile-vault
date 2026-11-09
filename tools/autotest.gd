@@ -694,6 +694,11 @@ func _run() -> void:
 		_checkpoint_test()
 		_finish()
 		return
+	if "--only=engine_bay" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _engine_bay_test()
+		_finish()
+		return
 	if "--only=engine_rest" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _engine_rest_test()
@@ -4693,16 +4698,42 @@ func _engine_bay_test() -> void:
 	e.auto_rest = true
 	EngineBay.set_mode("normal")
 	# stock-ish driving stays under the rest line, with the usual two mechanics in the cab (the run's earlier state
-	# decided this before: an empty cab cools at 0.10/min and a V8 cruise settles ~120 C in the day, flaky on CI)
+	# decided this before: an empty cab cools at 0.10/min and a V8 cruise settles ~120 C in the day, flaky on CI).
+	# MV-728: weather, biome + time of day and the load came from earlier tests too (storm 108 C, clear sky 123 C), so
+	# the check also pins a stock van: clear industrial noon, no trailers / mods / built rooms / scrap
+	var keep := {"weather": Game.s.weather, "tod": Game.s.tod, "biome": Game.s.biome, "tier": Game.s.get("tier", "van"),
+		"trailers": Game.s.get("trailers", 0), "mods": (Game.s.get("mods", {}) as Dictionary).duplicate(true), "scrap": Game.s.res.get("scrap", 0.0)}
+	var keep_types := []
+	for r in Game.s.rooms:
+		keep_types.append(r.type)
+	Game.s.weather = "clear"
+	Game.s.tod = 0.5
+	Game.s.biome = Data.BIOMES.map(func(b): return str(b.id)).find("industrial")
+	Game.s.tier = "van"
+	Game.s.trailers = 0
+	Game.s.mods = {}
+	Game.s.res.scrap = 0.0
+	for r in Game.s.rooms:
+		r.type = "empty"
 	var cab_keep := {}
 	for d in Game.s.dwellers:
 		if cab_keep.size() < mini(2, Data.CAB_WORKERS) and Game.squad_role(d) < 0 and not Game.is_away(d):
 			cab_keep[int(d.id)] = d.room
 			d.room = Data.CAB_SLOT
-	_check("engine: normal V8 cruise settles below auto-rest (%.1f C: ambient %.0f, heat in %.2f, cooling %.3f, load %.2f, weather %s, night %s)" % [EngineBay.settle_temp(), EngineBay.ambient(), EngineBay.heat_in(), EngineBay.cooling(), Haul.load_ratio(), str(Game.s.get("weather", "clear")), str(Game.is_night())], EngineBay.settle_temp() < 110.0 or Haul.load_ratio() > 1.0 or EngineBay.ambient() >= 40.0)
+	_check("engine: normal V8 cruise settles below auto-rest (%.1f C: ambient %.0f, heat in %.2f, cooling %.3f, load %.2f, cab %d)" % [EngineBay.settle_temp(), EngineBay.ambient(), EngineBay.heat_in(), EngineBay.cooling(), Haul.load_ratio(), EngineBay.crew().size()],
+		EngineBay.settle_temp() < 110.0 and Haul.load_ratio() <= 1.0)
 	for d in Game.s.dwellers:
 		if cab_keep.has(int(d.id)):
 			d.room = cab_keep[int(d.id)]
+	Game.s.weather = keep.weather
+	Game.s.tod = keep.tod
+	Game.s.biome = keep.biome
+	Game.s.tier = keep.tier
+	Game.s.trailers = keep.trailers
+	Game.s.mods = keep.mods
+	Game.s.res.scrap = keep.scrap
+	for k in Game.s.rooms.size():
+		Game.s.rooms[k].type = keep_types[k]
 	# --- jobs
 	Game.s.res.scrap = maxf(500.0, float(Game.s.res.scrap))
 	Game.s.res.fuel = maxf(50.0, float(Game.s.res.fuel))
