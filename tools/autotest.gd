@@ -635,11 +635,24 @@ func _run() -> void:
 		await _parallax_v2_test()
 		_finish()
 		return
+	if "--only=enc_art_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _enc_art_v2_test()
+		_finish()
+		return
 	if "--only=rooms_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _rooms_v3_test()
 		_finish()
 		return
+	if "--only=crew_portraits_v3" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _crew_portraits_v3_test()
+		_finish()
+		return
+
+
+
 	if "--only=world_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _world_v2_test()
@@ -1435,6 +1448,7 @@ func _run() -> void:
 		main.hud.panels.expedition.close()
 	Expedition.skip_site()
 	await _encounter_test()
+	await _enc_art_v2_test()
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
 	Meta.m().legacy = 9999
 	Meta.add_blueprint("bp_bus")
@@ -1625,6 +1639,10 @@ func _run() -> void:
 	await _scene_art_test()
 	await _parallax_v2_test()
 	await _rooms_v3_test()
+	await _crew_portraits_v3_test()
+
+
+
 	await _ambulance_v3_test()
 	await _world_v2_test()
 	await _vehicle_anim_test()
@@ -2965,6 +2983,52 @@ func _encounter_test() -> void:
 	Game.s.exp.enc.at = Time.get_unix_time_from_system() + 99999999.0
 	var r4 := await _enc_finish()
 	_check("encounter: scheduled-but-unreached is dropped", not r4.has("enc") and not Expedition.active())
+
+
+## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2)
+func _enc_art_v2_test() -> void:
+	Features.set_override("features", "enc_art_v2", true)
+	var sizes_ok := true
+	for id in Encounter.ENCOUNTERS:
+		var img: String = Encounter.def(id).image
+		var st := EncArt.still(img)
+		var sh: Texture2D = load(EncArt.DIR + img + "_anim.png")
+		if st == null or st.get_size() != Vector2(320, 160) or sh == null or sh.get_size() != Vector2(320 * 8, 160 * 6):
+			sizes_ok = false
+	_check("enc art v2: every encounter has a 320x160 still + 8x6 sheet", sizes_ok)
+	_check("enc art v2: sweep plays once, then the hold part loops",
+		EncArt.frame_at(0.0) == 0 and EncArt.frame_at(4.75) == 47 and EncArt.frame_at(4.8) == 18 and EncArt.frame_at(7.79) == 47 and EncArt.frame_at(7.8) == 18)
+	_check("enc art v2: frame cells", EncArt.frame_rect(9) == Rect2(320, 160, 320, 160))
+	var sup := {"food": 10, "water": 10, "stimpack": 1, "ammo": 10, "antibiotics": 0}
+	if not Expedition.active():
+		_check("enc art v2: expedition starts", _enc_start(sup))
+	Encounter.trigger_now("cry")
+	await wait(0.8)
+	var pop = main.hud.encounter_popup
+	_check("enc art v2: popup open", pop.is_open)
+	var rect: TextureRect = pop.media.get_child(0)
+	_check("enc art v2: popup shows the 320x160 animated art", rect.texture is AtlasTexture and rect.texture.get_size() == Vector2(320, 160))
+	var r0: Rect2 = (rect.texture as AtlasTexture).region
+	await wait(0.6)
+	_check("enc art v2: the flashlight animation advances", (rect.texture as AtlasTexture).region != r0)
+	await shot("enc_art_v2_cry")
+	pop.close()
+	Dev.enc_art_v2(false)
+	_check("enc art v2: switch off -> old 160x80 art", not Features.on("enc_art_v2") and EncArt.anim_texture("enc_cry").get_size() == Vector2(160, 80))
+	pop.show_encounter()
+	await wait(0.4)
+	_check("enc art v2: popup falls back to the old art", (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(160, 80))
+	pop.close()
+	Dev.enc_art_v2(true)
+	_check("enc art v2: GOD toggle turns it back on", Features.on("enc_art_v2"))
+	pop.show_encounter()
+	await wait(0.3)
+	pop.choose(Encounter.def("cry").choices.size() - 1)
+	await wait(0.4)
+	_check("enc art v2: result shows the 320x160 still", (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(320, 160))
+	await shot("enc_art_v2_cry_result")
+	pop.close()
+	await _enc_finish()
 
 
 ## random road events: shuffle bag per biome, no back-to-back repeats, survives a save round-trip
@@ -5783,6 +5847,55 @@ func _scene_art_test() -> void:
 	await wait(0.3)
 
 
+## MV-722: crew portraits use the approved v3 busts of the v3 person who plays them (switch crew_portraits_v3)
+func _crew_portraits_v3_test() -> void:
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var all_ok := true
+	for cid in V3Art.CREW_IDS:
+		var t := V3Art.portrait_tex(str(cid))
+		all_ok = all_ok and t != null and t.get_size() == Vector2(64, 64)
+	_check("portraits v3: all 11 characters have a 64x64 portrait", all_ok)
+	var d: Dictionary = Game.s.dwellers[0]
+	Features.set_override("features", "crew_portraits_v3", true)
+	var small := UIKit.portrait(str(d.variant), false, d)
+	var big := UIKit.portrait(str(d.variant), true, d)
+	var tr_s := small.get_child(0) as TextureRect
+	var tr_b := big.get_child(0) as TextureRect
+	_check("portraits v3: on = the v3 bust of V3Art.crew_for(d), 32 px slot / 64 px big",
+		str(small.get_meta("v3_crew", "")) == V3Art.crew_for(d) and tr_s.texture == V3Art.portrait_tex(V3Art.crew_for(d))
+		and tr_s.custom_minimum_size == Vector2(32, 32) and tr_b.custom_minimum_size == Vector2(64, 64))
+	_check("portraits v3: without the crew member (tutorial art) the old portrait stays",
+		not UIKit.portrait("dw_army_brown", true).has_meta("v3_crew"))
+	_check("portraits v3: Dev count = whole crew", Dev.crew_portraits_v3_count() == (Game.s.dwellers as Array).size())
+	main.hud.open_panel("dwellers")
+	main.hud.panels.dwellers.manage(int(d.id))
+	await wait(0.5)
+	var found := false
+	for n in main.hud.panels.dwellers.find_children("*", "PanelContainer", true, false):
+		if (n as Node).has_meta("v3_crew"):
+			found = true
+	_check("portraits v3: crew card shows the v3 portrait", found)
+	await shot("crew_portraits_v3")
+	main.hud.panels.dwellers.close()
+	await wait(0.3)
+	main.hud.open_panel("squad")
+	await wait(0.5)
+	await shot("crew_portraits_v3_squad")
+	main.hud.panels.squad.close()
+	await wait(0.3)
+	Dev.crew_portraits_v3(false)
+	var off := UIKit.portrait(str(d.variant), false, d)
+	_check("portraits v3: off = old 20x20 portrait", not off.has_meta("v3_crew") and (off.get_child(0) as TextureRect).custom_minimum_size == Vector2(20, 20)
+		and Dev.crew_portraits_v3_count() == 0)
+	small.free()
+	big.free()
+	off.free()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	await wait(0.2)
+
+
+## MV-711: v3 rooms + ref v3 crew in the v3 interior view (switches rooms_v3 / rooms_v3_review)
 func _rooms_v3_test() -> void:
 	var old_window := get_window().size
 	var old_state: Dictionary = Game.s.duplicate(true)
@@ -5840,6 +5953,25 @@ func _rooms_v3_test() -> void:
 			moved = moved or (a as CrewV3Actor).clip() in ["walk", "work", "carrywalk", "talk", "eat", "drink", "idle", "construct"]
 	_check("rooms v3: crew play their clips", moved)
 	await shot("rooms_v3_interior")
+	# MV-724: crisp room-toned pixel shadow (same width), lighter crew grade, GOD buttons drive both tunes
+	var old_a := 1.0 - (1.0 - 0.43) * (1.0 - 0.25)   # the MV-711 draw_circle shadow
+	_check("rooms v3: crew shadow is lighter than MV-711 but clearly there", CrewV3Actor.shadow_alpha() > 0.35 and CrewV3Actor.shadow_alpha() < old_a)
+	var widest := 0
+	for r in CrewV3Actor.SHADOW_ROWS:
+		widest = maxi(widest, int(r[1]))
+	_check("rooms v3: crew shadow keeps its width", widest == int(CrewV3Actor.SHADOW_W))
+	Dev.crew_v3_shadow(0.0)
+	var none_a := CrewV3Actor.shadow_alpha()
+	Dev.crew_v3_shadow(-1.0)
+	Dev.crew_v3_grade(1.0)
+	var g_full := CrewV3Actor.grade_k()
+	Dev.crew_v3_grade(-1.0)
+	Dev.crew_v3_lift(1.0)
+	var lift_off := CrewV3Actor.lift_k()
+	Dev.crew_v3_lift(-1.0)
+	_check("rooms v3: crew colours lifted toward v2 by default, GOD x1 turns it off", lift_off == 1.0 and CrewV3Actor.lift_k() > 1.0)
+	_check("rooms v3: GOD crew shadow / grade buttons", none_a == 0.0 and g_full == 1.0 and CrewV3Actor.grade_k() < 1.0
+		and is_equal_approx(CrewV3Actor.shadow_k(), CrewV3Actor.SHADOW))
 	var first := -1
 	for slot in panel.cells:
 		if (panel.cells[slot] as RoomV3Cell).kind == "v3" and not (panel.cells[slot] as RoomV3Cell).data.get("hotspots", []).is_empty():
@@ -5875,7 +6007,7 @@ func _rooms_v3_test() -> void:
 		for control in row.get_children():
 			if control is Button:
 				labels[control.text] = true
-	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด"))
+	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด") and labels.has("เงาอ่อน x0.5") and labels.has("ย้อม 0.5") and labels.has("สว่าง x1.5"))
 	god.close()
 	Features.set_override("features", "rooms_v3", false)
 	_check("rooms v3: switch off hides the HUD button and refuses to open", not hud._interior_btn.visible and not hud.open_interior())
@@ -9314,6 +9446,8 @@ func _perf_test() -> void:
 	Game.s.rooms = keep_rooms
 	Game.rooms_changed.emit()
 	# --- fixed-rate economy: alternating halves, fewer steps than frames, no game time lost
+	# a step resets the collected time, so on a slow runner (frames of 25-50 ms) it takes 2 frames: expect at least
+	# half the nominal sim_hz rate, not a fixed 20 (CI runners hit 36 frames / 18 steps in 1.5 s)
 	Features.set_override("features", "fixed_sim", true)
 	Game._flush_sim()
 	var w0: int = Game.sim_steps.world
@@ -9331,7 +9465,7 @@ func _perf_test() -> void:
 	Game._flush_sim()
 	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
 	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
-		and wn + cn >= mini(frames, 20))
+		and wn + cn >= mini(frames, int(elapsed * Features.num("perf.sim_hz", Game.SIM_HZ) / 2.0)))
 	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
 	Features.set_override("features", "fixed_sim", false)
 	w0 = Game.sim_steps.world

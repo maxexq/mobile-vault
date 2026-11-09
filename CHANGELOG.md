@@ -9,6 +9,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- New art for all six expedition special encounters: bigger detailed scenes where the team's flashlight sweeps in from the left onto the find, with HELP letters, toxic fumes, falling dust and pebbles (MV-717)
+- New crew portraits: every crew member's face in menus and popups is now the detailed portrait of the new 2.5D character who plays them (MV-722)
 - The defence squad now fights from inside the rear gunner room: a gunner, a loader and a spotter (the spotter joins as the Mobile Vault grows); nobody shoots from the roof or the rear wall any more and enemies can only hit the vehicle. Only one gunner room, and only at the rear of the vehicle (MV-727)
 - The ambulance on the road comes alive: its tyres roll with the speed and hop over bumps one axle after another while the body rides on its springs, it rocks when pulling out and braking, and it has working lights (headlight, tail and brake lights, a blinking marker when it pulls out or over, the red light bar flashing during raids, a flickering lantern at night) and a flag waving in the wind (MV-726)
 - Rear gunner post: a new room at the back of the vehicle where the crew shoot the monsters and bosses chasing you through a firing hatch, even in a power-out; new games start with it in the rear slot (MV-716)
@@ -33,6 +35,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
 
 ### Changed
+- New 2.5D crew in the v3 interior: a crisp pixel floor shadow in the room's own dark tone (same width as before, no longer a black blob), and brighter, livelier crew colours closer to the v2 crew instead of the dark room tint (MV-724)
 - Settings no longer show technical or personal details: About lists only the game version, channel, build and your Player ID, the Save tab hides the save file path and masks your e-mail (MV-588).
 - Next Generation brings every survivor with full levels, XP, skills and all equipment (worn, stash, vehicle gear and mods); obsolete crew/level research is refunded (MV-559).
 - Clearer sound: fixed the hiss and crackle (most of all on the web), and reworked rain, storm, sandstorm, snow, fog, acid rain, ashfall, overcast and thunder (MV-555).

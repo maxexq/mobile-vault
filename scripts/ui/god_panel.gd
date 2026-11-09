@@ -363,6 +363,17 @@ func _tab_vehicle() -> void:
 	_row([_b("ห้อง v3: " + ("เปิด" if Features.on("rooms_v3") else "ปิด"), func(): Dev.feature_set("rooms_v3", not Features.on("rooms_v3")),
 		"green" if Features.on("rooms_v3") else "red"), _b("ห้องรอตรวจ: " + ("ใช้" if Features.on("rooms_v3_review") else "ไม่ใช้"),
 		func(): Dev.feature_set("rooms_v3_review", not Features.on("rooms_v3_review")), "green" if Features.on("rooms_v3_review") else "red")], "สวิตช์")
+	_note("เงาใต้เท้าลูกเรือ x%.2f (tune crew_v3.shadow) · กลางเงาทึบ %d%% · ย้อมสีลูกเรือ %.2f (tune crew_v3.grade)" % [CrewV3Actor.shadow_k(),
+		roundi(CrewV3Actor.shadow_alpha() * 100.0), CrewV3Actor.grade_k()])
+	_row([_b("เงาเข้ม x1.5", func(): Dev.crew_v3_shadow(1.5)), _b("เงาอ่อน x0.5", func(): Dev.crew_v3_shadow(0.5)),
+		_b("ไม่มีเงา", func(): Dev.crew_v3_shadow(0.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_shadow(-1.0), "gray")], "เงาลูกเรือ")
+	_row([_b("สีแบบเดิม (เข้ม)", func(): Dev.crew_v3_grade(1.0)), _b("ย้อม 0.5", func(): Dev.crew_v3_grade(0.5)),
+		_b("สีสไปรต์ล้วน", func(): Dev.crew_v3_grade(0.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_grade(-1.0), "gray")], "สีลูกเรือ")
+	_row([_b("สว่าง x1 (สีเดิม)", func(): Dev.crew_v3_lift(1.0)), _b("สว่าง x1.25", func(): Dev.crew_v3_lift(1.25)), _b("สว่าง x1.5", func(): Dev.crew_v3_lift(1.5)),
+		_b("ค่าเริ่มต้น", func(): Dev.crew_v3_lift(-1.0), "gray")], "ความสว่างลูกเรือ (%.2f)" % CrewV3Actor.lift_k())
+
+
+
 	_row([_b("รถพยาบาล 1 ชั้น", func(): Dev.ambulance_v3_preview(1)), _b("2 ชั้น", func(): Dev.ambulance_v3_preview(2)),
 		_b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)), _b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)),
 		_b("รถพยาบาล: " + ("เปิด" if Features.on("ambulance_v3") else "ปิด"), func(): Dev.feature_set("ambulance_v3", not Features.on("ambulance_v3")),
@@ -420,6 +431,7 @@ func _tab_crew() -> void:
 	_trait_odds()
 	_trait_tiers_row()
 	_crew_roster()
+	_crew_portraits_v3()
 	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
 	for g in Inspection.GRADES:
 		var gid: String = g
@@ -495,6 +507,22 @@ func _crew_roster() -> void:
 		rb.append(_b(("★ " if Data.CREW_ROSTER[rid].cameo else "") + str(Data.CREW_ROSTER[rid].name), func(): Dev.spawn_roster(rid)))
 	var row := _row(rb, "ขึ้นรถ")
 	row.name = "RosterButtons"
+
+
+## MV-722: the 11 approved v3 portraits, who of the current crew shows which one, and the switch
+func _crew_portraits_v3() -> void:
+	var on := Features.on("crew_portraits_v3")
+	_head("PORTRAITS v3", "รูปหน้าลูกเรือ v3 (MV-722) · สวิตช์ %s · ลูกเรือที่ใช้รูปใหม่ %d คน" % ["เปิด" if on else "ปิด", Dev.crew_portraits_v3_count()])
+	_row([_b("รูปหน้า v3: " + ("เปิด" if on else "ปิด"), func(): Dev.crew_portraits_v3(not on), "green" if on else "red")], "สวิตช์")
+	var grid := UIKit.flow(4)
+	grid.name = "PortraitV3Grid"
+	for cid in V3Art.CREW_IDS:
+		var cell := VBoxContainer.new()
+		cell.name = "pt_" + str(cid)
+		cell.add_child(UIKit.tex_rect(V3Art.portrait_tex(str(cid)), Vector2(64, 64)))
+		cell.add_child(UIKit.label(str(cid), UIKit.FS_SMALL, UIKit.C_TEXT))
+		grid.add_child(cell)
+	_list.add_child(grid)
 
 
 func _tab_fight() -> void:
@@ -647,6 +675,8 @@ func _tab_world() -> void:
 		_row(encb, "จุดพิเศษ")
 		_note("ถ้ายังไม่มีทีมสำรวจ จะส่งทีมคุ้ยซากฟรีให้ก่อน · ห้ามซ้ำ 3 ครั้งล่าสุด: %s" % ", ".join(Encounter.recent().map(func(e): return str(Encounter.def(str(e)).get("th", e)))))
 		_row([_b("ล้างประวัติจุดพิเศษ", func(): Dev.encounter_recent_clear())])
+	_row([_b("ภาพจุดพิเศษ v2: " + ("เปิด" if Features.on("enc_art_v2") else "ปิด"), func(): Dev.enc_art_v2(not Features.on("enc_art_v2")),
+		"green" if Features.on("enc_art_v2") else "red")])
 	if not Expedition.active():
 		var sb := []
 		for id in Expedition.SITES:

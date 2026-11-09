@@ -130,6 +130,24 @@ func engine_shake(k: float) -> void:
 	Features.set_override("tune", "fx.engine_shake", null if k < 0.0 else k)
 
 
+## v3 crew contact shadow strength (MV-724): sets the crew_v3.shadow override, < 0 = back to the build's value
+func crew_v3_shadow(k: float) -> void:
+	Trace.rec("god", "crew v3 shadow %.2f" % k)
+	Features.set_override("tune", "crew_v3.shadow", null if k < 0.0 else k)
+
+
+## v3 crew brightness lift (MV-724): sets the crew_v3.lift override, < 0 = back to the build's value
+func crew_v3_lift(k: float) -> void:
+	Trace.rec("god", "crew v3 lift %.2f" % k)
+	Features.set_override("tune", "crew_v3.lift", null if k < 0.0 else k)
+
+
+## v3 crew room grade strength (MV-724): sets the crew_v3.grade override, < 0 = back to the build's value
+func crew_v3_grade(k: float) -> void:
+	Trace.rec("god", "crew v3 grade %.2f" % k)
+	Features.set_override("tune", "crew_v3.grade", null if k < 0.0 else k)
+
+
 ## MV-562: compare smoothness with the per-step / per-frame caches on and off
 func perf_cache_switch(v: bool) -> void:
 	feature_set("perf_cache", v)
@@ -1169,6 +1187,22 @@ func rooms_v3_showcase(lv: int) -> int:
 	return n
 
 
+# ------------------------------------------------------------------ MV-722 crew portraits v3
+## switch crew_portraits_v3 on/off; panels open after this rebuild their portraits
+func crew_portraits_v3(on: bool) -> void:
+	feature_set("crew_portraits_v3", on)
+	Game.dwellers_changed.emit()
+
+
+## how many of the current crew show a v3 portrait right now
+func crew_portraits_v3_count() -> int:
+	var n := 0
+	for d in Game.s.dwellers:
+		if UIKit.portrait_v3(d) != null:
+			n += 1
+	return n
+
+
 func rooms_max() -> void:
 	for r in Game.s.rooms:
 		if r.type != "empty":
@@ -1960,6 +1994,12 @@ func encounter_anywhere(id: String) -> void:
 			return
 		act("quick expedition for encounter")
 	encounter(id)
+
+
+## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2); open an encounter to see it
+func enc_art_v2(on: bool) -> void:
+	feature_set("enc_art_v2", on)
+	act("encounter art v2 " + ("on" if on else "off"))
 
 
 # ---- strangers
