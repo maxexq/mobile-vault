@@ -19,5 +19,6 @@ metadata:
   drawn by AmbulanceMotion.flame (no new imported textures). Orange ghost arc (x266-290,y28-48) removed. Solar rail over tank =
   Pro inpaint-v3 take s2 (tools/art/ambulance/solar_pl.png, 10 gens/take, 30 spent); Parames PICKED B 20:09 (in PR).
   Roof-mods thread's solar_covers sit on the side band (x296-436,y63-92), not the tank. PR #219 first commit CI autotest green.
+- 20:14 Parames APPROVED + saved ("เซฟเลย โคมไฟ ดีมาก"): /mnt/project-files/designs/ambulance-fix/approved/README.md. RULE: vehicle lamps have no baked backplate/halo; light = code additive glow.
 - 2026-11-09: downloading Godot 4.7.2 in the cloud was blocked by the auto-mode classifier this session (despite standing OK).
 Related: [[ambulance-v3-ingame]], [[vehicle-upgrade-icons]], [[vehicle-anim]], [[vehicle-2floor]].
