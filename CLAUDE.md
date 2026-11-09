@@ -82,6 +82,9 @@ rules also go into this file.
    `godot --path . --rendering-driver opengl3 -- --autotest --out=<abs dir>`
    (on Linux CI/cloud run it under `xvfb-run -a`; `--headless` hangs on frame_post_draw).
    `--only=<name>` runs one group, e.g. `--only=touch`, `--only=large`.
+   Inside a data-driven loop (seeds, biomes, every crew/item) record each case with
+   `_fold(label, ok, case)` and call `_fold_flush()` after the loop: one check per rule, not per
+   item (MV-729; the old per-item `_check` inflated the count to 3,600+).
    CI (workflow **Autotest**) runs it on every PR and must be green before merge; on Linux
    `bash tools/ci_autotest.sh` does exactly what CI does.
    CI skips the Godot run when no game file changed (`tools/ci_scope.sh`: docs, `api/`, `web/`,
