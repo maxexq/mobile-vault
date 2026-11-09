@@ -160,4 +160,5 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [ambulance-v3-ingame](ambulance-v3-ingame.md): MV-715 ambulance replaces the van: v3 interior shell (switch ambulance_v3) done, outside world v2 picked, next
 - [road-train-ingame](road-train-ingame.md): MV-721 two vehicles (ambulance + road train, switch road_train), B-double shells in the v3 interior, body 2-3 decks; on the road too (container trailers); RULE vehicles flat 2D
 - [vehicle-2floor](vehicle-2floor.md): MV-736 Decker double-decker bus: starts 2 decks, 3rd scrap deck by Vault, researched with tier_bus, in game behind switch decker
+- [ambulance-pup](ambulance-pup.md): MV-737 ambulance + pup B with code coupling APPROVED (12_ambulance_pup), in game as the ambulance trailers (switch ambulance_pup, pup_f2.png 3x2 grid)
 - [vehicle-anim](vehicle-anim.md): MV-726 ambulance on the road: rolling tyres, suspension hops, lights, flag (switch vehicle_anim, code only); rerun tools/ambulance_anim.py after shell rebuilds
