@@ -3559,7 +3559,10 @@ func _threat_test() -> void:
 	var ratio: float = earned.call(res.threat) / maxf(1.0, earned.call(res.classic))
 	print("[autotest] threat/classic combat scrap per hour = %.2f" % ratio)
 	_check("threat: fighting is a minority of the time (<60%)", float(res.threat.fight) < 0.6)
-	_check("threat: classic fights almost all the time (>80%)", float(res.classic.fight) > 0.8)
+	# MV-727: the room squad shoots from range as soon as a mob spawns, so classic waves end sooner than with the old
+	# deck heroes (0.83-0.85 before, ~0.81 now with the pinned starter squad): still almost all the time
+	var classic_min := 0.75 if RearGunner.room_mode() else 0.8
+	_check("threat: classic fights almost all the time (>%d%%)" % int(classic_min * 100), float(res.classic.fight) > classic_min)
 	_check("threat: several raids per hour", int(res.threat.raids) >= 10)
 	_check("threat: scrap per hour within 80-120% of classic", ratio >= 0.8 and ratio <= 1.2)
 	# ---- offline pay follows the measured raids
@@ -8871,7 +8874,8 @@ func _ensure_squad() -> void:
 ## crew member to a +15 gear set in it. Give the two shooters the new-game Leo / Mark stats + starter gear and a
 ## Lv1 gunner room for the test, and put everything back afterwards.
 func _pin_squad() -> Dictionary:
-	var saved := {"squad": (Game.s.squad as Array).duplicate(), "crew": [], "room": {}}
+	var saved := {"squad": (Game.s.squad as Array).duplicate(), "crew": [], "room": {}, "turret": Game.s.van_gear.turret}
+	Game.s.van_gear.turret = Loot.roll_item("turret", 1, 0, "mg_turret")     # the new-game turret part
 	var p := RearGunner.post()
 	if p >= 0:
 		saved.room = {"slot": p, "level": Game.s.rooms[p].level}
@@ -8885,12 +8889,15 @@ func _pin_squad() -> Dictionary:
 		if i >= starter.size() or d.is_empty():
 			Game.s.squad[i] = -1
 			continue
-		var keep := {"id": int(d.id)}
-		for k in starter[i]:
-			keep[k] = (d.get(k) as Variant)
-			if keep[k] is Dictionary:
-				keep[k] = (keep[k] as Dictionary).duplicate(true)
-			d[k] = starter[i][k]
+		var keep := {"id": int(d.id), "missing": []}
+		var pin: Dictionary = starter[i].duplicate()
+		pin.merge({"traits": [], "skills": {}, "infection": 0.0})    # no sharpshooter / skill tree / infection either
+		for k in pin:
+			if not d.has(k):
+				keep.missing.append(k)
+			else:
+				keep[k] = d[k].duplicate(true) if (d[k] is Dictionary or d[k] is Array) else d[k]
+			d[k] = pin[k]
 		saved.crew.append(keep)
 	# sync_squad pulls anyone else working in the gunner room into a free squad slot: send them out for the test
 	saved["moved"] = []
@@ -8908,13 +8915,16 @@ func _unpin_squad(saved: Dictionary) -> void:
 	for keep in saved.crew:
 		var d := Game.dweller_by_id(int(keep.id))
 		for k in keep:
-			if k != "id":
+			if k != "id" and k != "missing":
 				d[k] = keep[k]
+		for k in keep.missing:
+			d.erase(k)
 	if not (saved.room as Dictionary).is_empty():
 		Game.s.rooms[int(saved.room.slot)].level = saved.room.level
 		for id in saved.moved:
 			Game.dweller_by_id(int(id)).room = int(saved.room.slot)
 	Game.s.squad = saved.squad
+	Game.s.van_gear.turret = saved.turret
 	RearGunner.sync_squad()
 	Combat.rebuild_heroes()
 
