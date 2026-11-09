@@ -14,5 +14,10 @@ metadata:
 - Micro animation: the ambulance already has MV-726 (tyres, hops, lurch, beacon, lamps, lantern, mast, flag); the Decker's
   extra night headlight beam lives in PR #216's ambulance_motion.gd, so not ported here to avoid conflicts.
 - Branch mv-741-ambulance-cleanup off staging. Never push to mv-737-ambulance-pup (PR #217).
+- 19:55 Parames round 2: lantern disc removed + hook (cleanup.py lantern()), PixelLab flame flicker (animate-with-text-v3 take 3,
+  tools/art/ambulance/lantern_pl.png 8x18x22) mapped onto glass pixels in anim.json lantern_px/frames/glow by ambulance_anim.py,
+  drawn by AmbulanceMotion.flame (no new imported textures). Orange ghost arc (x266-290,y28-48) removed. Solar rail over tank =
+  Pro inpaint-v3 take s2 (tools/art/ambulance/solar_pl.png, 10 gens/take, 30 spent); Parames PICKED B 20:09 (in PR).
+  Roof-mods thread's solar_covers sit on the side band (x296-436,y63-92), not the tank. PR #219 first commit CI autotest green.
 - 2026-11-09: downloading Godot 4.7.2 in the cloud was blocked by the auto-mode classifier this session (despite standing OK).
 Related: [[ambulance-v3-ingame]], [[vehicle-upgrade-icons]], [[vehicle-anim]], [[vehicle-2floor]].
