@@ -381,6 +381,10 @@ func _tab_vehicle() -> void:
 		_b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)), _b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)),
 		_b("รถพยาบาล: " + ("เปิด" if Features.on("ambulance_v3") else "ปิด"), func(): Dev.feature_set("ambulance_v3", not Features.on("ambulance_v3")),
 		"green" if Features.on("ambulance_v3") else "red")], "รถพยาบาล v3")
+	_row([_b("พ่วง pup 1 คัน", func(): Dev.ambulance_pup_preview(1)), _b("2 คัน", func(): Dev.ambulance_pup_preview(2)),
+		_b("ดูภายใน", func(): Dev.ambulance_pup_preview(maxi(Game.trailers(), 1), true)),
+		_b("พ่วง pup: " + ("เปิด" if Features.on("ambulance_pup") else "ปิด"), func(): Dev.feature_set("ambulance_pup", not Features.on("ambulance_pup")),
+		"green" if Features.on("ambulance_pup") else "red")], "พ่วงรถพยาบาล")
 	_row([_b("บนถนน 1 ชั้น", func(): Dev.world_v2_preview(1)), _b("2 ชั้น", func(): Dev.world_v2_preview(2)),
 		_b("4 ชั้น", func(): Dev.world_v2_preview(4)),
 		_b("โลก v2: " + ("เปิด" if Features.on("world_v2") else "ปิด"), func(): Dev.feature_set("world_v2", not Features.on("world_v2")),

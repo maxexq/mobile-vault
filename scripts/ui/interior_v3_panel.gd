@@ -34,6 +34,18 @@ const RT_X0 := 226.0
 const RT_TX0 := 20.0
 const RT_Y0 := 116.0
 const RT_FH := 112.0
+## MV-737 (switch ambulance_pup): the ambulance's trailers are the approved pup (designs/road-train/approved/12_ambulance_pup),
+## stretched in code to the trailer grid (3 cells x 2 floors): pup_f2.png, its drawbar + tow plate at the front ride on the
+## unit in front. Unit i starts at PUP_X0 + PUP_STEP * i in ambulance shell px; cells at x 86 + col * 152, y 88 + row * 112
+## (row 0 = top floor); it stands on the road like the ambulance. designs/road-train/pup2/game_shell.py
+const PUP_DIR := "res://assets/vehicles/ambulance_pup/"
+const PUP_X0 := 600.0
+const PUP_STEP := 542.0
+const PUP_W := 576.0
+const PUP_H := 352.0
+const PUP_REAR := 562.0
+const PUP_CX0 := 86.0
+const PUP_CY0 := 88.0
 
 var scroll: ScrollContainer
 var canvas: Control
@@ -41,6 +53,7 @@ var world: Node2D
 var shell: Node2D
 var amb_shell: Sprite2D           # MV-715 ambulance shell over the main body's cells
 var rt_shells: Array = []         # MV-721 road train: body + one per trailer
+var pup_shells: Array = []        # MV-737 ambulance pups, one per trailer
 var cells: Dictionary = {}        # slot -> RoomV3Cell
 var info: Label
 var open_btn: Button
@@ -144,6 +157,8 @@ func cell_pos(slot: int) -> Vector2:
 	var top := _unit_top(unit)
 	if unit < 0 and amb():
 		return Vector2(AMB_X0 + c.x * (V3Art.CELL.x + WALL), top + AMB_Y0 + float(floors - 1 - c.y) * AMB_FH)
+	if unit >= 0 and pup():
+		return Vector2(_unit_x(unit) + PUP_CX0 + c.x * (V3Art.CELL.x + WALL), top + PUP_CY0 + float(floors - 1 - c.y) * AMB_FH)
 	if rt():
 		var x0 := RT_X0 if unit < 0 else _unit_x(unit) + RT_TX0
 		return Vector2(x0 + c.x * (V3Art.CELL.x + WALL), top + RT_Y0 + float(floors - 1 - c.y) * RT_FH)
@@ -161,6 +176,12 @@ func amb() -> bool:
 func rt() -> bool:
 	return Features.on("road_train") and Game.tier() == "rig" and ResourceLoader.exists(RT_DIR + "body_f%d.png" % Game.floors()) \
 		and (Game.trailers() == 0 or ResourceLoader.exists(RT_DIR + "trailer_f%d.png" % _unit_floors(0)))
+
+
+## MV-737: the ambulance's trailers are the pup shell (switch ambulance_pup, trailers of 2 floors)
+func pup() -> bool:
+	return Features.on("ambulance_pup") and amb() and Game.trailers() > 0 and _unit_floors(0) == 2 \
+		and ResourceLoader.exists(PUP_DIR + "pup_f2.png")
 
 
 func _rt_h(floors: int) -> float:
@@ -185,6 +206,8 @@ func _main_w() -> float:
 func _unit_x(unit: int) -> float:
 	if unit < 0:
 		return 0.0
+	if pup():
+		return PUP_X0 + PUP_STEP * float(unit)  # the pup's drawbar + tow plate ride on the unit in front
 	if rt():
 		return RT_W + RT_TW * float(unit)     # the container's nose rides on the unit in front: no gap
 	return _main_w() + UNIT_GAP + (_unit_w() + UNIT_GAP) * float(unit)
@@ -199,6 +222,8 @@ func _world_h() -> float:
 	if rt():
 		return maxf(_rt_h(Game.floors()), _rt_h(_unit_floors(0)) if Game.trailers() > 0 else 0.0)
 	var h := _amb_h() if amb() else _box_h(Game.floors())
+	if pup():
+		return maxf(h, PUP_H)
 	if Game.trailers() > 0:
 		h = maxf(h, _box_h(_unit_floors(0)) + (AMB_LIFT if amb() else 0.0))
 	return h
@@ -209,6 +234,8 @@ func _unit_top(unit: int) -> float:
 		return _world_h() - _rt_h(_unit_floors(unit))
 	if unit < 0:
 		return _world_h() - (_amb_h() if amb() else _box_h(Game.floors()))
+	if pup():
+		return _world_h() - PUP_H
 	return _world_h() - (AMB_LIFT if amb() else 0.0) - _box_h(_unit_floors(unit))
 
 
@@ -230,6 +257,8 @@ func _rebuild() -> void:
 	world_size = Vector2(_unit_x(units - 2) + _unit_w() if units > 1 else _main_w(), _world_h())
 	if rt():
 		world_size.x = _unit_x(units - 2) + RT_TW if units > 1 else RT_W
+	if pup():
+		world_size.x = _unit_x(units - 2) + PUP_W
 	for sp in rt_shells:
 		sp.queue_free()
 	rt_shells.clear()
@@ -247,6 +276,19 @@ func _rebuild() -> void:
 		amb_shell.texture = load(AMB_DIR + "shell_f%d.png" % Game.floors())
 		amb_shell.position = Vector2(0.0, _unit_top(-1))
 	world.move_child(amb_shell, world.get_child_count() - 1)     # the shell's lip and decks over the room edges
+	for sp in pup_shells:
+		sp.queue_free()
+	pup_shells.clear()
+	if pup():                                                     # front first: each tow plate sits on the unit in front
+		var tex: Texture2D = load(PUP_DIR + "pup_f2.png")
+		for u in Game.trailers():
+			var sp := Sprite2D.new()
+			sp.name = "PupShell%d" % u
+			sp.centered = false
+			sp.texture = tex
+			sp.position = Vector2(_unit_x(u), _unit_top(u))
+			world.add_child(sp)
+			pup_shells.append(sp)
 	for i in range(rt_shells.size() - 1, -1, -1):                 # road train: rear units first, the body on top
 		world.move_child(rt_shells[i], world.get_child_count() - 1)
 	if not _fit_once():
@@ -274,7 +316,7 @@ func _fit_once() -> bool:
 func refresh() -> void:
 	if Game.s.is_empty():
 		return
-	var shape := "%d/%d/%d/%s/%s" % [Game.floors(), Game.trailers(), Game.slot_count(), amb(), rt()]
+	var shape := "%d/%d/%d/%s/%s/%s" % [Game.floors(), Game.trailers(), Game.slot_count(), amb(), rt(), pup()]
 	if shape != _shape or cells.is_empty():
 		_rebuild()
 		_shape = shape
@@ -363,6 +405,8 @@ func _draw_shell() -> void:
 			continue                # the ambulance shell sprite is the main body
 		if rt():
 			continue                # MV-721: the road train shell sprites are every unit
+		if unit >= 0 and pup():
+			continue                # MV-737: the pup shell sprites are the trailers
 		shell.draw_rect(Rect2(x0, top, _unit_w(), h), steel)
 		for rx in range(int(x0) + 4, int(x0 + _unit_w()), 12):
 			shell.draw_rect(Rect2(rx, top + 3, 1, 1), rivet)

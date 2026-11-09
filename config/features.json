@@ -98,6 +98,7 @@
     "rooms_v3": true,
     "road_train": true,
     "ambulance_v3": true,
+    "ambulance_pup": true,
     "world_v2": true,
     "vehicle_anim": true,
     "rooms_v3_review": true,
