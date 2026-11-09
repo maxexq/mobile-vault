@@ -95,12 +95,8 @@ func _build_group(id: String) -> void:
 	ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(ground)
 	groups[id] = {"root": root, "layers": layers, "legacy": root.get_children()}
-	if id in ["industrial", "desert"]:
-		var live: Node2D = IndustrialBackdrop.new() if id == "industrial" else DesertBackdrop.new()
-		live.name = id.capitalize() + "Live"
-		root.add_child(live)
-		groups[id]["modern"] = live
-	# MV-710: approved 5-layer parallax v2 (every biome), wins over legacy + modern when parallax_v2 is on
+	# MV-710: approved 5-layer parallax v2 (every biome), wins over legacy when parallax_v2 is on
+	# (MV-729: the MV-548/MV-539 industrial + desert "modern" backdrops it replaced were retired)
 	if DirAccess.dir_exists_absolute("res://assets/bg/v2/%s" % id):
 		var v2 := ParallaxV2Backdrop.new(id)
 		v2.name = id.capitalize() + "V2"
@@ -139,22 +135,17 @@ func _refresh_backdrops() -> void:
 	for id in groups:
 		var g: Dictionary = groups[id]
 		var v2_on: bool = use_v2 and g.has("v2")
-		var modern_on: bool = not v2_on and g.has("modern") and Features.on(id + "_parallax")
 		for node in g.legacy:
-			(node as CanvasItem).visible = not v2_on and not modern_on
-		if g.has("modern"):
-			(g.modern as Node2D).visible = modern_on
+			(node as CanvasItem).visible = not v2_on
 		if g.has("v2"):
 			(g.v2 as Node2D).visible = v2_on
 
 
-## which backdrop draws a biome right now: "v2", "modern" or "legacy"
+## which backdrop draws a biome right now: "v2" or "legacy"
 func backdrop_kind(id: String) -> String:
 	var g: Dictionary = groups.get(id, {})
 	if g.has("v2") and g.v2.visible:
 		return "v2"
-	if g.has("modern") and g.modern.visible:
-		return "modern"
 	return "legacy"
 
 
@@ -196,9 +187,6 @@ func _process(delta: float) -> void:
 			continue
 		if g.has("v2") and g.v2.visible:
 			g.v2.road_speed = _speed
-			continue
-		if g.has("modern") and g.modern.visible:
-			g.modern.road_speed = _speed
 			continue
 		for px in g.layers:
 			var sp: float = px.get_meta("speed")

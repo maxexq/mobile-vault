@@ -194,7 +194,7 @@ func _build_manage(d: Dictionary) -> void:
 	# --- bio card
 	var bio := Lore.bio(d)
 	var top := UIKit.hbox(6)
-	top.add_child(UIKit.portrait(d.variant, true))
+	top.add_child(UIKit.portrait(d.variant, true, d))
 	var info := UIKit.vbox(1)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_child(UIKit.label(bio.role, UIKit.FS_SMALL, UIKit.C_GOLD))

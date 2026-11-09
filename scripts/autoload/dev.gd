@@ -24,7 +24,6 @@ var player_view := false     # MV-588: Settings shows what a player sees (no ser
 var flags := {}
 var speed := 1.0
 var overlay := false
-var icon_scale := 2
 var _taps: Array = []
 var _layer: CanvasLayer
 var _lbl: Label
@@ -147,6 +146,24 @@ func cam_fit() -> void:
 		return
 	Trace.rec("god", "camera fit")
 	m.camera_auto_fit()
+
+
+## v3 crew contact shadow strength (MV-724): sets the crew_v3.shadow override, < 0 = back to the build's value
+func crew_v3_shadow(k: float) -> void:
+	Trace.rec("god", "crew v3 shadow %.2f" % k)
+	Features.set_override("tune", "crew_v3.shadow", null if k < 0.0 else k)
+
+
+## v3 crew brightness lift (MV-724): sets the crew_v3.lift override, < 0 = back to the build's value
+func crew_v3_lift(k: float) -> void:
+	Trace.rec("god", "crew v3 lift %.2f" % k)
+	Features.set_override("tune", "crew_v3.lift", null if k < 0.0 else k)
+
+
+## v3 crew room grade strength (MV-724): sets the crew_v3.grade override, < 0 = back to the build's value
+func crew_v3_grade(k: float) -> void:
+	Trace.rec("god", "crew v3 grade %.2f" % k)
+	Features.set_override("tune", "crew_v3.grade", null if k < 0.0 else k)
 
 
 ## MV-562: compare smoothness with the per-step / per-frame caches on and off
@@ -305,7 +322,7 @@ func set_tod(v: float) -> void:
 	act("time of day %.2f" % v)
 
 
-## MV-548: one-click approved Industrial Ruins map preview at an exact simulation time.
+## clear-weather preview of a biome at an exact simulation time (MV-548; used by the parallax v2 preview)
 func background_preview(tod: float, biome: int = 0) -> void:
 	goto_biome(biome)
 	weather("clear")
@@ -323,11 +340,6 @@ func parallax_v2_preview(tod: float) -> void:
 ## MV-710: world rendered at 2x (parallax v2 near/road detail) on/off
 func world_2x(on: bool) -> void:
 	feature_set("world_2x", on)
-
-
-## MV-539: clear-weather previews of the real desert biome.
-func desert_background_preview(tod: float) -> void:
-	background_preview(tod, 1)
 
 
 func weather(w: String) -> void:
@@ -890,24 +902,12 @@ func gear_detail_demo() -> void:
 	inv.detail_uid = int(pick.uid)
 	inv.refresh()
 
-# ------------------------------------------------------------------ MV-483 trait cards
-## every trait card's light: "" = live, "still", "off" (read-only, not cheated)
-func trait_preview(mode: String) -> void:
-	TraitFx.preview = mode
-	TraitFx.paused_preview = false
-	Trace.rec("god", "trait preview %s" % mode)
 
-
+# ------------------------------------------------------------------ MV-483 / MV-497 trait cards
 ## MV-497: show the trait tiers or the untiered fallback (session override of the trait_tiers switch, read-only)
 func trait_tiers(on: bool) -> void:
 	Features.set_override("features", "trait_tiers", on)
 	Trace.rec("god", "trait tiers %s" % ("on" if on else "off"))
-
-
-## hold every trait card light and move it one phase (read-only)
-func trait_step() -> void:
-	TraitFx.frame_step()
-	Trace.rec("god", "trait step %d" % TraitFx.current_phase())
 
 
 # ------------------------------------------------------------------ MV-500 / MV-129 seeded world map
@@ -1202,6 +1202,22 @@ func rooms_v3_showcase(lv: int) -> int:
 	act("rooms v3 showcase", {"level": lv, "v3_rooms": n})
 	Game.rooms_changed.emit()
 	rooms_v3_open()
+	return n
+
+
+# ------------------------------------------------------------------ MV-722 crew portraits v3
+## switch crew_portraits_v3 on/off; panels open after this rebuild their portraits
+func crew_portraits_v3(on: bool) -> void:
+	feature_set("crew_portraits_v3", on)
+	Game.dwellers_changed.emit()
+
+
+## how many of the current crew show a v3 portrait right now
+func crew_portraits_v3_count() -> int:
+	var n := 0
+	for d in Game.s.dwellers:
+		if UIKit.portrait_v3(d) != null:
+			n += 1
 	return n
 
 
@@ -1998,6 +2014,12 @@ func encounter_anywhere(id: String) -> void:
 	encounter(id)
 
 
+## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2); open an encounter to see it
+func enc_art_v2(on: bool) -> void:
+	feature_set("enc_art_v2", on)
+	act("encounter art v2 " + ("on" if on else "off"))
+
+
 # ---- strangers
 func stranger_clear() -> void:
 	Inspection.queue().clear()
@@ -2139,15 +2161,6 @@ func mode_toll_test() -> void:
 	Game.travel_changed.emit()
 
 
-# ---- version channel (MV-111)
-## preview another channel's ALPHA/BETA/RC badge on the title + About ("" = the real channel); not saved
-## MV-275: inspect the real atlas at native / phone / large integer sizes.
-func icon_preview(scale: int) -> void:
-	icon_scale = clampi(scale, 1, 3)
-	Trace.rec("god", "icon preview x%d" % icon_scale)
-	changed.emit()
-
-
 ## MV-694: switch the 32 px PixelLab icon set (icons_v2) on / off for this tester
 func icons_v2(on: bool) -> void:
 	act("icons v2 %s" % ("on" if on else "off"))
@@ -2155,6 +2168,8 @@ func icons_v2(on: bool) -> void:
 	Features.changed.emit()
 
 
+# ---- version channel (MV-111)
+## preview another channel's ALPHA/BETA/RC badge on the title + About ("" = the real channel); not saved
 func channel_preview(ch: String) -> void:
 	act("channel preview %s" % (ch if ch != "" else "off"))
 	BuildInfo.channel_preview = ch if BuildInfo.CHANNELS.has(ch) else ""

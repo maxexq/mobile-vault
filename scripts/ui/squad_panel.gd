@@ -116,7 +116,7 @@ func _role_card(i: int) -> Control:
 		return p
 	var st := Combat.hero_stats(d, 0 if Combat.room_mode() else i)
 	var dh := UIKit.hbox(4)
-	dh.add_child(UIKit.portrait(d.variant))
+	dh.add_child(UIKit.portrait(d.variant, false, d))
 	var info := UIKit.vbox(1)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_child(UIKit.label("%s  Lv.%d" % [d.name, d.lvl], UIKit.FS_SMALL))
@@ -190,7 +190,7 @@ func _deck_card() -> Control:
 		v.add_child(UIKit.wrap_label(tag, UIKit.FS_SMALL))
 		return p
 	var dh := UIKit.hbox(4)
-	dh.add_child(UIKit.portrait(d.variant))
+	dh.add_child(UIKit.portrait(d.variant, false, d))
 	var info := UIKit.vbox(1)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var state := Loc.t("กำลังสู้แทน!") if not Combat.sub.is_empty() else Loc.t("นอนพักบนเปล")
