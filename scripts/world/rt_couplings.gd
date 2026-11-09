@@ -4,7 +4,8 @@ extends Node2D
 ## run unbroken from unit to unit). The lead trailer's red / blue air lines already run on into the first container
 ## trailer in the art; this node adds what the art lacks:
 ## - container trailer -> container trailer: the 4 air lines (2 red, 2 blue) sag from the rear end post of the unit in
-##   front to the hose ends on the nose of the unit behind, and a steel link joins the tow hook to the drawbar beam
+##   front to the hose ends on the nose of the unit behind (the unit in front ends in a B-link beam in its own shell,
+##   trailer_link_f<n>.png, which the nose of the unit behind sits on)
 ## - no trailer behind the lead trailer: its air line ends get coupler heads on the end post instead of ending in air
 ## The lines sway a pixel with the road while driving (`sway` is set by the Vehicle).
 
@@ -21,7 +22,6 @@ const LINES := [
 const BODY_CAPS := [Vector2(691, 329), Vector2(691, 340)]   # the lead trailer's air line ends (red, blue)
 
 var hoses: Array = []        # {a, b, col}
-var links: Array = []        # Rect2 steel bars
 var caps: Array = []         # Vector2 top-left of a 3x3 coupler head
 var sway := 0.0              # extra sag in px (whole px when drawn)
 
@@ -29,7 +29,6 @@ var sway := 0.0              # extra sag in px (whole px when drawn)
 ## trailers: top-left (shell px) of each container trailer, front first; their shell height (decks)
 func setup(body_pos: Vector2, body_h: float, trailers: Array, trailer_h: float) -> void:
 	hoses.clear()
-	links.clear()
 	caps.clear()
 	if trailers.is_empty():
 		for c in BODY_CAPS:
@@ -40,8 +39,6 @@ func setup(body_pos: Vector2, body_h: float, trailers: Array, trailer_h: float) 
 		var back: Vector2 = trailers[i]
 		for l in LINES:
 			hoses.append({"a": front + (l[0] as Vector2) + Vector2(0, dy), "b": back + (l[1] as Vector2) + Vector2(0, dy), "col": l[2]})
-		var x0 := front.x + 493.0
-		links.append(Rect2(x0, front.y + 349.0 + dy, back.x + 2.0 - x0, 5.0))
 	queue_redraw()
 
 
@@ -53,11 +50,6 @@ func set_sway(px: float) -> void:
 
 
 func _draw() -> void:
-	for r in links:
-		var b: Rect2 = r
-		draw_rect(b, DARK)
-		draw_rect(Rect2(b.position + Vector2(0, 1), Vector2(b.size.x, b.size.y - 2)), STEEL)
-		draw_rect(Rect2(b.position + Vector2(0, 1), Vector2(b.size.x, 1)), STEEL_HI)
 	for h in hoses:
 		_hose(h.a, h.b, h.col)
 	for c in caps:

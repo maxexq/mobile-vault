@@ -41,7 +41,8 @@ static var _glow_tex: GradientTexture2D
 
 var vehicle: Node2D
 var dir := DIR                     # shell set: DIR (ambulance) or DK_DIR (Decker bus) or RT_DIR (road train)
-var unit := ""                     # road train: "" = tractor + lead trailer, "trailer" = a container trailer
+var unit := ""                     # road train: "" = tractor + lead trailer, "trailer" = a container trailer,
+                                   # "trailer_link" = a container trailer with another one behind it (B-link rear)
 var floors := 0
 var behind: Node2D                 # road train: in the v2 root under every shell (landing legs slide up behind them)
 var legs: Array[Sprite2D] = []
@@ -81,13 +82,13 @@ static func meta(d := DIR) -> Dictionary:
 
 
 static func spot(n: int, d := DIR, u := "") -> Dictionary:
-	return (meta(d).get("trailer" if u == "trailer" else "floors", {}) as Dictionary).get(str(n), {})
+	return (meta(d).get(u if u != "" else "floors", {}) as Dictionary).get(str(n), {})
 
 
 ## the shell texture of a unit: shell_f<n> (ambulance, Decker), body_f<n> / trailer_f<n> (road train)
 static func shell_file(n: int, d := DIR, u := "") -> String:
 	if d == RT_DIR:
-		return d + ("trailer_f%d.png" if u == "trailer" else "body_f%d.png") % n
+		return d + ("%s_f%d.png" % [u, n] if u != "" else "body_f%d.png" % n)
 	return d + "shell_f%d.png" % n
 
 

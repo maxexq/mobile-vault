@@ -259,7 +259,8 @@ func _rebuild() -> void:
 			var sp := Sprite2D.new()
 			sp.name = "RoadTrainShell%d" % u
 			sp.centered = false
-			sp.texture = load(RT_DIR + ("body_f%d.png" % Game.floors() if u == 0 else "trailer_f%d.png" % _unit_floors(u - 1)))
+			sp.texture = load(RT_DIR + ("body_f%d.png" % Game.floors() if u == 0
+				else "%s_f%d.png" % [rt_trailer_kind(u - 1, units - 1, _unit_floors(u - 1)), _unit_floors(u - 1)]))
 			sp.position = Vector2(_unit_x(u - 1), _unit_top(u - 1))
 			world.add_child(sp)
 			rt_shells.append(sp)
@@ -407,3 +408,11 @@ func _draw_shell() -> void:
 				shell.draw_rect(Rect2(x0 + FRAME, y + V3Art.CELL.y, _unit_w() - FRAME * 2.0 - SHAFT, 1), beam_hi)
 		if u > 0:                   # tow bar to the unit in front
 			shell.draw_rect(Rect2(x0 - UNIT_GAP, top + h - 14, UNIT_GAP, 4), beam)
+
+
+## MV-740: container trailer `u` of `count`: "trailer_link" (B-link rear: its beam runs on under the nose of the trailer
+## behind it) unless it is the last one, which keeps the truck rear end (plate, tail lamps, tow hook) as "trailer"
+static func rt_trailer_kind(u: int, count: int, decks: int) -> String:
+	if u < count - 1 and ResourceLoader.exists(RT_DIR + "trailer_link_f%d.png" % decks):
+		return "trailer_link"
+	return "trailer"

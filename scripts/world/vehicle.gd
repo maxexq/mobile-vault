@@ -485,8 +485,9 @@ func _build_v2_trailers() -> void:
 	v2_tshells.clear()
 	if not v2_rt_trailers():
 		return
-	var tex: Texture2D = load(InteriorV3Panel.RT_DIR + "trailer_f%d.png" % v2_trailer_floors())
 	for u in range(n_trailers - 1, -1, -1):
+		var kind := InteriorV3Panel.rt_trailer_kind(u, n_trailers, v2_trailer_floors())
+		var tex: Texture2D = load(InteriorV3Panel.RT_DIR + "%s_f%d.png" % [kind, v2_trailer_floors()])
 		for i in Data.TRAILER_SLOTS:
 			var slot := Game.main_slots() + u * Data.TRAILER_SLOTS + i
 			if slot >= Game.slot_count():
@@ -505,10 +506,10 @@ func _build_v2_trailers() -> void:
 		v2_root.add_child(sp)
 		v2_tshells.append(sp)
 		var tf := v2_trailer_floors()
-		if amb_wanted() and AmbulanceMotion.ok(tf, AmbulanceMotion.RT_DIR, "trailer"):
-			sp.texture = AmbulanceMotion.cut_shell(tf, AmbulanceMotion.RT_DIR, "trailer")
+		if amb_wanted() and AmbulanceMotion.ok(tf, AmbulanceMotion.RT_DIR, kind):
+			sp.texture = AmbulanceMotion.cut_shell(tf, AmbulanceMotion.RT_DIR, kind)
 			var m := AmbulanceMotion.new()
-			m.build(tf, sp.position, _wheels_root, v2_root, V2_K, AmbulanceMotion.RT_DIR, "trailer")
+			m.build(tf, sp.position, _wheels_root, v2_root, V2_K, AmbulanceMotion.RT_DIR, kind)
 			m.set_meta("lead", (unit_x(u) - V2_X) + 0.0)
 			rt_units.append(m)
 

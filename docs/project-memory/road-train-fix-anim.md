@@ -18,3 +18,4 @@ Related: [[road-train-ingame]], [[vehicle-anim]], [[vehicle-2floor]], [[vehicles
 - PR #221 (base mv-736-decker). 20:34 Parames: REMOVE the shocks drawn on the wheels (done, Shock class deleted) + air lines must connect
   unbroken -> body keeps its original air lines (they run into the trailer art), scripts/world/rt_couplings.gd draws trailer->trailer
   hoses (4) + tow link and coupler caps when no trailer; cleanup clears the cage scraps on the trailer nose (x 0-8).
+- 21:20 Parames round 3: redo the joint between container trailers 2-3 -> cleanup.py link() writes trailer_link_f2/f3.png (plate/hook/lower tail lamp cut, lip + B-link beam tiled from the nose beam rows 342-357 to the canvas edge, fifth-wheel plate, upper lamp unlit); unit "trailer_link" in anim.json (no tails), InteriorV3Panel.rt_trailer_kind(u, count, decks) picks it for every trailer but the last (road + interior). RtCouplings tow-link bar removed. `cleanup.py link` rebuilds only the variants.

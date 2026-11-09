@@ -13109,22 +13109,35 @@ func _road_train_test() -> void:
 	var units_ok := rt_anim and v.amb_on and v.amb.dir == AmbulanceMotion.RT_DIR and v.amb.tyres.size() == 6 \
 		and v.rt_units.size() == 2 and v.amb.legs.size() == 1
 	for m in v.rt_units:
-		units_ok = units_ok and m.unit == "trailer" and m.tyres.size() == 3 and m.legs.size() == 1
+		units_ok = units_ok and m.unit.begins_with("trailer") and m.tyres.size() == 3 and m.legs.size() == 1
 	_check("road train: GOD drives it with animated tyres on every unit (6 + 3 + 3) and landing legs", units_ok)
 	_check("road train: tyres roll, legs cranked up while driving, headlight on", rsp0 != v.amb.spin_frame()
 		and v.amb.legs_down() == 0.0 and v.rt_units[0].legs_down() == 0.0 and v.amb.lamp_alpha("head") > 0.2)
 	# MV-740: unbroken air lines: 4 hoses + a tow link between the 2 container trailers, each hose from the rear end post
 	# of the unit in front to the nose of the unit behind; no coupler caps while a trailer follows the lead trailer
 	var cp: RtCouplings = v.rt_couplings
-	var hoses_ok := cp != null and cp.visible and cp.hoses.size() == 4 and cp.links.size() == 1 and cp.caps.is_empty()
+	var hoses_ok := cp != null and cp.visible and cp.hoses.size() == 4 and cp.caps.is_empty()
 	if hoses_ok:
 		var front: Sprite2D = v.v2_tshells[1]
 		var back: Sprite2D = v.v2_tshells[0]
 		for h in cp.hoses:
 			hoses_ok = hoses_ok and (h.a as Vector2).x < front.position.x + front.texture.get_width() \
 				and absf((h.b as Vector2).x - back.position.x) <= 1.0
-	_check("road train: air lines + tow link join the container trailers (no shock absorbers on the tyres)", hoses_ok
+	_check("road train: air lines join the container trailers (no shock absorbers on the tyres)", hoses_ok
 		and not "shocks" in v.amb)
+	# MV-740 round 3: the trailer in front ends in a B-link beam (no plate / tow hook / lit tail lamps), the last one keeps
+	# the truck rear end; the beam reaches the canvas edge on the nose beam's rows so the joint is one steel line
+	var link_ok: bool = (v.rt_units[1] as AmbulanceMotion).unit == "trailer_link" and (v.rt_units[0] as AmbulanceMotion).unit == "trailer" \
+		and not (v.rt_units[1] as AmbulanceMotion).glows.has("tail0") and (v.rt_units[0] as AmbulanceMotion).glows.has("tail0")
+	for dk in [2, 3]:
+		var li: Image = (load(InteriorV3Panel.RT_DIR + "trailer_link_f%d.png" % dk) as Texture2D).get_image()
+		var ti: Image = (load(InteriorV3Panel.RT_DIR + "trailer_f%d.png" % dk) as Texture2D).get_image()
+		li.decompress()
+		ti.decompress()
+		var bdy := li.get_height() - 380
+		link_ok = link_ok and li.get_size() == ti.get_size() and li.get_pixel(499, 350 + bdy).a > 0.9 \
+			and ti.get_pixel(0, 350 + bdy).a > 0.9 and li.get_pixel(460, 331 + bdy).r < 0.7
+	_check("road train: container trailer -> container trailer joint is a B-link beam (tail lamps only on the last one)", link_ok)
 	await shot("road_train_anim_drive")
 	Dev.road_train_anim("brake")
 	await wait(3.6)

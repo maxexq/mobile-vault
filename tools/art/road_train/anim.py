@@ -82,6 +82,8 @@ if __name__ == "__main__":
         meta["floors"][str(n)] = unit("body", n, BODY)
     for n in (2, 3):
         meta["trailer"][str(n)] = unit("trailer", n, TRAILER)
+        # a container trailer with another behind it: B-link rear (cleanup.link), no tail lamps lit
+        meta.setdefault("trailer_link", {})[str(n)] = unit("trailer_link", n, dict(TRAILER, tails=[]))
     json.dump(meta, open(os.path.join(DIR, "anim.json"), "w"), indent=1)
     spin_strip()
     print("wrote anim.json + wheel_spin.png")
