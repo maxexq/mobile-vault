@@ -286,7 +286,7 @@ func set_tod(v: float) -> void:
 	act("time of day %.2f" % v)
 
 
-## MV-548: one-click approved Industrial Ruins map preview at an exact simulation time.
+## clear-weather preview of a biome at an exact simulation time (MV-548; used by the parallax v2 preview)
 func background_preview(tod: float, biome: int = 0) -> void:
 	goto_biome(biome)
 	weather("clear")
@@ -304,11 +304,6 @@ func parallax_v2_preview(tod: float) -> void:
 ## MV-710: world rendered at 2x (parallax v2 near/road detail) on/off
 func world_2x(on: bool) -> void:
 	feature_set("world_2x", on)
-
-
-## MV-539: clear-weather previews of the real desert biome.
-func desert_background_preview(tod: float) -> void:
-	background_preview(tod, 1)
 
 
 func weather(w: String) -> void:

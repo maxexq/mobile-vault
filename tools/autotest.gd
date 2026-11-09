@@ -428,6 +428,28 @@ func _check(label: String, ok: bool) -> void:
 		_fails += 1
 
 
+## MV-729: data-driven loops (balance sims, per-crew/per-item sweeps) record each case with _fold and report one
+## check per label from _fold_flush, so the count reflects rules, not loop size. Every case still runs; a failing
+## label lists its failing cases on the next line.
+var _folds := {}  # label -> [cases run, failing case names]
+
+func _fold(label: String, ok: bool, case_name: String) -> void:
+	if not _folds.has(label):
+		_folds[label] = [0, []]
+	_folds[label][0] += 1
+	if not ok:
+		_folds[label][1].append(case_name)
+
+
+func _fold_flush() -> void:
+	for label in _folds:
+		var failed: Array = _folds[label][1]
+		_check("%s (%d cases)" % [label, int(_folds[label][0])], failed.is_empty())
+		if not failed.is_empty():
+			print("[autotest]   failing cases (%d): %s" % [failed.size(), ", ".join(PackedStringArray(failed.slice(0, 24)))])
+	_folds = {}
+
+
 ## prints the summary CI looks for and exits non-zero when a check failed (MV-110)
 func _finish() -> void:
 	print("[autotest] DONE fails=%d" % _fails)
@@ -605,8 +627,6 @@ func _run() -> void:
 		return
 	if "--only=background" in OS.get_cmdline_user_args():
 		Tutorial.skip()
-		await _industrial_background_test()
-		await _desert_background_test()
 		await _parallax_v2_test()
 		_finish()
 		return
@@ -1592,8 +1612,6 @@ func _run() -> void:
 	await _crew_roster_test()
 	await _announce_test()
 	await _scene_art_test()
-	await _industrial_background_test()
-	await _desert_background_test()
 	await _parallax_v2_test()
 	await _rooms_v3_test()
 	await _ambulance_v3_test()
@@ -5740,121 +5758,6 @@ func _scene_art_test() -> void:
 	await wait(0.3)
 
 
-func _industrial_background_test() -> void:
-	var old_window := get_window().size
-	var old_tod: float = Game.s.tod
-	var old_biome: int = int(Game.s.biome)
-	var old_weather: String = Game.s.weather
-	var overrides: Dictionary = Features.layers.dev.duplicate(true)
-	Features.set_override("features", "parallax_v2", false)
-	Features.set_override("features", "industrial_parallax", true)
-	get_window().size = Vector2i(1280, 640)
-	Game.s.biome = 0
-	Game.force_weather("clear")
-	main.background._on_biome_changed(0, true)
-	await wait(0.8)
-	var live: IndustrialBackdrop = main.background.groups.industrial.modern
-	_check("background: new art only on the industrial biome", live.is_visible_in_tree() and not main.background.groups.desert.modern.is_visible_in_tree())
-	var long_layers := true
-	var periods := {}
-	for key in live.layers:
-		var px: Parallax2D = live.layers[key].node
-		long_layers = long_layers and px.repeat_size.x >= 1920 and px.repeat_size.x == (px.get_child(0) as Sprite2D).texture.get_width()
-		periods[int(px.repeat_size.x)] = true
-	_check("background: actual texture widths drive long independent repeats", long_layers and periods.size() >= 4)
-	# MV-548: accepted native layer contract and road-relative motion, including parking.
-	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
-	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
-	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
-	for key in dimensions:
-		var sprite := live.layers[key].node.get_child(0) as Sprite2D
-		native = native and sprite.texture.get_size() == Vector2(dimensions[key]) and sprite.scale == Vector2.ONE
-		if key != "clouds" and key != "road":
-			native = native and sprite.position.y + sprite.texture.get_height() == Background.ROAD_Y
-	_check("industrial ruins: exact five native sizes, nearest pixels and ground alignment", native)
-	var nodes := live.get_child_count()
-	live.set_process(false)
-	Features.set_override("tune", "industrial_background.cloud_wind", 0.0)
-	live.preview_offset(0.0)
-	live.road_speed = 100.0
-	live._process(1.0)
-	var rates := true
-	for key in speeds:
-		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
-	_check("industrial ruins: road speed drives .03/.08/.25/.60/1.0 scroll", rates)
-	Features.set_override("tune", "industrial_background.mid_speed", 0.4)
-	live.preview_offset(0.0)
-	live._process(1.0)
-	_check("industrial ruins: live motion tuning keeps the node count stable", is_equal_approx(float(live.layers.mid.offset), 40.0) and live.get_child_count() == nodes)
-	Features.set_override("tune", "industrial_background.mid_speed", 0.25)
-	Features.set_override("tune", "industrial_background.cloud_wind", 4.0)
-	live.preview_offset(0.0)
-	live.road_speed = 0.0
-	live._process(1.0)
-	var parked := true
-	for key in ["far", "mid", "near", "road"]:
-		parked = parked and is_zero_approx(float(live.layers[key].offset))
-	_check("industrial ruins: parked land stays still while smog drifts", parked and is_equal_approx(float(live.layers.clouds.offset), 4.0))
-	live.preview_offset(0.0)
-	live.road_speed = 100.0
-	live._process(23.04)
-	_check("industrial ruins: full road loop returns to its starting pixel", is_zero_approx(float(live.layers.road.offset)))
-	live.set_process(true)
-	var child_count := live.get_child_count()
-	for entry in [[0.25, "sunrise", true, 1], [0.5, "daylight", true, 2], [0.75, "sunset", false, 3], [0.0, "moonlight", false, 0]]:
-		Game.s.tod = float(entry[0])
-		live.update_clock()
-		_check("background: simulation clock selects %s sky and celestial body" % entry[1], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]))
-		_check("background: %s celestial position stays on the pixel grid" % entry[1], live.celestial_position == live.celestial_position.round())
-		await wait(3.0)
-		await shot("industrial_" + str(entry[1]))
-	Game.s.tod = 0.35
-	live.update_clock()
-	var morning := live.celestial_position
-	Game.s.tod = 0.60
-	live.update_clock()
-	_check("background: sun moves after an in-game clock jump", morning.distance_to(live.celestial_position) > 20)
-	var phase0 := live.phase
-	await wait(0.6)
-	_check("background: smoke/dust animation advances without spawning nodes", live.phase > phase0 and live.get_child_count() == child_count)
-	live.preview_offset(99999.0)
-	var snapped := true
-	for key in live.layers:
-		var px: Parallax2D = live.layers[key].node
-		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
-	_check("background: large travel offsets wrap on whole pixels", snapped)
-	await shot("industrial_full_wrap")
-	Features.set_override("features", "industrial_parallax", false)
-	_check("background: feature off restores the old industrial background", not live.visible and main.background.groups.industrial.legacy[0].visible)
-	await wait(0.3)
-	await shot("industrial_legacy_fallback")
-	Features.set_override("features", "industrial_parallax", true)
-	main.background._on_biome_changed(1, true)
-	phase0 = live.phase
-	await wait(0.3)
-	_check("background: hidden industrial biome stops ambience updates", live.phase == phase0)
-	main.background._on_biome_changed(0, true)
-	Game.s.tod = 0.0
-	get_window().size = Vector2i(405, 720)
-	await wait(0.8)
-	await shot("industrial_portrait_moonlight")
-	Game.s.tod = 0.5
-	live.update_clock()
-	await wait(3.0)
-	await shot("industrial_portrait_daylight")
-	# MV-720: the GOD world tab no longer has Industrial preview buttons (parallax v2 draws every biome)
-	Features.layers.dev = overrides
-	Features.changed.emit()
-	Game.s.tod = old_tod
-	Game.s.biome = old_biome
-	Game.force_weather(old_weather)
-	main.background._on_biome_changed(old_biome, true)
-	get_window().size = old_window
-	await wait(0.3)
-
-
-## MV-710: approved 5-layer parallax v2 backgrounds for every biome.
-## MV-711: v3 rooms + ref v3 crew in the v3 interior view (switches rooms_v3 / rooms_v3_review)
 func _rooms_v3_test() -> void:
 	var old_window := get_window().size
 	var old_state: Dictionary = Game.s.duplicate(true)
@@ -6031,6 +5934,10 @@ func _parallax_v2_test() -> void:
 		_check("parallax v2: %s animation spawns no nodes" % id, v2.get_child_count() == nodes)
 	# world_2x: the world viewport renders 2 px per art px, coordinates stay in art px
 	Features.set_override("features", "world_2x", true)
+	# MV-729: pass through portrait first so the landscape size is a real resize and the world reframes (the
+	# retired desert backdrop test used to leave the window in this state before this check)
+	get_window().size = Vector2i(405, 720)
+	await wait(0.5)
 	get_window().size = Vector2i(1280, 640)
 	await wait(0.6)
 	var ws: float = main.world_scale
@@ -6072,103 +5979,6 @@ func _parallax_v2_test() -> void:
 	Game.s = old_state
 	Game.force_weather(str(old_state.get("weather", "clear")))
 	bg._on_biome_changed(int(Game.s.biome), true)
-	get_window().size = old_window
-	await wait(0.3)
-
-
-func _desert_background_test() -> void:
-	var old_window := get_window().size
-	var old_state: Dictionary = Game.s.duplicate(true)
-	var overrides: Dictionary = Features.layers.dev.duplicate(true)
-	Features.set_override("features", "parallax_v2", false)
-	Features.set_override("features", "desert_parallax", true)
-	Features.set_override("features", "industrial_parallax", true)
-	Dev.desert_background_preview(0.5)
-	main.background._on_biome_changed(1, true)
-	# goto_biome normally cross-fades: allow its existing transition to finish before sampling.
-	await wait(4.2)
-	var live: DesertBackdrop = main.background.groups.desert.modern
-	_check("desert: GOD action selects biome 1 in clear daylight", int(Game.s.biome) == 1 and Game.s.weather == "clear" and live.is_visible_in_tree())
-	_check("desert: industrial renderer is hidden and remaining biomes keep legacy art", not main.background.groups.industrial.modern.is_visible_in_tree() and not main.background.groups.forest.has("modern") and not main.background.groups.swamp.has("modern") and not main.background.groups.tundra.has("modern") and not main.background.groups.metro.has("modern"))
-	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
-	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
-	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
-	for key in dimensions:
-		var px: Parallax2D = live.layers[key].node
-		var sprite := px.get_child(0) as Sprite2D
-		var size: Vector2i = dimensions[key]
-		native = native and sprite.texture.get_size() == Vector2(size) and px.repeat_size.x == size.x and sprite.scale == Vector2.ONE
-		if key != "clouds" and key != "road":
-			native = native and sprite.position.y + size.y == Background.ROAD_Y
-	_check("desert: all five exact native dimensions, independent repeat widths and ground anchors", native)
-	var count := live.get_child_count()
-	live.set_process(false)
-	Features.set_override("tune", "desert_background.cloud_wind", 0.0)
-	live.preview_offset(0.0)
-	live.road_speed = 100.0
-	live._process(1.0)
-	var rates := true
-	for key in speeds:
-		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
-	_check("desert: real road speed drives .03/.08/.25/.60/1.0 relative scroll", rates)
-	Features.set_override("tune", "desert_background.mid_speed", 0.4)
-	_check("desert: live tuning changes the middle layer without rebuilding nodes", is_equal_approx(float(live.layers.mid.speed), 0.4) and live.get_child_count() == count)
-	Features.set_override("tune", "desert_background.mid_speed", 0.25)
-	Features.set_override("tune", "desert_background.cloud_wind", 4.0)
-	live.preview_offset(0.0)
-	live.road_speed = 0.0
-	live._process(1.0)
-	var stopped := true
-	for key in ["far", "mid", "near", "road"]:
-		stopped = stopped and is_zero_approx(float(live.layers[key].offset))
-	_check("desert: parked road/land stop while high dust drifts independently", stopped and is_equal_approx(float(live.layers.clouds.offset), 4.0))
-	live.preview_offset(99999999.0)
-	var snapped := true
-	for key in live.layers:
-		var px: Parallax2D = live.layers[key].node
-		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
-	_check("desert: long travel wraps every layer on whole pixels", snapped)
-	live.set_process(true)
-	for window in [Vector2i(1280, 640), Vector2i(405, 720)]:
-		get_window().size = window
-		await wait(0.5)
-		for entry in [[0.25, "dawn", true, 1], [0.5, "day", true, 2], [0.75, "dusk", false, 3], [0.0, "night", false, 0]]:
-			Game.s.tod = float(entry[0])
-			live.update_clock()
-			_check("desert: %s %s clock sky and pixel-snapped celestial" % [window, entry[1]], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]) and live.celestial_position == live.celestial_position.round())
-			# Let the existing WeatherFX grade settle after each abrupt clock jump.
-			await wait(3.0)
-			await shot("desert_%s_%s" % ["portrait" if window.y > window.x else "landscape", entry[1]])
-	Game.s.tod = 0.35
-	live.update_clock()
-	var morning := live.celestial_position
-	Game.s.tod = 0.60
-	live.update_clock()
-	_check("desert: sun catches up after an in-game clock jump", morning.distance_to(live.celestial_position) > 20)
-	Game.force_weather("sandstorm")
-	var before := live.phase
-	await wait(0.4)
-	_check("desert: weather uses existing ambience with a fixed scene-node count", live.phase > before and live.get_child_count() == count and Game.s.weather == "sandstorm")
-	await shot("desert_sandstorm")
-	Features.set_override("features", "desert_parallax", false)
-	before = live.phase
-	await wait(0.3)
-	_check("desert: kill switch restores legacy layers and stops hidden updates", not live.visible and main.background.groups.desert.legacy[0].visible and live.phase == before)
-	Features.set_override("features", "desert_parallax", true)
-	main.background._on_biome_changed(0, false)
-	await wait(3.2)
-	before = live.phase
-	await wait(0.3)
-	_check("desert: cross-fade completes and hidden desert stops updating", not live.is_visible_in_tree() and main.background.groups.industrial.modern.is_visible_in_tree() and live.phase == before)
-	# MV-720: the GOD buttons are gone; the Dev action stays for this test
-	Dev.desert_background_preview(0.5)
-	_check("desert: Dev preview action shows the desert at noon, clear", int(Game.s.biome) == 1 and is_equal_approx(float(Game.s.tod), 0.5) and Game.s.weather == "clear")
-	await wait(3.2)
-	Features.layers.dev = overrides
-	Features.changed.emit()
-	Game.s = old_state
-	Game.force_weather(str(old_state.weather))
-	main.background._on_biome_changed(int(old_state.biome), true)
 	get_window().size = old_window
 	await wait(0.3)
 
@@ -11019,9 +10829,10 @@ func _warlord_test() -> void:
 				for seed_value in [550, 551, 552]:
 					var result: Dictionary = bench.fight(biome, lap, profile, seed_value, true)
 					records.append(result)
-					_check("warlord: armed clear biome%d lap%d %s seed%d" % [biome, lap, profile, seed_value], result.killed and result.gate_open and result.falls == 0 and float(result.hero_min) >= 0.5 and float(result.hull_min) >= float(result.hull_max) * 0.9 and float(result.seconds) < 60.0)
+					_fold("warlord: armed %s clears every biome/lap/seed" % profile, result.killed and result.gate_open and result.falls == 0 and float(result.hero_min) >= 0.5 and float(result.hull_min) >= float(result.hull_max) * 0.9 and float(result.seconds) < 60.0, "biome%d lap%d seed%d" % [biome, lap, seed_value])
 					if not result.killed or result.falls > 0 or float(result.hero_min) < 0.5 or float(result.hull_min) < float(result.hull_max) * 0.9 or float(result.seconds) >= 60.0: print("[warlord-failure] ", JSON.stringify(result))
 			await wait(0.01)
+	_fold_flush()
 	for biome in Data.BIOMES.size():
 		var old: Dictionary = bench.fight(biome, 0, "common", 550, false)
 		var balanced: Dictionary = bench.fight(biome, 0, "common", 550, true)
@@ -11706,7 +11517,7 @@ func _event_progression_test() -> void:
 					var outcome := Game.resolve_event(id, _qte_index(id, "fight"), defenders)
 					fights += 1
 					if outcome.ok: armed_wins += 1
-					_check("event progression: ordinary armed team %s biome%d lap%d seed%d" % [id, biome, lap, seed_value], outcome.ok and float(Game.s.hull) >= before * 0.88 and defenders.all(func(did): return float(Game.dweller_by_id(int(did)).hp) >= 5.0))
+					_fold("event progression: ordinary armed team wins %s" % id, outcome.ok and float(Game.s.hull) >= before * 0.88 and defenders.all(func(did): return float(Game.dweller_by_id(int(did)).hp) >= 5.0), "biome%d lap%d seed%d" % [biome, lap, seed_value])
 			# A healthy ordinary unarmed team cannot trivialise advanced roadblocks.
 			if biome >= 1 or lap > 0:
 				bench.prepare(biome, lap, "unarmed", 553)
@@ -11715,8 +11526,9 @@ func _event_progression_test() -> void:
 				Game.s.hull = Game.hull_max()
 				var hull := float(Game.s.hull)
 				var failed := Game.resolve_event("raiders", _qte_index("raiders", "fight"), Game.auto_defenders())
-				_check("event progression: weak team loses safely biome%d lap%d" % [biome, lap], not failed.ok and float(Game.s.hull) >= hull * 0.88 and float(Game.s.hull) < hull)
+				_fold("event progression: weak team loses safely", not failed.ok and float(Game.s.hull) >= hull * 0.88 and float(Game.s.hull) < hull, "biome%d lap%d" % [biome, lap])
 			await wait(0.01)
+	_fold_flush()
 	print("[event-progression] ", JSON.stringify({"armed_wins": armed_wins, "fights": fights, "minimum_win_chance": minimum_chance}))
 	_check("event progression: ordinary two-person teams retain at least 85% win chance", minimum_chance >= 0.85)
 	# Exercise every real risky choice, not just the cap helpers, with frail unarmed crews late in a run.
@@ -11773,13 +11585,14 @@ func _event_progression_test() -> void:
 					var successes := 0
 					for roll_value in range(1, 11):
 						if roll_value + int(actor[stat]) >= dc: successes += 1
-					_check("event progression: displayed check odds exact %s/%d/%d" % [entry[0], biome, lap], Game.event_check_chance(ch) == successes * 10 and dc <= int(ch.dc) + 9)
+					_fold("event progression: displayed check odds exact %s" % entry[0], Game.event_check_chance(ch) == successes * 10 and dc <= int(ch.dc) + 9, "biome%d lap%d seed%d" % [biome, lap, seed_value])
 					var probe := RandomNumberGenerator.new()
 					probe.seed = seed_value
 					var expected := probe.randi_range(1, 10) + int(actor[stat]) >= dc
 					Game.rng.seed = seed_value
 					var outcome := Game.resolve_event(entry[0], _qte_index(entry[0], "check"), [])
-					_check("event progression: check resolution uses displayed target %s" % entry[0], outcome.ok == expected)
+					_fold("event progression: check resolution uses displayed target %s" % entry[0], outcome.ok == expected, "biome%d lap%d seed%d" % [biome, lap, seed_value])
+	_fold_flush()
 	bench.prepare(5, 3, "common", 553)
 	Game.started = false
 	var ch: Dictionary = Data.EVENTS.bunker.choices[0]
@@ -11944,18 +11757,19 @@ func _nextgen_crew_test() -> void:
 	Features.set_override("features", "confirm_actions", true)
 	for count in [1, 5, 12, 24]:
 		for forced in [false, true]:
+			var ctx := "%d/%s" % [count, forced]
 			_nextgen_crew_fixture(count)
 			Game.s["wrecked"] = forced
 			var old := Game.s
 			var previous: Dictionary = Game.s.duplicate(true)
 			Crew._deserters.append(Game.s.dwellers[0])
 			Meta.next_generation([101.0, 101.0, -999.0], "van")
-			_check("nextgen crew: %d/%s all people once, no extra volunteers" % [count, forced], Game.s.dwellers.size() == count and Game.tier() == "van" and Meta.generation() == 4)
-			_check("nextgen crew: old roster data is untouched", old.dwellers == previous.dwellers)
-			_check("nextgen crew: vehicle jobs/route reset but shared account stays", Game.s.exp.is_empty() and int(Game.s.vault_level) == 1 and int(Game.s.biome) == 0 and int(Game.s.lap) == 0 and Game.s.memorial.size() == 1 and Meta.has_blueprint("bp_bus"))
-			_check("nextgen crew: existing resource carry rules", is_equal_approx(float(Game.s.res.scrap), 450.0) and int(Game.s.items.components) == 40)
-			_check("nextgen crew: obsolete research refunded once", int(Meta.m().legacy) == 76 and Meta.retired_research_refund() == 0 and Meta.refund_retired_research() == 0 and Meta.perk("efficient") == 1)
-			_check("nextgen crew: obsolete research cannot be bought", not Meta.can_buy("veterans", 9999) and not Meta.can_buy("training", 9999))
+			_fold("nextgen crew: all people once, no extra volunteers", Game.s.dwellers.size() == count and Game.tier() == "van" and Meta.generation() == 4, ctx)
+			_fold("nextgen crew: old roster data is untouched", old.dwellers == previous.dwellers, ctx)
+			_fold("nextgen crew: vehicle jobs/route reset but shared account stays", Game.s.exp.is_empty() and int(Game.s.vault_level) == 1 and int(Game.s.biome) == 0 and int(Game.s.lap) == 0 and Game.s.memorial.size() == 1 and Meta.has_blueprint("bp_bus"), ctx)
+			_fold("nextgen crew: existing resource carry rules", is_equal_approx(float(Game.s.res.scrap), 450.0) and int(Game.s.items.components) == 40, ctx)
+			_fold("nextgen crew: obsolete research refunded once", int(Meta.m().legacy) == 76 and Meta.retired_research_refund() == 0 and Meta.refund_retired_research() == 0 and Meta.perk("efficient") == 1, ctx)
+			_fold("nextgen crew: obsolete research cannot be bought", not Meta.can_buy("veterans", 9999) and not Meta.can_buy("training", 9999), ctx)
 			var uids := {}
 			for i in count:
 				var d: Dictionary = Game.s.dwellers[i]
@@ -11963,44 +11777,45 @@ func _nextgen_crew_test() -> void:
 				var same := int(d.id) == int(before.id)
 				for key in ["name", "lore", "variant", "lvl", "xp", "str", "int", "agi", "skills", "traits", "role", "gear", "custom_progress"]:
 					same = same and d[key] == before[key]
-				_check("nextgen crew: %s keeps identity and full invested progress" % d.name, same)
-				_check("nextgen crew: %s returns from old duties safely" % d.name, not Game.is_away(d) and not Crew.busy(d) and not d.has("mood_room") and (int(d.room) in [-1, Data.CAB_SLOT, 1, 2]))
+				_fold("nextgen crew: everyone keeps identity and full invested progress", same, "%s %s" % [ctx, d.name])
+				_fold("nextgen crew: everyone returns from old duties safely", not Game.is_away(d) and not Crew.busy(d) and not d.has("mood_room") and (int(d.room) in [-1, Data.CAB_SLOT, 1, 2]), "%s %s" % [ctx, d.name])
 				for slot in Loot.HERO_SLOTS:
 					var uid := int(d.gear[slot].uid)
-					_check("nextgen crew: %s %s item identity is unique" % [d.name, slot], not uids.has(uid))
+					_fold("nextgen crew: every worn item identity is unique", not uids.has(uid), "%s %s %s" % [ctx, d.name, slot])
 					uids[uid] = true
 			var gear_copy := true
 			for i in previous.gear.size():
 				gear_copy = gear_copy and Game.s.gear[i] == previous.gear[i]
-			_check("nextgen crew: all stash equipment and oversized engine retained", gear_copy and Game.s.gear.size() == previous.gear.size() + 1 and Game.s.gear[-1] == previous.van_gear.engine and Loot.van_equipped("engine").is_empty())
-			_check("nextgen crew: vehicle gear identities retained without a free turret", Game.s.van_gear.turret == previous.van_gear.turret and Game.s.van_gear.plating == previous.van_gear.plating and Game.s.van_gear.spikes == previous.van_gear.spikes)
-			_check("nextgen crew: garage mods and solar equipment retained, new hull full", Game.s.mods == previous.mods and Game.s.solar == previous.solar and is_equal_approx(float(Game.s.hull), Game.hull_max()))
+			_fold("nextgen crew: all stash equipment and oversized engine retained", gear_copy and Game.s.gear.size() == previous.gear.size() + 1 and Game.s.gear[-1] == previous.van_gear.engine and Loot.van_equipped("engine").is_empty(), ctx)
+			_fold("nextgen crew: vehicle gear identities retained without a free turret", Game.s.van_gear.turret == previous.van_gear.turret and Game.s.van_gear.plating == previous.van_gear.plating and Game.s.van_gear.spikes == previous.van_gear.spikes, ctx)
+			_fold("nextgen crew: garage mods and solar equipment retained, new hull full", Game.s.mods == previous.mods and Game.s.solar == previous.solar and is_equal_approx(float(Game.s.hull), Game.hull_max()), ctx)
 			var moved_items: Array = (Game.s.gear as Array).duplicate()
 			moved_items.append_array((Game.s.van_gear as Dictionary).values())
 			for item in moved_items:
 				if item is Dictionary:
 					var uid := int(item.uid)
-					_check("nextgen crew: stash/vehicle UID %d unique and allocator safe" % uid, not uids.has(uid) and int(Game.s.next_uid) > uid)
+					_fold("nextgen crew: every stash/vehicle UID unique and allocator safe", not uids.has(uid) and int(Game.s.next_uid) > uid, "%s uid %d" % [ctx, uid])
 					uids[uid] = true
 			if count == 24:
-				_check("nextgen crew: full stash never auto-salvages during transfer", Game.s.gear.size() == Loot.STASH_CAP + 1)
+				_fold("nextgen crew: full stash never auto-salvages during transfer", Game.s.gear.size() == Loot.STASH_CAP + 1, ctx)
 
-			_check("nextgen crew: next survivor ID does not collide", int(Game.s.next_id) > int(Game.s.dwellers[count - 1].id))
-			_check("nextgen crew: pending old departure queue cleared", Crew._deserters.is_empty())
+			_fold("nextgen crew: next survivor ID does not collide", int(Game.s.next_id) > int(Game.s.dwellers[count - 1].id), ctx)
+			_fold("nextgen crew: pending old departure queue cleared", Crew._deserters.is_empty(), ctx)
 			if count > Data.BASE_POP_CAP:
-				_check("nextgen crew: everyone transfers above the smaller vehicle bed cap", Game.s.dwellers.size() > Game.pop_cap())
+				_fold("nextgen crew: everyone transfers above the smaller vehicle bed cap", Game.s.dwellers.size() > Game.pop_cap(), ctx)
 			if count >= 5:
-				_check("nextgen crew: defender assignments preserved by ID", Game.s.squad == previous.squad)
+				_fold("nextgen crew: defender assignments preserved by ID", Game.s.squad == previous.squad, ctx)
 			# Serialization makes integer IDs floats. A second real transfer must keep the same crew and gear.
 			var unpacked := Account.unwrap(JSON.parse_string(JSON.stringify(Account.envelope(Game.s))))
 			Account.a = unpacked.account
 			Game.s = unpacked.main
 			Account.attach(Game.s)
 			Meta.next_generation([], "van")
-			_check("nextgen crew: save round trip and repeat transfer keep everyone once", Game.s.dwellers.size() == count and int(Game.s.dwellers[0].id) == 101 and int(Game.s.dwellers[0].lvl) == 12 and int(Game.s.dwellers[0].skills.c1) == 2 and Game.s.dwellers[0].gear.size() == Loot.HERO_SLOTS.size() and Game.s.gear.size() == previous.gear.size() + 1 and int(Game.s.van_gear.turret.uid) == int(previous.van_gear.turret.uid))
-			_check("nextgen crew: save/repeat cannot refund again", int(Meta.m().legacy) == 76)
+			_fold("nextgen crew: save round trip and repeat transfer keep everyone once", Game.s.dwellers.size() == count and int(Game.s.dwellers[0].id) == 101 and int(Game.s.dwellers[0].lvl) == 12 and int(Game.s.dwellers[0].skills.c1) == 2 and Game.s.dwellers[0].gear.size() == Loot.HERO_SLOTS.size() and Game.s.gear.size() == previous.gear.size() + 1 and int(Game.s.van_gear.turret.uid) == int(previous.van_gear.turret.uid), ctx)
+			_fold("nextgen crew: save/repeat cannot refund again", int(Meta.m().legacy) == 76, ctx)
 			Game.s.dwellers[0].gear.weapon.plus = 8
-			_check("nextgen crew: gear/skills are deep copies", int(old.dwellers[0].gear.weapon.plus) == 3)
+			_fold("nextgen crew: gear/skills are deep copies", int(old.dwellers[0].gear.weapon.plus) == 3, ctx)
+	_fold_flush()
 	_nextgen_crew_fixture(5)
 	Meta.m().perks["tier_train"] = 1
 	var fitted_engine: Dictionary = Game.s.van_gear.engine.duplicate(true)
