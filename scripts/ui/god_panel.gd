@@ -549,7 +549,9 @@ func _crew_portrait_moods() -> void:
 	_row([_b("สีหน้า: " + ("เปิด" if on else "ปิด"), func(): Dev.crew_portrait_moods(not on), "green" if on else "red")], "สวิตช์")
 	_row([_b("ปกติ", func(): Dev.portrait_mood_preview("")), _b("ยิ้ม", func(): Dev.portrait_mood_preview("happy")),
 		_b("เครียด", func(): Dev.portrait_mood_preview("stressed")), _b("บาดเจ็บ", func(): Dev.portrait_mood_preview("injured"))], "ทั้งทีม")
-	_note("ดูหน้าจริงในหน้าลูกเรือ / ทีม หลังกดปุ่มทั้งทีม (MV-720: ไม่มีกริดรูปใน GOD)")
+	var g := Features.on("ren_guide")
+	_row([_b("หมอเรนนำทาง: " + ("เปิด" if g else "ปิด"), func(): Dev.ren_guide(not g), "green" if g else "red")], "สอนเล่น")
+	_note("ดูหน้าจริงในหน้าลูกเรือ / ทีม หลังกดปุ่มทั้งทีม · หมอเรนมีหน้าเพิ่ม 8 แบบ ใช้ในสอนเล่น การ์ดคำแนะนำ และเหตุการณ์ (MV-720: ไม่มีกริดรูปใน GOD)")
 
 
 func _tab_fight() -> void:

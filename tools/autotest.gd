@@ -6276,6 +6276,55 @@ func _crew_portrait_moods_test() -> void:
 	await shot("crew_portrait_moods_injured")
 	main.hud.panels.dwellers.close()
 	await wait(0.3)
+	# Dr. Ren's extra faces, scene faces (ctx) and the fallback for characters without them
+	var extra_ok := true
+	for m in V3Art.PORTRAIT_MOODS_EXTRA:
+		extra_ok = extra_ok and V3Art.has_portrait_mood("ren", m) and V3Art.portrait_tex("ren", m).get_size() == Vector2(64, 64)
+	_check("portrait moods: Dr. Ren has the 8 extra faces", extra_ok)
+	Dev.portrait_mood_preview("")
+	var other := ""
+	for cid in V3Art.CREW_IDS:
+		if not V3Art.has_portrait_mood(str(cid), "angry"):
+			other = str(cid)
+	_check("portrait moods: a face a character lacks falls back (angry -> stressed, surprised -> neutral)",
+		other != "" and UIKit.mood_face(other, "angry") == "stressed" and UIKit.mood_face(other, "surprised") == ""
+		and UIKit.mood_face("ren", "angry") == "angry")
+	var dd: Dictionary = Game.s.dwellers[0]
+	var cid0 := V3Art.crew_for(dd)
+	_check("portrait moods: scene face 'thinking' (event choice) = that face or its fallback",
+		UIKit.portrait_v3(dd, "thinking") == V3Art.portrait_tex(cid0, UIKit.mood_face(cid0, "thinking")))
+	dd.hp = float(dd.max_hp) * 0.1
+	_check("portrait moods: a hurt member keeps the injured face over a calm scene face",
+		UIKit.portrait_v3(dd, "happy") == V3Art.portrait_tex(cid0, "injured"))
+	dd.hp = float(dd.max_hp)
+	dd.rads = 80.0
+	_check("portrait moods: high radiation = sick face (stressed for those without it)",
+		UIKit.portrait_mood(dd) == "sick" and UIKit.portrait_v3(dd) == V3Art.portrait_tex(cid0, UIKit.mood_face(cid0, "sick")))
+	dd.rads = 0.0
+	var chip := OutcomeKit.crew_chip(dd, [["-20 HP", UIKit.C_RED]], 0.0, "happy")
+	var chip_ok := false
+	for n in chip.find_children("*", "TextureRect", true, false):
+		chip_ok = chip_ok or (n as TextureRect).texture == V3Art.portrait_tex(cid0, "injured")
+	chip.free()
+	_check("portrait moods: outcome chip with a red (hurt) tag shows the injured face", chip_ok)
+	# tutorial / tip guide
+	Features.set_override("features", "ren_guide", true)
+	var gp := UIKit.guide_portrait("combat")
+	UIKit.set_guide_mood(gp, Tutorial.guide_face("combat"))
+	_check("ren guide: tutorial combat step = Dr. Ren angry, 64 px, named DR.REN",
+		(gp.get_child(0) as TextureRect).texture == V3Art.portrait_tex("ren", "angry") and str(gp.get_meta("guide_mood", "")) == "angry"
+		and (gp.get_child(0) as TextureRect).custom_minimum_size == Vector2(64, 64) and Tutorial.guide_name() == "DR.REN")
+	var faces_ok := true
+	for st in Tutorial.STEPS:
+		faces_ok = faces_ok and (Tutorial.guide_face(str(st.id)) == "" or V3Art.has_portrait_mood("ren", Tutorial.guide_face(str(st.id))))
+	for k in Tutorial.TIPS:
+		faces_ok = faces_ok and V3Art.has_portrait_mood("ren", Tutorial.guide_face(str(k)))
+	_check("ren guide: every tutorial step and tip has a Dr. Ren face", faces_ok)
+	Dev.ren_guide(false)
+	UIKit.set_guide_mood(gp, "angry")
+	_check("ren guide: off = Sgt. Mark's 40 px portrait", not gp.has_meta("guide_mood") and Tutorial.guide_name() == "SGT.MARK"
+		and (gp.get_child(0) as TextureRect).custom_minimum_size == Vector2(40, 40))
+	gp.free()
 	Dev.crew_portrait_moods(false)
 	_check("portrait moods: switch off = neutral face", UIKit.portrait_mood(d) == "" and UIKit.portrait_v3(d) == V3Art.portrait_tex(V3Art.crew_for(d)))
 	Game.s.dwellers = keep

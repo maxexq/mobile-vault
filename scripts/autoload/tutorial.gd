@@ -41,6 +41,21 @@ const STEPS := [
 		"text": "เท่านี้ก็พร้อมแล้ว รถวิ่งต่อเองแม้คุณปิดเกม กลับมาเช็กเสบียงบ่อยๆ ล่ะ ขอให้รอดนะครับ ผู้บัญชาการ!"},
 ]
 const BUILDER_TEXT := " ตอนนี้ %s เป็นช่างของเรา"
+## MV-735 (switch ren_guide): Dr. Ren is the guide; his face per tutorial step / tip (UIKit.mood_face falls back)
+const REN_WELCOME := "ยินดีต้อนรับครับ ผู้บัญชาการ! ผมหมอเรน เพิ่งตื่นจากห้องแช่แข็ง รถพยาบาลคันนี้คือบ้านหลังสุดท้ายของพวกเรา งานของคุณคือพาทุกคนบนรถให้รอด"
+const GUIDE_FACE := {"welcome": "talking", "resources": "thinking", "tap_room": "happy", "closeup": "talking",
+	"open_build": "happy", "pick_room": "thinking", "place_room": "talking", "construct": "tired", "crew": "happy",
+	"crew_info": "thinking", "combat": "angry", "travel": "scared", "done": "happy",
+	"map": "thinking", "squad": "angry", "solar": "talking", "inventory": "happy", "log": "sad", "garage": "thinking",
+	"skills": "happy", "expedition": "talking", "nextgen": "sad", "door": "scared"}
+
+
+func guide_name() -> String:
+	return "DR.REN" if Features.on("ren_guide") else "SGT.MARK"
+
+
+func guide_face(id: String) -> String:
+	return str(GUIDE_FACE.get(id, "talking"))
 const START_SCRAP := 120.0
 
 ## CONTEXTUAL TIPS (MV-150): the first time a system's window opens, Sgt. Mark explains it once (TipCard). Systems
@@ -116,7 +131,7 @@ func text() -> String:
 	var st := current()
 	if st.is_empty():
 		return ""
-	var t: String = Loc.t(st.text)
+	var t: String = Loc.t(REN_WELCOME if st.id == "welcome" and Features.on("ren_guide") else st.text)
 	if st.id == "construct":
 		var names := builder_names()
 		if not names.is_empty():

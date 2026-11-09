@@ -327,11 +327,11 @@ static func tex_rect(tex: Texture2D, size: Vector2) -> TextureRect:
 ## 20x20 bust (x1) or 40x40 (x2) inside a dark frame. MV-722: given the crew member `d` and switch
 ## crew_portraits_v3 on, it shows the approved v3 portrait of the v3 person who plays them (V3Art.crew_for):
 ## 64x64 art in a 32x32 slot (half) or 64x64 when big
-static func portrait(variant: String, big: bool = false, d: Dictionary = {}) -> PanelContainer:
+static func portrait(variant: String, big: bool = false, d: Dictionary = {}, ctx: String = "") -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", card_style(Color("0c0c0e"), C_LINE_DIM, 1))
 	var tr := TextureRect.new()
-	var v3 := portrait_v3(d)
+	var v3 := portrait_v3(d, ctx)
 	tr.texture = v3 if v3 != null else (Atlas.tex("pt_" + variant) if Atlas.has("pt_" + variant) else Atlas.dweller_portrait(variant))
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED if big or v3 != null else TextureRect.STRETCH_KEEP_CENTERED
@@ -349,10 +349,48 @@ static func portrait(variant: String, big: bool = false, d: Dictionary = {}) -> 
 
 ## MV-722: the v3 portrait for crew member `d` (null when the switch is off, `d` is empty or the art is missing).
 ## MV-735: with crew_portrait_moods on, the face follows portrait_mood(d)
-static func portrait_v3(d: Dictionary) -> Texture2D:
+## `ctx` = the face the scene asks for (event choice "thinking", encounter "surprised", outcome "happy" / "sad" ...);
+## a hurt crew member keeps the injured face over a calm or happy ctx. Characters without that face use MOOD_FALLBACK.
+static func portrait_v3(d: Dictionary, ctx: String = "") -> Texture2D:
 	if d.is_empty() or not Features.on("crew_portraits_v3"):
 		return null
-	return V3Art.portrait_tex(V3Art.crew_for(d), portrait_mood(d))
+	var cid := V3Art.crew_for(d)
+	var m := portrait_mood(d)
+	if ctx != "" and Features.on("crew_portrait_moods") and not (m in ["injured", "sick"] and ctx in ["happy", "talking", "thinking"]):
+		m = ctx
+	return V3Art.portrait_tex(cid, mood_face(cid, m))
+
+
+## MV-735: faces only some characters have (Dr. Ren's extra set) fall back to the shared happy / stressed / injured / neutral
+const MOOD_FALLBACK := {"surprised": "", "angry": "stressed", "sad": "stressed", "scared": "stressed", "thinking": "",
+	"talking": "", "tired": "stressed", "sick": "stressed"}
+static func mood_face(cid: String, m: String) -> String:
+	var seen := 0
+	while m != "" and not V3Art.has_portrait_mood(cid, m) and seen < 4:
+		m = str(MOOD_FALLBACK.get(m, ""))
+		seen += 1
+	return m if V3Art.has_portrait_mood(cid, m) else ""
+
+
+## MV-735: the tutorial / tip guide: Dr. Ren's v3 face `mood` (switch ren_guide), else Sgt. Mark's old 40x40 portrait
+static func guide_portrait(mood: String = "talking") -> PanelContainer:
+	var p := portrait("dw_army_brown", true)
+	set_guide_mood(p, mood)
+	return p
+
+
+static func set_guide_mood(p: PanelContainer, mood: String) -> void:
+	var tr := p.get_child(0) as TextureRect
+	var on := Features.on("ren_guide") and V3Art.portrait_tex("ren") != null
+	if on:
+		tr.texture = V3Art.portrait_tex("ren", mood_face("ren", mood))
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(64, 64)
+		p.set_meta("guide_mood", mood_face("ren", mood))
+	else:
+		tr.texture = Atlas.tex("pt_dw_army_brown") if Atlas.has("pt_dw_army_brown") else Atlas.dweller_portrait("dw_army_brown")
+		tr.custom_minimum_size = Vector2(40, 40)
+		p.remove_meta("guide_mood")
 
 
 ## MV-735: which face crew member `d` shows: "injured" (HP below portrait.injured_hp of max), else "stressed"
@@ -364,6 +402,8 @@ static func portrait_mood(d: Dictionary) -> String:
 	var mx := maxf(1.0, float(d.get("max_hp", 100.0)))
 	if float(d.get("hp", mx)) < mx * Features.num("portrait.injured_hp", 0.4):
 		return "injured"
+	if float(d.get("rads", 0.0)) >= Features.num("portrait.sick_rads", 50.0) or Crew.is_infected(d):
+		return "sick"
 	var h := float(d.get("happy", 75.0))
 	if Crew.is_depressed(d) or Crew.is_broken(d) or h < Features.num("portrait.stressed_happy", 30.0):
 		return "stressed"

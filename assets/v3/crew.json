@@ -59,7 +59,15 @@
    "portrait_moods": {
     "happy": "portraits/ren_happy.png",
     "stressed": "portraits/ren_stressed.png",
-    "injured": "portraits/ren_injured.png"
+    "injured": "portraits/ren_injured.png",
+    "surprised": "portraits/ren_surprised.png",
+    "angry": "portraits/ren_angry.png",
+    "sad": "portraits/ren_sad.png",
+    "scared": "portraits/ren_scared.png",
+    "thinking": "portraits/ren_thinking.png",
+    "talking": "portraits/ren_talking.png",
+    "tired": "portraits/ren_tired.png",
+    "sick": "portraits/ren_sick.png"
    }
   },
   "clara": {

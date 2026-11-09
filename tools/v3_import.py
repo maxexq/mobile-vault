@@ -44,7 +44,7 @@ for _c in ("bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi"):
 PORTRAITS = "crew-portraits-v3/approved"
 # MV-735: approved mood faces <id>_<mood>.png -> assets/v3/portraits/<id>_<mood>.png, crew.json "portrait_moods"
 MOODS_DIR = "crew-portraits-v3/expr/approved"
-MOODS = ("happy", "stressed", "injured")
+MOODS = ("happy", "stressed", "injured", "surprised", "angry", "sad", "scared", "thinking", "talking", "tired", "sick")
 CLIPS = ["idle", "walk", "work", "construct", "eat", "drink", "talk", "carrywalk", "shoot"]   # shoot: MV-716 gunner post
 CLIP_FPS = {"idle": 6, "walk": 10, "work": 8, "construct": 8, "eat": 6, "drink": 6, "talk": 6, "carrywalk": 10, "shoot": 10}
 IDLE_FRAMES = 36          # idle overlay frames kept (of 96-144), played at IDLE_FPS

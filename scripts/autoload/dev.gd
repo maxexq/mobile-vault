@@ -1258,6 +1258,11 @@ func crew_portrait_moods(on: bool) -> void:
 	Game.dwellers_changed.emit()
 
 
+## MV-735: switch ren_guide on/off (Dr. Ren's faces as the tutorial / tip guide instead of Sgt. Mark)
+func ren_guide(on: bool) -> void:
+	feature_set("ren_guide", on)
+
+
 ## MV-735: put the whole crew in the state that shows `mood` ("happy" / "stressed" / "injured" / "" = neutral)
 ## by setting HP and happiness (morale stage cleared), so every portrait can be checked in its panels
 func portrait_mood_preview(mood: String) -> void:
