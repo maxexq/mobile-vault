@@ -10,6 +10,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Added
 - Sharper crew on the vehicle: the new crew are drawn at full pixel size in the main view, so faces and outlines no longer lose pixels (MV-734)
+- The road train's trailers on the road are now its red 2D container trailers, coupled tight behind the lead trailer (no old drawbar and single front wheel) (MV-721)
 - New art for all 21 road events: bigger detailed scenes in the colours of each road and its weather, and every event now plays its short story in the event window (the threat, what happens, how it ends); the result screen shows how it ended (MV-730)
 - Two vehicles only: Dr. Ren's ambulance and the new road train (prime mover + lead trailer, 2-3 decks, red container trailers); the armoured bus and train are gone, their saves drive the road train and keep their rooms (MV-721)
 - Free camera: pinch or scroll to zoom through every sharp pixel level around your fingers, drag to look around in any direction, and tap FIT to snap back to the automatic view (MV-723)
