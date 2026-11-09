@@ -194,6 +194,23 @@ func _rt_h(floors: int) -> float:
 	return 268.0 + RT_FH * float(floors - 1)
 
 
+## MV-731: the bumper tip + tow hook of the flat front stick out 12 px in front of the 638 px shell (nose.png); a child
+## of the shell sprite so it rides every hop / lurch. hide=true (road train body etc.) hides it.
+static func attach_nose(shell: Sprite2D, hide := false) -> void:
+	var nose := shell.get_node_or_null("Nose") as Sprite2D
+	if nose == null:
+		if hide or not ResourceLoader.exists(AMB_DIR + "nose.png"):
+			return
+		nose = Sprite2D.new()
+		nose.name = "Nose"
+		nose.centered = false
+		nose.texture = load(AMB_DIR + "nose.png")
+		shell.add_child(nose)
+	nose.visible = not hide and shell.texture != null
+	if nose.visible:
+		nose.position = Vector2(-nose.texture.get_width(), shell.texture.get_height() - nose.texture.get_height())
+
+
 func _amb_h() -> float:
 	return float(shell_spec(Game.tier()).base) + AMB_FH * float(Game.floors() - 1)
 
@@ -273,6 +290,7 @@ func _rebuild() -> void:
 	if amb_shell.visible:
 		amb_shell.texture = load(str(shell_spec(Game.tier()).dir) + "shell_f%d.png" % Game.floors())
 		amb_shell.position = Vector2(0.0, _unit_top(-1))
+		attach_nose(amb_shell, dk())
 	world.move_child(amb_shell, world.get_child_count() - 1)     # the shell's lip and decks over the room edges
 	for i in range(rt_shells.size() - 1, -1, -1):                 # road train: rear units first, the body on top
 		world.move_child(rt_shells[i], world.get_child_count() - 1)
