@@ -438,6 +438,7 @@ func _build_v2() -> void:
 	for slot in Game.main_slots():
 		var c := RoomV3Cell.new()
 		c.slot = slot
+		c.world_view = true      # MV-734: crew at full pixel size (a room pixel is one rendered pixel here)
 		var cell := Game.slot_cell(slot)
 		c.position = v2_cell_pos(cell.x, cell.y) / V2_K
 		v2_root.add_child(c)

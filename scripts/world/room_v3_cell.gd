@@ -13,6 +13,7 @@ const GROW_SEC := 20.0            # one growth stage of the grow room (visual on
 const LAMP := Vector2(6, 6)
 
 var slot := -1
+var world_view := false           # MV-734: a cell of the world (vehicle): crew drawn at full pixel size
 var room_type := ""
 var level := 1
 var kind := ""                    # v3 | fallback | empty | site | locked
@@ -113,7 +114,7 @@ func _sync_actors(unlocked: bool, site: bool) -> void:
 		if not actors.has(id):
 			var a := CrewV3Actor.new()
 			actors_root.add_child(a)
-			a.setup(d, mode, data, actors.size())
+			a.setup(d, mode, data, actors.size(), world_view)
 			actors[id] = a
 		else:
 			(actors[id] as CrewV3Actor).set_room(mode, data)
