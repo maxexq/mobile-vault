@@ -12791,6 +12791,9 @@ func _ambulance_v3_test() -> void:
 		pos_ok = pos_ok and (panel.cells[slot] as RoomV3Cell).position.is_equal_approx(want)
 	_check("ambulance v3: every room sits in its shell window (floor 0 at the bottom)", pos_ok)
 	_check("ambulance v3: the shell draws over the cells", panel.amb_shell.get_index() == panel.world.get_child_count() - 1)
+	var nose := panel.amb_shell.get_node_or_null("Nose") as Sprite2D
+	_check("MV-731: the flat front's bumper + tow hook (nose.png) sits just in front of the shell, bottom aligned", nose != null and nose.visible
+		and nose.position.x == -nose.texture.get_width() and nose.position.y + nose.texture.get_height() == panel.amb_shell.texture.get_height())
 	await shot("ambulance_v3_f3")
 	Dev.set_trailers(1)
 	await wait(0.4)
