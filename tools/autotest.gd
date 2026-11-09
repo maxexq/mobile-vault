@@ -646,6 +646,11 @@ func _run() -> void:
 		await _parallax_v2_test()
 		_finish()
 		return
+	if "--only=event_art_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _event_art_v2_test()
+		_finish()
+		return
 	if "--only=enc_art_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _enc_art_v2_test()
@@ -1655,6 +1660,7 @@ func _run() -> void:
 	await _engine_bay_test()
 	await _touch_test()
 	await _event_layout_test()
+	await _event_art_v2_test()
 	await _inspection_test()
 	await _threat_test()
 	await _settings_test()
@@ -3084,6 +3090,64 @@ func _enc_art_v2_test() -> void:
 	await _enc_finish()
 
 
+## MV-730: road event art v2 (switch event_art_v2): 320x160 no-vehicle scenes + 80-frame story sheets
+func _event_art_v2_test() -> void:
+	Features.set_override("features", "event_art_v2", true)
+	for id in Data.EVENTS:
+		var img: String = Data.EVENTS[id].image
+		var st := EventArt.still(img)
+		var sh: Texture2D = load(EventArt.DIR + "ev_" + img + "_anim.png") if ResourceLoader.exists(EventArt.DIR + "ev_" + img + "_anim.png") else null
+		_fold("event art v2: every road event has a 320x160 still + 10x8 story sheet", st != null and st.get_size() == Vector2(320, 160)
+			and sh != null and sh.get_size() == Vector2(320 * 10, 160 * 8), id)
+	_fold_flush()
+	_check("event art v2: story plays, holds the last frame 1.6 s, then repeats",
+		EventArt.frame_at(0.0) == 0 and EventArt.frame_at(1.05) == 10 and EventArt.frame_at(7.9) == 79 and EventArt.frame_at(9.45) == 79
+		and EventArt.frame_at(EventArt.cycle() + 0.05) == 0)
+	_check("event art v2: frame cells", EventArt.frame_rect(11) == Rect2(320, 160, 320, 160) and EventArt.frame_rect(79) == Rect2(2880, 1120, 320, 160))
+	var pop = main.hud.event_popup
+	if Game.active_event != "":
+		Game.cancel_event()
+	pop.close()
+	await wait(0.2)
+	Game.trigger_event("rogue_bot")
+	await wait(0.8)
+	_check("event art v2: popup open", pop.is_open)
+	var rect: TextureRect = pop.media.get_child(0)
+	_check("event art v2: popup shows the 320x160 story animation", rect.texture is AtlasTexture and rect.texture.get_size() == Vector2(320, 160))
+	var r0: Rect2 = (rect.texture as AtlasTexture).region
+	await wait(0.6)
+	_check("event art v2: the story animation advances", (rect.texture as AtlasTexture).region != r0)
+	await shot("event_art_v2_robot")
+	pop.refresh()
+	await wait(0.05)
+	_check("event art v2: a rebuilt window keeps the story going (not back to frame 0)",
+		((pop.media.get_child(0) as TextureRect).texture as AtlasTexture).region != EventArt.frame_rect(0))
+	Dev.event_art_v2(false)
+	pop.refresh()
+	await wait(0.1)
+	_check("event art v2: switch off -> old 160x80 art", not Features.on("event_art_v2") and (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(160, 80))
+	Dev.event_art_v2(true)
+	_check("event art v2: GOD toggle turns it back on", Features.on("event_art_v2"))
+	pop.refresh()
+	await wait(0.1)
+	var pick := 0     # a choice that needs no defenders, so the window really moves on to the result
+	var chs: Array = Data.EVENTS["rogue_bot"].choices
+	for i in chs.size():
+		if str(chs[i].action) != "fight":
+			pick = i
+			break
+	pop._resolve(pick)
+	await wait(0.4)
+	_check("event art v2: result shows the 320x160 outcome still", pop._outcome_ok != -1
+		and not ((pop.media.get_child(0) as TextureRect).texture is AtlasTexture)
+		and (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(320, 160))
+	await shot("event_art_v2_robot_result")
+	pop.close()
+	await wait(0.3)
+	if Game.active_event != "":
+		Game.cancel_event()
+
+
 ## random road events: shuffle bag per biome, no back-to-back repeats, survives a save round-trip
 func _event_variety_test() -> void:
 	var keep := {}
@@ -4427,6 +4491,9 @@ func _free_cam_test() -> void:
 	_check("free cam: FIT -> AUTO framing, centred (%s, pan %.0f/%.0f)" % [main.zoom_mode, main.pan_x, main.pan_y],
 		main.zoom_mode == "auto" and main.pan_x == 0.0 and main.pan_y == 0.0 and is_equal_approx(main.world_scale, main.target_ws()))
 	await wait(0.4)
+	# Main re-syncs the FIT button every 10th frame: on the big CI windows (software GL) 0.4 s can be fewer frames
+	for i in 11:
+		await get_tree().process_frame
 	_check("free cam: FIT goes dark again", not main.hud._fit_lit)
 	# GOD actions
 	Dev.cam_zoom(1)
