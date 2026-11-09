@@ -324,20 +324,34 @@ static func tex_rect(tex: Texture2D, size: Vector2) -> TextureRect:
 	return r
 
 
-## 20x20 bust (x1) or 40x40 (x2) inside a dark frame
-static func portrait(variant: String, big: bool = false) -> PanelContainer:
+## 20x20 bust (x1) or 40x40 (x2) inside a dark frame. MV-722: given the crew member `d` and switch
+## crew_portraits_v3 on, it shows the approved v3 portrait of the v3 person who plays them (V3Art.crew_for):
+## 64x64 art in a 32x32 slot (half) or 64x64 when big
+static func portrait(variant: String, big: bool = false, d: Dictionary = {}) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", card_style(Color("0c0c0e"), C_LINE_DIM, 1))
 	var tr := TextureRect.new()
-	tr.texture = Atlas.tex("pt_" + variant) if Atlas.has("pt_" + variant) else Atlas.dweller_portrait(variant)
+	var v3 := portrait_v3(d)
+	tr.texture = v3 if v3 != null else (Atlas.tex("pt_" + variant) if Atlas.has("pt_" + variant) else Atlas.dweller_portrait(variant))
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED if big else TextureRect.STRETCH_KEEP_CENTERED
-	tr.custom_minimum_size = Vector2(40, 40) if big else Vector2(20, 20)
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED if big or v3 != null else TextureRect.STRETCH_KEEP_CENTERED
+	if v3 != null:
+		tr.custom_minimum_size = Vector2(64, 64) if big else Vector2(32, 32)
+		p.set_meta("v3_crew", V3Art.crew_for(d))
+	else:
+		tr.custom_minimum_size = Vector2(40, 40) if big else Vector2(20, 20)
 	tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(tr)
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return p
+
+
+## MV-722: the v3 portrait for crew member `d` (null when the switch is off, `d` is empty or the art is missing)
+static func portrait_v3(d: Dictionary) -> Texture2D:
+	if d.is_empty() or not Features.on("crew_portraits_v3"):
+		return null
+	return V3Art.portrait_tex(V3Art.crew_for(d))
 
 
 static func button(text: String, color_key: String = "green", icon_name: String = "", min_w: int = 0) -> Button:

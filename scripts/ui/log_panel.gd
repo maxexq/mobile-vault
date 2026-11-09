@@ -133,7 +133,7 @@ func _build_crew() -> void:
 		var p := UIKit.panel()
 		var h := UIKit.hbox(4)
 		p.add_child(h)
-		h.add_child(UIKit.portrait(d.variant))
+		h.add_child(UIKit.portrait(d.variant, false, d))
 		var v := UIKit.vbox(0)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_child(UIKit.label("%s · %s" % [d.name, bio.role], UIKit.FS_SMALL, UIKit.C_GOLD))
