@@ -19,7 +19,7 @@ Run from anywhere AFTER tools/art/ambulance_front/apply_front.py, then rerun too
      is the game's additive glow + the PixelLab flame flicker (lantern_pl.png, tools/ambulance_anim.py).
 The rear (x >= 592) is not touched apart from frames, so the pup trailer's tow plate (x 600-621) still lines up.
 """
-import os, sys
+import json, os, sys
 import numpy as np
 from PIL import Image
 from scipy import ndimage as nd
@@ -219,6 +219,50 @@ def bake_driver(im, strip=os.path.join(D, "driver.png")):
     im.alpha_composite(cell, (87, im.height - 139))
 
 
+ROOF = os.path.join(HERE, "roof")
+
+
+def old_flag(im):
+    """the old flag cloth: (rect x0, y0, x1, y1) of the opaque pixels right of the pole around the red cross"""
+    px = im.load(); red = [(x, y) for x in range(133, 160) for y in range(0, 60)
+                         if px[x, y][3] and px[x, y][0] > 135 and px[x, y][1] < 60 and px[x, y][2] < 55]
+    cy = sum(y for _, y in red) // len(red)
+    pts = [(x, y) for x in range(133, 165) for y in range(cy - 14, cy + 14) if px[x, y][3]]
+    return min(x for x, _ in pts), min(y for _, y in pts), max(x for x, _ in pts) + 1, max(y for _, y in pts) + 1
+
+
+def roof_parts(im):
+    """MV-741 round 3 (Parames 20:32 + picks 20:41): the PixelLab roof parts (roof/<part>_still.png, Pro inpaint-v3):
+    flag 3, left pots 2, birdhouses 1, right pots 2, mast 3. Pots, birdhouses and mast replace their mask boxes
+    (same place on every shell); the flag replaces the old cloth and sits as much lower as the old flag did (taller shells
+    carry a shorter pole). AmbulanceMotion animates them from roof/<part>_anim.png (tools/ambulance_anim.py)."""
+    meta = json.load(open(os.path.join(ROOF, "roof.json")))
+    px = im.load(); mine = set()
+    x0, y0, x1, y1 = old_flag(im)
+    dy = y0 - 16                                                    # the f1 cloth top is row 16
+    for x in range(x0, x1):
+        for y in range(y0, y1):
+            px[x, y] = (0, 0, 0, 0)
+    for p, m in meta.items():
+        st = Image.open(os.path.join(ROOF, p + "_still.png")).convert("RGBA"); sp = st.load()
+        ax, ay = m["at"]
+        if p == "flag":
+            ay += dy
+            for x in range(st.width):
+                for y in range(st.height):
+                    if sp[x, y][3]:
+                        px[ax + x, ay + y] = sp[x, y]; mine.add((ax + x, ay + y))
+            continue
+        for bx0, by0, bx1, by1 in m["masks"]:          # where two parts' boxes overlap, an opaque pixel wins
+            for x in range(bx0, bx1):
+                for y in range(by0, by1):
+                    if sp[x - ax, y - ay][3] or (x, y) not in mine:
+                        px[x, y] = sp[x - ax, y - ay]
+                    if sp[x - ax, y - ay][3]:
+                        mine.add((x, y))
+    return dy
+
+
 def clean_shell(path, front):
     im = Image.open(path).convert("RGBA")
     solar(im)
@@ -231,6 +275,7 @@ def clean_shell(path, front):
     im, strays = drop_strays(im)
     rects = openings(im)
     frame(im, rects)
+    roof_parts(im)                           # last: the window frames must not paint over the pot rows
     im.save(path)
     return holes, strays, len(rects)
 

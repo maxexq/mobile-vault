@@ -22,7 +22,6 @@ const FLAG_FRAMES := 8
 const WELL := Color("141214")
 const LAMP_W := 4.6                # lantern pendulum: rad/s natural frequency
 const LAMP_DAMP := 1.1             # 1/s
-const PLANT_FRAMES := 8            # per set: frames 0..7 = parked breeze, 8..15 = headwind while driving
 const GLINT_FRAMES := 12
 const PUFF_LIFE := 1.8             # s
 const PUFF_MAX := 7
@@ -34,7 +33,7 @@ static var _flag_frames: Dictionary = {}   # floors -> Array[ImageTexture]
 static var _spin: Array[AtlasTexture] = []
 static var _glow_tex: GradientTexture2D
 static var _lamp_src: Dictionary = {}      # floors -> Image of the lantern cut out of the shell (lantern_still rect)
-static var _plants: Dictionary = {}        # floors -> {"at": Vector2i, "frames": Array[ImageTexture]} (MV-741 leaf sway)
+static var _clips: Dictionary = {}         # floors -> {clip: {"at": Vector2i, "frames": Array[AtlasTexture]}} (MV-741 PixelLab roof)
 static var _glints: Dictionary = {}        # floors -> {"at": Vector2i, "frames": Array[ImageTexture]} (MV-741 solar glint)
 static var _driver: Dictionary = {}        # state -> Array[AtlasTexture] (MV-741 Dr. Ren at the wheel)
 static var _puff_tex: Array[ImageTexture] = []
@@ -66,9 +65,10 @@ var lamp_angle := 0.0              # radians, + = the lantern swings forward (we
 var _lamp_vel := 0.0
 var _lamp_kick_t := 0.0
 ## GOD MODE / autotest overrides
-var plant: Sprite2D                # MV-741 roof garden leaves (cut out of the shell), sway frames
-var plant_frame := 0
-var _plant_t := 0.0
+var clips: Dictionary = {}         # MV-741 PixelLab roof clips: potsL / potsR (leaves sway) / birds (a sparrow) -> Sprite2D
+var clip_i: Dictionary = {}        # clip -> current frame
+var _clip_t: Dictionary = {}       # clip -> s until the next frame
+var _bird_wait := 3.0
 var glint: Sprite2D                # MV-741 sun glint sweeping the solar cells by day (additive)
 var glint_frame := -1              # -1 = no sweep running
 var _glint_wait := 2.0
@@ -123,15 +123,18 @@ static func cut_shell(n: int) -> Texture2D:
 		var rect := Rect2i(int(lr[0]), int(lr[1]), int(lr[2]), int(lr[3]))
 		_lamp_src[n] = img.get_region(rect)
 		img.fill_rect(rect, Color(0, 0, 0, 0))
-	if f.has("plant_px"):                      # MV-741: the leaves sway on their own sprite
-		_plants[n] = _plant_frames(img, f)
+	_clips[n] = _cut_clips(img, f)             # MV-741: PixelLab roof parts animate on their own sprites
 	if f.has("solar_px"):
 		_glints[n] = _glint_frames(f.solar_px)
-	var fr: Array = f.flag
-	var cloth := img.get_region(Rect2i(fr[0], fr[1], fr[2], fr[3]))
-	img.fill_rect(Rect2i(fr[0], fr[1], fr[2], fr[3]), Color(0, 0, 0, 0))
+	if (_clips[n] as Dictionary).has("flag"):
+		_flag_frames[n] = (_clips[n] as Dictionary).flag.frames
+		(_clips[n] as Dictionary).erase("flag")
+	else:
+		var fr: Array = f.flag
+		var cloth := img.get_region(Rect2i(fr[0], fr[1], fr[2], fr[3]))
+		img.fill_rect(Rect2i(fr[0], fr[1], fr[2], fr[3]), Color(0, 0, 0, 0))
+		_flag_frames[n] = _wave_frames(cloth)
 	_shells[n] = ImageTexture.create_from_image(img)
-	_flag_frames[n] = _wave_frames(cloth)
 	return _shells[n]
 
 
@@ -155,40 +158,32 @@ static func _wave_frames(cloth: Image) -> Array:
 	return out
 
 
-## MV-741: the leaf pixels (plant_px = [x, y, clump]) cut out of `img`; 2 x PLANT_FRAMES frames where every leaf row
-## shifts sideways by whole pixels, more the higher it is above its clump's base (plant_base). Set 1 = a parked breeze
-## around the rest pose, set 2 = leaning east into the headwind and fluttering. Each clump has its own phase.
-static func _plant_frames(img: Image, f: Dictionary) -> Dictionary:
-	var lo := Vector2i(100000, 100000)
-	var hi := Vector2i(-1, -1)
-	var cols: Array[Color] = []
-	for q in f.plant_px:
-		var x := int(q[0])
-		var y := int(q[1])
-		lo = Vector2i(mini(lo.x, x), mini(lo.y, y))
-		hi = Vector2i(maxi(hi.x, x), maxi(hi.y, y))
-		cols.append(img.get_pixel(x, y))
-	for q in f.plant_px:
-		img.set_pixel(int(q[0]), int(q[1]), Color(0, 0, 0, 0))
-	var at := lo - Vector2i(2, 0)
-	var size := hi - lo + Vector2i(6, 1)
-	var bases: Array = f.plant_base
-	var out: Array[ImageTexture] = []
-	for pass_i in 2:
-		var lean := 0.0 if pass_i == 0 else 1.0
-		var amp := 0.75 if pass_i == 0 else 1.0
-		for i in PLANT_FRAMES:
-			var im := Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBA8)
-			var k := 0
-			for q in f.plant_px:
-				var c := int(q[2])
-				var h := clampf((float(bases[c]) - float(q[1])) / 12.0, 0.0, 1.0)
-				var ph := TAU * float(i) / float(PLANT_FRAMES) + float(c) * 1.7
-				var dx := int(round(h * (lean + amp * sin(ph))))
-				im.set_pixel(int(q[0]) + dx - at.x, int(q[1]) - at.y, cols[k])
-				k += 1
-			out.append(ImageTexture.create_from_image(im))
-	return {"at": at, "frames": out}
+## MV-741 round 3: every clip in anim.json (roof_<clip>.png strips from tools/art/ambulance/roof, PixelLab
+## animate-with-text-v3 over the Pro inpaint-v3 parts): its frame 0 is baked into the shell, so those pixels are cut out
+## of `img` and the clip's sprite draws them. {clip: {"at": Vector2i, "frames": Array[AtlasTexture]}}
+static func _cut_clips(img: Image, f: Dictionary) -> Dictionary:
+	var out := {}
+	for c in (f.get("clips", {}) as Dictionary):
+		if not ResourceLoader.exists(DIR + "roof_%s.png" % c):
+			continue
+		var r: Array = f.clips[c].rect
+		var at := Vector2i(int(r[0]), int(r[1]))
+		var sz := Vector2i(int(r[2]), int(r[3]))
+		var strip: Texture2D = load(DIR + "roof_%s.png" % c)
+		var still := strip.get_image()
+		still.decompress()
+		for y in sz.y:
+			for x in sz.x:
+				if still.get_pixel(x, y).a > 0.5:
+					img.set_pixel(at.x + x, at.y + y, Color(0, 0, 0, 0))
+		var frames: Array[AtlasTexture] = []
+		for i in int(f.clips[c].frames):
+			var a := AtlasTexture.new()
+			a.atlas = strip
+			a.region = Rect2(Vector2(sz.x * i, 0), Vector2(sz))
+			frames.append(a)
+		out[c] = {"at": at, "frames": frames}
+	return out
 
 
 ## MV-741: GLINT_FRAMES frames of a bright diagonal band sweeping west to east over the solar cell glass (solar_px)
@@ -318,7 +313,7 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 	var fr: Array = f.flag
 	flag = Sprite2D.new()
 	flag.centered = false
-	flag.position = origin + Vector2(fr[0], fr[1] - 2)
+	flag.position = origin + Vector2(fr[0], fr[1] - (0 if spot(n).has("clips") and (spot(n).clips as Dictionary).has("flag") else 2))
 	over.add_child(flag)
 	cut_shell(n)
 	flag.texture = (_flag_frames[n] as Array)[0]
@@ -338,17 +333,21 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 
 ## MV-741 micro anims: the swaying leaves, the solar glint, the pipe puffs and Dr. Ren at the wheel
 func _build_roof(f: Dictionary, origin: Vector2) -> void:
-	plant_frame = 0
+	clip_i.clear()
+	_clip_t.clear()
 	glint_frame = -1
 	puffs.clear()
-	if _plants.has(floors):
-		plant = Sprite2D.new()
-		plant.name = "RoofPlants"
-		plant.centered = false
-		plant.position = origin + Vector2(_plants[floors].at)
-		plant.texture = (_plants[floors].frames as Array)[0]
-		over.add_child(plant)
-		over.move_child(plant, 0)
+	for c in (_clips.get(floors, {}) as Dictionary):
+		var cs := Sprite2D.new()
+		cs.name = "Roof_" + str(c)
+		cs.centered = false
+		cs.position = origin + Vector2(_clips[floors][c].at)
+		cs.texture = (_clips[floors][c].frames as Array)[0]
+		over.add_child(cs)
+		over.move_child(cs, 0)
+		clips[c] = cs
+		clip_i[c] = 0
+		_clip_t[c] = randf_range(0.0, 0.3)
 	if _glints.has(floors):
 		glint = Sprite2D.new()
 		glint.name = "SolarGlint"
@@ -375,14 +374,23 @@ func _build_roof(f: Dictionary, origin: Vector2) -> void:
 
 func _tick_roof(delta: float, speed_px: float, engine_on: bool, accel: float, dark: float) -> void:
 	var sp := clampf(speed_px / ROAD_PX, 0.0, 1.5)
-	if plant:                                  # leaves: slow breeze parked, quick flutter leaning east in the headwind
-		_plant_t -= delta
-		if _plant_t <= 0.0:
-			var driving := sp > 0.15
-			_plant_t = 1.0 / (2.5 if not driving else 5.0 + 6.0 * sp)
-			var i := (plant_frame + 1) % PLANT_FRAMES
-			plant_frame = i + (PLANT_FRAMES if driving else 0)
-			plant.texture = (_plants[floors].frames as Array)[plant_frame]
+	for c in clips:                            # MV-741 PixelLab clips: pots sway (faster in the headwind), the sparrow pops out now and then
+		var fs: Array = _clips[floors][c].frames
+		_clip_t[c] = float(_clip_t[c]) - delta
+		if float(_clip_t[c]) > 0.0:
+			continue
+		if c == "birds":
+			if int(clip_i[c]) == 0:
+				_bird_wait -= 0.125
+				if _bird_wait > 0.0:
+					_clip_t[c] = 0.125
+					continue
+				_bird_wait = randf_range(5.0, 11.0)
+			_clip_t[c] = 0.16
+		else:
+			_clip_t[c] = 1.0 / (4.0 if sp < 0.15 else 7.0 + 5.0 * sp)
+		clip_i[c] = (int(clip_i[c]) + 1) % fs.size()
+		(clips[c] as Sprite2D).texture = fs[int(clip_i[c])]
 	if glint:                                  # a sun glint runs over the cells every few seconds by day
 		var day := 1.0 - dark
 		if glint_frame < 0:
@@ -548,7 +556,8 @@ func clear() -> void:
 	glows.clear()
 	lamp = null
 	flame = null
-	plant = null
+	clips.clear()
+	clip_i.clear()
 	glint = null
 	driver = null
 	driver_state = ""
@@ -653,7 +662,7 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_flag_t -= delta
 	if _flag_t <= 0.0:
 		_flag_t = 1.0 / (4.0 + 10.0 * clampf(speed_px / ROAD_PX, 0.0, 1.2))
-		_flag_i = (_flag_i + 1) % FLAG_FRAMES
+		_flag_i = (_flag_i + 1) % (_flag_frames[floors] as Array).size()
 		flag.texture = (_flag_frames[floors] as Array)[_flag_i]
 
 

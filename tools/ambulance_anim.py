@@ -75,56 +75,55 @@ def one(n):
         xs = [x for x in range(575, 605) if px[x, y][3]]
         if xs:
             tip = [sum(xs) / len(xs) + 0.5, y + 0.5]; break
-    # flag cloth: the red cross, grown over every opaque pixel right of the pole
-    cross = big(blobs(im, BAR, (133, 0, 160, 60)))
-    cx, cy = int(cross["c"][0]), int(cross["c"][1])
-    cloth = [b for b in blobs(im, CLOTH, (133, cy - 14, 165, cy + 14)) if b["rect"][0] <= cx < b["rect"][0] + b["rect"][2]]
+    roof = roof_bits(im)
+    if "flag" in roof["clips"]:              # MV-741 round 3: the PixelLab flag clip (pole + cloth) replaces the code wave
+        flag = roof["clips"]["flag"]["rect"]
+    else:                                    # flag cloth: the red cross, grown over every opaque pixel right of the pole
+        cross = big(blobs(im, BAR, (133, 0, 160, 60)))
+        cx, cy = int(cross["c"][0]), int(cross["c"][1])
+        flag = big([b for b in blobs(im, CLOTH, (133, cy - 14, 165, cy + 14)) if b["rect"][0] <= cx < b["rect"][0] + b["rect"][2]])["rect"]
     bx, by, bw, bh = bar["rect"]
     return {"size": [W, H], "wheels": wheels(im), "wheel_r": WHEEL_R,
             "head": head["c"], "marker": marker["c"], "bar_l": [bx + bw / 4, by + bh / 2], "bar_r": [bx + bw * 3 / 4, by + bh / 2],
             "bar": bar["rect"], "lantern": lantern["c"], "tails": [t["c"] for t in tails], "mast": tip,
-            "flag": big(cloth)["rect"], **lantern_flicker(im, lantern["c"]), **lantern_hang(im), **roof_bits(im)}
+            "flag": flag, **lantern_flicker(im, lantern["c"]), **lantern_hang(im), **roof}
 
 
-TERRA = lambda p: p[3] and p[0] > 95 and p[0] - p[2] > 45 and p[1] < 125           # flower pots
-GREEN = lambda p: p[3] and p[1] > p[0] + 8 and p[1] > p[2] + 8 and p[1] > 60
-DARK = lambda p: p[3] and p[0] + p[1] + p[2] < 150
-GARDENS = [(138, 223), (457, 584)]      # the pot rows left of the doghouses and right of the tank (between the mast)
 PANEL = lambda p: p[3] and p[2] > p[0] + 15 and p[2] > 50                          # solar cell glass
+ROOF = os.path.join(ROOT, "tools", "art", "ambulance", "roof")                      # MV-741 round 3 PixelLab roof parts
 
 
 def roof_bits(im):
-    """MV-741 micro anims (Parames 20:22): the roof plants (leaf pixels above the pot rims, as clumps that sway from
-    their own base), the solar cell glass (a glint sweeps it by day) and the copper pipe's mouth (puffs)"""
+    """MV-741 micro anims: the solar cell glass (a glint sweeps it by day), the copper pipe's mouth (puffs) and the
+    PixelLab roof clips (flag, pot rows, birdhouses; cleanup.roof_parts baked frame 0): where each still sits on this shell"""
     px = im.load(); W, H = im.size
-    leaf = set()
-    for x0, x1 in GARDENS:
-        rim = {x: next((y for y in range(30, 90) if TERRA(px[x, y])), None) for x in range(x0, x1)}
-        rs = sorted(r for r in rim.values() if r); top = rs[len(rs) // 2] + 2
-        lim = {x: min(r, top) for x, r in rim.items() if r}
-        g = {(x, y) for x in lim for y in range(36, lim[x]) if GREEN(px[x, y])}
-        out = {(x + dx, y + dy) for x, y in g for dx in (-1, 0, 1) for dy in (-1, 0, 1)} - g
-        leaf |= g | {(x, y) for x, y in out if x in lim and 36 <= y < lim[x] and DARK(px[x, y])}
-    clump, bases = {}, []
-    for p0 in sorted(leaf):
-        if p0 in clump:
-            continue
-        st, pts = [p0], []
-        while st:
-            q = st.pop()
-            if q in clump or q not in leaf:
-                continue
-            clump[q] = len(bases); pts.append(q)
-            st += [(q[0] + dx, q[1] + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
-        bases.append(max(y for _, y in pts) + 1)
-    plant = [[x, y, clump[(x, y)]] for x, y in sorted(leaf, key=lambda q: (q[1], q[0]))]
     solar = [[x, y] for y in range(0, 30) for x in range(290, 452) if PANEL(px[x, y])]
     pipe = None
     for y in range(0, 20):
         xs = [x for x in range(448, 472) if px[x, y][3]]
         if len(xs) >= 6:
             pipe = [(min(xs) + max(xs) + 1) / 2, y - 0.5]; break
-    return {"plant_px": plant, "plant_base": bases, "solar_px": solar, "pipe": pipe}
+    clips = {}
+    meta = json.load(open(os.path.join(ROOF, "roof.json"))) if os.path.exists(os.path.join(ROOF, "roof.json")) else {}
+    for c, m in meta.items():
+        if not m.get("frames"):
+            continue
+        st = Image.open(os.path.join(ROOF, c + "_still.png")).convert("RGBA"); sp = st.load()
+        ops = [(x, y) for y in range(st.height) for x in range(st.width) if sp[x, y][3]]
+        for dy in range(0, 16):
+            ax, ay = m["at"][0], m["at"][1] + dy
+            if all(px[ax + x, ay + y] == sp[x, y] for x, y in ops):
+                clips[c] = {"rect": [ax, ay, st.width, st.height], "frames": m["frames"]}; break
+    return {"solar_px": solar, "pipe": pipe, "clips": clips}
+
+
+def roof_strips():
+    """copy the clip strips next to the shells (assets/vehicles/ambulance_v3/roof_<clip>.png)"""
+    if not os.path.exists(os.path.join(ROOF, "roof.json")):
+        return
+    for c, m in json.load(open(os.path.join(ROOF, "roof.json"))).items():
+        if m.get("frames"):
+            Image.open(os.path.join(ROOF, c + "_anim.png")).save(os.path.join(DIR, f"roof_{c}.png"))
 
 
 LANTERN_PL = os.path.join(ROOT, "tools", "art", "ambulance", "lantern_pl.png")   # MV-741 PixelLab flicker, 8 x 18x22
@@ -214,7 +213,8 @@ if __name__ == "__main__":
             meta["floors"][str(n)] = one(n)
             f = meta["floors"][str(n)]
             print(n, f["size"], len(f["wheels"]), "wheels,", len(f["tails"]), "tails, flag", f["flag"], "lantern", f["lantern"],
-                  "plants", len(f["plant_px"]), "/", len(f["plant_base"]), "solar", len(f["solar_px"]), "pipe", f["pipe"])
+                  "clips", sorted(f["clips"]), "solar", len(f["solar_px"]), "pipe", f["pipe"])
     json.dump(meta, open(os.path.join(DIR, "anim.json"), "w"), separators=(",", ":"))
     spin_strip()
+    roof_strips()
     print("wrote anim.json + wheel_spin.png")
