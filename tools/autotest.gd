@@ -4469,6 +4469,9 @@ func _free_cam_test() -> void:
 	_check("free cam: FIT -> AUTO framing, centred (%s, pan %.0f/%.0f)" % [main.zoom_mode, main.pan_x, main.pan_y],
 		main.zoom_mode == "auto" and main.pan_x == 0.0 and main.pan_y == 0.0 and is_equal_approx(main.world_scale, main.target_ws()))
 	await wait(0.4)
+	# Main re-syncs the FIT button every 10th frame: on the big CI windows (software GL) 0.4 s can be fewer frames
+	for i in 11:
+		await get_tree().process_frame
 	_check("free cam: FIT goes dark again", not main.hud._fit_lit)
 	# GOD actions
 	Dev.cam_zoom(1)
