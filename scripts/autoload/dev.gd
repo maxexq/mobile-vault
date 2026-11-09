@@ -1156,6 +1156,23 @@ func world_v2_preview(n: int) -> int:
 	return Game.floors()
 
 
+## MV-737: the ambulance with `n` pups (1-2) behind it on the road (world v2, switch ambulance_pup on); `interior` also
+## opens the v3 interior. Returns how many trailers it has now.
+func ambulance_pup_preview(n: int, interior: bool = false) -> int:
+	feature_set("ambulance_v3", true)
+	feature_set("world_v2", true)
+	feature_set("ambulance_pup", true)
+	if Game.tier() != "van":
+		set_tier("van")
+	_van_floors(maxi(Game.floors(), 1))
+	set_trailers(clampi(n, 1, Data.MAX_TRAILERS))
+	act("ambulance pup preview", {"trailers": Game.trailers()})
+	_vehicle_changed()
+	if interior:
+		rooms_v3_open()
+	return Game.trailers()
+
+
 ## MV-726 vehicle micro animations on the world v2 ambulance (switch vehicle_anim): "drive" (cruise speed),
 ## "fast", "brake" (slow down to a stop), "park" (engine off), "beacon" (raid light bar on/off), "bump" (one road
 ## bump: the tyres hop front to rear). Returns false when the ambulance animation is not up.

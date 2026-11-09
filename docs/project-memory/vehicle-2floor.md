@@ -19,3 +19,11 @@ finish.py, deck3.py). Artifact https://claude.ai/artifact/Eud8rt7MjYzmUYR6YgcKyd
   stacked on mv-736-decker.
 - Godot binary in cloud: /root/godot/Godot_v4.7.2-stable_linux.x86_64 (not on PATH; pass GODOT=... to ci_autotest.sh).
 Related: [[vehicles-flat-2d]], [[road-train-approved-set]], [[ambulance-v3-ingame]].
+- 2026-11-09 MV-739 round 2 (ee14f88): bg colour 46,44,48 pockets (roof rail, roof ladder, under chassis) cleared in cleanup.py,
+  rear tyre wedge removed, headlight drawn in code (cleanup.headlight, lens 12.5,269.5), anim.json "swing" rect = cables
+  under floor swing (AmbulanceMotion._swing_set/_tick_swing). Rebuild order: shell.py (approved art) -> cleanup.py -> anim.py.
+  Another thread (MV-736) also pushes to mv-736-decker: fetch + merge before every push.
+- 2026-11-09 MV-739 round 3 (a470237): PixelLab front + headlight = designs/vehicle-2floor/front/ (Pro inpaint-v3, 4 takes 40 gens,
+  s4 picked, halo stripped) -> front/out/decker_{2,3}deck_1x.png are now the shell.py sources. cleanup.py strays() sweeps
+  backdrop fringe / 1 px specks / detached bits, mesh backdrop -> dark glass; stray scan images in stray-check/. Front not yet
+  copied into approved/ (await Parames OK).
