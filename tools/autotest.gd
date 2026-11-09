@@ -5961,6 +5961,10 @@ func _parallax_v2_test() -> void:
 	Features.set_override("features", "world_2x", true)
 	# MV-729: pass through portrait first so the landscape size is a real resize and the world reframes (the
 	# retired desert backdrop test used to leave the window in this state before this check)
+	# a live boss or a trailer left by earlier groups switches "auto" zoom to wide (world scale 1 = no 2x render), so
+	# pin the normal zoom for these checks and put the tester's mode back after
+	var zoom_keep: String = main.zoom_mode
+	main.zoom_mode = "normal"
 	get_window().size = Vector2i(405, 720)
 	await wait(0.5)
 	get_window().size = Vector2i(1280, 640)
@@ -5980,6 +5984,8 @@ func _parallax_v2_test() -> void:
 	_check("world 2x: switch off renders 1:1 and keeps the camera framing", main.render_k == 1 and main.world_vp.size_2d_override == Vector2i.ZERO
 		and Vector2(main.world_vp.size) == main.vp_size() and main.camera.position.distance_to(cam0) < 1.0)
 	Dev.world_2x(true)
+	main.zoom_mode = zoom_keep
+	main._apply_world_scale()
 	await wait(0.3)
 	var v2i: ParallaxV2Backdrop = bg.groups[Data.BIOMES[int(Game.s.biome)].id].v2
 	Features.set_override("features", "parallax_v2", false)
