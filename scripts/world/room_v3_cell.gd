@@ -12,7 +12,7 @@ const GROW_SEC := 20.0            # one growth stage of the grow room (visual on
 const LAMP := Vector2(6, 6)
 
 var slot := -1
-var world_view := false           # MV-734: a cell of the world (vehicle): crew use the 2/3 world-view sheet
+var world_view := false           # MV-734: a cell of the world (vehicle): crew drawn at full pixel size
 var room_type := ""
 var level := 1
 var kind := ""                    # v3 | fallback | empty | site | locked

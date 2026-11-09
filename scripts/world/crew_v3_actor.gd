@@ -40,18 +40,18 @@ var _mat: ShaderMaterial
 var _act := "work"
 var _shadow_col := Color(0.05, 0.04, 0.035)
 var in_world := false             # MV-734: drawn in the world view (see setup)
-var far := false                  # MV-734: showing the 2/3 world-view sheet at scale 1
+var full := false                 # MV-734: drawn at full pixel size (world view)
 
 
 ## world_view: the actor stands in a cell of the world (vehicle), where one room pixel is one rendered pixel, so it
-## uses the 2/3 world-view sheet (MV-734, switch crew_far); in the interior view it keeps the 64 px sheet at 2/3
+## is drawn at full pixel size (MV-734, switch crew_world_full); in the interior view it stays at 2/3
 func setup(d: Dictionary, room_mode: String, level_data: Dictionary, index: int, world_view := false) -> void:
 	did = int(d.get("id", -1))
 	cid = V3Art.crew_for(d)
 	in_world = world_view
 	spr = AnimatedSprite2D.new()
 	spr.centered = false
-	_apply_sheet()
+	_apply_size()
 	_mat = ShaderMaterial.new()
 	_mat.shader = BLEND
 	spr.material = _mat
@@ -83,30 +83,26 @@ func set_room(room_mode: String, level_data: Dictionary) -> void:
 
 ## crew_v3.grade / lift / shadow tunes (MV-724) changed: re-apply the shader values and redraw the shadow
 func _tunes_changed() -> void:
-	_apply_sheet()
+	_apply_size()
 	_mat.set_shader_parameter("grade", grade_k())
 	_mat.set_shader_parameter("lift", lift_k())
 	queue_redraw()
 
 
-## MV-734: pick the crew sheet. World view + switch crew_far: the 43 px sheet (already 2/3) at scale 1, so no crew
-## pixel is smaller than a room pixel; otherwise the 64 px sheet at 2/3 (CREW_SCALE). Keeps the playing clip.
-func _apply_sheet() -> void:
-	var want := in_world and Features.on("crew_far") and V3Art.has_far(cid)
-	if spr.sprite_frames != null and want == far:
-		return
-	far = want
-	var clip_name := spr.animation
-	var playing := spr.is_playing()
-	var fr := spr.frame
-	spr.sprite_frames = V3Art.crew_frames(cid, far)
-	spr.offset = V3Art.FEET_FAR if far else V3Art.FEET
-	spr.scale = Vector2.ONE if far else Vector2.ONE * V3Art.CREW_SCALE
-	if spr.sprite_frames.has_animation(clip_name):
-		spr.animation = clip_name
-		spr.frame = mini(fr, spr.sprite_frames.get_frame_count(clip_name) - 1)
-		if playing:
-			spr.play()
+## MV-734: sprite scale. World view + switch crew_world_full: full pixel size (every sprite pixel = one room
+## pixel = one rendered pixel, sharp); otherwise 2/3 (CREW_SCALE, the interior view where room pixels are big).
+func _apply_size() -> void:
+	if spr.sprite_frames == null:
+		spr.sprite_frames = V3Art.crew_frames(cid)
+		spr.offset = V3Art.FEET
+	full = in_world and Features.on("crew_world_full")
+	spr.scale = Vector2.ONE * (V3Art.CREW_SCALE_WORLD if full else V3Art.CREW_SCALE)
+	queue_redraw()
+
+
+## sprite pixels -> room pixels for this actor (1 in the world view, 2/3 in the interior)
+func crew_k() -> float:
+	return spr.scale.x if spr != null else V3Art.CREW_SCALE
 
 
 func set_dim(v: float) -> void:
@@ -199,12 +195,19 @@ func _draw() -> void:
 	var o := Vector2(roundf(position.x), roundf(position.y)) - position   # snap to whole room pixels
 	var c1 := Color(_shadow_col, minf(SHADOW_A[0] * k, 1.0))
 	var c2 := Color(_shadow_col, minf(SHADOW_A[1] * k, 1.0))
+	var wk := crew_k() / V3Art.CREW_SCALE     # MV-734: full-size crew get a 1.5x wider shadow
 	for r in SHADOW_ROWS:
-		var w := int(r[1])
+		var w := _sw(int(r[1]), wk)
 		draw_rect(Rect2(o + Vector2(-floorf(w * 0.5), float(r[0])), Vector2(w, 1)), c1)
 	for r in SHADOW_CORE:
-		var w := int(r[1])
+		var w := _sw(int(r[1]), wk)
 		draw_rect(Rect2(o + Vector2(-floorf(w * 0.5), float(r[0])), Vector2(w, 1)), c2)
+
+
+## shadow row width scaled for the crew size, kept odd so the ellipse stays centred
+static func _sw(w: int, k: float) -> int:
+	var n := roundi(w * k)
+	return n if n % 2 == 1 else n + 1
 
 
 ## contact shadow strength: tune crew_v3.shadow (MV-724), 1.0 = the pixel shadow's own alphas

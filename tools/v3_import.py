@@ -206,10 +206,6 @@ def main():
                "frame": [64, 64], "crew": crew}, open(os.path.join(OUT, "crew.json"), "w"), indent=1)
     print("rooms:", ", ".join("%s(%s)" % (t, r["status"]) for t, r in rooms.items()), "+ empty")
     print("crew:", ", ".join(crew))
-    # MV-734: crisp 2/3 crew sheets for the world view (crew.json gains "far" entries)
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import crew_far
-    crew_far.main()
 
 
 if __name__ == "__main__":

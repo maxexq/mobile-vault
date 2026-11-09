@@ -166,18 +166,18 @@ func crew_v3_grade(k: float) -> void:
 	Features.set_override("tune", "crew_v3.grade", null if k < 0.0 else k)
 
 
-## MV-734: world-view crew sheet: on = the 2/3 sheet drawn whole-pixel (crisp), off = the 64 px sheet at 2/3 (drops
-## every third row / column), null = back to the build's value. Returns how many world crew now use the 2/3 sheet.
-func crew_far(v: Variant) -> int:
-	Trace.rec("god", "crew far %s" % [v])
-	Features.set_override("features", "crew_far", v)
+## MV-734: world-view crew size: true = full pixel size (sharp), false = 2/3 (drops every third row / column),
+## null = back to the build's value. Returns how many world crew are now drawn at full size.
+func crew_world_full(v: Variant) -> int:
+	Trace.rec("god", "crew world full %s" % [v])
+	Features.set_override("features", "crew_world_full", v)
 	var m = get_tree().current_scene
 	if m == null or m.get("vehicle") == null:
 		return 0
 	var n := 0
 	for c in m.vehicle.v2_cells.values():
 		for a in (c as RoomV3Cell).actors.values():
-			n += 1 if (a as CrewV3Actor).far else 0
+			n += 1 if (a as CrewV3Actor).full else 0
 	return n
 
 

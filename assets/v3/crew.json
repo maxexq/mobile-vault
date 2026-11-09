@@ -55,8 +55,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/ren.png",
-   "far": "ren_far.png"
+   "portrait": "portraits/ren.png"
   },
   "clara": {
    "file": "clara.png",
@@ -108,8 +107,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/clara.png",
-   "far": "clara_far.png"
+   "portrait": "portraits/clara.png"
   },
   "bit": {
    "file": "bit.png",
@@ -161,8 +159,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/bit.png",
-   "far": "bit_far.png"
+   "portrait": "portraits/bit.png"
   },
   "wan": {
    "file": "wan.png",
@@ -214,8 +211,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/wan.png",
-   "far": "wan_far.png"
+   "portrait": "portraits/wan.png"
   },
   "sorn": {
    "file": "sorn.png",
@@ -267,8 +263,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/sorn.png",
-   "far": "sorn_far.png"
+   "portrait": "portraits/sorn.png"
   },
   "lin": {
    "file": "lin.png",
@@ -320,8 +315,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/lin.png",
-   "far": "lin_far.png"
+   "portrait": "portraits/lin.png"
   },
   "tham": {
    "file": "tham.png",
@@ -373,8 +367,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/tham.png",
-   "far": "tham_far.png"
+   "portrait": "portraits/tham.png"
   },
   "fah": {
    "file": "fah.png",
@@ -426,8 +419,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/fah.png",
-   "far": "fah_far.png"
+   "portrait": "portraits/fah.png"
   },
   "krai": {
    "file": "krai.png",
@@ -479,8 +471,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/krai.png",
-   "far": "krai_far.png"
+   "portrait": "portraits/krai.png"
   },
   "ploy": {
    "file": "ploy.png",
@@ -532,8 +523,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/ploy.png",
-   "far": "ploy_far.png"
+   "portrait": "portraits/ploy.png"
   },
   "noi": {
    "file": "noi.png",
@@ -585,12 +575,7 @@
      "fps": 10
     }
    },
-   "portrait": "portraits/noi.png",
-   "far": "noi_far.png"
+   "portrait": "portraits/noi.png"
   }
- },
- "far_frame": [
-  43,
-  43
- ]
+ }
 }
