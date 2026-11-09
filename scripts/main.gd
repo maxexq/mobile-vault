@@ -895,8 +895,12 @@ func _enter_placement(room_type: String) -> void:
 	vehicle.set_build_highlight(true, room_type)
 	var any := false
 	for s in Game.unlocked_slots():
-		if Game.s.rooms[s].type == "empty":
+		if Game.s.rooms[s].type == "empty" and (room_type != RearGunner.TYPE or RearGunner.build_block(s) == ""):
 			any = true
+	if not any and room_type == RearGunner.TYPE:
+		Game.toast.emit(Loc.t("ห้องยิงสร้างได้เฉพาะช่องท้ายรถที่ว่างอยู่"), "warn")
+		_exit_placement()
+		return
 	if not any:
 		Game.toast.emit(Loc.t("ไม่มีช่องว่าง! อัปเกรด Mobile Vault เพื่อปลดล็อกชั้นเพิ่ม"), "warn")
 		_exit_placement()

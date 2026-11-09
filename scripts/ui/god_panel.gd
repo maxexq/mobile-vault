@@ -302,6 +302,8 @@ func _tab_vehicle() -> void:
 		gn += RearGunner.gunners(gs).size()
 	_note("ห้องยิงท้ายรถ (MV-716): %d ห้อง · คนยิง %d · %.1f ดาเมจ/วิ · สวิตช์ gunner_room %s" % [gslots.size(), gn, RearGunner.dps(), "เปิด" if RearGunner.on() else "ปิด"])
 	_row([_b("ยิงทดสอบ", func(): Dev.gunner_demo(4), "green"), _b("อัปเลเวล", func(): Dev.gunner_level_up(), "yellow")], "ห้องยิง")
+	_note("ทีมในห้องยิง (MV-727): %s · เปิดช่อง %d · DPS ปืน %d" % ["เปิด" if Combat.room_mode() else ("รอสร้างห้อง" if RearGunner.squad_on() else "ปิด"), RearGunner.roles_open(), int(Combat.squad_dps())])
+	_row([_b("เต็มทีม Lv3", func(): Dev.room_squad_full(), "green"), _b("สลับ ห้อง/หลังคา", func(): Dev.room_squad_toggle(), "yellow")], "ทีมในห้อง")
 	_row([_b("สด", func(): Dev.rx_anim_preview(""), "yellow" if RoomAnim.preview == "" else "gray"),
 		_b("ท่าพัก", func(): Dev.rx_anim_preview("rest"), "yellow" if RoomAnim.preview == "rest" else "gray"),
 		_b("ทำงาน", func(): Dev.rx_anim_preview("active"), "yellow" if RoomAnim.preview == "active" else "gray"),

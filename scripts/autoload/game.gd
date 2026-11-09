@@ -128,6 +128,9 @@ func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = tru
 		s.items["components"] = 20
 		if recruit_volunteers:
 			s.squad = [-1, int(s.dwellers[2].id), -1]
+			if RearGunner.squad_on():
+				s.squad = [int(s.dwellers[2].id), -1, -1]     # MV-727: the volunteer takes the gun in the gunner room
+				s.dwellers[2].room = RearGunner.DEFAULT_SLOT
 		return
 	var mark := _add_dweller({"name": "จ่ามาร์ค", "lore": "mark", "variant": "dw_army_brown", "str": 7, "int": 3, "agi": 4, "room": -1, "lvl": 3})
 	var leo := _add_dweller({"name": "ลีโอ", "lore": "leo", "variant": "dw_scav_brown", "str": 4, "int": 3, "agi": 7, "room": -1, "lvl": 2})
@@ -140,6 +143,10 @@ func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = tru
 	mark.gear = {"weapon": Loot.roll_item("weapon", 1, 0, "pipe_wrench"), "armor": Loot.roll_item("armor", 1, 0, "leather_jacket"), "helmet": Loot.roll_item("helmet", 1, 0, "hard_hat")}
 	s.van_gear.turret = Loot.roll_item("turret", 1, 0, "mg_turret")
 	s.items["components"] = 20
+	if RearGunner.squad_on() and RearGunner.on():
+		# MV-727: the squad fights from the rear gunner room: Leo on the gun, Sgt. Mark loading
+		leo.room = RearGunner.DEFAULT_SLOT
+		mark.room = RearGunner.DEFAULT_SLOT
 
 
 func load_game() -> bool:
@@ -1012,6 +1019,10 @@ func _free_away_squad() -> void:
 
 
 func set_squad(role: int, did: int) -> void:
+	if RearGunner.room_mode() and int(s.squad[role]) >= 0 and int(s.squad[role]) != did:
+		var prev := dweller_by_id(int(s.squad[role]))
+		if not prev.is_empty() and int(prev.room) == RearGunner.post():
+			prev.room = -1         # MV-727: off the squad = out of the gunner room
 	for i in s.squad.size():
 		if int(s.squad[i]) == did:
 			s.squad[i] = -1
@@ -1022,8 +1033,10 @@ func set_squad(role: int, did: int) -> void:
 		if Crew.refuses(d):
 			Crew.refuse_toast(d)
 			return
-		d.room = -1
+		# MV-727: with the room squad the defenders work inside the rear gunner room
+		d.room = RearGunner.post() if RearGunner.room_mode() else -1
 	s.squad[role] = did
+	RearGunner.sync_squad()
 	squad_changed.emit()
 	dwellers_changed.emit()
 	rooms_changed.emit()
@@ -1496,7 +1509,7 @@ func _sim_crew_body(dt: float, offline: bool) -> void:
 			target += 15.0
 		var role := squad_role(d)
 		if role >= 0:
-			target += 20.0 if _best_stat(d) == Combat.ROLES[role].stat else 10.0
+			target += 20.0 if _best_stat(d) == Combat.role(role).stat else 10.0
 			target += 2.0 * deck_lv    # a place to sit down between waves
 		elif deck_lv > 0 and int(d.id) == deck_id:
 			# the reserve dozes in the open air on the cot: rests up, heals, stays sharp
@@ -1789,10 +1802,15 @@ func assign(d: Dictionary, slot: int) -> bool:
 		if room(slot).get("type", "empty") == "empty":
 			return false
 		var r := squad_role(d)
-		if r >= 0:
+		if r >= 0 and not (RearGunner.room_mode() and slot == RearGunner.post()):
 			s.squad[r] = -1
 			squad_changed.emit()
+	elif RearGunner.room_mode() and squad_role(d) >= 0:
+		s.squad[squad_role(d)] = -1      # MV-727: taken out of the gunner room = off the squad
+		squad_changed.emit()
 	d.room = slot
+	if RearGunner.sync_squad():
+		squad_changed.emit()
 	dwellers_changed.emit()
 	rooms_changed.emit()
 	return true
@@ -1969,6 +1987,9 @@ func start_craft(slot: int, recipe_id: String) -> bool:
 
 func build_room(slot: int, room_type: String) -> bool:
 	if not is_slot_unlocked(slot) or s.rooms[slot].type != "empty":
+		return false
+	if room_type == RearGunner.TYPE and RearGunner.build_block(slot) != "":
+		toast.emit(RearGunner.build_block(slot), "warn")      # MV-727: one, in a rear slot only
 		return false
 	var def := Data.room_def(room_type)
 	if room_unlock_level(room_type) > int(s.vault_level):
@@ -2217,6 +2238,8 @@ func room_scale(slot: int) -> float:
 func room_capacity(slot: int) -> int:
 	if slot == Data.CAB_SLOT:
 		return Data.CAB_WORKERS
+	if RearGunner.room_mode() and slot == RearGunner.post():
+		return RearGunner.roles_open()     # MV-727: the squad slots open (by Mobile Vault level)
 	return Data.ROOM_WORKERS * room_span(slot)
 
 
