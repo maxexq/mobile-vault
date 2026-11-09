@@ -10,6 +10,12 @@ const DIR := "res://assets/v3/"
 const CELL := Vector2(144, 96)
 const CREW_SCALE := 2.0 / 3.0      # crew ref v3 rule: room x3, crew x2 on screen
 const FEET := Vector2(-32, -64)    # frame offset: 64x64 canvas, feet on the bottom row
+## MV-734: the world view's crew sheets (tools/crew_far.py): every frame shrunk to 2/3 ahead of time (64 -> 43 px,
+## majority colour, the sprite's own colours only) and drawn at scale 1, so each crew pixel is one whole room pixel.
+## In the world a room pixel is one rendered pixel, and the 64 px sheets at 2/3 lost every third row and column
+## to nearest sampling (cut faces and outlines: "the crew look blurry").
+const FAR := 43
+const FEET_FAR := Vector2(-21, -43)   # source col 32 -> 21.33, feet row 63 -> row 42 (the bottom row)
 ## which v3 character plays a recruit variant: the named crew roster keep a fixed look; everyone else gets a stable
 ## pick from their id (the 2.5D crew are 11 people, the old variants many more)
 const CREW_IDS := ["ren", "clara", "bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi"]
@@ -113,15 +119,17 @@ static func portrait_tex(cid: String) -> Texture2D:
 	return _tex[p]
 
 
-static func crew_frames(cid: String) -> SpriteFrames:
+static func crew_frames(cid: String, far := false) -> SpriteFrames:
 	_load()
-	if _frames.has(cid):
-		return _frames[cid]
+	var key := cid + ("|far" if far else "")
+	if _frames.has(key):
+		return _frames[key]
 	var sf := SpriteFrames.new()
 	sf.remove_animation("default")
 	var e: Dictionary = _crew.get(cid, {})
-	var p := DIR + "crew/" + str(e.get("file", ""))
+	var p := DIR + "crew/" + str(e.get("far" if far else "file", ""))
 	var sheet: Texture2D = load(p) if not e.is_empty() and ResourceLoader.exists(p) else null
+	var fs := FAR if far else 64
 	if sheet != null:
 		var clips: Dictionary = e.clips
 		for clip in clips:
@@ -131,10 +139,17 @@ static func crew_frames(cid: String) -> SpriteFrames:
 			for i in int(clips[clip].n):
 				var at := AtlasTexture.new()
 				at.atlas = sheet
-				at.region = Rect2(i * 64, int(clips[clip].row) * 64, 64, 64)
+				at.region = Rect2(i * fs, int(clips[clip].row) * fs, fs, fs)
 				sf.add_frame(clip, at)
-	_frames[cid] = sf
+	_frames[key] = sf
 	return sf
+
+
+## MV-734: this character has a 2/3 world-view sheet (crew.json "far", tools/crew_far.py)
+static func has_far(cid: String) -> bool:
+	_load()
+	var f := str((_crew.get(cid, {}) as Dictionary).get("far", ""))
+	return f != "" and ResourceLoader.exists(DIR + "crew/" + f)
 
 
 static func color_of(a: Array, alpha: float = 1.0) -> Color:

@@ -6270,7 +6270,7 @@ func _rooms_v3_test() -> void:
 			right_level = right_level and str(c.data.file).begins_with("L%d" % clampi(c.level, 1, 3))
 		actors += c.actors.size()
 		for a in c.actors.values():
-			pos_ok = pos_ok and (a as CrewV3Actor).spr.scale.is_equal_approx(Vector2.ONE * V3Art.CREW_SCALE)
+			pos_ok = pos_ok and (a as CrewV3Actor).spr.scale.is_equal_approx(Vector2.ONE * V3Art.CREW_SCALE) and not (a as CrewV3Actor).far
 	_check("rooms v3: cells draw the level image (L%d)" % 2, v3_cells >= 3 and right_level)
 	_check("rooms v3: crew aboard appear as v3 actors at 2/3 scale", actors > 0 and pos_ok)
 	await wait(2.5)
@@ -12821,6 +12821,36 @@ func _world_v2_test() -> void:
 			did = int(id)
 	_check("world v2: crew aboard walk in the v3 rooms", actors > 0)
 	_check("world v2: actor_for answers with the v3 crew actor", did < 0 or v.actor_for(did) is CrewV3Actor)
+	# MV-734: in the world a room pixel is one rendered pixel, so the crew use the pre-shrunk 2/3 sheet at scale 1
+	# (no crew pixel smaller than a room pixel); the interior view keeps the 64 px sheet at 2/3; GOD switches it
+	var far_ok := actors > 0
+	for c in v.v2_cells.values():
+		for a in (c as RoomV3Cell).actors.values():
+			var ca := a as CrewV3Actor
+			var tex: Texture2D = ca.spr.sprite_frames.get_frame_texture(ca.spr.animation, 0)
+			far_ok = far_ok and ca.far and ca.spr.scale == Vector2.ONE and ca.spr.offset == V3Art.FEET_FAR \
+				and tex != null and tex.get_size() == Vector2(V3Art.FAR, V3Art.FAR)
+	_check("world v2: crew use the crisp 2/3 sheet at whole room pixels (MV-734)", far_ok)
+	var sheets_ok := true
+	for cid in V3Art.crew_ids():
+		var full := V3Art.crew_frames(cid)
+		var small := V3Art.crew_frames(cid, true)
+		sheets_ok = sheets_ok and V3Art.has_far(cid) and small != full
+		for clip in full.get_animation_names():
+			sheets_ok = sheets_ok and small.has_animation(clip) and small.get_frame_count(clip) == full.get_frame_count(clip)
+	_check("world v2: every v3 crew has a 2/3 sheet with the same clips and frame counts (MV-734)", sheets_ok)
+	var n_off := Dev.crew_far(false)
+	var off_ok := true
+	for c in v.v2_cells.values():
+		for a in (c as RoomV3Cell).actors.values():
+			var ca := a as CrewV3Actor
+			off_ok = off_ok and not ca.far and ca.spr.scale.is_equal_approx(Vector2.ONE * V3Art.CREW_SCALE) and ca.spr.is_playing()
+	var n_on := Dev.crew_far(null)
+	var now_actors := 0
+	for c in v.v2_cells.values():
+		now_actors += (c as RoomV3Cell).actors.size()
+	_check("world v2: GOD crew sheet switch (off = 64 px at 2/3, default = 2/3 sheet)", n_off == 0 and off_ok and n_on > 0 and n_on == now_actors)
+	await shot("world_v2_crew_far")
 	await shot("world_v2_f2")
 	f = Dev.world_v2_preview(5)
 	await wait(0.4)
