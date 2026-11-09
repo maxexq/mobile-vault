@@ -231,6 +231,30 @@ def old_flag(im):
     return min(x for x, _ in pts), min(y for _, y in pts), max(x for x, _ in pts) + 1, max(y for _, y in pts) + 1
 
 
+def pipe_knob(im, box=(448, 0, 472, 6)):
+    """MV-741 (Parames 21:04): the copper pipe's rain-cap knob floated 2 px above the cap (rows 0-3): removed"""
+    px = im.load()
+    for x in range(box[0], box[2]):
+        for y in range(box[1], box[3]):
+            px[x, y] = (0, 0, 0, 0)
+
+
+def tail_hoods(im):
+    """MV-741 (Parames 21:04): brown half-disc lamp hoods stuck out behind the rear ladder at every tail lamp (x >= 618):
+    removed, the red lens on the rear wall stays. The tow hitch under the last lamp (pup coupling) is not touched."""
+    px = im.load(); W, H = im.size
+    reds = sorted({y for y in range(H) for x in range(600, 618)
+                   if px[x, y][3] and px[x, y][0] > 170 and px[x, y][1] < 80 and px[x, y][2] < 80})
+    done = 0
+    for y in range(H):
+        if not any(abs(y - r) <= 10 for r in reds):
+            continue
+        for x in range(618, W):
+            if px[x, y][3]:
+                px[x, y] = (0, 0, 0, 0); done += 1
+    return done
+
+
 def roof_parts(im):
     """MV-741 round 3 (Parames 20:32 + picks 20:41): the PixelLab roof parts (roof/<part>_still.png, Pro inpaint-v3):
     flag 3, left pots 2, birdhouses 1, right pots 2, mast 3. Pots, birdhouses and mast replace their mask boxes
@@ -275,6 +299,8 @@ def clean_shell(path, front):
     im, strays = drop_strays(im)
     rects = openings(im)
     frame(im, rects)
+    pipe_knob(im)
+    tail_hoods(im)
     roof_parts(im)                           # last: the window frames must not paint over the pot rows
     im.save(path)
     return holes, strays, len(rects)
