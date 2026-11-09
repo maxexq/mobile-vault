@@ -543,10 +543,8 @@ def gen_backgrounds():
         mid(name, cfg)
         near(name, cfg)
         road(name, cfg)
-    from .industrial_bg import generate
-    generate()
-    from .desert_bg import generate as generate_desert
-    generate_desert()
+    # MV-729: the MV-548 industrial / MV-539 desert "modern" generators were retired with their backdrops
+    # (parallax v2 draws every biome; art under designs/bg-parallax-*/approved/)
 
 # ------------------------------------------------------------------ MV-388 phase 4: environment micro ambience
 # Small roadside atlas sprites for the living-background owner (MV-370 / MV-371) to place on the road repeat.
