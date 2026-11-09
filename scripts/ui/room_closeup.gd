@@ -283,7 +283,7 @@ func _build_assign(def: Dictionary) -> void:
 	for d in list:
 		var where: String = Loc.t("ว่าง") if int(d.room) < 0 else Data.room_def(Game.room(int(d.room)).type).th
 		if Game.squad_role(d) >= 0:
-			where = Combat.ROLES[Game.squad_role(d)].th
+			where = Combat.role(Game.squad_role(d)).th
 		var b := _row_button(d, "%s  %s%d  (%s)" % [d.name, st.to_upper(), d[st], where], "gray" if int(d.room) >= 0 else "green")
 		var did: int = d.id
 		b.pressed.connect(func():
@@ -311,7 +311,7 @@ func _build_assign_builders() -> void:
 	for d in list:
 		var where: String = Loc.t("ว่าง") if int(d.room) < 0 else Data.room_def(Game.room(int(d.room)).type).th
 		if Game.squad_role(d) >= 0:
-			where = Combat.ROLES[Game.squad_role(d)].th
+			where = Combat.role(Game.squad_role(d)).th
 		var tags := Crew.build_tags(d)
 		var b := _row_button(d, Loc.t("%s  ช่าง x%.1f%s  (%s)") % [d.name, Crew.build_speed(d) / 0.6, (" " + tags) if tags != "" else "", where],
 			"yellow" if Crew.is_builder(d) else ("gray" if int(d.room) >= 0 else "green"))
@@ -675,6 +675,8 @@ func _build_empty() -> void:
 	set_title(Loc.t("EMPTY SLOT / ช่องว่าง — เลือกห้องที่จะสร้าง"))
 	_section("SCRAP %d" % int(Game.s.res.scrap), Loc.t("วัสดุ"))
 	for t in Data.buildable():
+		if t == RearGunner.TYPE and RearGunner.build_block(slot) != "":
+			continue      # MV-727: one gunner room, rear slots only
 		var def := Data.room_def(t)
 		var ul := Game.room_unlock_level(t)
 		var locked := ul > int(Game.s.vault_level)
