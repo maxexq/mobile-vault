@@ -105,6 +105,7 @@
     "enc_art_v2": true,
     "event_art_v2": true,
     "crew_portraits_v3": true,
+    "crew_world_full": true,
     "pets_v3": true
   },
   "events": {},

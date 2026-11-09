@@ -6389,7 +6389,7 @@ func _rooms_v3_test() -> void:
 			right_level = right_level and str(c.data.file).begins_with("L%d" % clampi(c.level, 1, 3))
 		actors += c.actors.size()
 		for a in c.actors.values():
-			pos_ok = pos_ok and (a as CrewV3Actor).spr.scale.is_equal_approx(Vector2.ONE * V3Art.CREW_SCALE)
+			pos_ok = pos_ok and (a as CrewV3Actor).spr.scale.is_equal_approx(Vector2.ONE * V3Art.CREW_SCALE) and not (a as CrewV3Actor).full
 	_check("rooms v3: cells draw the level image (L%d)" % 2, v3_cells >= 3 and right_level)
 	_check("rooms v3: crew aboard appear as v3 actors at 2/3 scale", actors > 0 and pos_ok)
 	await wait(2.5)
@@ -8455,6 +8455,7 @@ func _saloon_test() -> void:
 	cu.close()
 	await wait(0.3)
 	# --- GOD
+	Game.s["outage"] = {}       # a random short circuit (Game._tick_outages) on the Saloon would pause its job
 	Dev.saloon_clear_cd()
 	var gj := Dev.saloon_supper()
 	Dev.rx_finish_jobs()
@@ -12940,6 +12941,27 @@ func _world_v2_test() -> void:
 			did = int(id)
 	_check("world v2: crew aboard walk in the v3 rooms", actors > 0)
 	_check("world v2: actor_for answers with the v3 crew actor", did < 0 or v.actor_for(did) is CrewV3Actor)
+	# MV-734: in the world a room pixel is one rendered pixel, so the crew are drawn at full pixel size there (2/3 lost
+	# every third row / column); the interior view keeps 2/3; the shadow widens with them; GOD switches it
+	var full_ok := actors > 0
+	for c in v.v2_cells.values():
+		for a in (c as RoomV3Cell).actors.values():
+			var ca := a as CrewV3Actor
+			full_ok = full_ok and ca.full and ca.spr.scale == Vector2.ONE * V3Art.CREW_SCALE_WORLD and ca.spr.offset == V3Art.FEET
+	_check("world v2: crew drawn at full pixel size, 1 sprite px = 1 room px (MV-734)", full_ok)
+	_check("world v2: crew shadow widens 1.5x with full-size crew, stays odd", CrewV3Actor._sw(15, 1.5) == 23 and CrewV3Actor._sw(15, 1.0) == 15)
+	var n_off := Dev.crew_world_full(false)
+	var off_ok := true
+	for c in v.v2_cells.values():
+		for a in (c as RoomV3Cell).actors.values():
+			var ca := a as CrewV3Actor
+			off_ok = off_ok and not ca.full and ca.spr.scale.is_equal_approx(Vector2.ONE * V3Art.CREW_SCALE)
+	var n_on := Dev.crew_world_full(null)
+	var now_actors := 0
+	for c in v.v2_cells.values():
+		now_actors += (c as RoomV3Cell).actors.size()
+	_check("world v2: GOD crew size switch (off = 2/3, default = full pixel size)", n_off == 0 and off_ok and n_on > 0 and n_on == now_actors)
+	await shot("world_v2_crew_full")
 	await shot("world_v2_f2")
 	f = Dev.world_v2_preview(5)
 	await wait(0.4)
