@@ -580,7 +580,8 @@ vehicle and the 64x52 rooms in the world stay as they are until the v3 vehicle s
   `assets/vehicles/road_train_v3/body_f<1-3>.png` (prime mover + lead trailer) and `trailer_f<2-3>.png` (red container,
   nose on the unit in front), cells at x 226 / 20 + col x 152, y 116 + row x 112 (`shell.json`, built by
   `designs/road-train/game/shell.py`). On the road (world v2, switch `world_v2`) the rig is the same B-double body at half size with the v3 rooms and crew
-  (`Vehicle.v2_rt()`, 347 px long, `V2_W_RT`); its trailers are still the old ones (phase 2, like the ambulance).
+  (`Vehicle.v2_rt()`, 347 px long, `V2_W_RT`); its trailers are the same red container shells as in the v3 interior
+  (`Vehicle.v2_rt_trailers()`, 250 px each, `V2_TW_RT`, nose on the unit in front, their own axles; no old drawbar).
   GOD → รถ → โร้ดเทรน: drive the road train now (`Dev.road_train_preview`), on the road with 2 / 3 decks
   (`Dev.road_train_world`) + switch.
   Switch off = the old 4-vehicle ladder. Autotest: `--only=road_train` (old ladder tests pin the switch off).
