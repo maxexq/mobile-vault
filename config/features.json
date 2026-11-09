@@ -32,6 +32,7 @@
     "game_analytics": true,
     "server_outbox": true,
     "portrait_fit": true,
+    "free_cam": true,
     "env_badge": true,
     "barks": true,
     "tutorial_tips": true,

@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Free camera: pinch or scroll to zoom through every sharp pixel level around your fingers, drag to look around in any direction, and tap FIT to snap back to the automatic view (MV-723)
 - New art for all six expedition special encounters: bigger detailed scenes where the team's flashlight sweeps in from the left onto the find, with HELP letters, toxic fumes, falling dust and pebbles (MV-717)
 - New crew portraits: every crew member's face in menus and popups is now the detailed portrait of the new 2.5D character who plays them (MV-722)
 - The defence squad now fights from inside the rear gunner room: a gunner, a loader and a spotter (the spotter joins as the Mobile Vault grows); nobody shoots from the roof or the rear wall any more and enemies can only hit the vehicle. Only one gunner room, and only at the rear of the vehicle (MV-727)

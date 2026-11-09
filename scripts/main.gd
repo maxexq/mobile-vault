@@ -16,6 +16,11 @@ const FIT_CAP := 2.0          # portrait zoom-in stops at this many times the UI
 const SHAKE_SCALE := 0.5      # screen shake strength x (tune fx.shake; 1.0 = before MV-175)
 const TAP_SLOP := 8.0
 const PINCH_STEP := 1.25      # finger distance ratio for one pinch zoom step
+const FREE_PINCH := 1.15      # MV-723 free camera: finger distance ratio per whole zoom step (tune view.free_pinch)
+const FREE_IN := 2.5          # free camera: closest view = this x the UI pixel scale, rounded down (tune view.free_in)
+const FREE_OUT := 1.0         # free camera: whole steps it may pull back past the wide view (tune view.free_out)
+const FREE_Y_DOWN := 16.0     # free camera: art px of ground under the road the view may show ...
+const FREE_Y_UP := 24.0       # ... and of sky above the roof
 const PORTRAIT_BASE := Vector2i(360, 640)
 const LANDSCAPE_BASE := Vector2i(560, 320)
 const SCALE_UP_AT := 0.6       # MV-266: this far past a whole scale, use the next one ...
@@ -59,7 +64,11 @@ var _zf := 1.0
 var _zoom_from := {}
 var _placing := ""
 var _shake := 0.0
-var zoom_mode := "auto"          # normal | wide | auto
+var zoom_mode := "auto"          # normal | wide | auto | free (MV-723 pinch/wheel with switch free_cam; never saved)
+var free_ws := 0.0               # MV-723: the whole-number world scale picked by free zoom
+var _pinch_mid := Vector2.ZERO   # two-finger midpoint seen last (free camera pans with it)
+var _free_pan_y := Vector2.ZERO  # free camera: pan_y range for this viewport (set by _fit_camera)
+var _mag_acc := 1.0              # trackpad magnify factor gathered towards one free zoom step
 var world_scale := 1.0           # physical px per art pixel used by the world (whole number)
 var view_k := 1.0                # world viewport px per UI/design px (S / world_scale)
 var pan_right := PAN_LIMIT       # how far right a swipe may move the camera (world px), set by _fit_camera
@@ -164,6 +173,7 @@ func _ready() -> void:
 	hud.title_screen.start_requested.connect(_on_start)
 	hud.layout_changed.connect(_fit_camera)
 	hud.zoom_pressed.connect(cycle_zoom)
+	hud.fit_pressed.connect(camera_auto_fit)
 	hud.xray_toggled.connect(func(on: bool): vehicle.set_xray(on))
 	hud.hull_alert.alerted.connect(func(st: int): shake([0.0, 1.5, 4.0, 5.5][st]))     # MV-250 (4+ also buzzes)
 	hud.tutorial_overlay.main = self
@@ -282,6 +292,10 @@ func target_ws() -> float:
 
 func _ws_for(mode: String) -> float:
 	var s := pixel_scale
+	if mode == "free":
+		if _closeup_slot < 0:
+			return clampf(free_ws, free_min_ws(), free_max_ws())
+		mode = "auto"           # a room close-up keeps its own framing; closing it returns to the free view
 	var wide := mode == "wide" or (mode == "auto" and _auto_wide())
 	if _closeup_slot >= 0:
 		wide = false
@@ -306,8 +320,13 @@ func zoom_ladder() -> Array:
 
 
 ## one pinch / wheel step: +1 closer, -1 farther; nothing (no toast) at either end. Spreading the fingers in
-## normal when auto looks the same still switches to auto, so the gestures can always get back to it
-func zoom_step(dir: int) -> void:
+## normal when auto looks the same still switches to auto, so the gestures can always get back to it.
+## MV-723 free_cam: every whole scale between free_min_ws() and free_max_ws() instead, around `focus` (UI px)
+func zoom_step(dir: int, focus := Vector2(-1.0, -1.0)) -> void:
+	if free_cam_on():
+		if _closeup_slot < 0:
+			free_zoom_to(world_scale + dir, focus)
+		return
 	var ladder := zoom_ladder()
 	var cur := _ws_for(zoom_mode)
 	var i := 0
@@ -320,6 +339,71 @@ func zoom_step(dir: int) -> void:
 	var j := clampi(i + dir, 0, ladder.size() - 1)
 	if j != i:
 		set_zoom_mode(ladder[j])
+
+
+# ------------------------------------------------------------------ free camera (MV-723)
+func free_cam_on() -> bool:
+	return Features.on("free_cam")
+
+
+## farthest free view: the wide one, then view.free_out more whole steps (never below 1 screen px per art px)
+func free_min_ws() -> float:
+	return maxf(1.0, _ws_for("wide") - roundf(Features.num("view.free_out", FREE_OUT)))
+
+
+## closest free view: view.free_in x the UI scale, and never short of what AUTO / normal already show
+func free_max_ws() -> float:
+	return maxf(maxf(_ws_for("auto"), _ws_for("normal")), floorf(pixel_scale * Features.num("view.free_in", FREE_IN)))
+
+
+## free zoom to a whole scale, keeping the world point under `focus` (UI px; default the middle of the free area)
+## where it is. Every level is still a whole number of screen px per art px. false = already there / at the end.
+func free_zoom_to(ws: float, focus := Vector2(-1.0, -1.0)) -> bool:
+	var to := clampf(floorf(ws), free_min_ws(), free_max_ws())
+	if is_equal_approx(to, world_scale) and zoom_mode == "free":
+		return false
+	if focus.x < 0.0:
+		focus = hud.world_rect().get_center()
+	var p := camera.position + focus * view_k - vp_size() * 0.5        # the world point under the focus now
+	zoom_mode = "free"
+	free_ws = to
+	_apply_world_scale()
+	_fit_camera()            # cam_home and the pan limits of the new viewport right away, not next frame
+	var cam := p - (focus * view_k - vp_size() * 0.5)
+	pan_x = cam.x - cam_home.x
+	pan_y = cam_home.y - cam.y
+	_clamp_pan()
+	_place_camera()
+	return true
+
+
+## the FIT button (MV-723): back to the AUTO framing (fills a portrait phone, pulls back for bosses and convoys),
+## pan centred again
+func camera_auto_fit() -> void:
+	pan_x = 0.0
+	pan_y = 0.0
+	_mag_acc = 1.0
+	set_zoom_mode("auto")
+	_fit_camera()
+
+
+## the view is not the automatic framing (free zoom, or panned away): the FIT button lights up
+func camera_moved() -> bool:
+	return zoom_mode == "free" or absf(pan_x) > 0.5 or absf(pan_y) > 0.5
+
+
+func _clamp_pan() -> void:
+	pan_x = clampf(pan_x, -PAN_LIMIT, pan_right)
+	if zoom_mode == "free":
+		pan_y = clampf(pan_y, _free_pan_y.x, _free_pan_y.y)
+	else:
+		pan_y = clampf(pan_y, 0.0, pan_y_max)
+
+
+func _place_camera() -> void:
+	if _closeup_slot < 0 and (_zoom_tw == null or not _zoom_tw.is_running()):
+		camera.zoom = Vector2.ONE
+		camera.position = cam_home + Vector2(round(pan_x), -round(pan_y))
 
 
 ## portrait fill (MV-148): the largest whole scale at which the main body (without trailers) fits the width the
@@ -364,6 +448,7 @@ func _apply_world_scale() -> void:
 		world_tex.size = Vector2(want) / view_k
 	elif world_tex.anchor_right != 1.0:
 		world_tex.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.fit_repeats(vp_size().x)
 	_fit_camera.call_deferred()
 
 
@@ -385,7 +470,7 @@ func set_zoom_mode(m: String) -> void:
 
 
 func cycle_zoom() -> void:
-	set_zoom_mode({"auto": "wide", "wide": "normal", "normal": "auto"}[zoom_mode])
+	set_zoom_mode({"auto": "wide", "wide": "normal", "normal": "auto", "free": "auto"}.get(zoom_mode, "auto"))
 
 
 ## the world viewport in art px (world_2x renders it larger, see _apply_world_scale)
@@ -421,11 +506,20 @@ func _fit_camera() -> void:
 	cam_home = Vector2(round(-left + vp.x * 0.5), round(Vehicle.ROAD_Y - road_screen + vp.y * 0.5))
 	var need := Vehicle.ROAD_Y - (vehicle.top_y() - 6.0)
 	pan_y_max = maxf(0.0, need - (free.size.y - 12.0))
-	pan_y = clampf(pan_y, 0.0, pan_y_max)
+	# MV-723 free camera: up / down limits from the content, not from the home framing (that moves with the scale):
+	# zoomed in, the free area may travel from the sky over the roof to the ground under the road; it never shows more
+	# than FREE_Y_DOWN of ground under the road (the backdrop ends there), so zoomed out the road stays near the bottom.
+	# The home framing (pan 0) is always allowed.
+	var h := free.size.y
+	var fa := vehicle.top_y() - 6.0 - FREE_Y_UP + h * 0.5               # free-area centre with its top at the sky edge
+	var fb := Vehicle.ROAD_Y + 12.0 + FREE_Y_DOWN - h * 0.5            # ... with its bottom at the ground edge
+	var off := free.position.y + h * 0.5 - vp.y * 0.5                    # free-area centre - camera centre
+	var p1 := cam_home.y + off - fa
+	var p2 := cam_home.y + off - fb
+	_free_pan_y = Vector2(minf(p2, 0.0), maxf(maxf(p1, p2), 0.0))
+	_clamp_pan()
 	if _closeup_slot < 0:
-		if _zoom_tw == null or not _zoom_tw.is_running():
-			camera.zoom = Vector2.ONE
-			camera.position = cam_home + Vector2(round(pan_x), -round(pan_y))
+		_place_camera()
 	else:
 		_apply_zoom(1.0)
 
@@ -435,7 +529,7 @@ func _process(delta: float) -> void:
 	if zoom_mode == "auto" and Engine.get_process_frames() % 20 == 0:
 		if not is_equal_approx(target_ws(), world_scale):
 			_apply_world_scale()
-	if _closeup_slot < 0 and not _pressing and _last_input_t > 3.0 and absf(pan_x) > 0.5:
+	if _closeup_slot < 0 and not _pressing and _last_input_t > 3.0 and absf(pan_x) > 0.5 and zoom_mode != "free":
 		pan_x = lerpf(pan_x, 0.0, clampf(delta * 1.5, 0.0, 1.0))
 		if _zoom_tw == null or not _zoom_tw.is_running():
 			camera.position.x = cam_home.x + round(pan_x)
@@ -447,6 +541,8 @@ func _process(delta: float) -> void:
 		camera.offset = Vector2(round(randf_range(-sw, sw)), round(randf_range(-sw, sw)))
 	else:
 		camera.offset = Vector2.ZERO
+	if hud and Engine.get_process_frames() % 10 == 0:
+		hud.sync_fit_btn(camera_moved())
 	if blur_rect.visible:
 		_update_blur_rect()
 	_update_blur_still(delta)
@@ -466,7 +562,7 @@ func target_fps() -> int:
 
 
 func is_calm() -> bool:
-	return Game.started and not _pressing and _touches.is_empty() and _last_input_t >= Features.num("perf.idle_after", IDLE_AFTER) 		and background.current_speed_px() < 0.5 and Combat.enemies.is_empty() and _shake <= 0.0 		and (_zoom_tw == null or not _zoom_tw.is_running()) and (_closeup_slot >= 0 or absf(pan_x) <= 0.5)
+	return Game.started and not _pressing and _touches.is_empty() and _last_input_t >= Features.num("perf.idle_after", IDLE_AFTER) 		and background.current_speed_px() < 0.5 and Combat.enemies.is_empty() and _shake <= 0.0 		and (_zoom_tw == null or not _zoom_tw.is_running()) and (_closeup_slot >= 0 or zoom_mode == "free" or absf(pan_x) <= 0.5)
 
 
 ## MV-604: once the close-up camera holds still, cache one frame of the live blur and show that instead (the
@@ -535,6 +631,8 @@ func _on_setting_changed(key: String) -> void:
 
 
 func _on_features_changed() -> void:
+	if zoom_mode == "free" and not free_cam_on():
+		zoom_mode = str(Settings.get_value("zoom"))      # MV-723 switch turned off: back to the saved mode
 	_on_resize()        # MV-266: responsive_scale may change the UI scale
 	if world_vp != null and (not is_equal_approx(target_ws(), world_scale) or world_render_k(world_scale) != render_k):
 		_apply_world_scale()
@@ -567,10 +665,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	# zoom: mouse wheel / trackpad magnify / two-finger pinch
 	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 		if _closeup_slot < 0:
-			zoom_step(1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1)
+			zoom_step(1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1, event.position)
 		return
 	if event is InputEventMagnifyGesture and _closeup_slot < 0:
-		zoom_step(1 if event.factor > 1.0 else -1)
+		if not free_cam_on():
+			zoom_step(1 if event.factor > 1.0 else -1)
+			return
+		# a trackpad sends many small factors: gather them into whole steps (MV-723)
+		_mag_acc *= event.factor
+		var st := Features.num("view.free_pinch", FREE_PINCH)
+		if _mag_acc >= st or _mag_acc <= 1.0 / st:
+			zoom_step(1 if _mag_acc > 1.0 else -1, event.position)
+			_mag_acc = 1.0
 		return
 	if event is InputEventScreenTouch and event.pressed:
 		_touches[event.index] = event.position
@@ -598,29 +704,45 @@ func _unhandled_input(event: InputEvent) -> void:
 			_dragged = true
 		if _dragged and _closeup_slot < 0:
 			# relative is in UI px; the camera moves in world px, so the road follows the finger at any zoom
-			pan_x = clampf(pan_x - event.relative.x * view_k, -PAN_LIMIT, pan_right)
-			camera.position.x = cam_home.x + round(pan_x)
+			pan_x -= event.relative.x * view_k
+			if free_cam_on():
+				pan_y += event.relative.y * view_k      # MV-723: drag down to look up (free view also below the road)
+			_clamp_pan()
+			_place_camera()
 		_last_input_t = 0.0
 
 
 ## two fingers spreading by PINCH_STEP switch to the normal view, closing by it to the wide one;
 ## once per step, and only when the mode really changes (no toast storm while the fingers keep moving)
+## MV-723 free_cam: finer steps (view.free_pinch) around the fingers' midpoint, and two fingers moving together pan
 func _pinch(pts: Array) -> void:
 	var d := (pts[0] as Vector2).distance_to(pts[1])
+	var mid: Vector2 = (pts[0] + pts[1]) * 0.5
 	if _pinch_d <= 0.0:
 		_pinch_d = d
+		_pinch_mid = mid
 		return
 	if _closeup_slot >= 0:
 		return
+	var free := free_cam_on()
+	if free:
+		var dm := mid - _pinch_mid
+		_pinch_mid = mid
+		if dm.length() > 0.0:
+			pan_x -= dm.x * view_k
+			pan_y += dm.y * view_k
+			_clamp_pan()
+			_place_camera()
+	var step := Features.num("view.free_pinch", FREE_PINCH) if free else PINCH_STEP
 	var dir := 0
-	if d > _pinch_d * PINCH_STEP:
+	if d > _pinch_d * step:
 		dir = 1
-	elif d * PINCH_STEP < _pinch_d:
+	elif d * step < _pinch_d:
 		dir = -1
 	if dir == 0:
 		return
 	_pinch_d = d
-	zoom_step(dir)
+	zoom_step(dir, mid)
 
 
 func _on_tap(screen_pos: Vector2) -> void:

@@ -674,6 +674,22 @@ func _run() -> void:
 		await _icons_v2_test()
 		_finish()
 		return
+	if "--only=free_cam" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		get_window().size = Vector2i(780, 1688)
+		await wait(1.5)
+		await _free_cam_test()
+		get_window().size = Vector2i(1280, 640)
+		await wait(1.2)
+		await _free_cam_test()
+		get_window().size = Vector2i(2560, 1440)
+		await wait(1.2)
+		await _free_cam_test()
+		get_window().size = Vector2i(2532, 1170)      # iPhone 13 landscape at 3x (Parames's black box in the sky)
+		await wait(1.2)
+		await _free_cam_test()
+		_finish()
+		return
 	if "--only=touch" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		# the full run reaches the touch test in this landscape window; at the default 405x720 the UI scale is 1,
@@ -709,6 +725,11 @@ func _run() -> void:
 	if "--only=checkpoint" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		_checkpoint_test()
+		_finish()
+		return
+	if "--only=engine_bay" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _engine_bay_test()
 		_finish()
 		return
 	if "--only=engine_rest" in OS.get_cmdline_user_args():
@@ -1574,6 +1595,16 @@ func _run() -> void:
 	await wait(1.5)
 	await shot("portrait")
 	await _portrait_fit_test()
+	await _free_cam_test()
+	get_window().size = Vector2i(2560, 1440)      # big desktop screen: the farthest free view is > 2000 art px wide
+	await wait(1.2)
+	await _free_cam_test()
+	get_window().size = Vector2i(2532, 1170)      # landscape phone at 3x: the widest free view of all
+	await wait(1.2)
+	await _free_cam_test()
+	get_window().size = Vector2i(780, 1688)
+	await wait(1.2)
+	main.set_zoom_mode("auto")
 	main.open_closeup(2)
 	await wait(1.0)
 	await shot("portrait_closeup")
@@ -4177,6 +4208,8 @@ func _cloud_account_test() -> void:
 ## MV-148: a portrait phone's AUTO camera fills the screen with the main body (whole-number scale, crisp pixels),
 ## trailers stay a swipe away, landscape and the switch keep the old framing. Window is 780x1688 (S = 2).
 func _portrait_fit_test() -> void:
+	Features.set_override("features", "free_cam", false)     # the named-mode ladder; free zoom has _free_cam_test
+	await wait(0.3)
 	var win := Vector2(DisplayServer.window_get_size())
 	var trailers := Game.trailers()
 	_check("view: portrait AUTO is not the wide convoy view (S %d, world %d, trailers %d)" % [main.pixel_scale, main.world_scale, trailers],
@@ -4221,6 +4254,155 @@ func _portrait_fit_test() -> void:
 	Features.set_override("features", "portrait_fit", null)
 	await wait(0.6)
 	_check("view: GOD readout names the scales", Dev.view_info().contains("UI x%d" % int(main.pixel_scale)))
+	Features.set_override("features", "free_cam", null)
+
+
+## MV-723 free camera: pinch / wheel walk every whole scale (still crisp pixels) around the finger / cursor, drag pans both
+## ways with no drift back, the FIT button returns to AUTO, a room close-up still works, switch off = the old ladder
+func _free_cam_test() -> void:
+	Features.set_override("features", "free_cam", true)
+	if main.hud.room_closeup.is_open:
+		main.hud.room_closeup.close()
+	await wait(0.6)
+	main.camera_auto_fit()
+	await wait(0.6)
+	var btn: Button = main.hud._fit_btn
+	_check("free cam: FIT button shows, not lit at AUTO", btn.visible and not main.camera_moved() and not main.hud._fit_lit)
+	var lo: float = main.free_min_ws()
+	var hi: float = main.free_max_ws()
+	_check("free cam: %d..%d is more levels than the old ladder %s" % [lo, hi, str(main.zoom_ladder())], hi - lo + 1.0 > main.zoom_ladder().size())
+	for i in 12:
+		main.zoom_step(-1)
+	await wait(0.3)
+	_check("free cam: zooming out stops at the farthest level (%d)" % main.world_scale, main.zoom_mode == "free" and is_equal_approx(main.world_scale, lo))
+	await shot("free_cam_far")
+	# the backdrop still covers the whole wide view: no clear-colour holes in the sky (the 64 px sky strip used to run
+	# out on the right on big screens, Parames 2026-11-08)
+	# ... also panned to either end of the road (Parames 2026-11-08: a black box on the right after dragging)
+	# A pixel test missed it (the hole shows the dark clear colour only after the CRT pass), so check the strips the way
+	# the GL renderer draws them: copies -(n/2)..(n - n/2) of repeat_size around the layer, against the visible rect.
+	var holes := 0
+	var gaps: Array[String] = []
+	for side in [0.0, main.pan_right, -main.PAN_LIMIT, main.pan_right * 0.37, -main.PAN_LIMIT * 0.61]:
+		main.pan_x = side
+		main._clamp_pan()
+		main._place_camera()
+		await wait(0.1)
+		var view: Rect2 = main.world_vp.get_canvas_transform().affine_inverse() * Rect2(Vector2.ZERO, main.vp_size())
+		for px in main.background.find_children("*", "Parallax2D", true, false):
+			var p2 := px as Parallax2D
+			if not p2.is_visible_in_tree() or p2.repeat_size.x <= 0.0:
+				continue
+			var w := p2.repeat_size.x
+			var left := p2.global_position.x - float(p2.repeat_times / 2) * w
+			var right := p2.global_position.x + float(p2.repeat_times - p2.repeat_times / 2 + 1) * w
+			if left > view.position.x + 0.5 or right < view.end.x - 0.5:
+				holes += 1
+				gaps.append("%s %d..%d vs %d..%d" % [p2.name, left, right, view.position.x, view.end.x])
+	_check("free cam: every backdrop strip covers the farthest view, centre and across the pan range (%d gaps, view %d art px wide) %s" % [holes, main.vp_size().x, ", ".join(gaps.slice(0, 3))], holes == 0)
+	if holes > 0:
+		await shot("free_cam_sky_holes")
+	main.pan_x = 0.0
+	main._place_camera()
+	await wait(0.15)
+	# wheel in at a point: the world point under the cursor stays where it is
+	var wr: Rect2 = main.hud.world_rect()
+	var f: Vector2 = main.world_to_screen(main.vehicle.slot_global_rect(2).get_center()).round()      # on a room
+	var p0: Vector2 = main.screen_to_world(f)
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel.pressed = true
+	wheel.position = f
+	main._unhandled_input(wheel)
+	await wait(0.3)
+	_check("free cam: wheel up = one whole step closer (%d)" % main.world_scale, is_equal_approx(main.world_scale, lo + 1.0))
+	var p1: Vector2 = main.screen_to_world(f)
+	# across it stays exactly; up/down too unless the view hit its limit (the whole vehicle fits: road kept low)
+	var y_lim: bool = is_equal_approx(main.pan_y, main._free_pan_y.x) or is_equal_approx(main.pan_y, main._free_pan_y.y)
+	_check("free cam: the point under the cursor stays (%s -> %s)" % [p0, p1], absf(p0.x - p1.x) <= 1.0 and (absf(p0.y - p1.y) <= 1.0 or y_lim))
+	# every step in is the next whole number, every art pixel exactly world_scale screen px
+	var steps_ok := true
+	var crisp := true
+	var last: float = main.world_scale
+	for i in 12:
+		main.zoom_step(1)
+		await get_tree().process_frame
+		var ws: float = main.world_scale
+		if ws != last and not is_equal_approx(ws, last + 1.0):
+			steps_ok = false
+		last = ws
+		if ws != floorf(ws) or main.world_tex.size.x * main.pixel_scale < main.vp_size().x * ws - 0.5 * main.pixel_scale \
+				and main.view_k < 1.0:
+			crisp = false
+	_check("free cam: one whole step at a time up to the closest (%d / %d)" % [last, hi], steps_ok and is_equal_approx(last, hi))
+	_check("free cam: every level is a whole number of screen px per art px", crisp)
+	await wait(0.3)
+	await shot("free_cam_close")
+	# drag: both axes, and it stays where it was left
+	main.pan_x = 0.0
+	main.pan_y = 0.0
+	var a := wr.get_center()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = a
+	main._unhandled_input(press)
+	var mv := InputEventMouseMotion.new()
+	mv.button_mask = MOUSE_BUTTON_MASK_LEFT
+	mv.position = a + Vector2(-40, 30)
+	mv.relative = Vector2(-40, 30)
+	main._unhandled_input(mv)
+	var rel := press.duplicate()
+	rel.pressed = false
+	main._unhandled_input(rel)
+	# the road follows the finger: 40 / 30 UI px = that x view_k world px (or up to the limit)
+	_check("free cam: a drag pans across and up (%.1f, %.1f, k %.2f)" % [main.pan_x, main.pan_y, main.view_k],
+		main.pan_x >= 40.0 * main.view_k - 1.0 and (main.pan_y >= 30.0 * main.view_k - 1.0 or is_equal_approx(main.pan_y, main._free_pan_y.y)))
+	var px: float = main.pan_x
+	main._last_input_t = 10.0
+	await wait(0.5)
+	_check("free cam: no drift back while free", is_equal_approx(main.pan_x, px))
+	await wait(0.3)
+	_check("free cam: FIT lights up when the view was moved by hand", main.hud._fit_lit)
+	# a room close-up keeps its own framing and comes back to the free view
+	main.open_closeup(2)
+	await wait(1.0)
+	_check("free cam: close-up opens at its own zoom", main._closeup_slot == 2 and main.camera.zoom.x >= 1.0)
+	main.hud.room_closeup.close()
+	await wait(0.8)
+	_check("free cam: closing it returns to the free view", main.zoom_mode == "free" and is_equal_approx(main.world_scale, hi))
+	# two fingers spreading: several whole steps in one gesture
+	for i in 12:
+		main.zoom_step(-1)
+	await wait(0.3)
+	var c: Vector2 = main.hud.world_rect().get_center()
+	await _finger(20, c - Vector2(10, 0), true)
+	await _finger(21, c + Vector2(10, 0), true)
+	await _fingers_drag([20, 21], [c - Vector2(10, 0), c + Vector2(10, 0)], [c - Vector2(70, 0), c + Vector2(70, 0)], 16)
+	await _finger(20, c - Vector2(70, 0), false)
+	await _finger(21, c + Vector2(70, 0), false)
+	_check("free cam: one pinch zooms several steps (%d -> %d)" % [lo, main.world_scale], main.world_scale >= lo + 2.0)
+	_check("free cam: no fingers left after the pinch", main._touches.is_empty())
+	# FIT: back to AUTO, centred
+	btn.pressed.emit()
+	await wait(0.5)
+	_check("free cam: FIT -> AUTO framing, centred (%s, pan %.0f/%.0f)" % [main.zoom_mode, main.pan_x, main.pan_y],
+		main.zoom_mode == "auto" and main.pan_x == 0.0 and main.pan_y == 0.0 and is_equal_approx(main.world_scale, main.target_ws()))
+	await wait(0.4)
+	_check("free cam: FIT goes dark again", not main.hud._fit_lit)
+	# GOD actions
+	Dev.cam_zoom(1)
+	_check("free cam: GOD zoom +1", main.zoom_mode == "free")
+	Dev.cam_fit()
+	_check("free cam: GOD FIT", main.zoom_mode == "auto")
+	# switch off: the free view falls back to the saved mode and the button hides
+	Dev.cam_zoom(-1)
+	Features.set_override("features", "free_cam", false)
+	await wait(0.5)
+	_check("free cam: switch off -> saved mode (%s), no FIT button" % main.zoom_mode, main.zoom_mode in ["auto", "wide", "normal"] and not btn.visible)
+	Features.set_override("features", "free_cam", null)
+	main.camera_auto_fit()
+	await wait(0.3)
 
 
 ## flush until the queue is empty (the full run has hundreds of trace entries by now); false if a batch fails
@@ -4622,8 +4804,43 @@ func _engine_bay_test() -> void:
 	e.heat = 40.0
 	e.auto_rest = true
 	EngineBay.set_mode("normal")
-	# stock-ish driving stays under the rest line
-	_check("engine: normal V8 cruise settles below auto-rest", EngineBay.settle_temp() < 110.0 or Haul.load_ratio() > 1.0 or EngineBay.ambient() >= 40.0)
+	# stock-ish driving stays under the rest line, with the usual two mechanics in the cab (the run's earlier state
+	# decided this before: an empty cab cools at 0.10/min and a V8 cruise settles ~120 C in the day, flaky on CI).
+	# MV-728: weather, biome + time of day and the load came from earlier tests too (storm 108 C, clear sky 123 C), so
+	# the check also pins a stock van: clear industrial noon, no trailers / mods / built rooms / scrap
+	var keep := {"weather": Game.s.weather, "tod": Game.s.tod, "biome": Game.s.biome, "tier": Game.s.get("tier", "van"),
+		"trailers": Game.s.get("trailers", 0), "mods": (Game.s.get("mods", {}) as Dictionary).duplicate(true), "scrap": Game.s.res.get("scrap", 0.0)}
+	var keep_types := []
+	for r in Game.s.rooms:
+		keep_types.append(r.type)
+	Game.s.weather = "clear"
+	Game.s.tod = 0.5
+	Game.s.biome = Data.BIOMES.map(func(b): return str(b.id)).find("industrial")
+	Game.s.tier = "van"
+	Game.s.trailers = 0
+	Game.s.mods = {}
+	Game.s.res.scrap = 0.0
+	for r in Game.s.rooms:
+		r.type = "empty"
+	var cab_keep := {}
+	for d in Game.s.dwellers:
+		if cab_keep.size() < mini(2, Data.CAB_WORKERS) and Game.squad_role(d) < 0 and not Game.is_away(d):
+			cab_keep[int(d.id)] = d.room
+			d.room = Data.CAB_SLOT
+	_check("engine: normal V8 cruise settles below auto-rest (%.1f C: ambient %.0f, heat in %.2f, cooling %.3f, load %.2f, cab %d)" % [EngineBay.settle_temp(), EngineBay.ambient(), EngineBay.heat_in(), EngineBay.cooling(), Haul.load_ratio(), EngineBay.crew().size()],
+		EngineBay.settle_temp() < 110.0 and Haul.load_ratio() <= 1.0)
+	for d in Game.s.dwellers:
+		if cab_keep.has(int(d.id)):
+			d.room = cab_keep[int(d.id)]
+	Game.s.weather = keep.weather
+	Game.s.tod = keep.tod
+	Game.s.biome = keep.biome
+	Game.s.tier = keep.tier
+	Game.s.trailers = keep.trailers
+	Game.s.mods = keep.mods
+	Game.s.res.scrap = keep.scrap
+	for k in Game.s.rooms.size():
+		Game.s.rooms[k].type = keep_types[k]
 	# --- jobs
 	Game.s.res.scrap = maxf(500.0, float(Game.s.res.scrap))
 	Game.s.res.fuel = maxf(50.0, float(Game.s.res.fuel))
@@ -5513,6 +5730,7 @@ func _touch_test() -> void:
 		main.hud.room_closeup.close()
 	await wait(0.6)
 	var zoom_was: String = main.zoom_mode
+	Features.set_override("features", "free_cam", false)     # one pinch = one named mode here; MV-723 has _free_cam_test
 	var toasts := []
 	var on_toast := func(msg: String, _kind: String): if msg.begins_with("มุมกล้อง"): toasts.append(msg)
 	Game.toast.connect(on_toast)
@@ -5552,6 +5770,7 @@ func _touch_test() -> void:
 	_check("touch: pinch out -> closer view again (%s)" % main.zoom_mode, main.world_scale >= main.pixel_scale and toasts.size() == 2)
 	_check("touch: no fingers left after the pinches", main._touches.is_empty())
 	Game.toast.disconnect(on_toast)
+	Features.set_override("features", "free_cam", null)
 	main.set_zoom_mode(zoom_was)
 	await wait(0.3)
 	# 4) lists: drag a finger that lands on a button -> the list scrolls, the button does not fire;

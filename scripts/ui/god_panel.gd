@@ -189,6 +189,9 @@ func _tab_main() -> void:
 			var sz: Vector2i = it[0]
 			sb.append(_b(it[1], func(): Dev.window_preset(sz), "gray", true))
 		_row(sb, "จำลองจอ")
+	_head("CAMERA", "กล้องอิสระ (MV-723) · %s" % ("เปิด" if Features.on("free_cam") else "ปิด (สวิตช์ free_cam)"))
+	_row([_b("ซูมเข้า +1", func(): Dev.cam_zoom(1)), _b("ซูมออก -1", func(): Dev.cam_zoom(-1)), _b("FIT", Dev.cam_fit, "yellow"),
+		_b("free_cam: " + ("เปิด" if Features.on("free_cam") else "ปิด"), func(): Dev.feature_set("free_cam", not Features.on("free_cam")), "green" if Features.on("free_cam") else "gray")], "กล้อง")
 	_head("SHAKE", "จอสั่น · แรง x%.2f (tune fx.shake) · %s" % [Features.num("fx.shake", 0.5), "เปิด" if bool(Settings.get_value("shake")) else "ปิดในตั้งค่า"])
 	_row([_b("สั่นเบา", func(): Dev.shake_test(2.0)), _b("สั่นแรงสุด", func(): Dev.shake_test(6.0), "red")], "ทดสอบ")
 	_note("รถสั่น x%.2f (tune fx.engine_shake) · %s" % [Features.num("fx.engine_shake", Vehicle.ENGINE_SHAKE), "เปิด" if bool(Settings.get_value("car_shake")) else "ปิดในตั้งค่า"])
