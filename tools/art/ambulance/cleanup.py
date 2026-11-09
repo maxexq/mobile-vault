@@ -252,6 +252,14 @@ def tail_hoods(im):
         for x in range(618, W):
             if px[x, y][3]:
                 px[x, y] = (0, 0, 0, 0); done += 1
+    # the brown lamp housing between the rear wall and the ladder (x 612-614) above / beside each red lens
+    for y in range(H):
+        if not any(-8 <= y - r <= 6 for r in reds):
+            continue
+        for x in range(612, 615):
+            q = px[x, y]
+            if q[3] and not (q[0] > 170 and q[1] < 80) and q[:3] not in ((56, 5, 5), (83, 3, 3)):
+                px[x, y] = (0, 0, 0, 0); done += 1
     return done
 
 

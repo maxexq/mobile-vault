@@ -32,5 +32,8 @@ metadata:
   repo tools/art/ambulance/roof/ (stills + strips + roof.json masks). cleanup.roof_parts runs LAST (after window frames);
   ambulance_anim template-matches each still -> anim.json clips; AmbulanceMotion clips replace the code flag wave + leaf shear.
   21:00 Parames APPROVED the roof set (saved designs/ambulance-fix/approved/roof/).
+  21:04 cleanup.pipe_knob (floating rain-cap knob) + tail_hoods (lamp hoods x>=618 near tail lamps; hitch kept, pup thread told).
+  21:10 staging merged Decker PR #216 -> AmbulanceMotion is keyed by dir + floors (DIR / DK_DIR); MV-741 code ported onto it.
+  Previews: designs/ambulance-fix/full_anim_f{1,2}.gif (Python mirror incl. nose.png).
 - 2026-11-09: downloading Godot 4.7.2 in the cloud was blocked by the auto-mode classifier this session (despite standing OK).
 Related: [[ambulance-v3-ingame]], [[vehicle-upgrade-icons]], [[vehicle-anim]], [[vehicle-2floor]].
