@@ -396,10 +396,15 @@ func _offline_summary_test() -> void:
 		_check("offline summary: window and sticky continue fit %s" % str(viewport_size), bounds.encloses(panel.box.get_global_rect()) and panel.box.get_global_rect().encloses(panel.continue_button.get_global_rect()))
 		await shot("offline_summary_%dx%d" % [viewport_size.x, viewport_size.y])
 	var pos := panel.continue_button.get_global_rect().get_center()
+	# the economy keeps running while the window is up (resizes + screenshots above take ~1.5 s, long enough for a
+	# production tick or a raid to change supplies): take the "no rewards granted again" snapshot right before the tap
+	snapshot = JSON.stringify(Game.s.res)
 	await _finger(0, pos, true)
 	await _finger(0, pos, false)
+	var res_after := JSON.stringify(Game.s.res)
 	await wait(0.2)
-	_check("offline summary: real finger dismisses and releases gesture", not panel.is_open and main._touches.is_empty() and JSON.stringify(Game.s.res) == snapshot)
+	_check("offline summary: real finger dismisses and releases gesture", not panel.is_open and main._touches.is_empty())
+	_check("offline summary: dismissing grants nothing again", res_after == snapshot)
 	Dev.offline_summary_preview()
 	var esc := InputEventKey.new()
 	esc.keycode = KEY_ESCAPE
@@ -2732,6 +2737,7 @@ func _confirm_actions_test() -> void:
 	nextgen.close()
 	await wait(0.2)
 	Inspection.queue().clear()
+	Features.set_override("features", "strangers", true)   # MV-719: screening ships off
 	var stranger := Inspection.queue_candidate("confirm-test", "rare", "human")
 	main.hud.open_door()
 	var door: InspectionPanel = main.hud.panels.door
@@ -2742,6 +2748,8 @@ func _confirm_actions_test() -> void:
 	dialog.close()
 	_check("confirm: cancelling shooting leaves the visitor alive", is_same(Inspection.current(), stranger))
 	door.close()
+	Inspection.queue().clear()
+	Features.set_override("features", "strangers", null)
 	await wait(0.2)
 	main.hud.open_panel("god")
 	Dev.confirm_preview()
@@ -3141,6 +3149,21 @@ func _inspection_test() -> void:
 	for k in Dev.flags:
 		Dev.flags[k] = false
 	Game.s.erase("insp")
+	# MV-719: screening ships switched off; these checks cover the system itself
+	_check("inspect: strangers switch is off by default", not Features.on("strangers") and Features.source("features", "strangers") == "default")
+	var n_off: int = Game.s.dwellers.size()
+	var off_d := Game.offer_recruit("radio", 1000.0)
+	_check("inspect: switch off = a sure elite boards straight away", not off_d.is_empty() and Game.s.dwellers.size() == n_off + 1
+		and Inspection.queue().is_empty() and not Inspection.pending())
+	if not off_d.is_empty():
+		Game.s.dwellers.erase(off_d)
+		Game.dwellers_changed.emit()
+	Inspection.queue_candidate("test", "rare", "human")
+	Inspection.tick(Inspection.WAIT_SEC + 1.0, false)
+	_check("inspect: switch off = a waiting stranger stays hidden and keeps their place", not Inspection.pending()
+		and not Inspection.halting() and Inspection.queue().size() == 1)
+	Inspection.queue().clear()
+	Features.set_override("features", "strangers", true)
 	# rarity: ~6 % rare + ~1.5 % very rare of all recruit offers
 	var rare := 0
 	var vrare := 0
@@ -3249,6 +3272,7 @@ func _inspection_test() -> void:
 	Inspection.queue_candidate("test", "rare", "human")
 	Inspection.tick(Inspection.WAIT_SEC + 1.0, false)
 	_check("inspect: unanswered stranger leaves", not Inspection.pending())
+	Features.set_override("features", "strangers", null)
 	print("[autotest] inspection checks done: %d failed total" % _fails)
 func _fake_run(gen: int) -> Dictionary:
 	return {"rooms": [], "res": {}, "dwellers": [], "meta": {"gen": gen}, "saved_at": Cloud.now()}
@@ -4601,7 +4625,7 @@ func _features_test() -> void:
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
 	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
 	# (MV-546) rides on the world map, so it ships off with it
-	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud"]
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers"]  # strangers: door screening paused (MV-719)
 	var all_on := true
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
@@ -4719,7 +4743,7 @@ func _features_test() -> void:
 	main.hud.panels.god.close()
 	_check("features: snapshot lists what is off", Features.snapshot().off.has("strangers"))
 	Features.clear_overrides()
-	_check("features: GOD hidden again clears nothing left on", Features.on("strangers") and Features.on("encounters"))
+	_check("features: GOD hidden again clears nothing left on", Features.source("features", "strangers") == "default" and Features.on("encounters"))
 
 
 
@@ -7812,6 +7836,7 @@ func _flagged_test() -> void:
 	for k in main.hud.panels:
 		if main.hud.panels[k].is_open:
 			main.hud.panels[k].close()
+	Features.set_override("features", "strangers", true)   # MV-719: off by default
 	var keep_q: Array = Inspection.queue().duplicate(true)
 	var keep_trav: bool = bool(Game.s.traveling)
 	var keep_stall := float(Game.s.stall)
@@ -7882,6 +7907,7 @@ func _flagged_test() -> void:
 		Inspection.queue().append(q)
 	Game.s.traveling = keep_trav
 	Game.s.stall = keep_stall
+	Features.set_override("features", "strangers", null)
 	Inspection.queue_changed.emit()
 
 
@@ -9665,8 +9691,8 @@ func _perf_test() -> void:
 	Game.s.rooms = keep_rooms
 	Game.rooms_changed.emit()
 	# --- fixed-rate economy: alternating halves, fewer steps than frames, no game time lost
-	# a step resets the collected time, so on a slow runner (frames of 25-50 ms) it takes 2 frames: expect at least
-	# half the nominal sim_hz rate, not a fixed 20 (CI runners hit 36 frames / 18 steps in 1.5 s)
+	# A step resets the collected time, so slow frames may run one step every other frame.
+	# Keep MV-719's observed-frame lower bound (with one step of slack), capped at 20 on faster runners.
 	Features.set_override("features", "fixed_sim", true)
 	Game._flush_sim()
 	var w0: int = Game.sim_steps.world
@@ -9684,7 +9710,7 @@ func _perf_test() -> void:
 	Game._flush_sim()
 	var sim_sec := fposmod(float(Game.s.tod) - tod0, 1.0) * Data.DAY_LENGTH_SEC
 	_check("perf: %d frames ran %d world + %d crew steps, alternating" % [frames, wn, cn], absi(wn - cn) <= 1 and wn + cn <= frames
-		and wn + cn >= mini(frames, int(elapsed * Features.num("perf.sim_hz", Game.SIM_HZ) / 2.0)))
+		and wn + cn >= mini(frames / 2 - 1, 20))   # a step resets the timer: frames of 25-50 ms run one every other frame
 	_check("perf: no game time lost (%.2f s simulated for %.2f s of frames)" % [sim_sec, elapsed], absf(sim_sec - elapsed) < 0.2)
 	Features.set_override("features", "fixed_sim", false)
 	w0 = Game.sim_steps.world

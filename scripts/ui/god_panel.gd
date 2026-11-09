@@ -443,7 +443,9 @@ func _tab_crew() -> void:
 			var kid: String = k
 			sb.append(_b(str(Inspection.KINDS[k].th), func(): Dev.stranger(kid, gid), "green" if k == "human" else "red"))
 		_row(sb, str(Inspection.GRADES[g].th))
-	_row([_b("ล้างคิว", func(): Dev.stranger_clear(), "red")])
+	_row([_b("ล้างคิว", func(): Dev.stranger_clear(), "red"),
+		_b("ตรวจคน: %s" % ("เปิด" if Features.on("strangers") else "ปิด"), func(): Dev.feature_set("strangers", not Features.on("strangers")), "green" if Features.on("strangers") else "gray")])
+	_note("MV-719: สวิตช์ strangers ปิดเป็นค่าเริ่มต้น = คนพิเศษเข้ารถเลยไม่ต้องตรวจ · ตอนนี้%s" % ("เปิดตรวจ" if Features.on("strangers") else "ปิดตรวจ"))
 	_note("โบกรถ (MV-244): สวิตช์ stop_for_strangers %s · %s · สร้างคนแปลกหน้าตอนรถวิ่ง = รถจอดและเปิดหน้าต่างตรวจเอง" % [
 		"เปิด" if Features.on("stop_for_strangers") else "ปิด", "รถจอดรับคนอยู่" if Inspection.halting() else "ไม่ได้จอดรับใคร"])
 	_head("CREW", "ทีละคน")

@@ -1311,6 +1311,8 @@ func stranger(kind: String = "", grade: String = "rare") -> void:
 		Game.toast.emit("คิวหน้าประตูเต็ม (%d คน) — ล้างคิวก่อน" % Inspection.MAX_QUEUE, "warn")
 		return
 	act("stranger %s %s" % [grade, kind])
+	if not Features.on("strangers"):
+		Game.toast.emit("สวิตช์ strangers ปิดอยู่ — คนแปลกหน้าเข้าคิวแต่ไม่โผล่ เปิดในแท็บฟีเจอร์ก่อน", "warn")
 
 
 func heal_all() -> void:

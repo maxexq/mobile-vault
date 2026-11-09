@@ -243,6 +243,8 @@ Parames 2026-11-08: no more shooting from the roof or the rear wall; the crew fi
 
 ## 4i. v4.4 — strangers at the door (inspection)
 
+> **Paused (MV-719, 2026-11-08):** switch `strangers` ships **off** (`config/features.json`). Elites from every recruit source join straight away; anyone already queued in a save stays hidden (timer frozen) and the vehicle does not park for them. Turn it back on with `"strangers": true` in `config/features.json` or the remote `web/features.json`, or GOD → STRANGERS "ตรวจคน".
+
 Inspired by the door checks in *No, I'm Not a Human*. Every way a refugee joins (radio, road event, SOS broadcast, expedition loot, boss captive, expedition encounters) goes through `Game.offer_recruit(source)`. Usually they board at once; **rarely (~6 % rare, ~1.5 % very rare)** the stranger is exceptional (top stat 7–9 / 9–11, +2/+4 levels, 2–3 good traits) and waits at the door for inspection instead.
 
 | Part | How it works |
