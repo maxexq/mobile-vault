@@ -13041,7 +13041,7 @@ func _road_train_test() -> void:
 	var wf := Dev.road_train_world(2)
 	await wait(0.4)
 	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
-	var world_ok := wf == 2 and v.v2 and v.v2_rt() and v.v2_shell.texture.resource_path.ends_with("road_train_v3/body_f2.png") \
+	var world_ok := wf == 2 and v.v2 and v.v2_rt() and (v.v2_shell.texture.resource_path.ends_with("road_train_v3/body_f2.png") or v.amb_on) \
 		and v.v2_cells.size() == Game.main_slots() and v.wheels.is_empty() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
 		and is_equal_approx(v.v2_extra(), Vehicle.V2_W_RT - Vehicle.MAIN_W)
 	for slot in Game.main_slots():
@@ -13073,6 +13073,61 @@ func _road_train_test() -> void:
 			and (tc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and v.cell_size(slot) == Vehicle.V2_CELL, str(slot))
 	_fold_flush()
 	_check("road train: on the road the trailers are the container shells on the road line, no gap, no old trailer wheels", tr_ok)
+	# MV-740: shell clean-up (no see-through pinholes, the cab glass back, the lead trailer's rear closed, a frame round
+	# every room window) and micro animations (tyres, landing legs, shock absorbers, lamps) on every unit
+	var rt_spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.RT_DIR + "shell.json"))
+	var clean_ok := true
+	var frame_ok := true
+	for kind in ["body", "trailer"]:
+		for d in [2, 3]:                                  # (the road train body has 2 or 3 decks, RT_DECKS)
+			var img: Image = (load(InteriorV3Panel.RT_DIR + "%s_f%d.png" % [kind, d]) as Texture2D).get_image()
+			img.decompress()
+			var dy: int = img.get_height() - 380
+			if kind == "body":
+				clean_ok = clean_ok and img.get_pixel(140, 245 + dy).a > 0.9 and img.get_pixel(693, 150).a > 0.9 \
+					and img.get_pixel(360, 368 + dy).a == 0.0
+			for y in range(100, img.get_height() - 1):      # 1 px slits between two opaque pixels (side to side)
+				for x in range(1, img.get_width() - 1):
+					if img.get_pixel(x, y).a == 0.0 and img.get_pixel(x - 1, y).a > 0.0 and img.get_pixel(x + 1, y).a > 0.0:
+						var in_win := false                         # (a tyre is cut out and drawn on its own)
+						for wx in AmbulanceMotion.spot(d, AmbulanceMotion.RT_DIR, "" if kind == "body" else "trailer").wheels:
+							in_win = in_win or Vector2(x + 0.5, y + 0.5).distance_to(Vector2(float(wx[0]), float(wx[1]))) <= 24.0
+						for cc in rt_spec[kind][str(d)].cells:
+							in_win = in_win or Rect2i(int(cc.x), int(cc.y), 144, 96).has_point(Vector2i(x, y))
+						clean_ok = clean_ok and in_win
+			for cc in rt_spec[kind][str(d)].cells:
+				var cx := int(cc.x)
+				var cy := int(cc.y)
+				frame_ok = frame_ok and img.get_pixel(cx + 72, cy - 1).v < 0.06 and img.get_pixel(cx - 1, cy + 48).v < 0.06 \
+					and img.get_pixel(cx + 72, cy).a > 0.3 and img.get_pixel(cx + 72, cy + 48).a < 0.1
+	_check("road train: no see-through pinholes, cab glass filled, rear ladder cage closed, no far-side leg shadow (2/3 decks + trailers)", clean_ok)
+	_check("road train: every room window has a frame (black edge outside, inner shadow lip, clear middle)", frame_ok)
+	var rt_anim := Dev.road_train_anim("drive")
+	await wait(0.8)
+	var rsp0 := v.amb.spin_frame()
+	await wait(0.4)
+	var units_ok := rt_anim and v.amb_on and v.amb.dir == AmbulanceMotion.RT_DIR and v.amb.tyres.size() == 6 \
+		and v.rt_units.size() == 2 and v.amb.shocks.size() == 3 and v.amb.legs.size() == 1
+	for m in v.rt_units:
+		units_ok = units_ok and m.unit == "trailer" and m.tyres.size() == 3 and m.legs.size() == 1 and m.shocks.size() == 2
+	_check("road train: GOD drives it with animated tyres on every unit (6 + 3 + 3), landing legs and shock absorbers", units_ok)
+	_check("road train: tyres roll, legs cranked up while driving, headlight on", rsp0 != v.amb.spin_frame()
+		and v.amb.legs_down() == 0.0 and v.rt_units[0].legs_down() == 0.0 and v.amb.lamp_alpha("head") > 0.2)
+	var squeeze := false
+	v.amb.bump(AmbulanceMotion.ROAD_PX)
+	for i in 30:
+		await get_tree().process_frame
+		for sh in v.amb.shocks:
+			squeeze = squeeze or (sh as AmbulanceMotion.Shock).length != (sh as AmbulanceMotion.Shock).length0
+	_check("road train: a bump moves the shock absorbers", squeeze)
+	await shot("road_train_anim_drive")
+	Dev.road_train_anim("brake")
+	await wait(3.6)
+	_check("road train: stopped -> the landing legs crank down onto the road", v.amb.legs_down() == 1.0 and v.rt_units[1].legs_down() == 1.0
+		and v.amb.legs[0].position.y == float(v.amb.legs[0].get_meta("y0")))
+	await shot("road_train_anim_parked")
+	Dev.road_train_anim("park")
+	v.debug_speed = -1.0
 	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")

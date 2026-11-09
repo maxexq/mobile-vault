@@ -1223,6 +1223,17 @@ func road_train_world(n: int) -> int:
 	return Game.floors()
 
 
+## MV-740: the road train on the road (its decks now, else 2) with its micro animations; mode as vehicle_anim
+## ("drive", "fast", "brake" = stop: the landing legs crank down, "park", "bump", "beacon")
+func road_train_anim(mode := "drive") -> bool:
+	feature_set("vehicle_anim", true)
+	road_train_world(Game.floors() if Game.tier() == "rig" else 2)
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or not v.amb_on or not v.v2_rt():
+		return false
+	return vehicle_anim(mode)
+
+
 ## MV-736: switch decker on and drive the Decker double-decker bus with n decks (2 or 3); on_road = world v2 too.
 ## Returns the decks it got.
 func decker_preview(n: int, on_road := true) -> int:

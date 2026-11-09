@@ -15,9 +15,17 @@ extends RefCounted
 ## MV-739: the same class drives the Decker bus (dir DK_DIR, anchors from tools/art/decker/anim.py): no flag, roof
 ## bar, lantern or mast there; instead the "9 DEPOT" destination sign (glyphs lit with the engine, an old display that
 ## flickers and drops a glyph now and then, brighter at night), the rear amber indicator and a headlight beam at night.
+## MV-740: and the road train (dir RT_DIR, anchors from tools/art/road_train/anim.py): one instance per unit (unit ""
+## = tractor + lead trailer, "trailer" = each container trailer), plus landing legs that crank up when driving and down
+## once fully stopped, shock absorbers between tandem tyres that stretch / squeeze with the body and the tyres, roof
+## clearance lamps, a searchlight and a blinking mast tip on the trailers.
 
 const DIR := "res://assets/vehicles/ambulance_v3/"
 const DK_DIR := "res://assets/vehicles/decker_v3/"
+const RT_DIR := "res://assets/vehicles/road_train_v3/"
+const LEG_LIFT := 6.0              # shell px the landing legs crank up while driving
+const LEG_DOWN_AFTER := 0.8        # s fully stopped before the legs crank down
+const LEG_CRANK := 1.2             # s for a full crank (up or down)
 const ROAD_PX := 90.0              # world px/s at speed factor 1 (= Background.ROAD_PX_PER_SEC)
 const BLINK := 0.36                # s per indicator half-cycle
 const SIGNAL_SEC := 2.9            # indicator time after pulling out / before stopping
@@ -29,11 +37,18 @@ static var _meta: Dictionary = {}         # dir -> anim.json
 static var _shells: Dictionary = {}        # dir + floors -> ImageTexture (tyres + flag cloth cut out)
 static var _flag_frames: Dictionary = {}   # dir + floors -> Array[ImageTexture]
 static var _spin: Dictionary = {}          # dir -> Array[AtlasTexture]
+static var _legs: Dictionary = {}          # dir + unit + floors -> Array[ImageTexture] (landing legs cut from the shell)
 static var _glow_tex: GradientTexture2D
 
 var vehicle: Node2D
-var dir := DIR                     # shell set: DIR (ambulance) or DK_DIR (Decker bus)
+var dir := DIR                     # shell set: DIR (ambulance) or DK_DIR (Decker bus) or RT_DIR (road train)
+var unit := ""                     # road train: "" = tractor + lead trailer, "trailer" = a container trailer
 var floors := 0
+var behind: Node2D                 # road train: in the v2 root under every shell (landing legs slide up behind them)
+var legs: Array[Sprite2D] = []
+var leg_down := 1.0                # 1 = feet on the road, 0 = cranked up
+var _stopped_t := 0.0
+var shocks: Array[Node2D] = []
 var under: Node2D                  # behind the body, scale V2_K
 var wells: Node2D
 var over: Node2D                   # in the v2 root, over the shell
@@ -67,27 +82,34 @@ static func meta(d := DIR) -> Dictionary:
 	return _meta.get(d, {})
 
 
-static func spot(n: int, d := DIR) -> Dictionary:
-	return (meta(d).get("floors", {}) as Dictionary).get(str(n), {})
+static func spot(n: int, d := DIR, u := "") -> Dictionary:
+	return (meta(d).get("trailer" if u == "trailer" else "floors", {}) as Dictionary).get(str(n), {})
 
 
-## the anchors are there and match the shell size (rerun tools/ambulance_anim.py / tools/art/decker/anim.py after a
-## shell rebuild)
-static func ok(n: int, d := DIR) -> bool:
-	var f := spot(n, d)
-	if f.is_empty() or not ResourceLoader.exists(d + "wheel_spin.png") or not ResourceLoader.exists(d + "shell_f%d.png" % n):
+## the shell texture of a unit: shell_f<n> (ambulance, Decker), body_f<n> / trailer_f<n> (road train)
+static func shell_file(n: int, d := DIR, u := "") -> String:
+	if d == RT_DIR:
+		return d + ("trailer_f%d.png" if u == "trailer" else "body_f%d.png") % n
+	return d + "shell_f%d.png" % n
+
+
+## the anchors are there and match the shell size (rerun tools/ambulance_anim.py / tools/art/decker/anim.py /
+## tools/art/road_train/anim.py after a shell rebuild)
+static func ok(n: int, d := DIR, u := "") -> bool:
+	var f := spot(n, d, u)
+	if f.is_empty() or not ResourceLoader.exists(d + "wheel_spin.png") or not ResourceLoader.exists(shell_file(n, d, u)):
 		return false
-	var tex: Texture2D = load(d + "shell_f%d.png" % n)
+	var tex: Texture2D = load(shell_file(n, d, u))
 	return tex.get_size() == Vector2(f.size[0], f.size[1])
 
 
-## the shell with the tyres and the flag cloth cut out (they are drawn by this class)
-static func cut_shell(n: int, d := DIR) -> Texture2D:
-	var key := d + str(n)
+## the shell with the tyres, the flag cloth and the landing legs cut out (they are drawn by this class)
+static func cut_shell(n: int, d := DIR, u := "") -> Texture2D:
+	var key := d + u + str(n)
 	if _shells.has(key):
 		return _shells[key]
-	var f := spot(n, d)
-	var img: Image = (load(d + "shell_f%d.png" % n) as Texture2D).get_image()
+	var f := spot(n, d, u)
+	var img: Image = (load(shell_file(n, d, u)) as Texture2D).get_image()
 	img.decompress()
 	var r: float = f.wheel_r
 	for w in f.wheels:
@@ -103,6 +125,11 @@ static func cut_shell(n: int, d := DIR) -> Texture2D:
 		var cloth := img.get_region(Rect2i(fr[0], fr[1], fr[2], fr[3]))
 		img.fill_rect(Rect2i(fr[0], fr[1], fr[2], fr[3]), Color(0, 0, 0, 0))
 		_flag_frames[key] = _wave_frames(cloth)
+	_legs[key] = []
+	for lr in f.get("legs", []):
+		var r2 := Rect2i(int(lr[0]), int(lr[1]), int(lr[2]), int(lr[3]))
+		_legs[key].append(ImageTexture.create_from_image(img.get_region(r2)))
+		img.fill_rect(r2, Color(0, 0, 0, 0))
 	_shells[key] = ImageTexture.create_from_image(img)
 	return _shells[key]
 
@@ -175,11 +202,12 @@ static func glow_tex() -> GradientTexture2D:
 
 ## (re)build for a shell of n floors whose top-left is `origin` (shell px). `under_parent` is behind the body,
 ## `over_parent` is the v2 root (over the shell).
-func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k: float, d := DIR) -> void:
+func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k: float, d := DIR, u := "") -> void:
 	clear()
 	dir = d
+	unit = u
 	floors = n
-	var f := spot(n, dir)
+	var f := spot(n, dir, unit)
 	under = Node2D.new()
 	under.name = "AmbulanceWheels"
 	under.scale = Vector2.ONE * k
@@ -210,7 +238,8 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 	over = Node2D.new()
 	over.name = "AmbulanceLights"
 	over_parent.add_child(over)
-	cut_shell(n, dir)
+	cut_shell(n, dir, unit)
+	var key := dir + unit + str(n)
 	flag = null
 	if f.has("flag"):
 		var fr: Array = f.flag
@@ -218,9 +247,42 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 		flag.centered = false
 		flag.position = origin + Vector2(fr[0], fr[1] - 2)
 		over.add_child(flag)
-		flag.texture = (_flag_frames[dir + str(n)] as Array)[0]
-	_glow("head", origin + _v(f.head), 9.0, Color(1.0, 0.86, 0.55))
-	_glow("marker", origin + _v(f.marker), 7.0, Color(1.0, 0.6, 0.15))
+		flag.texture = (_flag_frames[key] as Array)[0]
+	if not (_legs.get(key, []) as Array).is_empty():
+		behind = Node2D.new()
+		behind.name = "RoadTrainLegs"
+		over_parent.add_child(behind)
+		over_parent.move_child(behind, 0)
+		var li := 0
+		for lr in f.legs:
+			var leg := Sprite2D.new()
+			leg.centered = false
+			leg.texture = _legs[key][li]
+			leg.position = origin + Vector2(lr[0], lr[1])
+			leg.set_meta("y0", leg.position.y)
+			behind.add_child(leg)
+			legs.append(leg)
+			li += 1
+	for sh in f.get("shocks", []):
+		var sk := Shock.new()
+		sk.position = origin + Vector2(float(sh[0]), float(sh[1]))
+		sk.length0 = float(sh[2]) - float(sh[1])
+		sk.length = sk.length0
+		for j in f.wheels.size():
+			if absf(float(f.wheels[j][0]) - float(sh[0])) < 30.0:
+				sk.tyres.append(j)
+		over.add_child(sk)
+		shocks.append(sk)
+	if f.has("head"):
+		_glow("head", origin + _v(f.head), 9.0, Color(1.0, 0.86, 0.55))
+	if f.has("marker"):
+		_glow("marker", origin + _v(f.marker), 7.0, Color(1.0, 0.6, 0.15))
+	var ri := 0
+	for p in f.get("roof_lamps", []):
+		_glow("roof%d" % ri, origin + _v(p), 5.0, Color(1.0, 0.25, 0.12))
+		ri += 1
+	if f.has("search"):
+		_glow("lantern", origin + _v(f.search), 10.0, Color(1.0, 0.92, 0.65))
 	for id in ["bar_l", "bar_r"]:
 		if f.has(id):
 			_glow(id, origin + _v(f[id]), 11.0, Color(1.0, 0.12, 0.1))
@@ -228,8 +290,9 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 		_glow("lantern", origin + _v(f.lantern), 12.0, Color(1.0, 0.7, 0.3))
 	if f.has("mast"):
 		_glow("mast", origin + _v(f.mast), 5.0, Color(1.0, 0.25, 0.2))
-	if f.has("sign"):
-		_build_sign(f, origin)
+	if f.has("sign") or dir == RT_DIR and f.has("head"):
+		if f.has("sign"):
+			_build_sign(f, origin)
 		var beam := _glow("beam", origin + _v(f.head) + Vector2(-26, 2), 1.0, Color(1.0, 0.88, 0.6))
 		beam.scale = Vector2(56.0, 14.0) / 32.0       # a flat cone of light on the road ahead after dark
 	var i := 0
@@ -282,11 +345,14 @@ func _glow(id: String, at: Vector2, radius: float, col: Color) -> Sprite2D:
 
 
 func clear() -> void:
-	for n in [under, over]:
+	for n in [under, over, behind]:
 		if is_instance_valid(n):
 			n.queue_free()
 	under = null
 	over = null
+	behind = null
+	legs.clear()
+	shocks.clear()
 	tyres.clear()
 	sign_lit = null
 	sign_dead = null
@@ -298,7 +364,7 @@ func clear() -> void:
 
 
 func set_visible(on: bool) -> void:
-	for n in [under, over]:
+	for n in [under, over, behind]:
 		if is_instance_valid(n):
 			n.visible = on
 
@@ -310,13 +376,14 @@ func _lamp(id: String, a: float) -> void:
 		g.visible = a > 0.01
 
 
-## a road bump under the front axle now: the tyres hop over it one after another at the road speed
-func bump(speed_px: float) -> void:
+## a road bump under the front axle now: the tyres hop over it one after another at the road speed (`lead` = world px
+## from the convoy's front axle to this unit's first tyre: a trailer takes the bump later)
+func bump(speed_px: float, lead := 0.0) -> void:
 	if tyres.is_empty() or speed_px < 1.0:
 		return
 	var x0 := tyres[0].position.x
 	for i in tyres.size():
-		var d := (tyres[i].position.x - x0) * under.scale.x            # world px behind the front axle
+		var d := (tyres[i].position.x - x0) * under.scale.x + lead     # world px behind the front axle
 		hops[i] = d / speed_px
 		hop_left[i] = 0.0
 
@@ -328,7 +395,7 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_t += delta
 	var moving := speed_px > 1.0
 	# tyres roll: angle = distance / radius (in shell px: the strip is drawn at shell scale)
-	var r: float = spot(floors, dir).get("wheel_r", 22.5)
+	var r: float = spot(floors, dir, unit).get("wheel_r", 22.5)
 	spin_angle = fposmod(spin_angle + speed_px / under.scale.x / r * delta, TAU)
 	var frames := spin_frames(dir)
 	var n := frames.size()
@@ -381,7 +448,13 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_lamp("lantern", dark * 0.8 * _lantern)
 	_lamp("mast", 0.9 if fmod(_t, 1.6) < 0.22 else 0.0)
 	_lamp("beam", dark * 0.5 if engine_on else 0.0)
+	for i in 8:
+		if not glows.has("roof%d" % i):
+			break
+		_lamp("roof%d" % i, dark * 0.7 if engine_on or force_brake else 0.0)
 	_tick_sign(delta, engine_on, dark, hazard)
+	_tick_legs(delta, moving)
+	_tick_shocks(body_y)
 	# flag: a slow breeze parked, snapping in the headwind when driving
 	if flag == null:
 		return
@@ -389,7 +462,7 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	if _flag_t <= 0.0:
 		_flag_t = 1.0 / (4.0 + 10.0 * clampf(speed_px / ROAD_PX, 0.0, 1.2))
 		_flag_i = (_flag_i + 1) % FLAG_FRAMES
-		flag.texture = (_flag_frames[dir + str(floors)] as Array)[_flag_i]
+		flag.texture = (_flag_frames[dir + unit + str(floors)] as Array)[_flag_i]
 
 
 ## Decker destination sign: on with the engine (brighter after dark), an old display that flickers now and then and
@@ -436,3 +509,60 @@ func flag_frame() -> int:
 
 func spin_frame() -> int:
 	return int(spin_angle / TAU * float(spin_frames(dir).size())) % spin_frames(dir).size()
+
+
+## road train landing legs: crank up as soon as the rig rolls, crank back down once it has stood still a moment;
+## whole pixels only, a crank handle turns in steps
+func _tick_legs(delta: float, moving: bool) -> void:
+	if legs.is_empty():
+		return
+	_stopped_t = 0.0 if moving else _stopped_t + delta
+	var want := 1.0 if _stopped_t >= LEG_DOWN_AFTER else 0.0
+	leg_down = move_toward(leg_down, want, delta / LEG_CRANK)
+	for leg in legs:
+		leg.position.y = float(leg.get_meta("y0")) - roundf(LEG_LIFT * (1.0 - leg_down))
+
+
+## the shocks hang from the chassis (they ride with the body) and push on the axle beam (it stays on the road and hops
+## with the tyres either side), so they squeeze when a tyre hops and stretch when the body lifts
+func _tick_shocks(body_y: float) -> void:
+	if shocks.is_empty():
+		return
+	var k := under.scale.y
+	for i in shocks.size():
+		var s := shocks[i] as Shock
+		var hop := 0.0
+		for j in s.tyres:                         # the tyres either side of this shock
+			hop = maxf(hop, float(tyres[j].get_meta("y0")) - tyres[j].position.y)
+		var want := s.length0 - roundf(body_y / k) - hop
+		if not is_equal_approx(want, s.length):
+			s.length = want
+			s.queue_redraw()
+
+
+func legs_down() -> float:
+	return leg_down if not legs.is_empty() else -1.0
+
+
+## a shock absorber in side view: steel body hanging from the chassis eye, chrome rod down to the axle eye
+class Shock extends Node2D:
+	var length0 := 24.0
+	var length := 24.0
+	var tyres: Array[int] = []
+
+	func _draw() -> void:
+		var dark := Color("141214")
+		var steel := Color("58544a")
+		var hi := Color("8a8470")
+		var rod := Color("aaa48e")
+		var l := maxf(8.0, length)
+		var body := floorf(length0 * 0.5)
+		draw_rect(Rect2(-2, -1, 5, 3), dark)                       # top eye
+		draw_rect(Rect2(-1, 0, 3, 1), steel)
+		draw_rect(Rect2(-2, 2, 5, body), dark)                     # damper body
+		draw_rect(Rect2(-1, 2, 3, body - 1), steel)
+		draw_rect(Rect2(-1, 2, 1, body - 1), hi)
+		draw_rect(Rect2(-1, 2 + body, 3, l - body - 4), dark)       # rod
+		draw_rect(Rect2(0, 2 + body, 1, l - body - 4), rod)
+		draw_rect(Rect2(-2, l - 2, 5, 3), dark)                    # axle eye
+		draw_rect(Rect2(-1, l - 1, 3, 1), steel)
