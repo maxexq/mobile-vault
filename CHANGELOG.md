@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- The road train's trailers on the road are now its red 2D container trailers, coupled tight behind the lead trailer (no old drawbar and single front wheel) (MV-721)
 - Two vehicles only: Dr. Ren's ambulance and the new road train (prime mover + lead trailer, 2-3 decks, red container trailers); the armoured bus and train are gone, their saves drive the road train and keep their rooms (MV-721)
 - Free camera: pinch or scroll to zoom through every sharp pixel level around your fingers, drag to look around in any direction, and tap FIT to snap back to the automatic view (MV-723)
 - New art for all six expedition special encounters: bigger detailed scenes where the team's flashlight sweeps in from the left onto the find, with HELP letters, toxic fumes, falling dust and pebbles (MV-717)
