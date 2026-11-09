@@ -31,5 +31,6 @@ metadata:
   mast PL anims broke the wires -> code blink only. Sources designs/ambulance-fix/roof2/ (parts.py, gen.py, anim.py, compose.py);
   repo tools/art/ambulance/roof/ (stills + strips + roof.json masks). cleanup.roof_parts runs LAST (after window frames);
   ambulance_anim template-matches each still -> anim.json clips; AmbulanceMotion clips replace the code flag wave + leaf shear.
+  21:00 Parames APPROVED the roof set (saved designs/ambulance-fix/approved/roof/).
 - 2026-11-09: downloading Godot 4.7.2 in the cloud was blocked by the auto-mode classifier this session (despite standing OK).
 Related: [[ambulance-v3-ingame]], [[vehicle-upgrade-icons]], [[vehicle-anim]], [[vehicle-2floor]].
