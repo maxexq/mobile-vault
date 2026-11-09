@@ -61,6 +61,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [infirmary-redesign](infirmary-redesign.md): MV-600 infirmary v2 APPROVED: A ward L1-L3 + merged 2/3 with B surgery corner, PR #180 (stacked on #178)
 - [world-v2-scale-plan](world-v2-scale-plan.md): MV-602 move world to 144x96 v2 rooms: Layout v1/v2 behind world_v2, main body <=520 px, phase 1 van+kitchen slice pending
 - [empty-cell-v2](empty-cell-v2.md): MV-603 empty cell before building, v2 style, picked A bare shell + building materials (empty_A_mat.png), In Review
+- [pets-v3-ingame](pets-v3-ingame.md): MV-733 approved realistic pets (9 breeds, walk) in v3 room cells, switch pets_v3
 - [pets-preview](pets-preview.md): MV-601 3 dogs/3 cats/3 chickens, REALISTIC size approved + saved (designs/pets-preview/approved-realistic/), walk only so far
 - [pixellab-room-gen-rules](pixellab-room-gen-rules.md): MV-605 5 PixelLab merged-room rules (move furniture, no old walls, zones first, 3-slot real area, 6 px walkway + full bases), PR #183
 - [water-room-redesign](water-room-redesign.md): MV-607 water room = WATER PURIFIER (not bathroom), v2 option C picked, L1-L3 + merged 2/3 + anim + hotspots, In Review (no PR yet)

@@ -1434,13 +1434,52 @@ func kill(d: Dictionary) -> void:
 	Game.dwellers_changed.emit()
 
 
-func add_pet(kind: String) -> void:
+func add_pet(kind: String, breed: String = "") -> void:
 	var names := {"dog": "ข้าวตัง", "cat": "ส้มจี๊ด", "hen": "ไข่ดาว"}
 	if not Game.s.has("pets"):
 		Game.s["pets"] = []
-	Game.s.pets.append({"kind": kind, "name": names.get(kind, kind)})
-	act("pet " + kind)
+	var p := {"kind": kind, "name": names.get(kind, kind)}
+	# MV-733: each tap gives the next v3 breed of that kind that is not on board yet (dog: mutt, shepherd, terrier ...)
+	if breed == "":
+		var have := []
+		for q in Game.s.pets:
+			have.append(PetsV3.breed_of(q))
+		for b in PetsV3.breeds(kind):
+			if not have.has(b):
+				breed = b
+				break
+	if breed != "":
+		p["breed"] = breed
+		p["name"] = PET_NAMES.get(breed, p.name)
+	Game.s.pets.append(p)
+	act("pet " + kind + (" " + breed if breed != "" else ""))
 	Game.pets_changed.emit()
+
+
+## MV-733: names for the GOD pets, one per v3 breed
+const PET_NAMES := {"dog_mutt": "ข้าวตัง", "dog_shepherd": "ทองแดง", "dog_terrier": "ขนุน", "cat_ginger": "ส้มจี๊ด",
+	"cat_tabby": "ลายเมฆ", "cat_black": "ถ่านไฟ", "hen_brown": "ไข่ดาว", "hen_white": "ไข่ตุ๋น", "rooster": "จ่าเอก"}
+
+
+## MV-733: one pet of every v3 breed (9) on board, then show them all at once
+func pets_v3_all() -> void:
+	if not Game.s.has("pets"):
+		Game.s["pets"] = []
+	var have := []
+	for q in Game.s.pets:
+		have.append(PetsV3.breed_of(q))
+	for b in PetsV3.breeds():
+		if not have.has(b):
+			Game.s.pets.append({"kind": str(PetsV3.info(b).get("kind", "dog")), "name": PET_NAMES.get(b, b), "breed": b})
+	act("pets v3 all")
+	PetsV3.hop_all()
+	Game.pets_changed.emit()
+
+
+## MV-733: every pet picks a new room now
+func pets_v3_hop() -> void:
+	PetsV3.hop_all()
+	act("pets v3 hop")
 
 
 func clear_pets() -> void:

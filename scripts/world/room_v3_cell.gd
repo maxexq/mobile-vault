@@ -6,6 +6,7 @@ extends Node2D
 ## emergency lamp at (6,6): dull while powered, pulsing with a red glow in a power-out while the room goes dark.
 ## Empty cells / building sites use the 3 empty-cell stages (site progress picks the stage). A room type without a
 ## v3 set shows its old 64x52 art on the finished empty shell. Locked cells are a dark sealed panel.
+## MV-733: adopted pets (PetsV3, switch pets_v3) wander in whichever room PetsV3 put them in (PetV3Actor).
 
 const DARK := Color(0.32, 0.29, 0.42)
 const GROW_SEC := 20.0            # one growth stage of the grow room (visual only)
@@ -23,6 +24,8 @@ var old_art: Sprite2D
 var idle: Sprite2D
 var actors_root: Node2D
 var actors := {}                  # dweller id -> CrewV3Actor
+var pets := {}                    # MV-733: pet index -> PetV3Actor
+var _pet_t := 0.0
 var _top: Node2D
 var _idle_t := 0.0
 var _t := 0.0
@@ -92,6 +95,7 @@ func refresh() -> void:
 		idle.position = Vector2(float(ov.rect[0]), float(ov.rect[1]))
 		idle.visible = tex != null
 	_sync_actors(unlocked, site)
+	sync_pets()
 	_apply_dark()
 
 
@@ -119,6 +123,28 @@ func _sync_actors(unlocked: bool, site: bool) -> void:
 			actors.erase(id)
 
 
+## MV-733: keep one PetV3Actor per pet PetsV3 has in this room (arrivals fade in, leavers fade out)
+func sync_pets() -> void:
+	var want := {}
+	if kind == "v3" or kind == "fallback":
+		for p in PetsV3.pets_in(slot):
+			want[int(p.i)] = p
+	for i in pets.keys():
+		var a: PetV3Actor = pets[i]
+		if not want.has(i) or str(want[i].breed) != a.breed:
+			a.leave()
+			pets.erase(i)
+	for i in want:
+		if not pets.has(i):
+			var a := PetV3Actor.new()
+			actors_root.add_child(a)
+			a.setup(want[i], data)
+			a.set_dim(dark)
+			pets[i] = a
+		else:
+			(pets[i] as PetV3Actor).set_room(data)
+
+
 func _is_first_quarters() -> bool:
 	for i in Game.s.rooms.size():
 		if str(Game.s.rooms[i].type) == "quarters" and Game.is_slot_unlocked(i):
@@ -134,10 +160,17 @@ func _apply_dark() -> void:
 	idle.modulate.a = 0.0 if dark else 1.0
 	for a in actors.values():
 		(a as CrewV3Actor).set_dim(1.0 if dark else 0.0)
+	for a in pets.values():
+		(a as PetV3Actor).set_dim(dark)
 
 
 func _process(delta: float) -> void:
 	_t += delta
+	_pet_t -= delta
+	if _pet_t <= 0.0:                 # pets hop between rooms on their own clock (PetsV3.slot_of)
+		_pet_t = 0.5
+		if not pets.is_empty() or not (Game.s.get("pets", []) as Array).is_empty():
+			sync_pets()
 	var ov: Dictionary = data.get("idle", {})
 	if idle.visible and not ov.is_empty():
 		_idle_t += delta * float(ov.fps)
