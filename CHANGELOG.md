@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- New pets: 3 dogs, 3 cats and 3 chickens in their real size, trotting around the rooms of Dr. Ren's ambulance and hopping from room to room, preferring rooms with people (MV-733)
 - The road train's trailers on the road are now its red 2D container trailers, coupled tight behind the lead trailer (no old drawbar and single front wheel) (MV-721)
 - New art for all 21 road events: bigger detailed scenes in the colours of each road and its weather, and every event now plays its short story in the event window (the threat, what happens, how it ends); the result screen shows how it ended (MV-730)
 - Two vehicles only: Dr. Ren's ambulance and the new road train (prime mover + lead trailer, 2-3 decks, red container trailers); the armoured bus and train are gone, their saves drive the road train and keep their rooms (MV-721)

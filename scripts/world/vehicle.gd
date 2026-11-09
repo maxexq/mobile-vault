@@ -329,6 +329,7 @@ func _ready() -> void:
 			return
 		_sync_detail()
 		_sync_roof()
+		_sync_pets_view()
 		_refresh_mods())
 	add_to_group("vehicle_fx")
 	rebuild()
@@ -419,6 +420,7 @@ func _build_v2() -> void:
 		v2_shell.centered = false
 		v2_root.add_child(v2_shell)
 	v2_root.visible = v2
+	_sync_pets_view()
 	_roof_root.visible = not v2   # the ambulance carries its own roof garden, flag and mast
 	_mods_root.visible = not v2   # (old-van mod overlays: world v2 phase 2)
 	if cab_view:
@@ -759,6 +761,13 @@ func is_open_view() -> bool:
 
 
 # ------------------------------------------------------------------ pets roaming the vehicle
+## MV-733: on the world v2 body the pets live in the v3 room cells (PetsV3, switch pets_v3); the old 16-bit pets
+## only roam the old van view
+func _sync_pets_view() -> void:
+	if pets_root:
+		pets_root.visible = not (v2 and PetsV3.on())
+
+
 func _sync_pets() -> void:
 	if Game.s.is_empty():
 		return

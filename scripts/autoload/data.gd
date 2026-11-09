@@ -296,7 +296,7 @@ const EVENTS := {
 		"th": "หมาหลงข้างทาง", "en": "A STRAY DOG", "image": "dog", "danger": 0,
 		"desc": "หมาพันธุ์ผสมขนยุ่งวิ่งตามรถมาหลายกิโล ลิ้นห้อย หางกระดิก มันดูหิวแต่ไม่ดุร้ายเลย",
 		"choices": [
-			{"action": "adopt", "pet": {"kind": "dog", "name": "ข้าวตัง"}, "cost": {"food": 10}, "th": "รับเลี้ยง ตั้งชื่อว่า ข้าวตัง", "en": "ADOPT IT", "sub": "-10 อาหาร · ทุกคนมีความสุข +15 · มันจะวิ่งเล่นทั่วรถ", "color": "green", "lore": "khaotang"},
+			{"action": "adopt", "pet": {"kind": "dog", "name": "ข้าวตัง", "breed": "dog_mutt"}, "cost": {"food": 10}, "th": "รับเลี้ยง ตั้งชื่อว่า ข้าวตัง", "en": "ADOPT IT", "sub": "-10 อาหาร · ทุกคนมีความสุข +15 · มันจะวิ่งเล่นทั่วรถ", "color": "green", "lore": "khaotang"},
 			{"action": "gift", "cost": {"food": 5}, "th": "โยนเนื้อแห้งให้", "en": "TOSS SOME FOOD", "sub": "-5 อาหาร · ความสุข +", "color": "yellow",
 				"result": "มันงับเนื้อแห้งแล้วกระดิกหาง ก่อนวิ่งหายเข้าพุ่มไม้ข้างทาง ทุกคนยิ้มออก (+ความสุข)", "stamp": ["GOOD BOY", "ใจดีจัง"]},
 			{"action": "ignore", "th": "ปล่อยมันไป", "en": "LEAVE IT BE", "sub": "ความสุขลด", "color": "gray", "happy": -6},
@@ -306,7 +306,7 @@ const EVENTS := {
 		"th": "แมวในซากรถ", "en": "A CAT IN THE WRECK", "image": "cat", "danger": 0,
 		"desc": "เสียงร้องแหลม ๆ ดังจากใต้ซากรถเก๋ง แมวส้มผอมโซมองรถบ้านด้วยตาวาว มันคาบหนูกลายพันธุ์ตัวหนึ่งไว้ในปาก",
 		"choices": [
-			{"action": "adopt", "pet": {"kind": "cat", "name": "ส้มจี๊ด"}, "cost": {"food": 6}, "th": "อุ้มขึ้นรถ ตั้งชื่อ ส้มจี๊ด", "en": "TAKE IT ALONG", "sub": "-6 อาหาร · ความสุข + · จับหนู อาหารเสียน้อยลง", "color": "green"},
+			{"action": "adopt", "pet": {"kind": "cat", "name": "ส้มจี๊ด", "breed": "cat_ginger"}, "cost": {"food": 6}, "th": "อุ้มขึ้นรถ ตั้งชื่อ ส้มจี๊ด", "en": "TAKE IT ALONG", "sub": "-6 อาหาร · ความสุข + · จับหนู อาหารเสียน้อยลง", "color": "green"},
 			{"action": "ignore", "th": "ปล่อยไว้ตรงนั้น", "en": "LEAVE IT", "sub": "", "color": "gray"},
 		],
 	},
@@ -314,7 +314,7 @@ const EVENTS := {
 		"th": "ไก่สองหัว", "en": "TWO-HEADED HEN", "image": "hen", "danger": 0,
 		"desc": "ไก่ตัวหนึ่งมีสองหัว ยืนจิกเมล็ดพืชอยู่กลางถนนอย่างไม่สนโลก ข้าง ๆ มีไข่สามฟองที่ดูปกติดี",
 		"choices": [
-			{"action": "adopt", "pet": {"kind": "hen", "name": "ไข่ดาว"}, "cost": {"food": 4}, "th": "จับขึ้นรถ ตั้งชื่อ ไข่ดาว", "en": "ADOPT THE HEN", "sub": "-4 อาหาร · ออกไข่ อาหาร +0.6/นาที", "color": "green"},
+			{"action": "adopt", "pet": {"kind": "hen", "name": "ไข่ดาว", "breed": "hen_brown"}, "cost": {"food": 4}, "th": "จับขึ้นรถ ตั้งชื่อ ไข่ดาว", "en": "ADOPT THE HEN", "sub": "-4 อาหาร · ออกไข่ อาหาร +0.6/นาที", "color": "green"},
 			{"action": "shelter", "time": 5.0, "reward": {"food": 15}, "th": "เก็บแค่ไข่", "en": "JUST THE EGGS", "sub": "อาหาร +15", "color": "yellow",
 				"result": "เก็บไข่มาได้ ไก่สองหัวจ้องตามรถไปไม่วางตา", "stamp": ["EGGS", "ได้ไข่มา"]},
 		],
