@@ -1996,6 +1996,12 @@ func encounter_anywhere(id: String) -> void:
 	encounter(id)
 
 
+## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2); open an encounter to see it
+func enc_art_v2(on: bool) -> void:
+	feature_set("enc_art_v2", on)
+	act("encounter art v2 " + ("on" if on else "off"))
+
+
 # ---- strangers
 func stranger_clear() -> void:
 	Inspection.queue().clear()
