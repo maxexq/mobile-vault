@@ -13209,6 +13209,9 @@ func _decker_test() -> void:
 			var cy := int(cc.y)
 			frame_ok = frame_ok and img.get_pixel(cx + 72, cy - 1).v < 0.06 and img.get_pixel(cx - 1, cy + 48).v < 0.06 \
 				and img.get_pixel(cx + 72, cy).a > 0.3 and img.get_pixel(cx + 72, cy + 48).a < 0.1
+		for x in range(300, 480):             # roof rail band and the gap between the cables / chassis: see-through
+			clean_ok = clean_ok and img.get_pixel(x, 30).is_equal_approx(Color8(46, 44, 48)) == false
+		clean_ok = clean_ok and img.get_pixel(12, 268 + dy).get_luminance() > 0.8      # MV-739 code-drawn headlight lens
 	_check("decker: no plate over the headlight, no stray pixels under the chassis / around the tyres (2 and 3 decks)", clean_ok)
 	_check("decker: every room window has a frame (black edge outside, inner shadow lip, clear middle)", frame_ok)
 	# MV-739: micro animations on the road (switch vehicle_anim): tyres roll with the speed, lights, flickering sign
@@ -13223,6 +13226,12 @@ func _decker_test() -> void:
 		and v.amb.dir == AmbulanceMotion.DK_DIR and v.amb.tyres.size() == 3 and sign_seen)
 	_check("decker: tyres roll and the headlight / tail lamps are on while driving", sp0 != v.amb.spin_frame()
 		and v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1 and v.amb.flag == null)
+	var sw_seen := {}
+	for i in 12:
+		await wait(0.08)
+		sw_seen[v.amb.swing_frame()] = true
+	_check("decker: the loose cables under the floor swing while driving (%d frames seen)" % sw_seen.size(),
+		v.amb.swings.size() == 1 and sw_seen.size() >= 3)
 	await shot("decker_anim_drive")
 	Dev.decker_anim("brake")
 	await wait(1.6)

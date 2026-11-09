@@ -607,6 +607,10 @@ vehicle and the 64x52 rooms in the world stay as they are until the v3 vehicle s
   suspension hops, lurch on start / brake, headlight + a light beam on the road at night, tail / brake lamp, rear amber
   indicator, and the "9 DEPOT" sign lit with the engine (brighter after dark, flickers, drops a glyph now and then,
   blinks with the hazard when the engine is broken); exhaust puffs leave the tail pipe under the rear bumper.
+  Round 2: the PixelLab backdrop colour left in closed pockets (inside the roof rail, between the roof ladder rungs,
+  between the cables / tanks under the chassis) is see-through, the sliver behind the rear tyre is gone, the headlight
+  is redrawn in code (square housing, steel bezel, pale lens), and the loose cables under the floor swing (anim.json
+  `swing` rects: lazy when parked, more with speed, a kick at every road bump).
   GOD → รถบัส 2 ชั้น → ขับ+ไฟ / เบรก (`Dev.decker_anim`).
   Autotest: `--only=decker`.
 - **Bastion 42-B (MV-738, switch `bastion`, needs `decker`):** the ex-army 8x8 command truck (`bastion` id,
