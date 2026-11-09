@@ -2,7 +2,7 @@
 """Turn the Web export in web/ into the claude.ai playable artifact, so both show the same page.
 
 The artifact host caps single files at 15 MB, so index.wasm and index.pck are published gzipped
-as engine.wasm / pack.wasm, and a small fetch shim (put where the shell has <!--BOOT_SHIM-->)
+as engine.wasm / pack.wasm (split into pack.wasm, pack.2.wasm ... when the gzip is still over PART_MAX), and a small fetch shim (put where the shell has <!--BOOT_SHIM-->)
 answers Godot's own fetch("index.wasm"/"index.pck") with the decompressed stream. Everything
 else, boot card included, comes from web/index.html, i.e. tools/web_shell.html.
 
@@ -43,16 +43,45 @@ SHIM = """<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako_in
     }));
   }
 
+  async function part(file) {
+    const res = await realFetch(file, { credentials: "same-origin" });
+    if (!res.ok) throw new Error("โหลดไฟล์ " + file + " ไม่สำเร็จ (HTTP " + res.status + ")");
+    return res;
+  }
+
+  // the gzip split over several files (host size cap): one stream, the parts in order
+  function joined(files) {
+    let i = 0, reader = null;
+    return new ReadableStream({
+      async pull(ctrl) {
+        for (;;) {
+          if (!reader) {
+            if (i >= files.length) { ctrl.close(); return; }
+            reader = (await part(files[i++])).body.getReader();
+          }
+          const r = await reader.read();
+          if (r.done) { reader = null; continue; }
+          ctrl.enqueue(r.value);
+          return;
+        }
+      },
+    });
+  }
+
   async function inflate(key, entry) {
-    const res = await realFetch(entry.file, { credentials: "same-origin" });
-    if (!res.ok) throw new Error("โหลดไฟล์ " + entry.file + " ไม่สำเร็จ (HTTP " + res.status + ")");
+    const files = entry.parts || [entry.file];
     const headers = { "Content-Type": entry.type };
     if ("DecompressionStream" in window && "TransformStream" in window) {
-      const stream = counted(res.body, key).pipeThrough(new DecompressionStream("gzip"));
+      const body = files.length > 1 ? joined(files) : (await part(files[0])).body;
+      const stream = counted(body, key).pipeThrough(new DecompressionStream("gzip"));
       return new Response(stream, { status: 200, headers });
     }
     // older Safari: buffer + pako
-    const buf = new Uint8Array(await res.arrayBuffer());
+    const bufs = [];
+    for (const f of files) bufs.push(new Uint8Array(await (await part(f)).arrayBuffer()));
+    const buf = new Uint8Array(bufs.reduce(function (n, b) { return n + b.byteLength; }, 0));
+    let at = 0;
+    for (const b of bufs) { buf.set(b, at); at += b.byteLength; }
     loaded[key] = buf.byteLength; report();
     return new Response(window.pako.inflate(buf), { status: 200, headers });
   }
@@ -67,6 +96,7 @@ SHIM = """<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako_in
 })();
 </script>"""
 
+PART_MAX = 14 * 1024 * 1024     # bytes per published file (host cap 15 MB, sent base64-encoded)
 GZIPPED = {"index.wasm": ("engine.wasm", "application/wasm"), "index.pck": ("pack.wasm", "application/octet-stream")}
 COPIED = ["index.js", "logo.png", "boot/sky.png", "boot/sun.png", "boot/far.png", "boot/mid.png",
           "boot/near.png", "boot/road.png", "boot/bus.png", "boot/walker.png", "features.json", "index.audio.worklet.js", "index.audio.position.worklet.js"]
@@ -87,7 +117,15 @@ def main() -> None:
         with open(os.path.join(a.web, src), "rb") as f, open(out, "wb") as raw, \
                 gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=9, mtime=0) as g:
             shutil.copyfileobj(f, g)
-        shim_map[src] = {"file": dst, "type": mime, "gz": os.path.getsize(out)}
+        size = os.path.getsize(out)
+        shim_map[src] = {"file": dst, "type": mime, "gz": size}
+        if size > PART_MAX:
+            data = open(out, "rb").read()
+            stem, ext = os.path.splitext(dst)
+            parts = [dst] + [f"{stem}.{i + 1}{ext}" for i in range(1, (size + PART_MAX - 1) // PART_MAX)]
+            for i, name in enumerate(parts):
+                open(os.path.join(a.out, name), "wb").write(data[i * PART_MAX:(i + 1) * PART_MAX])
+            shim_map[src]["parts"] = parts
     for name in COPIED:
         if os.path.exists(os.path.join(a.web, name)):
             os.makedirs(os.path.dirname(os.path.join(a.out, name)), exist_ok=True)
@@ -98,7 +136,7 @@ def main() -> None:
                         '"ล็อกอินด้วย Gmail เพื่อเล่นต่อข้ามเครื่องได้ แต่ต้องเปิดเกมบนเว็บโดยตรง ไม่ใช่ในหน้านี้",')
     open(os.path.join(a.out, "index.html"), "w", encoding="utf-8").write(html)
     for k, v in shim_map.items():
-        print(f"{k} -> {v['file']} {v['gz'] / 1048576:.1f} MB gz")
+        print(f"{k} -> {', '.join(v.get('parts', [v['file']]))} {v['gz'] / 1048576:.1f} MB gz")
     print("wrote", os.path.join(a.out, "index.html"))
 
 

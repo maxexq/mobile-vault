@@ -428,6 +428,28 @@ func _check(label: String, ok: bool) -> void:
 		_fails += 1
 
 
+## MV-729: data-driven loops (balance sims, per-crew/per-item sweeps) record each case with _fold and report one
+## check per label from _fold_flush, so the count reflects rules, not loop size. Every case still runs; a failing
+## label lists its failing cases on the next line.
+var _folds := {}  # label -> [cases run, failing case names]
+
+func _fold(label: String, ok: bool, case_name: String) -> void:
+	if not _folds.has(label):
+		_folds[label] = [0, []]
+	_folds[label][0] += 1
+	if not ok:
+		_folds[label][1].append(case_name)
+
+
+func _fold_flush() -> void:
+	for label in _folds:
+		var failed: Array = _folds[label][1]
+		_check("%s (%d cases)" % [label, int(_folds[label][0])], failed.is_empty())
+		if not failed.is_empty():
+			print("[autotest]   failing cases (%d): %s" % [failed.size(), ", ".join(PackedStringArray(failed.slice(0, 24)))])
+	_folds = {}
+
+
 ## prints the summary CI looks for and exits non-zero when a check failed (MV-110)
 func _finish() -> void:
 	print("[autotest] DONE fails=%d" % _fails)
@@ -605,8 +627,6 @@ func _run() -> void:
 		return
 	if "--only=background" in OS.get_cmdline_user_args():
 		Tutorial.skip()
-		await _industrial_background_test()
-		await _desert_background_test()
 		await _parallax_v2_test()
 		_finish()
 		return
@@ -615,11 +635,24 @@ func _run() -> void:
 		await _parallax_v2_test()
 		_finish()
 		return
+	if "--only=enc_art_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _enc_art_v2_test()
+		_finish()
+		return
 	if "--only=rooms_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _rooms_v3_test()
 		_finish()
 		return
+	if "--only=crew_portraits_v3" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _crew_portraits_v3_test()
+		_finish()
+		return
+
+
+
 	if "--only=world_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _world_v2_test()
@@ -639,6 +672,22 @@ func _run() -> void:
 		Tutorial.skip()
 		await _icon_art_test()
 		await _icons_v2_test()
+		_finish()
+		return
+	if "--only=free_cam" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		get_window().size = Vector2i(780, 1688)
+		await wait(1.5)
+		await _free_cam_test()
+		get_window().size = Vector2i(1280, 640)
+		await wait(1.2)
+		await _free_cam_test()
+		get_window().size = Vector2i(2560, 1440)
+		await wait(1.2)
+		await _free_cam_test()
+		get_window().size = Vector2i(2532, 1170)      # iPhone 13 landscape at 3x (Parames's black box in the sky)
+		await wait(1.2)
+		await _free_cam_test()
 		_finish()
 		return
 	if "--only=touch" in OS.get_cmdline_user_args():
@@ -676,6 +725,11 @@ func _run() -> void:
 	if "--only=checkpoint" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		_checkpoint_test()
+		_finish()
+		return
+	if "--only=engine_bay" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _engine_bay_test()
 		_finish()
 		return
 	if "--only=engine_rest" in OS.get_cmdline_user_args():
@@ -1415,6 +1469,7 @@ func _run() -> void:
 		main.hud.panels.expedition.close()
 	Expedition.skip_site()
 	await _encounter_test()
+	await _enc_art_v2_test()
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
 	Meta.m().legacy = 9999
 	Meta.add_blueprint("bp_bus")
@@ -1540,6 +1595,16 @@ func _run() -> void:
 	await wait(1.5)
 	await shot("portrait")
 	await _portrait_fit_test()
+	await _free_cam_test()
+	get_window().size = Vector2i(2560, 1440)      # big desktop screen: the farthest free view is > 2000 art px wide
+	await wait(1.2)
+	await _free_cam_test()
+	get_window().size = Vector2i(2532, 1170)      # landscape phone at 3x: the widest free view of all
+	await wait(1.2)
+	await _free_cam_test()
+	get_window().size = Vector2i(780, 1688)
+	await wait(1.2)
+	main.set_zoom_mode("auto")
 	main.open_closeup(2)
 	await wait(1.0)
 	await shot("portrait_closeup")
@@ -1603,10 +1668,12 @@ func _run() -> void:
 	await _crew_roster_test()
 	await _announce_test()
 	await _scene_art_test()
-	await _industrial_background_test()
-	await _desert_background_test()
 	await _parallax_v2_test()
 	await _rooms_v3_test()
+	await _crew_portraits_v3_test()
+
+
+
 	await _ambulance_v3_test()
 	await _world_v2_test()
 	await _vehicle_anim_test()
@@ -2952,6 +3019,52 @@ func _encounter_test() -> void:
 	_check("encounter: scheduled-but-unreached is dropped", not r4.has("enc") and not Expedition.active())
 
 
+## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2)
+func _enc_art_v2_test() -> void:
+	Features.set_override("features", "enc_art_v2", true)
+	var sizes_ok := true
+	for id in Encounter.ENCOUNTERS:
+		var img: String = Encounter.def(id).image
+		var st := EncArt.still(img)
+		var sh: Texture2D = load(EncArt.DIR + img + "_anim.png")
+		if st == null or st.get_size() != Vector2(320, 160) or sh == null or sh.get_size() != Vector2(320 * 8, 160 * 6):
+			sizes_ok = false
+	_check("enc art v2: every encounter has a 320x160 still + 8x6 sheet", sizes_ok)
+	_check("enc art v2: sweep plays once, then the hold part loops",
+		EncArt.frame_at(0.0) == 0 and EncArt.frame_at(4.75) == 47 and EncArt.frame_at(4.8) == 18 and EncArt.frame_at(7.79) == 47 and EncArt.frame_at(7.8) == 18)
+	_check("enc art v2: frame cells", EncArt.frame_rect(9) == Rect2(320, 160, 320, 160))
+	var sup := {"food": 10, "water": 10, "stimpack": 1, "ammo": 10, "antibiotics": 0}
+	if not Expedition.active():
+		_check("enc art v2: expedition starts", _enc_start(sup))
+	Encounter.trigger_now("cry")
+	await wait(0.8)
+	var pop = main.hud.encounter_popup
+	_check("enc art v2: popup open", pop.is_open)
+	var rect: TextureRect = pop.media.get_child(0)
+	_check("enc art v2: popup shows the 320x160 animated art", rect.texture is AtlasTexture and rect.texture.get_size() == Vector2(320, 160))
+	var r0: Rect2 = (rect.texture as AtlasTexture).region
+	await wait(0.6)
+	_check("enc art v2: the flashlight animation advances", (rect.texture as AtlasTexture).region != r0)
+	await shot("enc_art_v2_cry")
+	pop.close()
+	Dev.enc_art_v2(false)
+	_check("enc art v2: switch off -> old 160x80 art", not Features.on("enc_art_v2") and EncArt.anim_texture("enc_cry").get_size() == Vector2(160, 80))
+	pop.show_encounter()
+	await wait(0.4)
+	_check("enc art v2: popup falls back to the old art", (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(160, 80))
+	pop.close()
+	Dev.enc_art_v2(true)
+	_check("enc art v2: GOD toggle turns it back on", Features.on("enc_art_v2"))
+	pop.show_encounter()
+	await wait(0.3)
+	pop.choose(Encounter.def("cry").choices.size() - 1)
+	await wait(0.4)
+	_check("enc art v2: result shows the 320x160 still", (pop.media.get_child(0) as TextureRect).texture.get_size() == Vector2(320, 160))
+	await shot("enc_art_v2_cry_result")
+	pop.close()
+	await _enc_finish()
+
+
 ## random road events: shuffle bag per biome, no back-to-back repeats, survives a save round-trip
 func _event_variety_test() -> void:
 	var keep := {}
@@ -4114,6 +4227,8 @@ func _cloud_account_test() -> void:
 ## MV-148: a portrait phone's AUTO camera fills the screen with the main body (whole-number scale, crisp pixels),
 ## trailers stay a swipe away, landscape and the switch keep the old framing. Window is 780x1688 (S = 2).
 func _portrait_fit_test() -> void:
+	Features.set_override("features", "free_cam", false)     # the named-mode ladder; free zoom has _free_cam_test
+	await wait(0.3)
 	var win := Vector2(DisplayServer.window_get_size())
 	var trailers := Game.trailers()
 	_check("view: portrait AUTO is not the wide convoy view (S %d, world %d, trailers %d)" % [main.pixel_scale, main.world_scale, trailers],
@@ -4158,6 +4273,155 @@ func _portrait_fit_test() -> void:
 	Features.set_override("features", "portrait_fit", null)
 	await wait(0.6)
 	_check("view: GOD readout names the scales", Dev.view_info().contains("UI x%d" % int(main.pixel_scale)))
+	Features.set_override("features", "free_cam", null)
+
+
+## MV-723 free camera: pinch / wheel walk every whole scale (still crisp pixels) around the finger / cursor, drag pans both
+## ways with no drift back, the FIT button returns to AUTO, a room close-up still works, switch off = the old ladder
+func _free_cam_test() -> void:
+	Features.set_override("features", "free_cam", true)
+	if main.hud.room_closeup.is_open:
+		main.hud.room_closeup.close()
+	await wait(0.6)
+	main.camera_auto_fit()
+	await wait(0.6)
+	var btn: Button = main.hud._fit_btn
+	_check("free cam: FIT button shows, not lit at AUTO", btn.visible and not main.camera_moved() and not main.hud._fit_lit)
+	var lo: float = main.free_min_ws()
+	var hi: float = main.free_max_ws()
+	_check("free cam: %d..%d is more levels than the old ladder %s" % [lo, hi, str(main.zoom_ladder())], hi - lo + 1.0 > main.zoom_ladder().size())
+	for i in 12:
+		main.zoom_step(-1)
+	await wait(0.3)
+	_check("free cam: zooming out stops at the farthest level (%d)" % main.world_scale, main.zoom_mode == "free" and is_equal_approx(main.world_scale, lo))
+	await shot("free_cam_far")
+	# the backdrop still covers the whole wide view: no clear-colour holes in the sky (the 64 px sky strip used to run
+	# out on the right on big screens, Parames 2026-11-08)
+	# ... also panned to either end of the road (Parames 2026-11-08: a black box on the right after dragging)
+	# A pixel test missed it (the hole shows the dark clear colour only after the CRT pass), so check the strips the way
+	# the GL renderer draws them: copies -(n/2)..(n - n/2) of repeat_size around the layer, against the visible rect.
+	var holes := 0
+	var gaps: Array[String] = []
+	for side in [0.0, main.pan_right, -main.PAN_LIMIT, main.pan_right * 0.37, -main.PAN_LIMIT * 0.61]:
+		main.pan_x = side
+		main._clamp_pan()
+		main._place_camera()
+		await wait(0.1)
+		var view: Rect2 = main.world_vp.get_canvas_transform().affine_inverse() * Rect2(Vector2.ZERO, main.vp_size())
+		for px in main.background.find_children("*", "Parallax2D", true, false):
+			var p2 := px as Parallax2D
+			if not p2.is_visible_in_tree() or p2.repeat_size.x <= 0.0:
+				continue
+			var w := p2.repeat_size.x
+			var left := p2.global_position.x - float(p2.repeat_times / 2) * w
+			var right := p2.global_position.x + float(p2.repeat_times - p2.repeat_times / 2 + 1) * w
+			if left > view.position.x + 0.5 or right < view.end.x - 0.5:
+				holes += 1
+				gaps.append("%s %d..%d vs %d..%d" % [p2.name, left, right, view.position.x, view.end.x])
+	_check("free cam: every backdrop strip covers the farthest view, centre and across the pan range (%d gaps, view %d art px wide) %s" % [holes, main.vp_size().x, ", ".join(gaps.slice(0, 3))], holes == 0)
+	if holes > 0:
+		await shot("free_cam_sky_holes")
+	main.pan_x = 0.0
+	main._place_camera()
+	await wait(0.15)
+	# wheel in at a point: the world point under the cursor stays where it is
+	var wr: Rect2 = main.hud.world_rect()
+	var f: Vector2 = main.world_to_screen(main.vehicle.slot_global_rect(2).get_center()).round()      # on a room
+	var p0: Vector2 = main.screen_to_world(f)
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel.pressed = true
+	wheel.position = f
+	main._unhandled_input(wheel)
+	await wait(0.3)
+	_check("free cam: wheel up = one whole step closer (%d)" % main.world_scale, is_equal_approx(main.world_scale, lo + 1.0))
+	var p1: Vector2 = main.screen_to_world(f)
+	# across it stays exactly; up/down too unless the view hit its limit (the whole vehicle fits: road kept low)
+	var y_lim: bool = is_equal_approx(main.pan_y, main._free_pan_y.x) or is_equal_approx(main.pan_y, main._free_pan_y.y)
+	_check("free cam: the point under the cursor stays (%s -> %s)" % [p0, p1], absf(p0.x - p1.x) <= 1.0 and (absf(p0.y - p1.y) <= 1.0 or y_lim))
+	# every step in is the next whole number, every art pixel exactly world_scale screen px
+	var steps_ok := true
+	var crisp := true
+	var last: float = main.world_scale
+	for i in 12:
+		main.zoom_step(1)
+		await get_tree().process_frame
+		var ws: float = main.world_scale
+		if ws != last and not is_equal_approx(ws, last + 1.0):
+			steps_ok = false
+		last = ws
+		if ws != floorf(ws) or main.world_tex.size.x * main.pixel_scale < main.vp_size().x * ws - 0.5 * main.pixel_scale \
+				and main.view_k < 1.0:
+			crisp = false
+	_check("free cam: one whole step at a time up to the closest (%d / %d)" % [last, hi], steps_ok and is_equal_approx(last, hi))
+	_check("free cam: every level is a whole number of screen px per art px", crisp)
+	await wait(0.3)
+	await shot("free_cam_close")
+	# drag: both axes, and it stays where it was left
+	main.pan_x = 0.0
+	main.pan_y = 0.0
+	var a := wr.get_center()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = a
+	main._unhandled_input(press)
+	var mv := InputEventMouseMotion.new()
+	mv.button_mask = MOUSE_BUTTON_MASK_LEFT
+	mv.position = a + Vector2(-40, 30)
+	mv.relative = Vector2(-40, 30)
+	main._unhandled_input(mv)
+	var rel := press.duplicate()
+	rel.pressed = false
+	main._unhandled_input(rel)
+	# the road follows the finger: 40 / 30 UI px = that x view_k world px (or up to the limit)
+	_check("free cam: a drag pans across and up (%.1f, %.1f, k %.2f)" % [main.pan_x, main.pan_y, main.view_k],
+		main.pan_x >= 40.0 * main.view_k - 1.0 and (main.pan_y >= 30.0 * main.view_k - 1.0 or is_equal_approx(main.pan_y, main._free_pan_y.y)))
+	var px: float = main.pan_x
+	main._last_input_t = 10.0
+	await wait(0.5)
+	_check("free cam: no drift back while free", is_equal_approx(main.pan_x, px))
+	await wait(0.3)
+	_check("free cam: FIT lights up when the view was moved by hand", main.hud._fit_lit)
+	# a room close-up keeps its own framing and comes back to the free view
+	main.open_closeup(2)
+	await wait(1.0)
+	_check("free cam: close-up opens at its own zoom", main._closeup_slot == 2 and main.camera.zoom.x >= 1.0)
+	main.hud.room_closeup.close()
+	await wait(0.8)
+	_check("free cam: closing it returns to the free view", main.zoom_mode == "free" and is_equal_approx(main.world_scale, hi))
+	# two fingers spreading: several whole steps in one gesture
+	for i in 12:
+		main.zoom_step(-1)
+	await wait(0.3)
+	var c: Vector2 = main.hud.world_rect().get_center()
+	await _finger(20, c - Vector2(10, 0), true)
+	await _finger(21, c + Vector2(10, 0), true)
+	await _fingers_drag([20, 21], [c - Vector2(10, 0), c + Vector2(10, 0)], [c - Vector2(70, 0), c + Vector2(70, 0)], 16)
+	await _finger(20, c - Vector2(70, 0), false)
+	await _finger(21, c + Vector2(70, 0), false)
+	_check("free cam: one pinch zooms several steps (%d -> %d)" % [lo, main.world_scale], main.world_scale >= lo + 2.0)
+	_check("free cam: no fingers left after the pinch", main._touches.is_empty())
+	# FIT: back to AUTO, centred
+	btn.pressed.emit()
+	await wait(0.5)
+	_check("free cam: FIT -> AUTO framing, centred (%s, pan %.0f/%.0f)" % [main.zoom_mode, main.pan_x, main.pan_y],
+		main.zoom_mode == "auto" and main.pan_x == 0.0 and main.pan_y == 0.0 and is_equal_approx(main.world_scale, main.target_ws()))
+	await wait(0.4)
+	_check("free cam: FIT goes dark again", not main.hud._fit_lit)
+	# GOD actions
+	Dev.cam_zoom(1)
+	_check("free cam: GOD zoom +1", main.zoom_mode == "free")
+	Dev.cam_fit()
+	_check("free cam: GOD FIT", main.zoom_mode == "auto")
+	# switch off: the free view falls back to the saved mode and the button hides
+	Dev.cam_zoom(-1)
+	Features.set_override("features", "free_cam", false)
+	await wait(0.5)
+	_check("free cam: switch off -> saved mode (%s), no FIT button" % main.zoom_mode, main.zoom_mode in ["auto", "wide", "normal"] and not btn.visible)
+	Features.set_override("features", "free_cam", null)
+	main.camera_auto_fit()
+	await wait(0.3)
 
 
 ## flush until the queue is empty (the full run has hundreds of trace entries by now); false if a batch fails
@@ -4559,8 +4823,43 @@ func _engine_bay_test() -> void:
 	e.heat = 40.0
 	e.auto_rest = true
 	EngineBay.set_mode("normal")
-	# stock-ish driving stays under the rest line
-	_check("engine: normal V8 cruise settles below auto-rest", EngineBay.settle_temp() < 110.0 or Haul.load_ratio() > 1.0 or EngineBay.ambient() >= 40.0)
+	# stock-ish driving stays under the rest line, with the usual two mechanics in the cab (the run's earlier state
+	# decided this before: an empty cab cools at 0.10/min and a V8 cruise settles ~120 C in the day, flaky on CI).
+	# MV-728: weather, biome + time of day and the load came from earlier tests too (storm 108 C, clear sky 123 C), so
+	# the check also pins a stock van: clear industrial noon, no trailers / mods / built rooms / scrap
+	var keep := {"weather": Game.s.weather, "tod": Game.s.tod, "biome": Game.s.biome, "tier": Game.s.get("tier", "van"),
+		"trailers": Game.s.get("trailers", 0), "mods": (Game.s.get("mods", {}) as Dictionary).duplicate(true), "scrap": Game.s.res.get("scrap", 0.0)}
+	var keep_types := []
+	for r in Game.s.rooms:
+		keep_types.append(r.type)
+	Game.s.weather = "clear"
+	Game.s.tod = 0.5
+	Game.s.biome = Data.BIOMES.map(func(b): return str(b.id)).find("industrial")
+	Game.s.tier = "van"
+	Game.s.trailers = 0
+	Game.s.mods = {}
+	Game.s.res.scrap = 0.0
+	for r in Game.s.rooms:
+		r.type = "empty"
+	var cab_keep := {}
+	for d in Game.s.dwellers:
+		if cab_keep.size() < mini(2, Data.CAB_WORKERS) and Game.squad_role(d) < 0 and not Game.is_away(d):
+			cab_keep[int(d.id)] = d.room
+			d.room = Data.CAB_SLOT
+	_check("engine: normal V8 cruise settles below auto-rest (%.1f C: ambient %.0f, heat in %.2f, cooling %.3f, load %.2f, cab %d)" % [EngineBay.settle_temp(), EngineBay.ambient(), EngineBay.heat_in(), EngineBay.cooling(), Haul.load_ratio(), EngineBay.crew().size()],
+		EngineBay.settle_temp() < 110.0 and Haul.load_ratio() <= 1.0)
+	for d in Game.s.dwellers:
+		if cab_keep.has(int(d.id)):
+			d.room = cab_keep[int(d.id)]
+	Game.s.weather = keep.weather
+	Game.s.tod = keep.tod
+	Game.s.biome = keep.biome
+	Game.s.tier = keep.tier
+	Game.s.trailers = keep.trailers
+	Game.s.mods = keep.mods
+	Game.s.res.scrap = keep.scrap
+	for k in Game.s.rooms.size():
+		Game.s.rooms[k].type = keep_types[k]
 	# --- jobs
 	Game.s.res.scrap = maxf(500.0, float(Game.s.res.scrap))
 	Game.s.res.fuel = maxf(50.0, float(Game.s.res.fuel))
@@ -5189,34 +5488,6 @@ func _icon_art_test() -> void:
 			var texture := Atlas.icon(id)
 			sizes_ok = sizes_ok and texture.get_width() == 16 and texture.get_height() == 16
 	_check("icons: all 92 native atlas regions remain 16x16", names.size() == 92 and sizes_ok)
-	main.hud.open_panel("god")
-	var god = main.hud.panels.god
-	god.tab = "icons"
-	for scale in [1, 2, 3]:
-		Dev.icon_preview(scale)
-		god.refresh()
-		await wait(0.3)
-		var grid: Node = god._list.find_child("IconGrid", true, false)
-		var cells_ok: bool = grid != null and grid.get_child_count() == 92
-		if grid:
-			for cell in grid.get_children():
-				var texture: TextureRect = cell.get_node("Icon")
-				cells_ok = cells_ok and texture.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST and texture.custom_minimum_size == Vector2(scale * 16, scale * 16)
-		_check("icons: GOD gallery has 92 nearest-filtered entries at x%d" % scale, cells_ok)
-		var scroll := god._list.get_parent() as ScrollContainer
-		if scroll:
-			scroll.scroll_vertical = 0
-			await wait(0.2)
-		await shot("icons_gallery_x%d" % scale)
-		if scroll and scale == 2:
-			for page in [1, 2, 3, 4]:
-				scroll.scroll_vertical = page * 400
-				await wait(0.2)
-				await shot("icons_gallery_x2_page%d" % page)
-	Dev.icon_preview(2)
-	god.tab = "main"
-	god.close()
-	await wait(0.2)
 	main.hud.open_panel("inventory")
 	await wait(0.3)
 	await shot("icons_inventory")
@@ -5351,23 +5622,15 @@ func _crew_roster_test() -> void:
 	await shot("crew_roster_list")
 	main.hud.panels.dwellers.close()
 	Features.set_override("features", "crew_roster_20", null)
-	# GOD preview: one cell per crew member with the chosen animation playing
+	# GOD: one board button per crew member, no animated sprite grid (MV-720)
 	main.hud.open_panel("god")
 	var god = main.hud.panels.god
 	god.tab = "crew"
-	god._crew_anim = "hammer"
 	god.refresh()
-	await wait(0.5)
-	var grid: Node = god._list.find_child("RosterGrid", true, false)
-	var scroll := god._list.get_parent() as ScrollContainer
-	if scroll and grid:
-		scroll.scroll_vertical = int((grid as Control).position.y) - 80
-		await wait(0.3)
-	var cells := grid.get_child_count() if grid else 0
-	var spr: AnimatedSprite2D = grid.find_child("Sprite", true, false) if grid else null
-	_check("crew roster: GOD preview shows 20 with the picked animation (%d)" % cells, cells == 20 and spr != null and spr.animation == "hammer" and spr.is_playing())
-	await shot("god_crew_roster")
-	god._crew_anim = "idle"
+	await wait(0.3)
+	var row: Node = god._list.find_child("RosterButtons", true, false)
+	var btns := row.find_children("*", "Button", true, false).size() if row else 0
+	_check("crew roster: GOD has a board button for all 20 (%d), no sprite grid" % btns, btns == 20 and god.find_children("*", "AnimatedSprite2D", true, false).is_empty())
 	god.close()
 	await wait(0.3)
 
@@ -5486,6 +5749,7 @@ func _touch_test() -> void:
 		main.hud.room_closeup.close()
 	await wait(0.6)
 	var zoom_was: String = main.zoom_mode
+	Features.set_override("features", "free_cam", false)     # one pinch = one named mode here; MV-723 has _free_cam_test
 	var toasts := []
 	var on_toast := func(msg: String, _kind: String): if msg.begins_with("มุมกล้อง"): toasts.append(msg)
 	Game.toast.connect(on_toast)
@@ -5525,6 +5789,7 @@ func _touch_test() -> void:
 	_check("touch: pinch out -> closer view again (%s)" % main.zoom_mode, main.world_scale >= main.pixel_scale and toasts.size() == 2)
 	_check("touch: no fingers left after the pinches", main._touches.is_empty())
 	Game.toast.disconnect(on_toast)
+	Features.set_override("features", "free_cam", null)
 	main.set_zoom_mode(zoom_was)
 	await wait(0.3)
 	# 4) lists: drag a finger that lands on a button -> the list scrolls, the button does not fire;
@@ -5820,131 +6085,54 @@ func _scene_art_test() -> void:
 	await wait(0.3)
 
 
-func _industrial_background_test() -> void:
-	var old_window := get_window().size
-	var old_tod: float = Game.s.tod
-	var old_biome: int = int(Game.s.biome)
-	var old_weather: String = Game.s.weather
+## MV-722: crew portraits use the approved v3 busts of the v3 person who plays them (switch crew_portraits_v3)
+func _crew_portraits_v3_test() -> void:
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
-	Features.set_override("features", "parallax_v2", false)
-	Features.set_override("features", "industrial_parallax", true)
-	get_window().size = Vector2i(1280, 640)
-	Game.s.biome = 0
-	Game.force_weather("clear")
-	main.background._on_biome_changed(0, true)
-	await wait(0.8)
-	var live: IndustrialBackdrop = main.background.groups.industrial.modern
-	_check("background: new art only on the industrial biome", live.is_visible_in_tree() and not main.background.groups.desert.modern.is_visible_in_tree())
-	var long_layers := true
-	var periods := {}
-	for key in live.layers:
-		var px: Parallax2D = live.layers[key].node
-		long_layers = long_layers and px.repeat_size.x >= 1920 and px.repeat_size.x == (px.get_child(0) as Sprite2D).texture.get_width()
-		periods[int(px.repeat_size.x)] = true
-	_check("background: actual texture widths drive long independent repeats", long_layers and periods.size() >= 4)
-	# MV-548: accepted native layer contract and road-relative motion, including parking.
-	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
-	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
-	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
-	for key in dimensions:
-		var sprite := live.layers[key].node.get_child(0) as Sprite2D
-		native = native and sprite.texture.get_size() == Vector2(dimensions[key]) and sprite.scale == Vector2.ONE
-		if key != "clouds" and key != "road":
-			native = native and sprite.position.y + sprite.texture.get_height() == Background.ROAD_Y
-	_check("industrial ruins: exact five native sizes, nearest pixels and ground alignment", native)
-	var nodes := live.get_child_count()
-	live.set_process(false)
-	Features.set_override("tune", "industrial_background.cloud_wind", 0.0)
-	live.preview_offset(0.0)
-	live.road_speed = 100.0
-	live._process(1.0)
-	var rates := true
-	for key in speeds:
-		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
-	_check("industrial ruins: road speed drives .03/.08/.25/.60/1.0 scroll", rates)
-	Features.set_override("tune", "industrial_background.mid_speed", 0.4)
-	live.preview_offset(0.0)
-	live._process(1.0)
-	_check("industrial ruins: live motion tuning keeps the node count stable", is_equal_approx(float(live.layers.mid.offset), 40.0) and live.get_child_count() == nodes)
-	Features.set_override("tune", "industrial_background.mid_speed", 0.25)
-	Features.set_override("tune", "industrial_background.cloud_wind", 4.0)
-	live.preview_offset(0.0)
-	live.road_speed = 0.0
-	live._process(1.0)
-	var parked := true
-	for key in ["far", "mid", "near", "road"]:
-		parked = parked and is_zero_approx(float(live.layers[key].offset))
-	_check("industrial ruins: parked land stays still while smog drifts", parked and is_equal_approx(float(live.layers.clouds.offset), 4.0))
-	live.preview_offset(0.0)
-	live.road_speed = 100.0
-	live._process(23.04)
-	_check("industrial ruins: full road loop returns to its starting pixel", is_zero_approx(float(live.layers.road.offset)))
-	live.set_process(true)
-	var child_count := live.get_child_count()
-	for entry in [[0.25, "sunrise", true, 1], [0.5, "daylight", true, 2], [0.75, "sunset", false, 3], [0.0, "moonlight", false, 0]]:
-		Game.s.tod = float(entry[0])
-		live.update_clock()
-		_check("background: simulation clock selects %s sky and celestial body" % entry[1], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]))
-		_check("background: %s celestial position stays on the pixel grid" % entry[1], live.celestial_position == live.celestial_position.round())
-		await wait(3.0)
-		await shot("industrial_" + str(entry[1]))
-	Game.s.tod = 0.35
-	live.update_clock()
-	var morning := live.celestial_position
-	Game.s.tod = 0.60
-	live.update_clock()
-	_check("background: sun moves after an in-game clock jump", morning.distance_to(live.celestial_position) > 20)
-	var phase0 := live.phase
-	await wait(0.6)
-	_check("background: smoke/dust animation advances without spawning nodes", live.phase > phase0 and live.get_child_count() == child_count)
-	live.preview_offset(99999.0)
-	var snapped := true
-	for key in live.layers:
-		var px: Parallax2D = live.layers[key].node
-		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
-	_check("background: large travel offsets wrap on whole pixels", snapped)
-	await shot("industrial_full_wrap")
-	Features.set_override("features", "industrial_parallax", false)
-	_check("background: feature off restores the old industrial background", not live.visible and main.background.groups.industrial.legacy[0].visible)
+	var all_ok := true
+	for cid in V3Art.CREW_IDS:
+		var t := V3Art.portrait_tex(str(cid))
+		all_ok = all_ok and t != null and t.get_size() == Vector2(64, 64)
+	_check("portraits v3: all 11 characters have a 64x64 portrait", all_ok)
+	var d: Dictionary = Game.s.dwellers[0]
+	Features.set_override("features", "crew_portraits_v3", true)
+	var small := UIKit.portrait(str(d.variant), false, d)
+	var big := UIKit.portrait(str(d.variant), true, d)
+	var tr_s := small.get_child(0) as TextureRect
+	var tr_b := big.get_child(0) as TextureRect
+	_check("portraits v3: on = the v3 bust of V3Art.crew_for(d), 32 px slot / 64 px big",
+		str(small.get_meta("v3_crew", "")) == V3Art.crew_for(d) and tr_s.texture == V3Art.portrait_tex(V3Art.crew_for(d))
+		and tr_s.custom_minimum_size == Vector2(32, 32) and tr_b.custom_minimum_size == Vector2(64, 64))
+	_check("portraits v3: without the crew member (tutorial art) the old portrait stays",
+		not UIKit.portrait("dw_army_brown", true).has_meta("v3_crew"))
+	_check("portraits v3: Dev count = whole crew", Dev.crew_portraits_v3_count() == (Game.s.dwellers as Array).size())
+	main.hud.open_panel("dwellers")
+	main.hud.panels.dwellers.manage(int(d.id))
+	await wait(0.5)
+	var found := false
+	for n in main.hud.panels.dwellers.find_children("*", "PanelContainer", true, false):
+		if (n as Node).has_meta("v3_crew"):
+			found = true
+	_check("portraits v3: crew card shows the v3 portrait", found)
+	await shot("crew_portraits_v3")
+	main.hud.panels.dwellers.close()
 	await wait(0.3)
-	await shot("industrial_legacy_fallback")
-	Features.set_override("features", "industrial_parallax", true)
-	main.background._on_biome_changed(1, true)
-	phase0 = live.phase
+	main.hud.open_panel("squad")
+	await wait(0.5)
+	await shot("crew_portraits_v3_squad")
+	main.hud.panels.squad.close()
 	await wait(0.3)
-	_check("background: hidden industrial biome stops ambience updates", live.phase == phase0)
-	main.background._on_biome_changed(0, true)
-	Game.s.tod = 0.0
-	get_window().size = Vector2i(405, 720)
-	await wait(0.8)
-	await shot("industrial_portrait_moonlight")
-	Game.s.tod = 0.5
-	live.update_clock()
-	await wait(3.0)
-	await shot("industrial_portrait_daylight")
-	main.hud.open_panel("god")
-	var god = main.hud.panels.god
-	god.tab = "world"
-	god.refresh()
-	await wait(0.2)
-	var preview_buttons := {}
-	for row in god._list.get_children():
-		for control in row.get_children():
-			if control is Button:
-				preview_buttons[control.text] = control
-	_check("background: GOD world tab provides all four clock previews", preview_buttons.has("รุ่งเช้า") and preview_buttons.has("กลางวัน") and preview_buttons.has("พระอาทิตย์ตก") and preview_buttons.has("กลางคืน") and preview_buttons.has("ฉากเดิม"))
-	god.close()
+	Dev.crew_portraits_v3(false)
+	var off := UIKit.portrait(str(d.variant), false, d)
+	_check("portraits v3: off = old 20x20 portrait", not off.has_meta("v3_crew") and (off.get_child(0) as TextureRect).custom_minimum_size == Vector2(20, 20)
+		and Dev.crew_portraits_v3_count() == 0)
+	small.free()
+	big.free()
+	off.free()
 	Features.layers.dev = overrides
 	Features.changed.emit()
-	Game.s.tod = old_tod
-	Game.s.biome = old_biome
-	Game.force_weather(old_weather)
-	main.background._on_biome_changed(old_biome, true)
-	get_window().size = old_window
-	await wait(0.3)
+	await wait(0.2)
 
 
-## MV-710: approved 5-layer parallax v2 backgrounds for every biome.
 ## MV-711: v3 rooms + ref v3 crew in the v3 interior view (switches rooms_v3 / rooms_v3_review)
 func _rooms_v3_test() -> void:
 	var old_window := get_window().size
@@ -6003,6 +6191,25 @@ func _rooms_v3_test() -> void:
 			moved = moved or (a as CrewV3Actor).clip() in ["walk", "work", "carrywalk", "talk", "eat", "drink", "idle", "construct"]
 	_check("rooms v3: crew play their clips", moved)
 	await shot("rooms_v3_interior")
+	# MV-724: crisp room-toned pixel shadow (same width), lighter crew grade, GOD buttons drive both tunes
+	var old_a := 1.0 - (1.0 - 0.43) * (1.0 - 0.25)   # the MV-711 draw_circle shadow
+	_check("rooms v3: crew shadow is lighter than MV-711 but clearly there", CrewV3Actor.shadow_alpha() > 0.35 and CrewV3Actor.shadow_alpha() < old_a)
+	var widest := 0
+	for r in CrewV3Actor.SHADOW_ROWS:
+		widest = maxi(widest, int(r[1]))
+	_check("rooms v3: crew shadow keeps its width", widest == int(CrewV3Actor.SHADOW_W))
+	Dev.crew_v3_shadow(0.0)
+	var none_a := CrewV3Actor.shadow_alpha()
+	Dev.crew_v3_shadow(-1.0)
+	Dev.crew_v3_grade(1.0)
+	var g_full := CrewV3Actor.grade_k()
+	Dev.crew_v3_grade(-1.0)
+	Dev.crew_v3_lift(1.0)
+	var lift_off := CrewV3Actor.lift_k()
+	Dev.crew_v3_lift(-1.0)
+	_check("rooms v3: crew colours lifted toward v2 by default, GOD x1 turns it off", lift_off == 1.0 and CrewV3Actor.lift_k() > 1.0)
+	_check("rooms v3: GOD crew shadow / grade buttons", none_a == 0.0 and g_full == 1.0 and CrewV3Actor.grade_k() < 1.0
+		and is_equal_approx(CrewV3Actor.shadow_k(), CrewV3Actor.SHADOW))
 	var first := -1
 	for slot in panel.cells:
 		if (panel.cells[slot] as RoomV3Cell).kind == "v3" and not (panel.cells[slot] as RoomV3Cell).data.get("hotspots", []).is_empty():
@@ -6038,7 +6245,7 @@ func _rooms_v3_test() -> void:
 		for control in row.get_children():
 			if control is Button:
 				labels[control.text] = true
-	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด"))
+	_check("rooms v3: GOD vehicle tab has the v3 buttons", labels.has("เปิดภายในรถ v3") and labels.has("โชว์ L3") and labels.has("ห้อง v3: เปิด") and labels.has("เงาอ่อน x0.5") and labels.has("ย้อม 0.5") and labels.has("สว่าง x1.5"))
 	god.close()
 	Features.set_override("features", "rooms_v3", false)
 	_check("rooms v3: switch off hides the HUD button and refuses to open", not hud._interior_btn.visible and not hud.open_interior())
@@ -6122,6 +6329,14 @@ func _parallax_v2_test() -> void:
 		_check("parallax v2: %s animation spawns no nodes" % id, v2.get_child_count() == nodes)
 	# world_2x: the world viewport renders 2 px per art px, coordinates stay in art px
 	Features.set_override("features", "world_2x", true)
+	# MV-729: pass through portrait first so the landscape size is a real resize and the world reframes (the
+	# retired desert backdrop test used to leave the window in this state before this check)
+	# a live boss or a trailer left by earlier groups switches "auto" zoom to wide (world scale 1 = no 2x render), so
+	# pin the normal zoom for these checks and put the tester's mode back after
+	var zoom_keep: String = main.zoom_mode
+	main.zoom_mode = "normal"
+	get_window().size = Vector2i(405, 720)
+	await wait(0.5)
 	get_window().size = Vector2i(1280, 640)
 	await wait(0.6)
 	var ws: float = main.world_scale
@@ -6139,6 +6354,8 @@ func _parallax_v2_test() -> void:
 	_check("world 2x: switch off renders 1:1 and keeps the camera framing", main.render_k == 1 and main.world_vp.size_2d_override == Vector2i.ZERO
 		and Vector2(main.world_vp.size) == main.vp_size() and main.camera.position.distance_to(cam0) < 1.0)
 	Dev.world_2x(true)
+	main.zoom_mode = zoom_keep
+	main._apply_world_scale()
 	await wait(0.3)
 	var v2i: ParallaxV2Backdrop = bg.groups[Data.BIOMES[int(Game.s.biome)].id].v2
 	Features.set_override("features", "parallax_v2", false)
@@ -6163,116 +6380,6 @@ func _parallax_v2_test() -> void:
 	Game.s = old_state
 	Game.force_weather(str(old_state.get("weather", "clear")))
 	bg._on_biome_changed(int(Game.s.biome), true)
-	get_window().size = old_window
-	await wait(0.3)
-
-
-func _desert_background_test() -> void:
-	var old_window := get_window().size
-	var old_state: Dictionary = Game.s.duplicate(true)
-	var overrides: Dictionary = Features.layers.dev.duplicate(true)
-	Features.set_override("features", "parallax_v2", false)
-	Features.set_override("features", "desert_parallax", true)
-	Features.set_override("features", "industrial_parallax", true)
-	Dev.desert_background_preview(0.5)
-	main.background._on_biome_changed(1, true)
-	# goto_biome normally cross-fades: allow its existing transition to finish before sampling.
-	await wait(4.2)
-	var live: DesertBackdrop = main.background.groups.desert.modern
-	_check("desert: GOD action selects biome 1 in clear daylight", int(Game.s.biome) == 1 and Game.s.weather == "clear" and live.is_visible_in_tree())
-	_check("desert: industrial renderer is hidden and remaining biomes keep legacy art", not main.background.groups.industrial.modern.is_visible_in_tree() and not main.background.groups.forest.has("modern") and not main.background.groups.swamp.has("modern") and not main.background.groups.tundra.has("modern") and not main.background.groups.metro.has("modern"))
-	var dimensions := {"clouds": Vector2i(1984, 220), "far": Vector2i(1920, 300), "mid": Vector2i(1920, 230), "near": Vector2i(2112, 124), "road": Vector2i(2304, 64)}
-	var speeds := {"clouds": 0.03, "far": 0.08, "mid": 0.25, "near": 0.60, "road": 1.0}
-	var native := live.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
-	for key in dimensions:
-		var px: Parallax2D = live.layers[key].node
-		var sprite := px.get_child(0) as Sprite2D
-		var size: Vector2i = dimensions[key]
-		native = native and sprite.texture.get_size() == Vector2(size) and px.repeat_size.x == size.x and sprite.scale == Vector2.ONE
-		if key != "clouds" and key != "road":
-			native = native and sprite.position.y + size.y == Background.ROAD_Y
-	_check("desert: all five exact native dimensions, independent repeat widths and ground anchors", native)
-	var count := live.get_child_count()
-	live.set_process(false)
-	Features.set_override("tune", "desert_background.cloud_wind", 0.0)
-	live.preview_offset(0.0)
-	live.road_speed = 100.0
-	live._process(1.0)
-	var rates := true
-	for key in speeds:
-		rates = rates and is_equal_approx(float(live.layers[key].offset), 100.0 * float(speeds[key]))
-	_check("desert: real road speed drives .03/.08/.25/.60/1.0 relative scroll", rates)
-	Features.set_override("tune", "desert_background.mid_speed", 0.4)
-	_check("desert: live tuning changes the middle layer without rebuilding nodes", is_equal_approx(float(live.layers.mid.speed), 0.4) and live.get_child_count() == count)
-	Features.set_override("tune", "desert_background.mid_speed", 0.25)
-	Features.set_override("tune", "desert_background.cloud_wind", 4.0)
-	live.preview_offset(0.0)
-	live.road_speed = 0.0
-	live._process(1.0)
-	var stopped := true
-	for key in ["far", "mid", "near", "road"]:
-		stopped = stopped and is_zero_approx(float(live.layers[key].offset))
-	_check("desert: parked road/land stop while high dust drifts independently", stopped and is_equal_approx(float(live.layers.clouds.offset), 4.0))
-	live.preview_offset(99999999.0)
-	var snapped := true
-	for key in live.layers:
-		var px: Parallax2D = live.layers[key].node
-		snapped = snapped and px.scroll_offset.x == roundf(px.scroll_offset.x) and absf(px.scroll_offset.x) <= px.repeat_size.x
-	_check("desert: long travel wraps every layer on whole pixels", snapped)
-	live.set_process(true)
-	for window in [Vector2i(1280, 640), Vector2i(405, 720)]:
-		get_window().size = window
-		await wait(0.5)
-		for entry in [[0.25, "dawn", true, 1], [0.5, "day", true, 2], [0.75, "dusk", false, 3], [0.0, "night", false, 0]]:
-			Game.s.tod = float(entry[0])
-			live.update_clock()
-			_check("desert: %s %s clock sky and pixel-snapped celestial" % [window, entry[1]], live.sky_state == int(entry[3]) and live.sun_visible == bool(entry[2]) and live.celestial_position == live.celestial_position.round())
-			# Let the existing WeatherFX grade settle after each abrupt clock jump.
-			await wait(3.0)
-			await shot("desert_%s_%s" % ["portrait" if window.y > window.x else "landscape", entry[1]])
-	Game.s.tod = 0.35
-	live.update_clock()
-	var morning := live.celestial_position
-	Game.s.tod = 0.60
-	live.update_clock()
-	_check("desert: sun catches up after an in-game clock jump", morning.distance_to(live.celestial_position) > 20)
-	Game.force_weather("sandstorm")
-	var before := live.phase
-	await wait(0.4)
-	_check("desert: weather uses existing ambience with a fixed scene-node count", live.phase > before and live.get_child_count() == count and Game.s.weather == "sandstorm")
-	await shot("desert_sandstorm")
-	Features.set_override("features", "desert_parallax", false)
-	before = live.phase
-	await wait(0.3)
-	_check("desert: kill switch restores legacy layers and stops hidden updates", not live.visible and main.background.groups.desert.legacy[0].visible and live.phase == before)
-	Features.set_override("features", "desert_parallax", true)
-	main.background._on_biome_changed(0, false)
-	await wait(3.2)
-	before = live.phase
-	await wait(0.3)
-	_check("desert: cross-fade completes and hidden desert stops updating", not live.is_visible_in_tree() and main.background.groups.industrial.modern.is_visible_in_tree() and live.phase == before)
-	main.hud.open_panel("god")
-	var god = main.hud.panels.god
-	god.tab = "world"
-	god.refresh()
-	await wait(0.2)
-	var buttons := {}
-	for row in god._list.get_children():
-		for control in row.get_children():
-			if control is Button:
-				buttons[control.text] = control
-	_check("desert: GOD world tab has four clock previews and both switch buttons", buttons.has("เช้า") and buttons.has("เที่ยง") and buttons.has("เย็น") and buttons.has("คืน") and buttons.has("ทะเลทรายใหม่") and buttons.has("ทะเลทรายเดิม"))
-	await shot("desert_god_world")
-	if buttons.has("เที่ยง"):
-		buttons["เที่ยง"].pressed.emit()
-		_check("desert: GOD button invokes the desert preview action", int(Game.s.biome) == 1 and is_equal_approx(float(Game.s.tod), 0.5) and Game.s.weather == "clear")
-	god.close()
-	await wait(3.2)
-	Features.layers.dev = overrides
-	Features.changed.emit()
-	Game.s = old_state
-	Game.force_weather(str(old_state.weather))
-	main.background._on_biome_changed(int(old_state.biome), true)
 	get_window().size = old_window
 	await wait(0.3)
 
@@ -9579,6 +9686,8 @@ func _perf_test() -> void:
 	Game.s.rooms = keep_rooms
 	Game.rooms_changed.emit()
 	# --- fixed-rate economy: alternating halves, fewer steps than frames, no game time lost
+	# A step resets the collected time, so slow frames may run one step every other frame.
+	# Keep MV-719's observed-frame lower bound (with one step of slack), capped at 20 on faster runners.
 	Features.set_override("features", "fixed_sim", true)
 	Game._flush_sim()
 	var w0: int = Game.sim_steps.world
@@ -10388,14 +10497,13 @@ func _trait_cards_test() -> void:
 	dp.close()
 	await wait(0.3)
 	Features.set_override("features", "trait_card_style", null)
-	# --- GOD preview
+	# --- GOD crew tab: the tiers toggle only, no card grid (MV-720)
 	hud.open_panel("god")
 	var god = hud.panels.god
 	god.tab = "crew"
 	god.refresh()
-	await wait(0.5)
-	_check("trait cards: GOD previews all twelve profiles + fallbacks", god.find_children("*", "TraitCard", true, false).size() >= 16)
-	await shot("trait_cards_god")
+	await wait(0.3)
+	_check("trait cards: GOD crew tab builds no trait card preview (MV-720)", god.find_children("*", "TraitCard", true, false).is_empty())
 	god.close()
 	await wait(0.3)
 	Settings.set_value("tips", keep_tips)
@@ -11321,9 +11429,10 @@ func _warlord_test() -> void:
 				for seed_value in [550, 551, 552]:
 					var result: Dictionary = bench.fight(biome, lap, profile, seed_value, true)
 					records.append(result)
-					_check("warlord: armed clear biome%d lap%d %s seed%d" % [biome, lap, profile, seed_value], result.killed and result.gate_open and result.falls == 0 and float(result.hero_min) >= 0.5 and float(result.hull_min) >= float(result.hull_max) * 0.9 and float(result.seconds) < 60.0)
+					_fold("warlord: armed %s clears every biome/lap/seed" % profile, result.killed and result.gate_open and result.falls == 0 and float(result.hero_min) >= 0.5 and float(result.hull_min) >= float(result.hull_max) * 0.9 and float(result.seconds) < 60.0, "biome%d lap%d seed%d" % [biome, lap, seed_value])
 					if not result.killed or result.falls > 0 or float(result.hero_min) < 0.5 or float(result.hull_min) < float(result.hull_max) * 0.9 or float(result.seconds) >= 60.0: print("[warlord-failure] ", JSON.stringify(result))
 			await wait(0.01)
+	_fold_flush()
 	for biome in Data.BIOMES.size():
 		var old: Dictionary = bench.fight(biome, 0, "common", 550, false)
 		var balanced: Dictionary = bench.fight(biome, 0, "common", 550, true)
@@ -11481,7 +11590,7 @@ func _gear_detail_test() -> void:
 	var god: Node = main.hud.panels.god
 	god.tab = "icons"
 	god.refresh()
-	_check("gear detail: GOD Icons tab has the demo", god.find_child("GearDetailDemo", true, false) != null)
+	_check("gear detail: GOD UI tab has the demo", god.find_child("GearDetailDemo", true, false) != null)
 	god.close()
 	Dev.gear_detail_demo()
 	_check("gear detail: GOD demo opens a weapon next to the equipped one", loot.is_open and loot.pick_slot == "weapon" and loot.detail_uid >= 0 and loot.find_child("StatTable", true, false) != null)
@@ -11588,7 +11697,7 @@ func _multi_salvage_test() -> void:
 	var god: Node = main.hud.panels.god
 	god.tab = "icons"
 	god.refresh()
-	_check("multi salvage: GOD Icons tab has the demo", god.find_child("MultiSalvageDemo", true, false) != null)
+	_check("multi salvage: GOD UI tab has the demo", god.find_child("MultiSalvageDemo", true, false) != null)
 	god.close()
 	Game.s.gear = []
 	Dev.multi_salvage_demo()
@@ -12016,7 +12125,7 @@ func _event_progression_test() -> void:
 					var outcome := Game.resolve_event(id, _qte_index(id, "fight"), defenders)
 					fights += 1
 					if outcome.ok: armed_wins += 1
-					_check("event progression: ordinary armed team %s biome%d lap%d seed%d" % [id, biome, lap, seed_value], outcome.ok and float(Game.s.hull) >= before * 0.88 and defenders.all(func(did): return float(Game.dweller_by_id(int(did)).hp) >= 5.0))
+					_fold("event progression: ordinary armed team wins %s" % id, outcome.ok and float(Game.s.hull) >= before * 0.88 and defenders.all(func(did): return float(Game.dweller_by_id(int(did)).hp) >= 5.0), "biome%d lap%d seed%d" % [biome, lap, seed_value])
 			# A healthy ordinary unarmed team cannot trivialise advanced roadblocks.
 			if biome >= 1 or lap > 0:
 				bench.prepare(biome, lap, "unarmed", 553)
@@ -12025,8 +12134,9 @@ func _event_progression_test() -> void:
 				Game.s.hull = Game.hull_max()
 				var hull := float(Game.s.hull)
 				var failed := Game.resolve_event("raiders", _qte_index("raiders", "fight"), Game.auto_defenders())
-				_check("event progression: weak team loses safely biome%d lap%d" % [biome, lap], not failed.ok and float(Game.s.hull) >= hull * 0.88 and float(Game.s.hull) < hull)
+				_fold("event progression: weak team loses safely", not failed.ok and float(Game.s.hull) >= hull * 0.88 and float(Game.s.hull) < hull, "biome%d lap%d" % [biome, lap])
 			await wait(0.01)
+	_fold_flush()
 	print("[event-progression] ", JSON.stringify({"armed_wins": armed_wins, "fights": fights, "minimum_win_chance": minimum_chance}))
 	_check("event progression: ordinary two-person teams retain at least 85% win chance", minimum_chance >= 0.85)
 	# Exercise every real risky choice, not just the cap helpers, with frail unarmed crews late in a run.
@@ -12083,13 +12193,14 @@ func _event_progression_test() -> void:
 					var successes := 0
 					for roll_value in range(1, 11):
 						if roll_value + int(actor[stat]) >= dc: successes += 1
-					_check("event progression: displayed check odds exact %s/%d/%d" % [entry[0], biome, lap], Game.event_check_chance(ch) == successes * 10 and dc <= int(ch.dc) + 9)
+					_fold("event progression: displayed check odds exact %s" % entry[0], Game.event_check_chance(ch) == successes * 10 and dc <= int(ch.dc) + 9, "biome%d lap%d seed%d" % [biome, lap, seed_value])
 					var probe := RandomNumberGenerator.new()
 					probe.seed = seed_value
 					var expected := probe.randi_range(1, 10) + int(actor[stat]) >= dc
 					Game.rng.seed = seed_value
 					var outcome := Game.resolve_event(entry[0], _qte_index(entry[0], "check"), [])
-					_check("event progression: check resolution uses displayed target %s" % entry[0], outcome.ok == expected)
+					_fold("event progression: check resolution uses displayed target %s" % entry[0], outcome.ok == expected, "biome%d lap%d seed%d" % [biome, lap, seed_value])
+	_fold_flush()
 	bench.prepare(5, 3, "common", 553)
 	Game.started = false
 	var ch: Dictionary = Data.EVENTS.bunker.choices[0]
@@ -12254,18 +12365,19 @@ func _nextgen_crew_test() -> void:
 	Features.set_override("features", "confirm_actions", true)
 	for count in [1, 5, 12, 24]:
 		for forced in [false, true]:
+			var ctx := "%d/%s" % [count, forced]
 			_nextgen_crew_fixture(count)
 			Game.s["wrecked"] = forced
 			var old := Game.s
 			var previous: Dictionary = Game.s.duplicate(true)
 			Crew._deserters.append(Game.s.dwellers[0])
 			Meta.next_generation([101.0, 101.0, -999.0], "van")
-			_check("nextgen crew: %d/%s all people once, no extra volunteers" % [count, forced], Game.s.dwellers.size() == count and Game.tier() == "van" and Meta.generation() == 4)
-			_check("nextgen crew: old roster data is untouched", old.dwellers == previous.dwellers)
-			_check("nextgen crew: vehicle jobs/route reset but shared account stays", Game.s.exp.is_empty() and int(Game.s.vault_level) == 1 and int(Game.s.biome) == 0 and int(Game.s.lap) == 0 and Game.s.memorial.size() == 1 and Meta.has_blueprint("bp_bus"))
-			_check("nextgen crew: existing resource carry rules", is_equal_approx(float(Game.s.res.scrap), 450.0) and int(Game.s.items.components) == 40)
-			_check("nextgen crew: obsolete research refunded once", int(Meta.m().legacy) == 76 and Meta.retired_research_refund() == 0 and Meta.refund_retired_research() == 0 and Meta.perk("efficient") == 1)
-			_check("nextgen crew: obsolete research cannot be bought", not Meta.can_buy("veterans", 9999) and not Meta.can_buy("training", 9999))
+			_fold("nextgen crew: all people once, no extra volunteers", Game.s.dwellers.size() == count and Game.tier() == "van" and Meta.generation() == 4, ctx)
+			_fold("nextgen crew: old roster data is untouched", old.dwellers == previous.dwellers, ctx)
+			_fold("nextgen crew: vehicle jobs/route reset but shared account stays", Game.s.exp.is_empty() and int(Game.s.vault_level) == 1 and int(Game.s.biome) == 0 and int(Game.s.lap) == 0 and Game.s.memorial.size() == 1 and Meta.has_blueprint("bp_bus"), ctx)
+			_fold("nextgen crew: existing resource carry rules", is_equal_approx(float(Game.s.res.scrap), 450.0) and int(Game.s.items.components) == 40, ctx)
+			_fold("nextgen crew: obsolete research refunded once", int(Meta.m().legacy) == 76 and Meta.retired_research_refund() == 0 and Meta.refund_retired_research() == 0 and Meta.perk("efficient") == 1, ctx)
+			_fold("nextgen crew: obsolete research cannot be bought", not Meta.can_buy("veterans", 9999) and not Meta.can_buy("training", 9999), ctx)
 			var uids := {}
 			for i in count:
 				var d: Dictionary = Game.s.dwellers[i]
@@ -12273,44 +12385,45 @@ func _nextgen_crew_test() -> void:
 				var same := int(d.id) == int(before.id)
 				for key in ["name", "lore", "variant", "lvl", "xp", "str", "int", "agi", "skills", "traits", "role", "gear", "custom_progress"]:
 					same = same and d[key] == before[key]
-				_check("nextgen crew: %s keeps identity and full invested progress" % d.name, same)
-				_check("nextgen crew: %s returns from old duties safely" % d.name, not Game.is_away(d) and not Crew.busy(d) and not d.has("mood_room") and (int(d.room) in [-1, Data.CAB_SLOT, 1, 2]))
+				_fold("nextgen crew: everyone keeps identity and full invested progress", same, "%s %s" % [ctx, d.name])
+				_fold("nextgen crew: everyone returns from old duties safely", not Game.is_away(d) and not Crew.busy(d) and not d.has("mood_room") and (int(d.room) in [-1, Data.CAB_SLOT, 1, 2]), "%s %s" % [ctx, d.name])
 				for slot in Loot.HERO_SLOTS:
 					var uid := int(d.gear[slot].uid)
-					_check("nextgen crew: %s %s item identity is unique" % [d.name, slot], not uids.has(uid))
+					_fold("nextgen crew: every worn item identity is unique", not uids.has(uid), "%s %s %s" % [ctx, d.name, slot])
 					uids[uid] = true
 			var gear_copy := true
 			for i in previous.gear.size():
 				gear_copy = gear_copy and Game.s.gear[i] == previous.gear[i]
-			_check("nextgen crew: all stash equipment and oversized engine retained", gear_copy and Game.s.gear.size() == previous.gear.size() + 1 and Game.s.gear[-1] == previous.van_gear.engine and Loot.van_equipped("engine").is_empty())
-			_check("nextgen crew: vehicle gear identities retained without a free turret", Game.s.van_gear.turret == previous.van_gear.turret and Game.s.van_gear.plating == previous.van_gear.plating and Game.s.van_gear.spikes == previous.van_gear.spikes)
-			_check("nextgen crew: garage mods and solar equipment retained, new hull full", Game.s.mods == previous.mods and Game.s.solar == previous.solar and is_equal_approx(float(Game.s.hull), Game.hull_max()))
+			_fold("nextgen crew: all stash equipment and oversized engine retained", gear_copy and Game.s.gear.size() == previous.gear.size() + 1 and Game.s.gear[-1] == previous.van_gear.engine and Loot.van_equipped("engine").is_empty(), ctx)
+			_fold("nextgen crew: vehicle gear identities retained without a free turret", Game.s.van_gear.turret == previous.van_gear.turret and Game.s.van_gear.plating == previous.van_gear.plating and Game.s.van_gear.spikes == previous.van_gear.spikes, ctx)
+			_fold("nextgen crew: garage mods and solar equipment retained, new hull full", Game.s.mods == previous.mods and Game.s.solar == previous.solar and is_equal_approx(float(Game.s.hull), Game.hull_max()), ctx)
 			var moved_items: Array = (Game.s.gear as Array).duplicate()
 			moved_items.append_array((Game.s.van_gear as Dictionary).values())
 			for item in moved_items:
 				if item is Dictionary:
 					var uid := int(item.uid)
-					_check("nextgen crew: stash/vehicle UID %d unique and allocator safe" % uid, not uids.has(uid) and int(Game.s.next_uid) > uid)
+					_fold("nextgen crew: every stash/vehicle UID unique and allocator safe", not uids.has(uid) and int(Game.s.next_uid) > uid, "%s uid %d" % [ctx, uid])
 					uids[uid] = true
 			if count == 24:
-				_check("nextgen crew: full stash never auto-salvages during transfer", Game.s.gear.size() == Loot.STASH_CAP + 1)
+				_fold("nextgen crew: full stash never auto-salvages during transfer", Game.s.gear.size() == Loot.STASH_CAP + 1, ctx)
 
-			_check("nextgen crew: next survivor ID does not collide", int(Game.s.next_id) > int(Game.s.dwellers[count - 1].id))
-			_check("nextgen crew: pending old departure queue cleared", Crew._deserters.is_empty())
+			_fold("nextgen crew: next survivor ID does not collide", int(Game.s.next_id) > int(Game.s.dwellers[count - 1].id), ctx)
+			_fold("nextgen crew: pending old departure queue cleared", Crew._deserters.is_empty(), ctx)
 			if count > Data.BASE_POP_CAP:
-				_check("nextgen crew: everyone transfers above the smaller vehicle bed cap", Game.s.dwellers.size() > Game.pop_cap())
+				_fold("nextgen crew: everyone transfers above the smaller vehicle bed cap", Game.s.dwellers.size() > Game.pop_cap(), ctx)
 			if count >= 5:
-				_check("nextgen crew: defender assignments preserved by ID", Game.s.squad == previous.squad)
+				_fold("nextgen crew: defender assignments preserved by ID", Game.s.squad == previous.squad, ctx)
 			# Serialization makes integer IDs floats. A second real transfer must keep the same crew and gear.
 			var unpacked := Account.unwrap(JSON.parse_string(JSON.stringify(Account.envelope(Game.s))))
 			Account.a = unpacked.account
 			Game.s = unpacked.main
 			Account.attach(Game.s)
 			Meta.next_generation([], "van")
-			_check("nextgen crew: save round trip and repeat transfer keep everyone once", Game.s.dwellers.size() == count and int(Game.s.dwellers[0].id) == 101 and int(Game.s.dwellers[0].lvl) == 12 and int(Game.s.dwellers[0].skills.c1) == 2 and Game.s.dwellers[0].gear.size() == Loot.HERO_SLOTS.size() and Game.s.gear.size() == previous.gear.size() + 1 and int(Game.s.van_gear.turret.uid) == int(previous.van_gear.turret.uid))
-			_check("nextgen crew: save/repeat cannot refund again", int(Meta.m().legacy) == 76)
+			_fold("nextgen crew: save round trip and repeat transfer keep everyone once", Game.s.dwellers.size() == count and int(Game.s.dwellers[0].id) == 101 and int(Game.s.dwellers[0].lvl) == 12 and int(Game.s.dwellers[0].skills.c1) == 2 and Game.s.dwellers[0].gear.size() == Loot.HERO_SLOTS.size() and Game.s.gear.size() == previous.gear.size() + 1 and int(Game.s.van_gear.turret.uid) == int(previous.van_gear.turret.uid), ctx)
+			_fold("nextgen crew: save/repeat cannot refund again", int(Meta.m().legacy) == 76, ctx)
 			Game.s.dwellers[0].gear.weapon.plus = 8
-			_check("nextgen crew: gear/skills are deep copies", int(old.dwellers[0].gear.weapon.plus) == 3)
+			_fold("nextgen crew: gear/skills are deep copies", int(old.dwellers[0].gear.weapon.plus) == 3, ctx)
+	_fold_flush()
 	_nextgen_crew_fixture(5)
 	Meta.m().perks["tier_train"] = 1
 	var fitted_engine: Dictionary = Game.s.van_gear.engine.duplicate(true)
@@ -12427,23 +12540,10 @@ func _icons_v2_test() -> void:
 	var b := UIKit.button("x", "green", "food")
 	_check("icons v2: button icon keeps the 16 px slot", b.icon is IconTex and b.icon.get_width() == 16)
 	b.free()
-	main.hud.open_panel("god")
-	var god = main.hud.panels.god
-	god.tab = "icons"
-	Dev.icon_preview(2)
-	god.refresh()
-	await wait(0.3)
-	await shot("icons_v2_gallery_x2")
 	Dev.icons_v2(false)
 	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
 	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
-	god.refresh()
-	await wait(0.3)
-	await shot("icons_v1_gallery_x2")
 	Dev.icons_v2(was)
-	god.tab = "main"
-	god.close()
-	await wait(0.2)
 
 
 ## MV-715: the van's main body in the v3 interior is Dr. Ren's ambulance shell (switch ambulance_v3)

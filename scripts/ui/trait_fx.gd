@@ -23,9 +23,6 @@ const RED := Color8(214, 43, 42)
 const RED_HOT := Color8(255, 118, 83)
 const CACHE_MAX := 96
 
-## GOD: "" = live, "still" = the static look, "off" = no light at all
-static var preview := ""
-static var paused_preview := false
 static var _clock := 0.0
 static var _clock_frame := -1
 static var _cache := {}
@@ -42,19 +39,14 @@ static func current_phase() -> int:
 	return int(floor(_clock * FPS)) % PHASES
 
 
-static func frame_step() -> void:
-	paused_preview = true
-	_clock = float(current_phase() + 1) / FPS + 0.001
-
-
 ## "anim", "still" (switch off / reduced effects / not classified), "accent" (a beneficial trait not classified: only the
-## semantic bar), "off" (style off or GOD)
+## semantic bar), "off" (style off)
 static func mode_for(neg: bool, t: int) -> String:
-	if not Features.on("trait_card_style") or preview == "off":
+	if not Features.on("trait_card_style"):
 		return "off"
 	if t < 0:
 		return "still" if neg else "accent"
-	if preview == "still" or not Features.on("trait_card_vfx") or RoomAnim.reduced():
+	if not Features.on("trait_card_vfx") or RoomAnim.reduced():
 		return "still"
 	return "anim"
 
@@ -215,7 +207,7 @@ func _process(delta: float) -> void:
 	var mode := mode_for(negative, tier)
 	var p := 0
 	if mode == "anim":
-		if is_inside_tree() and not get_tree().paused and not paused_preview and Engine.get_process_frames() != _clock_frame:
+		if is_inside_tree() and not get_tree().paused and Engine.get_process_frames() != _clock_frame:
 			_clock_frame = Engine.get_process_frames()
 			_clock = fmod(_clock + delta, float(PHASES) / FPS)
 		p = current_phase()

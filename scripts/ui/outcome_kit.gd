@@ -91,7 +91,7 @@ static func crew_chip(d: Dictionary, tags: Array, delay: float) -> Control:
 	var p := UIKit.panel(UIKit.C_BG2, UIKit.C_LINE_DARK)
 	var h := UIKit.hbox(3)
 	p.add_child(h)
-	var pt := UIKit.portrait(d.variant)
+	var pt := UIKit.portrait(d.variant, false, d)
 	if d.get("dead", false):
 		pt.modulate = Color(0.55, 0.4, 0.4)
 	h.add_child(pt)
