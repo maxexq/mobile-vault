@@ -128,6 +128,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [biome-bosses-v2](biome-bosses-v2.md): MV-704 6 lore biome bosses, picks approved/<boss>/, code light grade page Boss Lighting
 - [biome-bosses-hd](biome-bosses-hd.md): MV-704 boss HD = Crew v3 pixels (B2-2 in-scene redraw x2), Foreman approved, other 5 done awaiting OK, page Boss Pixel Size
 - [rooms-crew-v3-ingame](rooms-crew-v3-ingame.md): MV-711 v3 rooms + v3 crew in game via v3 interior view (rooms_v3/rooms_v3_review), PR #193 on #192, web/ export pending (no cloud_config)
+- [room-art-fixes-mv757](room-art-fixes-mv757.md): MV-757 kitchen idle without baked cook, rest room idle anim, grow room centre window shows the biome (room_window_bg)
 
 ## Other memory files (not in the short index above)
 
