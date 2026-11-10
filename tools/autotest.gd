@@ -13697,7 +13697,7 @@ func _decker_test() -> void:
 	await wait(0.2)
 	var mods_max := Dev.decker_mods(3)
 	await wait(0.3)
-	var mroot := v.v2_shell.get_node_or_null(DeckerMods.NODE) as Node2D
+	var mroot := v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
 	var gun := 0 if Combat.room_mode() else 1          # MV-727: no outside gun while the squad fights from the gunner room
 	_check("decker mods: none = only the roof solar panels, all max = %d parts (%d / %d)" % [6 + gun, mods_none, mods_max],
 		mods_none == 1 and mods_max == 6 + gun and mroot != null and mroot.visible

@@ -29,7 +29,7 @@ JOBS={   # mod id: (anchor, {level: part})
     "solar":       ("roof",{L:(lambda L=L: file_part(A+f"solar/solar_L{L}.png",96,-48)) for L in (1,2,3)}),
 }
 if __name__=="__main__":
-    os.makedirs(OUT,exist_ok=True); meta={}
+    os.makedirs(OUT,exist_ok=True); meta={"_deck_h":112,"_base_floors":2}   # ShellMods format
     for mid,(anchor,lv) in JOBS.items():
         meta[mid]={"anchor":anchor}
         for L,f in lv.items():

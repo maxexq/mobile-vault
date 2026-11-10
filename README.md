@@ -641,10 +641,12 @@ vehicle and the 64x52 rooms in the world stay as they are until the v3 vehicle s
   (`Dev.decker_sign`), air horn / siren (`Dev.decker_horn`, sound group `decker`) + both switches.
   Autotest: `--only=decker`.
   **Exterior mods (MV-760, switch `decker_mods`):** the approved Decker mod art (MV-739,
-  `/mnt/project-files/designs/vehicle-2floor/approved/`) is drawn on the bus by `scripts/world/decker_mods.gd` (`DeckerMods`):
-  trimmed PNGs in `assets/vehicles/decker_v3/mods/` cut by `tools/art/decker_mods/build.py`, placed from `mods.json` in
-  shell_f2 pixels, as children of the shell sprite (road view `Vehicle.v2_shell` and the v3 interior `amb_shell`), so they
-  ride every hop. `body` parts drop 112 px per deck above 2, `roof` parts stay on the roof. Mod -> art: `spike_ram` L1-3,
+  `/mnt/project-files/designs/vehicle-2floor/approved/`) is drawn on the bus by `DeckerMods` (`scripts/world/decker_mods.gd`,
+  which picks the art level per mod) through the shared layer `ShellMods` (`scripts/world/shell_mods.gd`, for every
+  world-v2 shell): trimmed PNGs in `<vehicle dir>/mods/<mod>_L<n>.png` + `mods.json` (`_deck_h`, `_base_floors`, per mod
+  `anchor` body / roof and `[x, y]` per level, optional `"<n>@<floors>"` override), children of the shell sprite (road view
+  `Vehicle.v2_shell` and the v3 interior `amb_shell`), so they ride every hop. Decker art is cut by
+  `tools/art/decker_mods/build.py`; `body` parts drop 112 px per deck above 2, `roof` parts stay on the roof. Mod -> art: `spike_ram` L1-3,
   `fuel_tanks` L1-3, `armor_plates` L1-3 (skirt), `roof_turret` L1-3 = the rear-wall sponson gun (hidden while the squad
   fights from the gunner room, MV-727), `rad_shield` L1-2 = lead on the front of both decks, `heater` L1-2 = the roof flue,
   and the two roof solar panels (always there: L1, +1 with `solar_covers`, +1 at 4 panels). Off-road wheels + suspension

@@ -1317,7 +1317,7 @@ func decker_mods(lv: int) -> int:
 	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
 	if v == null or v.v2_shell == null:
 		return 0
-	var root := v.v2_shell.get_node_or_null(DeckerMods.NODE)
+	var root := v.v2_shell.get_node_or_null(ShellMods.NODE)
 	return root.get_child_count() if root != null and root.visible else 0
 
 
