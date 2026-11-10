@@ -13,6 +13,7 @@ var hud: HUD
 var main: Node
 var _card: PanelContainer
 var _head: Label
+var _face: PanelContainer   # MV-735: guide portrait (Dr. Ren's face changes per line with ren_guide)
 var _text: Label
 var _hint: Label
 var _bar: ProgressBar
@@ -36,8 +37,9 @@ func _ready() -> void:
 	var h := UIKit.hbox(5)
 	_card.add_child(h)
 	var pv := UIKit.vbox(1)
-	pv.add_child(UIKit.portrait("dw_army_brown", true))
-	var radio := UIKit.label("CH.7", UIKit.FP, UIKit.C_GREEN, true)
+	_face = UIKit.guide_portrait()
+	pv.add_child(_face)
+	var radio := UIKit.label("MEDIC" if Features.on("ren_guide") else "CH.7", UIKit.FP, UIKit.C_GREEN, true)
 	radio.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pv.add_child(radio)
 	h.add_child(pv)
@@ -117,6 +119,7 @@ func _process(d: float) -> void:
 	_update_target()
 	_update_bar()
 	_place_card()
+	_point_face()
 	queue_redraw()
 
 
@@ -124,7 +127,8 @@ func _enter_step() -> void:
 	_shown_step = Tutorial.step()
 	var st := Tutorial.current()
 	var manual := bool(st.get("manual", false))
-	_head.text = "SGT.MARK · TUTORIAL %d/%d" % [Tutorial.step() + 1, Tutorial.STEPS.size()]
+	_head.text = "%s · TUTORIAL %d/%d" % [Tutorial.guide_name(), Tutorial.step() + 1, Tutorial.STEPS.size()]
+	UIKit.set_guide_mood(_face, Tutorial.guide_face(str(st.id)))
 	_text.text = Tutorial.text()
 	_chars = 0.0
 	_text.visible_characters = 0
@@ -188,6 +192,15 @@ func _frame_slot(slot: int) -> void:
 	var b: Vector2 = main.world_to_screen(r.end)
 	_target = Rect2(a.floor(), (b - a).ceil()).grow(PAD)
 	_has_target = true
+
+
+## MV-735: Dr. Ren points his hand at the highlighted target (only redraws the face when the pose changes)
+func _point_face() -> void:
+	if not _face.has_meta("guide_mood"):
+		return
+	var want := Tutorial.guide_point(Tutorial.guide_face(str(Tutorial.current().id)), _target, _has_target, _face.get_global_rect())
+	if UIKit.mood_face("ren", want) != str(_face.get_meta("guide_mood")):
+		UIKit.set_guide_mood(_face, want)
 
 
 ## keep the card away from the thing it points at: top when the target is low, otherwise bottom
