@@ -427,12 +427,13 @@ func set_tier(t: String) -> void:
 	var old_main := Game.main_slots()
 	Game.s.tier = t
 	Game.relayout_body(old_main, Data.ROOMS_PER_FLOOR * Game.target_floors())
+	Game.ensure_min_trailers()          # MV-753: the road train comes with its trailer
 	act("tier " + t)
 	_vehicle_changed()
 
 
 func set_trailers(n: int) -> void:
-	n = clampi(n, 0, Data.MAX_TRAILERS)
+	n = clampi(n, Game.min_trailers(), Data.MAX_TRAILERS)     # MV-753: the road train keeps its starting trailer
 	var cur := Game.trailers()
 	while cur < n:
 		for i in Data.TRAILER_SLOTS:
@@ -1225,6 +1226,7 @@ func _van_floors(n: int) -> void:
 func road_train_preview() -> String:
 	feature_set("road_train", true)
 	set_tier("rig")
+	Game.ensure_min_trailers()          # MV-753: already on the rig before the switch was on
 	act("road train preview", {"tier": Game.tier()})
 	_vehicle_changed()
 	return Game.tier()
@@ -1244,6 +1246,16 @@ func road_train_world(n: int) -> int:
 	act("road train world", {"floors": Game.floors()})
 	_vehicle_changed()
 	return Game.floors()
+
+
+## MV-753: switch rt_start_trailer (the road train comes with its trailer) on/off; on a road train with no trailer the
+## free one is hitched at once. Returns the trailers now.
+func rt_start_trailer(on: bool) -> int:
+	feature_set("rt_start_trailer", on)
+	Game.ensure_min_trailers()
+	act("road train start trailer", {"on": on, "trailers": Game.trailers()})
+	_vehicle_changed()
+	return Game.trailers()
 
 
 ## MV-740: the road train on the road (its decks now, else 2) with its micro animations; mode as vehicle_anim
@@ -2297,10 +2309,23 @@ func event_art_v2(on: bool) -> void:
 	act("road event art v2 " + ("on" if on else "off"))
 
 
+## MV-758: the new expedition scene (approved interiors + v3 crew expedition clips, switch exp_scene_v2); open the
+## expedition panel while a team is out to see it
+func exp_scene_v2(on: bool) -> void:
+	feature_set("exp_scene_v2", on)
+	act("expedition scene v2 " + ("on" if on else "off"))
+
+
 ## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2); open an encounter to see it
 func enc_art_v2(on: bool) -> void:
 	feature_set("enc_art_v2", on)
 	act("encounter art v2 " + ("on" if on else "off"))
+
+
+## MV-750: new 2x-density landmark art for the 13 expedition sites (switch landmarks_v2); arrive at a site to see it
+func landmarks_v2(on: bool) -> void:
+	feature_set("landmarks_v2", on)
+	act("landmarks v2 " + ("on" if on else "off"))
 
 
 # ---- strangers

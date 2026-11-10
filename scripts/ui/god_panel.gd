@@ -405,7 +405,10 @@ func _tab_vehicle() -> void:
 		_b("บนถนน 2 ชั้น", func(): Dev.road_train_world(2)), _b("3 ชั้น", func(): Dev.road_train_world(3)),
 		_b("ขับ+ล้อ", func(): Dev.road_train_anim("drive"), "green"), _b("จอด (ขาค้ำลง)", func(): Dev.road_train_anim("brake")),
 		_b("รถ 2 คัน: " + ("เปิด" if Features.on("road_train") else "ปิด"), func(): Dev.feature_set("road_train", not Features.on("road_train")),
-		"green" if Features.on("road_train") else "red")], "โร้ดเทรน")
+		"green" if Features.on("road_train") else "red"),
+		_b("พ่วงติดรถ: " + ("เปิด" if Features.on("rt_start_trailer") else "ปิด"),
+		func(): Dev.rt_start_trailer(not Features.on("rt_start_trailer")),
+		"green" if Features.on("rt_start_trailer") else "red")], "โร้ดเทรน")
 	_row([_b("ขับ Decker 2 ชั้น", func(): Dev.decker_preview(2)), _b("3 ชั้น", func(): Dev.decker_preview(3)),
 		_b("ภายใน", func(): Dev.decker_interior()),
 		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),
@@ -742,6 +745,10 @@ func _tab_world() -> void:
 		_row([_b("ล้างประวัติจุดพิเศษ", func(): Dev.encounter_recent_clear())])
 	_row([_b("ภาพจุดพิเศษ v2: " + ("เปิด" if Features.on("enc_art_v2") else "ปิด"), func(): Dev.enc_art_v2(not Features.on("enc_art_v2")),
 		"green" if Features.on("enc_art_v2") else "red")])
+	_row([_b("สถานที่ v2: " + ("เปิด" if Features.on("landmarks_v2") else "ปิด"), func(): Dev.landmarks_v2(not Features.on("landmarks_v2")),
+		"green" if Features.on("landmarks_v2") else "red")])
+	_row([_b("ฉากสำรวจ v2: " + ("เปิด" if Features.on("exp_scene_v2") else "ปิด"), func(): Dev.exp_scene_v2(not Features.on("exp_scene_v2")),
+		"green" if Features.on("exp_scene_v2") else "red")])
 	if not Expedition.active():
 		var sb := []
 		for id in Expedition.SITES:
