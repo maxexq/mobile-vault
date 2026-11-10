@@ -32,3 +32,4 @@ Related: [[vehicles-flat-2d]], [[road-train-approved-set]], [[ambulance-v3-ingam
   Before/after: /mnt/project-files/designs/vehicle-2floor/bastion-cleanup/.
 - 2026-11-10 Bastion round 3 (Parames: room frames, pinholes, solar cell on the front of deck 2, micro anims): cleanup.py holes/frame/solar/lamps,
   anim.py -> anim.json + wheel_spin.png, AmbulanceMotion.BS_DIR, Dev.bastion_anim + GOD ขับ+ไฟ/เบรก. 0 gens; solar drawn in code (PixelLab redraw offered).
+- 2026-11-10 (MV-764) Parames: "Bastion 42-B พักไว้ก่อน ซ่อนจากเกม" -> config/features.json bastion=false (parked). Code + art kept; Bastion saves drive the Decker, hull clamped on load (Game.clamp_parked_hull). Turn back on with the switch.

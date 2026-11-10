@@ -257,6 +257,7 @@ func _migrate() -> void:
 	fit_body(true)
 	fit_trailers()
 	ensure_min_trailers()
+	clamp_parked_hull()
 	while s.rooms.size() < slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for d in s.dwellers:
@@ -912,6 +913,14 @@ func power_flow_pm() -> float:
 		f -= Data.TRAVEL_POWER_PM
 		f += EngineBay.power_pm() - float(EngineBay.burn_pm().get("power", 0.0))
 	return f
+
+
+## MV-764: Bastion 42-B is parked (switch bastion off): a save that was driving it now drives the Decker, whose hull
+## bonus is 100 lower, so the hull it built up against the Bastion's max is cut down to the Decker's on load
+func clamp_parked_hull() -> void:
+	if s.is_empty() or str(s.get("tier", "")) != "bastion" or bastion_on() or not s.has("hull"):
+		return
+	s.hull = minf(float(s.hull), hull_max())
 
 
 func hull_max() -> float:

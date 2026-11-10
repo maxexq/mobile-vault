@@ -2,7 +2,9 @@
   "min_game": "4.3",
   "max_game": "",
   "tz_hours": 7,
-  "features": {},
+  "features": {
+    "bastion": false
+  },
   "events": {},
   "tune": {},
   "announce": [

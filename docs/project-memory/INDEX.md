@@ -128,6 +128,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [biome-bosses-v2](biome-bosses-v2.md): MV-704 6 lore biome bosses, picks approved/<boss>/, code light grade page Boss Lighting
 - [biome-bosses-hd](biome-bosses-hd.md): MV-704 boss HD = Crew v3 pixels (B2-2 in-scene redraw x2), Foreman approved, other 5 done awaiting OK, page Boss Pixel Size
 - [rooms-crew-v3-ingame](rooms-crew-v3-ingame.md): MV-711 v3 rooms + v3 crew in game via v3 interior view (rooms_v3/rooms_v3_review), PR #193 on #192, web/ export pending (no cloud_config)
+- [room-art-fixes-mv757](room-art-fixes-mv757.md): MV-757 kitchen idle without baked cook, rest room idle anim, grow room centre window shows the biome (room_window_bg)
 
 ## Other memory files (not in the short index above)
 
@@ -157,6 +158,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [water-room-v3](water-room-v3.md): MV-618 water purifier redone per Room guide v3 (one-point, L1-L3 single cell, Claude picked all), states + hotspots format 2 done, In Review; files designs/room-redesign-preview/water_v3/
 - [workshop-v3](workshop-v3.md): MV-624 workshop (โรงช่าง) per Room guide v3, L1-L3 single cell, anim, hotspots fmt 2 (new actions salvage_parts/repair_hull), Claude picked all, In Review; files workshop_v3/
 - [enc-art-redraw](enc-art-redraw.md): MV-717 encounter art x6 APPROVED (designs/enc-art/approved/), in game via EncArt + switch enc_art_v2; silhouettes = crew v3 size
+- [exp-scene-v2](exp-scene-v2.md): MV-758 new expedition scene (switch exp_scene_v2): approved interiors + ambience + v3 crew expedition clips, tools/exp_scene_import.py
 - [ambulance-v3-ingame](ambulance-v3-ingame.md): MV-715 ambulance replaces the van: v3 interior shell (switch ambulance_v3) done, outside world v2 picked, next
 - [road-train-ingame](road-train-ingame.md): MV-721 two vehicles (ambulance + road train, switch road_train), B-double shells in the v3 interior, body 2-3 decks; on the road too (container trailers); RULE vehicles flat 2D
 - [vehicle-2floor](vehicle-2floor.md): MV-736 Decker double-decker bus: starts 2 decks, 3rd scrap deck by Vault, researched with tier_bus, in game behind switch decker; MV-738 Bastion 42-B = the other pick of the same research (switch bastion)
@@ -165,3 +167,4 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [road-train-fix-anim](road-train-fix-anim.md): MV-740 road train shell cleanup (pinholes, cab glass, rear cage, room frames) + tyres, landing legs, lamps, code air lines between units; rerun shell.py -> tools/art/road_train/cleanup.py -> anim.py
 - [road-train-mods](road-train-mods.md): MV-748/762 road train exterior mods: 9 approved sets in game via ShellMods + RoadTrainMods (switch road_train_mods), suspension behind tyres, off-road tyre strips
 - [ambulance-fix](ambulance-fix.md): MV-741 Dr. Ren ambulance clean-up (code only): cab holes refilled, strays removed, room windows framed (tools/art/ambulance/cleanup.py)
+- [landmarks-v2](landmarks-v2.md): RULE MV-750 lm_* sites at 2x density, never frame-cut, door per site; all 13 APPROVED (designs/landmarks-v2/approved/), in game behind landmarks_v2

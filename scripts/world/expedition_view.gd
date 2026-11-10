@@ -8,7 +8,6 @@ extends Node2D
 ## Lives in vehicle-local space (first child of the Vehicle, so it draws behind the truck body).
 
 const SITE_GAP := 4.0          # landmark left edge = convoy rear + gap (vehicle-local)
-const DOOR_OFF := 30.0         # door centre inside every lm_* sprite (tools/art/landmarks.py DOOR_X)
 const GROUND_Y := 296.0        # walkers' feet on the road shoulder
 const DECK_EXIT0 := Vector2(266, 260)
 const WALK_SPEED := 22.0
@@ -16,6 +15,7 @@ const WALK_SPEED := 22.0
 var vehicle: Vehicle
 var site_spr: Sprite2D
 var _site := ""
+var _sprite := ""                # lm_* key of the site on screen
 var _team_cache: Array = []    # [{id, variant}] of the team currently out
 var _walkers: Array = []
 
@@ -31,6 +31,13 @@ func setup(v: Vehicle) -> void:
 	Expedition.expedition_finished.connect(_on_finished)
 	Game.travel_changed.connect(func(): _sync(false))
 	Game.game_started.connect(func(): _sync(true))
+	Features.changed.connect(refresh)     # MV-750: landmarks_v2 on/off swaps the site art in place
+	_sync(true)
+
+
+## MV-750: redraw the current site (art switch changed)
+func refresh() -> void:
+	_site = "~"
 	_sync(true)
 
 
@@ -52,7 +59,7 @@ func deck_exit() -> Vector2:
 
 func door_x() -> float:
 	if site_spr.visible and site_spr.texture:
-		return site_x() + DOOR_OFF
+		return site_x() + LandmarkArt.door(_sprite)
 	return 380.0     # generic "scavenge the area": they walk off-screen
 
 
@@ -69,12 +76,15 @@ func _sync(instant: bool) -> void:
 			tw.tween_callback(func(): site_spr.visible = false)
 		return
 	var spr: String = Expedition.site_def(id).get("sprite", "")
-	if spr == "" or not Atlas.has(spr):
+	_sprite = spr
+	var tex: Texture2D = LandmarkArt.texture(spr) if spr != "" else null
+	if tex == null:
 		site_spr.visible = false
 	else:
-		site_spr.texture = Atlas.tex(spr)
+		site_spr.texture = tex
+		site_spr.scale = Vector2.ONE * LandmarkArt.scale(spr)
 		site_spr.visible = true
-		var h := float(site_spr.texture.get_height())
+		var h := LandmarkArt.size(spr).y
 		var target := Vector2(site_x(), GROUND_Y - h + 2.0)
 		if instant:
 			site_spr.position = target
