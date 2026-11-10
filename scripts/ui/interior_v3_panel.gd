@@ -321,7 +321,10 @@ func _rebuild() -> void:
 		amb_shell.texture = load(str(shell_spec(Game.tier()).dir) + "shell_f%d.png" % Game.floors())
 		amb_shell.position = Vector2(0.0, _unit_top(-1))
 		attach_nose(amb_shell, dk())
-		DeckerMods.attach(amb_shell, Game.floors(), dk() and Game.tier() == "bus")
+		if Game.tier() == "bus":
+			DeckerMods.attach(amb_shell, Game.floors(), dk())
+		else:
+			AmbulanceMods.attach(amb_shell, Game.floors(), not dk())    # MV-763 (still off-road tyre layer here)
 	world.move_child(amb_shell, world.get_child_count() - 1)     # the shell's lip and decks over the room edges
 	for sp in pup_shells:
 		sp.queue_free()

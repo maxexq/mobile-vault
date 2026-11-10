@@ -1321,6 +1321,33 @@ func decker_mods(lv: int) -> int:
 	return root.get_child_count() if root != null and root.visible else 0
 
 
+## MV-763: drive Dr. Ren's ambulance (van, world v2) at `n` floors (-1 = its floors now, at least 1) with every approved
+## exterior mod at level lv (0 = none, 1-3; rad shield tops out at 2): ram, roof gun, fuel tanks (+ rack), armor, lead,
+## heavy suspension, off-road tyres. `interior` also opens the v3 interior. Returns the parts drawn on the road view.
+func ambulance_mods(lv: int, n: int = -1, interior: bool = false) -> int:
+	feature_set("ambulance_mods", true)
+	feature_set("ambulance_v3", true)
+	feature_set("world_v2", true)
+	if Game.tier() != "van":
+		set_tier("van")
+	_van_floors(n if n > 0 else maxi(Game.floors(), 1))
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "roof_turret", "fuel_tanks", "armor_plates", "rad_shield", "suspension", "offroad_wheels"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	act("ambulance mods", {"level": lv, "floors": Game.floors()})
+	_vehicle_changed()
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	if interior:
+		rooms_v3_open()
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or v.v2_shell == null:
+		return 0
+	var root := v.v2_shell.get_node_or_null(ShellMods.NODE)
+	return root.get_child_count() if root != null and root.visible else 0
+
+
 ## MV-744: play the Decker's air horn or raid siren (a preview: changes nothing in the run)
 func decker_horn(id: String = "air_horn") -> void:
 	sound_preview("sound", id)

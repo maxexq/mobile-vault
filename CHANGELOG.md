@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Dr. Ren's ambulance shows its upgrades: spiked ram, a gun on the roof, armour plates, lead plates on the cab, heavy suspension, spare fuel tanks (extra ones on a rack on the rear wall) and bigger off-road tyres that lift the body, each changing look with its level (MV-763)
 - The Decker bus shows its upgrades: spiked ram, spare fuel tanks, side armour, a gun on the rear wall, lead plates over the front of both decks, a heater flue and solar panels on the roof, each changing look with its level (MV-760)
 - The crew look a little lighter on the vehicle: brighter colours and softer dark-brown outlines instead of heavy black ones (MV-745)
 - The Decker bus's 9 DEPOT sign is now a status board: it flashes RAID! and runs HULL / WATER / FOOD / FUEL / POWER LOW warnings, scrolls cheerful lines that lift the crew's mood a little, and the bus honks its air horn leaving a stop and winds a siren before a raid (MV-744)
