@@ -501,7 +501,8 @@ func _build_v2() -> void:
 		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K, amb_dir())
 		if v2_rt():
 			RoadTrainMods.rt_mods(amb, true)                       # MV-762 suspension + off-road tyres
-	RoadTrainMods.attach_body(v2_shell, floors, v2_rt())          # MV-762 approved road train exterior mods
+	if v2_rt():          # MV-762 approved road train exterior mods (ShellMods node shared with the Decker: only when it's ours)
+		RoadTrainMods.attach_body(v2_shell, floors, true)
 	_build_rt_couplings()
 	_pups_on_top()
 	for rv in room_views:
@@ -943,7 +944,8 @@ func _mod_sprite(region: String, pos: Vector2) -> Sprite2D:
 
 ## MV-762: redraw the road train's exterior parts, suspension and tyres after an upgrade or a switch change
 func _refresh_rt_mods() -> void:
-	RoadTrainMods.attach_body(v2_shell, floors, v2_rt())
+	if v2_rt():                  # the Decker's attach (just before) owns the shared ShellMods node on other vehicles
+		RoadTrainMods.attach_body(v2_shell, floors, true)
 	for sp in v2_tshells:
 		RoadTrainMods.attach_trailer(sp, v2_trailer_floors(), v2_rt(), bool(sp.get_meta("rear", false)))
 	if amb_on and v2_rt():
