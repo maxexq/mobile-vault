@@ -175,7 +175,7 @@ func _build_defenders(v: VBoxContainer, _ch: Dictionary) -> void:
 		var row := UIKit.panel(UIKit.C_BG2, UIKit.C_GREEN if sel else UIKit.C_LINE_DARK)
 		var h := UIKit.hbox(4)
 		row.add_child(h)
-		h.add_child(UIKit.portrait(d.variant, false, d))
+		h.add_child(UIKit.portrait(d.variant, false, d, "thinking"))
 		var info := UIKit.vbox(1)
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		info.add_child(UIKit.label(Loc.t("%s Lv%d  พลัง %.0f") % [d.name, d.lvl, Game.dweller_power(d)], UIKit.FS_SMALL))

@@ -42,6 +42,10 @@ for _c in ("bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi"):
     CREW[_c] = "lore-crew-3/approved/" + _c
 # MV-722: approved v3 portraits (MV-708, 64x64 busts, v2 portrait style) -> assets/v3/portraits/<id>.png
 PORTRAITS = "crew-portraits-v3/approved"
+# MV-735: approved mood faces <id>_<mood>.png -> assets/v3/portraits/<id>_<mood>.png, crew.json "portrait_moods"
+MOODS_DIR = "crew-portraits-v3/expr/approved"
+MOODS = ("happy", "stressed", "injured", "surprised", "angry", "sad", "scared", "thinking", "talking", "tired", "sick",
+         "point_left", "point_right", "point_up", "finger_up")
 CLIPS = ["idle", "walk", "work", "construct", "eat", "drink", "talk", "carrywalk", "shoot"]   # shoot: MV-716 gunner post
 CLIP_FPS = {"idle": 6, "walk": 10, "work": 8, "construct": 8, "eat": 6, "drink": 6, "talk": 6, "carrywalk": 10, "shoot": 10}
 IDLE_FRAMES = 36          # idle overlay frames kept (of 96-144), played at IDLE_FPS
@@ -180,6 +184,20 @@ def portraits(crew, src):
             sys.exit("portrait must be 64x64: " + p)
         im.save(os.path.join(OUT, "portraits", cid + ".png"))
         e["portrait"] = "portraits/" + cid + ".png"
+        moods = {}
+        for m in MOODS:
+            mp = os.path.join(src, MOODS_DIR, "%s_%s.png" % (cid, m))
+            if not os.path.exists(mp):
+                continue
+            mi = Image.open(mp).convert("RGBA")
+            if mi.size != (64, 64):
+                sys.exit("portrait must be 64x64: " + mp)
+            mi.save(os.path.join(OUT, "portraits", "%s_%s.png" % (cid, m)))
+            moods[m] = "portraits/%s_%s.png" % (cid, m)
+        if moods:
+            e["portrait_moods"] = moods
+        else:
+            e.pop("portrait_moods", None)
 
 
 def main():
