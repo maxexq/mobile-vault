@@ -10,10 +10,12 @@ const ENGINE_SLOT := 0
 const CAB_SLOT := 99
 const CAB_WORKERS := 2
 const SLOT_COUNT := 12            # rig body, kept for tools / tests
-const MAX_TRAILERS := 2
+## Parames 2026-11-10: the first patch ships ONE trailer (each trailer must be its own design, the 2nd is not drawn yet);
+## older saves with 2 trailers are folded into 1 by Game.fit_trailers()
+const MAX_TRAILERS := 1
 const TRAILER_FLOORS := 2
 const TRAILER_SLOTS := 6
-const MAX_SLOTS := 27             # 5-floor body + 2 trailers
+const MAX_SLOTS := 21             # 5-floor body + 1 trailer
 ## MV-563 (switch five_floors): the body grows with the Mobile Vault level, from the vehicle's START_FLOORS by one
 ## floor at each FLOOR_GAIN_LEVELS level (tune vault.floor_gain_1..3) up to BODY_FLOORS
 const BODY_FLOORS := 5
@@ -33,7 +35,13 @@ const TIER_ORDER_2 := ["van", "rig"]
 ## MV-736 (switch decker, with road_train): the Decker double-decker bus (id bus) joins between the two
 const TIER_ORDER_3 := ["van", "bus", "rig"]
 const DK_DECKS := [2, 3]          # Decker: starts with 2 decks, the scrap 3rd deck at the first floor-gain Vault level
-const DECKER := {"th": "รถบัส 2 ชั้น เด็คเกอร์", "en": "DECKER BUS", "names": ["9 DEPOT", "NIGHT ROUTE"], "floors": 2}
+const DECKER := {"th": "รถบัส 2 ชั้น เด็คเกอร์", "en": "DECKER BUS", "names": ["9 DEPOT", "NIGHT ROUTE"], "floors": 2,
+	"pick": "เบา วิ่งไว ประหยัดน้ำมัน เกราะบาง"}
+## MV-738 (switch bastion, with decker): Bastion 42-B, the ex-army 8x8 command truck (id bastion), the other pick of the
+## same research: same 2 -> 3 decks as the Decker, much heavier (slower, more fuel) and far more armour
+const TIER_ORDER_4 := ["van", "bus", "bastion", "rig"]
+const BASTION := {"th": "รถบัญชาการ บาสเตียน 42-B", "en": "BASTION 42-B", "names": ["BASTION 42-B"], "floors": 2,
+	"weight": 40.0, "engine": 62.0, "hull": 140.0, "pick": "เกราะหนา +140 แต่หนัก วิ่งช้า กินน้ำมัน"}
 const RT_DECKS := [2, 3]          # road train lead trailer (= main body): decks at Vault 1, most decks
 const ROAD_TRAIN := {"th": "รถพ่วงยาว โร้ดเทรน", "en": "ROAD TRAIN", "names": ["OUTBACK", "LONG HAUL", "BIG DINGO"], "floors": 2}
 const VAN_AMBULANCE := {"th": "รถพยาบาลหมอเรน", "en": "DR. REN'S AMBULANCE", "names": ["TRIAGE-9", "MERCY RUN"]}

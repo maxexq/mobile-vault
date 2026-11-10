@@ -255,6 +255,7 @@ func _migrate() -> void:
 	(s.res as Dictionary).merge(Data.START_RAW, false)
 	_migrate_v4()
 	fit_body(true)
+	fit_trailers()
 	while s.rooms.size() < slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for d in s.dwellers:
@@ -536,6 +537,10 @@ func beds_short_text(left: int) -> String:
 # ------------------------------------------------------------------ vehicle tier / layout
 func tier() -> String:
 	var t := str(s.get("tier", "van")) if not s.is_empty() else "rig"
+	if t == "bastion":
+		if bastion_on():
+			return t      # MV-738: Bastion 42-B
+		t = "bus"         # switch off: the save drives the Decker (or the road train)
 	if Features.on("road_train") and t == "bus" and decker_on():
 		return "bus"      # MV-736: the bus slot is the Decker
 	if Features.on("road_train") and (t == "bus" or t == "train"):
@@ -550,6 +555,8 @@ func vehicle_def() -> Dictionary:
 ## MV-721: the vehicle ladder in play (switch road_train: ambulance + road train only)
 func tier_order() -> Array:
 	if Features.on("road_train"):
+		if bastion_on():
+			return Data.TIER_ORDER_4
 		return Data.TIER_ORDER_3 if decker_on() else Data.TIER_ORDER_2
 	return Data.TIER_ORDER
 
@@ -557,6 +564,25 @@ func tier_order() -> Array:
 ## MV-736: the Decker double-decker bus is in play (switch decker, only with road_train)
 func decker_on() -> bool:
 	return Features.on("decker") and Features.on("road_train")
+
+
+## MV-744: the Decker's status sign keeps spirits up a little (switch decker_sign, tune decker_sign.happy)
+func decker_sign_happy() -> float:
+	if not Features.on("decker_sign") or not decker_on() or tier() != "bus":
+		return 0.0
+	return Features.num("decker_sign.happy", 3.0)
+
+
+## MV-738: Bastion 42-B is in play (switch bastion, only with the Decker): the other pick of the bus research
+func bastion_on() -> bool:
+	return Features.on("bastion") and decker_on()
+
+
+## MV-736/738: is this tier (default: the current one) a 2-3 deck Decker-type body (Decker bus or Bastion 42-B)?
+func dk_tier(t := "") -> bool:
+	if t == "":
+		t = tier()
+	return (t == "bus" and decker_on()) or (t == "bastion" and bastion_on())
 
 
 func vehicle_def_for(t: String) -> Dictionary:
@@ -568,6 +594,8 @@ func vehicle_def_for(t: String) -> Dictionary:
 			return d.merged(Data.VAN_AMBULANCE, true)
 		if t == "bus" and decker_on():
 			return d.merged(Data.DECKER, true)
+		if t == "bastion" and bastion_on():
+			return (Data.VEHICLES.bus as Dictionary).merged(Data.BASTION, true)
 	return d
 
 
@@ -605,8 +633,8 @@ func floors_at(lv: int) -> int:
 		if lv >= int(Features.num("vault.floor_gain_1", float(Data.FLOOR_GAIN_LEVELS[0]))):
 			d += 1
 		return mini(d, Data.RT_DECKS[1])
-	if decker_on() and tier() == "bus":
-		# MV-736: the Decker starts with 2 decks, the scrap 3rd deck at the first floor-gain Vault level, never taller
+	if dk_tier():
+		# MV-736/738: the Decker starts with 2 decks, the scrap 3rd deck at the first floor-gain Vault level, never taller
 		var k := int(Data.DK_DECKS[0])
 		if lv >= int(Features.num("vault.floor_gain_1", float(Data.FLOOR_GAIN_LEVELS[0]))):
 			k += 1
@@ -638,7 +666,7 @@ func fit_body(keep_used := false) -> bool:
 		if Features.on("road_train") and tier() == "rig":
 			# MV-721: the road train is never taller than its 3 decks; rooms above move down or refund (_rehome_room)
 			new_main = mini(old, Data.ROOMS_PER_FLOOR * int(Data.RT_DECKS[1]))
-		elif decker_on() and tier() == "bus":
+		elif dk_tier():
 			new_main = mini(old, Data.ROOMS_PER_FLOOR * int(Data.DK_DECKS[1]))     # MV-736: the Decker tops out at 3 decks
 	s.body_slots = new_main
 	if old == new_main or s.rooms.size() < old:
@@ -696,6 +724,27 @@ func _rehome_room(main_part: Array, new_main: int, room: Dictionary) -> int:
 			return i
 	s.res.scrap = float(s.res.get("scrap", 0.0)) + float(int(Data.ROOMS[t].get("cost", 0)) * maxi(1, int(room.get("level", 1))))
 	return -1
+
+
+## a save with more trailers than Data.MAX_TRAILERS (2 before the 2026-11-10 first patch) keeps its rooms: each room on a
+## removed trailer moves into an empty cell that stays (crew with it), else its build cost comes back as scrap; crew in
+## a removed trailer with nowhere to go turn idle. Returns true when anything changed.
+func fit_trailers() -> bool:
+	var had := int(s.get("trailers", 0))
+	if had <= Data.MAX_TRAILERS:
+		return false
+	var keep := main_slots() + Data.TRAILER_SLOTS * Data.MAX_TRAILERS
+	var rooms: Array = s.rooms
+	var kept := rooms.slice(0, keep)
+	for idx in range(keep, rooms.size()):
+		var to := _rehome_room(kept, keep, rooms[idx])
+		for d in s.dwellers:
+			if int(d.room) == idx:
+				d.room = to
+	s.rooms = kept
+	s.trailers = Data.MAX_TRAILERS
+	_unl_key = -1
+	return true
 
 
 func trailers() -> int:
@@ -1530,7 +1579,7 @@ func _sim_crew_body(dt: float, offline: bool) -> void:
 			has_quarters = true
 	# MV-113: everything below is the same for every crew member this tick: work it out once, not per person
 	var first_q := _first_quarters()
-	var env_base := Env.happy_base()
+	var env_base := Env.happy_base() + decker_sign_happy()
 	var freeze := Env.freeze_power()
 	var pets_bonus := 6.0 * minf(2.0, float((s.get("pets", []) as Array).size()))
 	var low_food: bool = float(res.food) < cap("food") * 0.1

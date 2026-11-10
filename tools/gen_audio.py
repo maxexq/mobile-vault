@@ -710,6 +710,36 @@ def sfx_alarm(rnd):
     return lp(x, 1400)
 
 
+def sfx_air_horn(rnd):
+    """MV-744 Decker air horn: two short then one long blast of a three-note truck/bus chord (saw stack, a reedy
+    buzz from a little noise, the air hiss at the end), low-passed so it honks instead of stinging"""
+    x = zeros(1.55)
+    chord = (233.1, 293.7, 349.2)
+    for at, ln in ((0.0, 0.16), (0.24, 0.16), (0.5, 0.75)):
+        for k, f in enumerate(chord):
+            tone = osc(lambda t, f=f: f * (0.985 + 0.015 * min(1.0, t / 0.05)), ln, "saw", phase=rnd.random())
+            tone = env_mul(tone, lambda t, ln=ln: min(1.0, t / 0.015, max(0.0, (ln - t) / 0.04)))
+            mix(x, tone, n(at), 0.32)
+        buzz = env_mul(bp(white(n(ln), rnd), 700, 2.0), lambda t, ln=ln: min(1.0, t / 0.02, max(0.0, (ln - t) / 0.04)))
+        mix(x, buzz, n(at), 0.12)
+    hiss = env_mul(hp(white(n(0.3), rnd), 3000), lambda t: decay(t, 0.08))
+    mix(x, hiss, n(1.24), 0.08)
+    return verb(lp(x, 2600), 0.18, 0.8)
+
+
+def sfx_bus_siren(rnd):
+    """MV-744 Decker raid siren: a hand-cranked style wail, up and down twice (tri + a little square for bite)"""
+    sec = 2.4
+
+    def f(t):
+        ph = (t % 1.2) / 1.2
+        return 480.0 + 420.0 * math.sin(math.pi * ph) ** 1.5
+
+    x = [0.75 * a + 0.25 * b for a, b in zip(osc(f, sec, "tri"), osc(f, sec, "square"))]
+    x = env_mul(x, lambda t: min(1.0, t / 0.08, max(0.0, (sec - t) / 0.3)))
+    return verb(lp(x, 2200), 0.22, 1.0)
+
+
 def sfx_build(rnd):
     x = zeros(0.95)
     for k in range(3):
@@ -1091,6 +1121,8 @@ SOUNDS = {
     "skill": ("sfx", sfx_skill, False),
     "boss_roar": ("sfx", sfx_boss_roar, False),
     "alarm": ("sfx", sfx_alarm, False),
+    "air_horn": ("sfx", sfx_air_horn, False),
+    "bus_siren": ("sfx", sfx_bus_siren, False),
     "build": ("sfx", sfx_build, False),
     "build_done": ("sfx", sfx_build_done, False),
     "demolish": ("sfx", sfx_demolish, False),

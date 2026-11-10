@@ -30,7 +30,11 @@ const AMB_LIFT := 40.0
 const DK_DIR := "res://assets/vehicles/decker_v3/"
 const DK_W := 640.0
 const DK_X0 := 104.0
-const DK_Y0 := 56.0         # trailers stand on the road: their bottom sits this far above the shell's bottom
+const DK_Y0 := 56.0
+## MV-738 (switch bastion): Bastion 42-B, same 640 px shells and cell rows as the Decker but the box starts at x 158
+## (long military nose + cab in front). assets/vehicles/bastion_v3/shell_f<n>.png, built by tools/art/bastion/shell.py.
+const BS_DIR := "res://assets/vehicles/bastion_v3/"
+const BS_X0 := 158.0         # trailers stand on the road: their bottom sits this far above the shell's bottom
 ## MV-721 (switch road_train): the road train (tier rig) is the approved B-double v2: prime mover + lead trailer as
 ## the main body (body_f<n>.png, 1-3 decks) and the red container for every trailer (trailer_f<n>.png), all drawn
 ## on one road line; cells at x 226 / 20 + col * 152, y 116 + row * 112 (row 0 = top deck). designs/road-train/game/shell.py
@@ -182,12 +186,14 @@ func amb() -> bool:
 
 ## MV-736: the main body is the Decker shell (switch decker, tier bus, 2-3 decks)
 func dk() -> bool:
-	return Game.decker_on() and Game.tier() == "bus" and Game.floors() >= 2 and Game.floors() <= 3 \
-		and ResourceLoader.exists(DK_DIR + "shell_f%d.png" % Game.floors())
+	return Game.dk_tier() and Game.floors() >= 2 and Game.floors() <= 3 \
+		and ResourceLoader.exists(str(shell_spec(Game.tier()).dir) + "shell_f%d.png" % Game.floors())
 
 
 ## shell art of a body drawn as one sprite: dir, width, first cell x0 / y0, height at 1 floor (+112 per floor)
 static func shell_spec(t: String) -> Dictionary:
+	if t == "bastion":
+		return {"dir": BS_DIR, "w": DK_W, "x0": BS_X0, "y0": DK_Y0, "base": 232.0}
 	if t == "bus":
 		return {"dir": DK_DIR, "w": DK_W, "x0": DK_X0, "y0": DK_Y0, "base": 232.0}
 	return {"dir": AMB_DIR, "w": AMB_W, "x0": AMB_X0, "y0": AMB_Y0, "base": 240.0}
@@ -305,7 +311,8 @@ func _rebuild() -> void:
 			var sp := Sprite2D.new()
 			sp.name = "RoadTrainShell%d" % u
 			sp.centered = false
-			sp.texture = load(RT_DIR + ("body_f%d.png" % Game.floors() if u == 0 else "trailer_f%d.png" % _unit_floors(u - 1)))
+			sp.texture = load(RT_DIR + ("body_f%d.png" % Game.floors() if u == 0
+				else "%s_f%d.png" % [rt_trailer_kind(u - 1, units - 1, _unit_floors(u - 1)), _unit_floors(u - 1)]))
 			sp.position = Vector2(_unit_x(u - 1), _unit_top(u - 1))
 			world.add_child(sp)
 			rt_shells.append(sp)
@@ -469,3 +476,11 @@ func _draw_shell() -> void:
 				shell.draw_rect(Rect2(x0 + FRAME, y + V3Art.CELL.y, _unit_w() - FRAME * 2.0 - SHAFT, 1), beam_hi)
 		if u > 0:                   # tow bar to the unit in front
 			shell.draw_rect(Rect2(x0 - UNIT_GAP, top + h - 14, UNIT_GAP, 4), beam)
+
+
+## MV-740: container trailer `u` of `count`: "trailer_link" (B-link rear: its beam runs on under the nose of the trailer
+## behind it) unless it is the last one, which keeps the truck rear end (plate, tail lamps, tow hook) as "trailer"
+static func rt_trailer_kind(u: int, count: int, decks: int) -> String:
+	if u < count - 1 and ResourceLoader.exists(RT_DIR + "trailer_link_f%d.png" % decks):
+		return "trailer_link"
+	return "trailer"

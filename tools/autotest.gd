@@ -684,6 +684,11 @@ func _run() -> void:
 		await _world_v2_test()
 		_finish()
 		return
+	if "--only=bastion" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _bastion_test()
+		_finish()
+		return
 	if "--only=decker" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _decker_test()
@@ -1537,11 +1542,16 @@ func _run() -> void:
 	Game.s.res.scrap = 9000.0
 	Game.s.items.components = 9999
 	Meta.add_blueprint("bp_trailer")
-	_check("hitch two wagons to the train", Mods.add_trailer() and Mods.add_trailer() and Game.slot_count() == Game.main_slots() + 12)
+	var hitched := true
+	for i in Data.MAX_TRAILERS:
+		hitched = hitched and Mods.add_trailer()
+	# Parames 2026-11-10: first patch = Data.MAX_TRAILERS (1) trailer / wagon; one more is refused
+	_check("hitch wagons to the train up to the limit", hitched and not Mods.add_trailer()
+		and Game.slot_count() == Game.main_slots() + Data.TRAILER_SLOTS * Data.MAX_TRAILERS)
 	Game.vault_level_changed.emit(6)
 	main.set_zoom_mode("wide")
 	await wait(1.6)
-	await shot("train_two_wagons_wide")
+	await shot("train_wagons_wide")
 	main.set_zoom_mode("auto")
 	Features.set_override("features", "road_train", null)
 	# ---- tester console (god mode) + trace log
@@ -1576,7 +1586,9 @@ func _run() -> void:
 	_check("god: free build", free_slot >= 0 and Game.build_room(free_slot, "kitchen") and is_equal_approx(float(Game.s.res.scrap), scrap_before))
 	Dev.set_flag("free", false)
 	Dev.set_tier("van")
-	_check("god: swap chassis keeps trailers", Game.tier() == "van" and Game.slot_count() == Game.main_slots() + 12 		and main.vehicle.room_views.size() == Game.main_slots() + 12)
+	var tslots := Data.TRAILER_SLOTS * Data.MAX_TRAILERS
+	_check("god: swap chassis keeps trailers", Game.tier() == "van" and Game.slot_count() == Game.main_slots() + tslots \
+		and main.vehicle.room_views.size() == Game.main_slots() + tslots)
 	Dev.set_tier("train")
 	Dev.set_flag("invincible", true)
 	Dev.set_hull(0.1)
@@ -1724,6 +1736,7 @@ func _run() -> void:
 	await _world_v2_test()
 	await _road_train_test()
 	await _decker_test()
+	await _bastion_test()
 	await _ambulance_pup_test()
 	await _vehicle_anim_test()
 	await _raw_food_test()
@@ -7189,7 +7202,7 @@ func _exterior_mods_test() -> void:
 	var matrix_ok := true
 	for tier in Data.TIER_ORDER:
 		Dev.set_tier(tier)
-		for trailers in 3:
+		for trailers in Data.MAX_TRAILERS + 1:
 			Dev.set_trailers(trailers)
 			for lv in range(1, 4):
 				for id in Mods.MODS:
@@ -7212,7 +7225,7 @@ func _exterior_mods_test() -> void:
 					matrix_ok = matrix_ok and m.pool.size() == 12 and m.active_fx() == 0
 				if trailers == 0 and lv == 2:
 					await shot("exterior_mods_" + tier)
-	_check("exterior mods: all chassis, 0-2 trailers, all levels, cutaway/closed, rail/track/rim precedence", matrix_ok)
+	_check("exterior mods: all chassis, 0-max trailers, all levels, cutaway/closed, rail/track/rim precedence", matrix_ok)
 	var floors_ok := true
 	for tier in Data.TIER_ORDER:
 		Dev.set_tier(tier)
@@ -12924,6 +12937,20 @@ func _ambulance_v3_test() -> void:
 				holes_ok = holes_ok and img.get_pixel(int(c.x) + 72, int(c.y) + 48).a < 0.1 and img.get_pixel(int(c.x) + 72, int(c.y) - 6).a > 0.9
 	_check("ambulance v3: shells for 1-5 floors load at 638 wide with 3 cells per floor", files_ok)
 	_check("ambulance v3: every cell window is cut out and the deck above it is solid", holes_ok)
+	# MV-741 cleanup (tools/art/ambulance/cleanup.py): no see-through pockets in the cab, no stray specks, framed windows
+	var clean_ok := true
+	var frames_ok := true
+	for n in [1, 3]:
+		var img: Image = (load(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % n) as Texture2D).get_image()
+		img.decompress()
+		img.convert(Image.FORMAT_RGBA8)
+		var r := _amb_shell_flaws(img)
+		clean_ok = clean_ok and r.x == 0 and r.y == 0
+		for c in spec.floors[str(n)].cells:      # 1 px black lip right over the opening's top edge
+			var lip := img.get_pixel(int(c.x) + 72, int(c.y) + 3)
+			frames_ok = frames_ok and lip.a > 0.9 and lip.r < 0.1 and lip.g < 0.1
+	_check("MV-741: the ambulance cab has no see-through holes and the shell has no stray pixels", clean_ok)
+	_check("MV-741: every room window has a frame lip, so the rooms sit inside the body", frames_ok)
 	var hud: HUD = main.hud
 	var panel: InteriorV3Panel = hud.panels.interior
 	var f := Dev.ambulance_v3_preview(3)
@@ -12963,6 +12990,58 @@ func _ambulance_v3_test() -> void:
 	await wait(0.3)
 
 
+## MV-741: (see-through pixels enclosed by the cab, opaque pixels with no opaque neighbour) in an ambulance shell.
+## The cab is the front 146 px (up to the first window) of the bottom 144 rows; enclosed = not reachable from the image border through
+## transparent pixels.
+func _amb_shell_flaws(img: Image) -> Vector2i:
+	var w := img.get_width()
+	var h := img.get_height()
+	var d := img.get_data()
+	var seen := PackedByteArray()
+	seen.resize(w * h)
+	var stack := PackedInt32Array()
+	for x in w:
+		stack.append(x)
+		stack.append((h - 1) * w + x)
+	for y in h:
+		stack.append(y * w)
+		stack.append(y * w + w - 1)
+	while not stack.is_empty():
+		var i: int = stack[stack.size() - 1]
+		stack.resize(stack.size() - 1)
+		if seen[i] or d[i * 4 + 3] > 0:
+			continue
+		seen[i] = 1
+		var x := i % w
+		@warning_ignore("integer_division")
+		var y := i / w
+		if x > 0: stack.append(i - 1)
+		if x < w - 1: stack.append(i + 1)
+		if y > 0: stack.append(i - w)
+		if y < h - 1: stack.append(i + w)
+	var holes := 0
+	for y in range(h - 144, h):
+		for x in 146:              # up to the first room window (cells start at x 146)
+			var i := y * w + x
+			if d[i * 4 + 3] == 0 and not seen[i]:
+				holes += 1
+	var strays := 0
+	var around := PackedInt32Array([-w - 1, -w, -w + 1, -1, 1, w - 1, w, w + 1])
+	for y in range(1, h - 1):
+		for x in range(1, w - 1):
+			var i := y * w + x
+			if d[i * 4 + 3] == 0:
+				continue
+			var lone := true
+			for o in around:
+				if d[(i + o) * 4 + 3] > 0:
+					lone = false
+					break
+			if lone:
+				strays += 1
+	return Vector2i(holes, strays)
+
+
 ## MV-726: the world v2 ambulance moves: rolling tyres on the road, body on its springs, lights, flag
 func _vehicle_anim_test() -> void:
 	var old_state: Dictionary = Game.s.duplicate(true)
@@ -12988,6 +13067,32 @@ func _vehicle_anim_test() -> void:
 	var g1 := v.amb.flag_frame()
 	await wait(0.13)
 	_check("vehicle anim: driving rolls the tyres and waves the flag", f1 != v.amb.spin_frame() and g1 != v.amb.flag_frame())
+	# MV-741: the lantern is cut out of the shell and swings from its bail while driving
+	var lsw := 0.0
+	for i in 30:
+		await wait(0.05)
+		lsw = maxf(lsw, absf(v.amb.lamp_angle))
+	var lr: Array = spot.lantern_still
+	_check("MV-741: the lantern hangs on its own sprite and swings while the vehicle moves", v.amb.lamp != null
+		and img.get_pixel(int(lr[0]) + 4, int(lr[1]) + 8).a == 0.0 and lsw > 0.03 and absf(v.amb.lamp.rotation - v.amb.lamp_angle) < 0.001)
+	# MV-741 micro anims: Dr. Ren drives, the roof plants lean into the headwind, the pipe puffs, the cells glint by day
+	var pr: Array = spot.clips.potsL.rect
+	var pot_frames := {}
+	var puffed := false
+	var glinted := false
+	v.amb._glint_wait = 0.0
+	for i in 16:
+		await wait(0.05)
+		puffed = puffed or not v.amb.puffs.is_empty()
+		pot_frames[v.amb.clip_i.get("potsL", -1)] = true
+		glinted = glinted or (v.amb.glint != null and v.amb.glint.visible)
+	_check("MV-741: Dr. Ren drives the ambulance (driver.png 'drive' loop over the cab glass)", v.amb.driver != null
+		and v.amb.driver_state == "drive" and (AmbulanceMotion.driver_frames().drive as Array).has(v.amb.driver.texture))
+	_check("MV-741: the PixelLab roof clips (flag, both pot rows, birdhouses) are cut from the shell and the leaves sway",
+		v.amb.clips.has("potsL") and v.amb.clips.has("potsR") and v.amb.clips.has("birds") and (spot.clips as Dictionary).has("flag")
+		and img.get_pixel(int(pr[0]) + 10, int(pr[1]) + 20).a == 0.0 and pot_frames.size() >= 3)
+	_check("MV-741: the copper pipe puffs smoke and the solar cells glint by day", puffed
+		and (glinted or v._night > 0.6) and v.amb.glint != null)
 	_check("vehicle anim: headlight lens + tail lamps on while driving", v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1)
 	var y_before: Array = v.amb.tyres.map(func(t): return t.global_position.y)
 	v.amb.bump(90.0)
@@ -13014,10 +13119,20 @@ func _vehicle_anim_test() -> void:
 		marker_seen = marker_seen or v.amb.lamp_alpha("marker") > 0.5
 	_check("vehicle anim: the raid light bar flashes left then right", bl and br)
 	_check("vehicle anim: the amber marker blinks after pulling over", marker_seen)
+	# MV-741: the roof lantern's PixelLab flame flickers over its glass and its glow follows the flame, day or night
+	var fl_seen := {}
+	var lit := true
+	for i in 20:
+		await wait(0.05)
+		fl_seen[v.amb.flame_frame()] = true
+		lit = lit and v.amb.lamp_alpha("lantern") > 0.05
+	_check("MV-741: the lantern flame flickers (PixelLab frames over the glass) and always glows", v.amb.flame != null
+		and v.amb.flame_frames.size() == (spot.lantern_frames as Array).size() and fl_seen.size() >= 3 and lit)
 	await shot("vehicle_anim_beacon")
 	var f2 := v.amb.spin_frame()
 	await wait(0.3)
 	_check("vehicle anim: parked tyres stand still", f2 == v.amb.spin_frame())
+	_check("MV-741: parked, Dr. Ren idles at the wheel", v.amb.driver_state == "idle")
 	v.amb.force_beacon = false
 	v.debug_speed = -1.0
 	_check("vehicle anim: GOD MODE actions drive it", Dev.vehicle_anim("fast") and v.debug_speed > 1.0 and Dev.vehicle_anim("park"))
@@ -13135,8 +13250,8 @@ func _ambulance_pup_test() -> void:
 	var tex_ok: bool = ResourceLoader.exists(InteriorV3Panel.PUP_DIR + "pup_f2.png") and int(spec.size[0]) == int(InteriorV3Panel.PUP_W) \
 		and int(spec.size[1]) == int(InteriorV3Panel.PUP_H) and int(spec.rear) == int(InteriorV3Panel.PUP_REAR) and spec.cells.size() == Data.TRAILER_SLOTS
 	_check("ambulance pup: the pup shell fits the trailer grid (3 rooms x 2 floors) and its pup.json", tex_ok)
-	var road_ok: bool = n == 2 and Game.tier() == "van" and v.v2 and v.v2_pup_trailers() and not v.v2_rt_trailers() \
-		and v.v2_tshells.size() == 2 and v.v2_cells.size() == Game.slot_count() and v.wheels.is_empty()
+	var road_ok: bool = n == Data.MAX_TRAILERS and Game.tier() == "van" and v.v2 and v.v2_pup_trailers() and not v.v2_rt_trailers() \
+		and v.v2_tshells.size() == n and v.v2_cells.size() == Game.slot_count() and v.wheels.is_empty()
 	for k in v.v2_tshells.size():
 		var tsp: Sprite2D = v.v2_tshells[k]
 		road_ok = road_ok and tsp.texture.resource_path.ends_with("ambulance_pup/pup_f2.png") \
@@ -13144,7 +13259,7 @@ func _ambulance_pup_test() -> void:
 			and tsp.get_index() > v.v2_shell.get_index()          # the tow plate sits on the ambulance's rear
 	road_ok = road_ok and is_equal_approx(v.unit_x(0), Vehicle.V2_X + InteriorV3Panel.PUP_X0 * Vehicle.V2_K) \
 		and is_equal_approx(v.unit_x(1) - v.unit_x(0), InteriorV3Panel.PUP_STEP * Vehicle.V2_K) \
-		and is_equal_approx(v.length(), v.unit_x(1) + InteriorV3Panel.PUP_REAR * Vehicle.V2_K)
+		and is_equal_approx(v.length(), v.unit_x(n - 1) + InteriorV3Panel.PUP_REAR * Vehicle.V2_K)
 	for slot in range(Game.main_slots(), Game.slot_count()):
 		var tc: RoomV3Cell = v.v2_cells[slot]
 		road_ok = road_ok and tc.world_view
@@ -13158,7 +13273,7 @@ func _ambulance_pup_test() -> void:
 	var panel: InteriorV3Panel = main.hud.panels.interior
 	Dev.ambulance_pup_preview(2, true)
 	await wait(0.4)
-	var in_ok: bool = panel.amb() and panel.pup() and panel.pup_shells.size() == 2
+	var in_ok: bool = panel.amb() and panel.pup() and panel.pup_shells.size() == n
 	for slot in range(Game.main_slots(), Game.slot_count()):
 		var u := Game.slot_unit(slot)
 		var c := Game.slot_cell(slot)
@@ -13220,7 +13335,7 @@ func _road_train_test() -> void:
 	var panel: InteriorV3Panel = main.hud.panels.interior
 	var shells_ok := true
 	for lv in [1, 6]:
-		for trailers in [0, 2]:
+		for trailers in [0, Data.MAX_TRAILERS]:
 			Dev.set_vault(lv)
 			Dev.set_trailers(trailers)
 			Dev.rooms_v3_open()
@@ -13242,10 +13357,10 @@ func _road_train_test() -> void:
 				var img := sp.texture.get_image()
 				var lp := (panel.cells[slot] as RoomV3Cell).position - sp.position + Vector2(72, 48)
 				shells_ok = shells_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1
-			if lv == 6 and trailers == 2:
+			if lv == 6 and trailers == Data.MAX_TRAILERS:
 				await shot("road_train_interior_v3")
 			panel.close()
-	_check("road train: v3 interior draws the B-double shells, every room in its window (2/3 decks, 0/2 trailers)", shells_ok)
+	_check("road train: v3 interior draws the B-double shells, every room in its window (2/3 decks, 0/max trailers)", shells_ok)
 	get_window().size = old_window
 	# on the road (world v2): the B-double body with v3 cells, standing on the road, taps on the cells
 	var v: Vehicle = main.vehicle
@@ -13253,7 +13368,7 @@ func _road_train_test() -> void:
 	var wf := Dev.road_train_world(2)
 	await wait(0.4)
 	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
-	var world_ok := wf == 2 and v.v2 and v.v2_rt() and v.v2_shell.texture.resource_path.ends_with("road_train_v3/body_f2.png") \
+	var world_ok := wf == 2 and v.v2 and v.v2_rt() and (v.v2_shell.texture.resource_path.ends_with("road_train_v3/body_f2.png") or v.amb_on) \
 		and v.v2_cells.size() == Game.main_slots() and v.wheels.is_empty() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
 		and is_equal_approx(v.v2_extra(), Vehicle.V2_W_RT - Vehicle.MAIN_W)
 	for slot in Game.main_slots():
@@ -13265,13 +13380,13 @@ func _road_train_test() -> void:
 			and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and cl.y < 2
 	await shot("road_train_world_f2")
 	wf = Dev.road_train_world(3)
-	Dev.set_trailers(2)
+	Dev.set_trailers(Data.MAX_TRAILERS)
 	await wait(0.4)
 	world_ok = world_ok and wf == 3 and v.v2 and v.v2_shell.texture.get_size().y == 492.0
 	await shot("road_train_world_f3")
 	_check("road train: on the road (world v2) the B-double body carries the v3 rooms, on the road line, 2/3 decks", world_ok)
 	# MV-721: the trailers behind it are the 2D red container shells, nose on the unit in front, no old drawbar / wheels
-	var tr_ok := v.v2_rt_trailers() and v.v2_tshells.size() == 2 and v.wheels.is_empty() and v.v2_cells.size() == Game.slot_count()
+	var tr_ok := v.v2_rt_trailers() and v.v2_tshells.size() == Data.MAX_TRAILERS and v.wheels.is_empty() and v.v2_cells.size() == Game.slot_count()
 	for k in v.v2_tshells.size():
 		var tsp: Sprite2D = v.v2_tshells[k]
 		var tb := (tsp.position.y + tsp.texture.get_size().y) * Vehicle.V2_K
@@ -13285,6 +13400,113 @@ func _road_train_test() -> void:
 			and (tc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and v.cell_size(slot) == Vehicle.V2_CELL, str(slot))
 	_fold_flush()
 	_check("road train: on the road the trailers are the container shells on the road line, no gap, no old trailer wheels", tr_ok)
+	# MV-740: shell clean-up (no see-through pinholes, the cab glass back, the lead trailer's rear closed, a frame round
+	# every room window) and micro animations (tyres, landing legs, shock absorbers, lamps) on every unit
+	var rt_spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.RT_DIR + "shell.json"))
+	var clean_ok := true
+	var frame_ok := true
+	for kind in ["body", "trailer"]:
+		for d in [2, 3]:                                  # (the road train body has 2 or 3 decks, RT_DECKS)
+			var img: Image = (load(InteriorV3Panel.RT_DIR + "%s_f%d.png" % [kind, d]) as Texture2D).get_image()
+			img.decompress()
+			var dy: int = img.get_height() - 380
+			if kind == "body":
+				clean_ok = clean_ok and img.get_pixel(140, 245 + dy).a > 0.9 and img.get_pixel(693, 150).a > 0.9 \
+					and img.get_pixel(360, 368 + dy).a == 0.0
+			for y in range(100, img.get_height() - 1):      # 1 px slits between two opaque pixels (side to side)
+				for x in range(1, img.get_width() - 1):
+					if img.get_pixel(x, y).a == 0.0 and img.get_pixel(x - 1, y).a > 0.0 and img.get_pixel(x + 1, y).a > 0.0:
+						var in_win := false                         # (a tyre is cut out and drawn on its own)
+						for wx in AmbulanceMotion.spot(d, AmbulanceMotion.RT_DIR, "" if kind == "body" else "trailer").wheels:
+							in_win = in_win or Vector2(x + 0.5, y + 0.5).distance_to(Vector2(float(wx[0]), float(wx[1]))) <= 24.0
+						for cc in rt_spec[kind][str(d)].cells:
+							in_win = in_win or Rect2i(int(cc.x), int(cc.y), 144, 96).has_point(Vector2i(x, y))
+						clean_ok = clean_ok and in_win
+			for cc in rt_spec[kind][str(d)].cells:
+				var cx := int(cc.x)
+				var cy := int(cc.y)
+				frame_ok = frame_ok and img.get_pixel(cx + 72, cy - 1).v < 0.06 and img.get_pixel(cx - 1, cy + 48).v < 0.06 \
+					and img.get_pixel(cx + 72, cy).a > 0.3 and img.get_pixel(cx + 72, cy + 48).a < 0.1
+	_check("road train: no see-through pinholes, cab glass filled, rear ladder cage closed, no far-side leg shadow (2/3 decks + trailers)", clean_ok)
+	_check("road train: every room window has a frame (black edge outside, inner shadow lip, clear middle)", frame_ok)
+	var rt_anim := Dev.road_train_anim("drive")
+	await wait(0.8)
+	var rsp0 := v.amb.spin_frame()
+	await wait(0.4)
+	var units_ok := rt_anim and v.amb_on and v.amb.dir == AmbulanceMotion.RT_DIR and v.amb.tyres.size() == 6 \
+		and v.rt_units.size() == Data.MAX_TRAILERS and v.amb.legs.size() == 1
+	for m in v.rt_units:
+		units_ok = units_ok and m.unit.begins_with("trailer") and m.tyres.size() == 3 and m.legs.size() == 1
+	_check("road train: GOD drives it with animated tyres on every unit (6 + 3 per trailer) and landing legs", units_ok)
+	_check("road train: tyres roll, legs cranked up while driving, headlight on", rsp0 != v.amb.spin_frame()
+		and v.amb.legs_down() == 0.0 and v.rt_units[0].legs_down() == 0.0 and v.amb.lamp_alpha("head") > 0.2)
+	# MV-740: unbroken air lines: with one trailer the lead trailer's lines run on into its nose art (no code hoses, no caps);
+	# 4 code hoses join container trailers (checked with 2 when Data.MAX_TRAILERS allows it)
+	var cp: RtCouplings = v.rt_couplings
+	var hoses_ok := cp != null and cp.visible and cp.caps.is_empty() and cp.hoses.size() == 4 * (Data.MAX_TRAILERS - 1)
+	_check("road train: air lines run unbroken from the lead trailer into the trailer (no shock absorbers on the tyres)", hoses_ok
+		and not "shocks" in v.amb)
+	# MV-740 round 3: a trailer with another behind it ends in a B-link beam (no plate / tow hook / lit tail lamps), the last
+	# one keeps the truck rear end; the beam reaches the canvas edge on the nose beam's rows so the joint is one steel line.
+	# Parames 2026-11-10: first patch = 1 trailer (Data.MAX_TRAILERS), so the B-link shells are checked as files only
+	var last: AmbulanceMotion = v.rt_units[0]
+	var link_ok: bool = last.unit == "trailer" and last.glows.has("tail0") and Data.MAX_TRAILERS == 1 \
+		and InteriorV3Panel.rt_trailer_kind(0, 2, 2) == "trailer_link" and InteriorV3Panel.rt_trailer_kind(0, 1, 2) == "trailer"
+	for dk in [2, 3]:
+		var li: Image = (load(InteriorV3Panel.RT_DIR + "trailer_link_f%d.png" % dk) as Texture2D).get_image()
+		var ti: Image = (load(InteriorV3Panel.RT_DIR + "trailer_f%d.png" % dk) as Texture2D).get_image()
+		li.decompress()
+		ti.decompress()
+		var bdy := li.get_height() - 380
+		link_ok = link_ok and li.get_size() == ti.get_size() and li.get_pixel(499, 350 + bdy).a > 0.9 \
+			and ti.get_pixel(0, 350 + bdy).a > 0.9 and li.get_pixel(460, 331 + bdy).r < 0.7 \
+			and ti.get_pixel(4, 150).a > 0.9 and ti.get_pixel(4, 290 + bdy).a > 0.9
+	_check("road train: one trailer max (first patch) with tail lamps, B-link shells ready, the nose has a full front post", link_ok)
+	await shot("road_train_anim_drive")
+	Dev.road_train_anim("brake")
+	await wait(3.6)
+	_check("road train: stopped -> the landing legs crank down onto the road", v.amb.legs_down() == 1.0 and v.rt_units[0].legs_down() == 1.0
+		and v.amb.legs[0].position.y == float(v.amb.legs[0].get_meta("y0")))
+	await shot("road_train_anim_parked")
+	Dev.road_train_anim("park")
+	v.debug_speed = -1.0
+	Dev.set_trailers(0)
+	await wait(0.3)
+	_check("road train: no trailer behind -> the lead trailer's air lines end in coupler heads", v.rt_couplings.visible
+		and v.rt_couplings.caps.size() == 2 and v.rt_couplings.hoses.is_empty())
+	# Parames 2026-11-10: an older save with 2 trailers folds into 1; the rooms of the removed trailer move into empty cells
+	# that stay (crew with them), else their build cost comes back as scrap
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	var keep_dw2: Array = Game.s.dwellers.duplicate(true)
+	Dev.set_trailers(1)
+	var rtype := ""
+	for k in Data.ROOMS:
+		if int(Data.ROOMS[k].get("cost", 0)) > 0:
+			rtype = str(k)
+			break
+	var base_n: int = Game.s.rooms.size()
+	for i in Data.TRAILER_SLOTS:
+		Game.s.rooms.append({"type": rtype if i == 0 else "empty", "level": 1, "job": {}})
+	Game.s.trailers = 2
+	if not Game.s.dwellers.is_empty():
+		Game.s.dwellers[0].room = base_n
+	var empty_before := 0
+	for i in base_n:
+		if i != Data.ENGINE_SLOT and str(Game.s.rooms[i].type) == "empty" and (Game.s.rooms[i].get("build", {}) as Dictionary).is_empty():
+			empty_before += 1
+	var tscrap0 := float(Game.s.res.get("scrap", 0.0))
+	var folded := Game.fit_trailers()
+	var moved_ok := true
+	if empty_before > 0:
+		moved_ok = Game.s.dwellers.is_empty() or str(Game.s.rooms[int(Game.s.dwellers[0].room)].type) == rtype
+	else:
+		moved_ok = float(Game.s.res.get("scrap", 0.0)) > tscrap0
+	_check("road train: a 2-trailer save folds into 1 trailer, the removed trailer's room is rehomed (or refunded)", folded
+		and int(Game.s.trailers) == 1 and Game.trailers() == 1 and Game.s.rooms.size() == Game.slot_count() and moved_ok)
+	Game.s.rooms = keep_rooms
+	Game.s.dwellers = keep_dw2
+	Game.s.trailers = 0
+	Dev._vehicle_changed()
 	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
@@ -13323,6 +13545,7 @@ func _decker_test() -> void:
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	Features.set_override("features", "road_train", true)
 	Features.set_override("features", "decker", true)
+	Features.set_override("features", "bastion", false)     # MV-738: Bastion joins the ladder in _bastion_test
 	_check("decker: the ladder is ambulance, Decker, road train", Game.tier_order() == ["van", "bus", "rig"])
 	Game.s.tier = "bus"
 	_check("decker: a bus save drives the Decker, named DECKER BUS", Game.tier() == "bus" and str(Game.vehicle_def().en) == "DECKER BUS")
@@ -13435,6 +13658,40 @@ func _decker_test() -> void:
 	_check("decker: the loose cables under the floor swing while driving (%d frames seen)" % sw_seen.size(),
 		v.amb.swings.size() == 1 and sw_seen.size() >= 3)
 	await shot("decker_anim_drive")
+	# MV-744: the 9 DEPOT sign is a status board (switch decker_sign) + air horn / raid siren (switch decker_horn)
+	var sign_ok := Dev.decker_sign("RAID!", "raid")
+	await wait(0.3)
+	_check("decker sign: GOD puts RAID! on the sign, the blank face covers 9 DEPOT, the baked glyphs stay dark",
+		sign_ok and v.amb.sign_line() == "RAID!" and v.amb.tick_face.visible and not v.amb.sign_lit.visible
+		and v.amb.tick_text.region_rect.size == Vector2(44, DeckerSign.GLYPH_H))
+	await shot("decker_sign_raid")
+	Dev.decker_sign("NEXT STOP: HOPE", "cheer")
+	await wait(0.4)
+	var rx0 := v.amb.tick_text.region_rect.position.x
+	await wait(0.5)
+	_check("decker sign: a line longer than the face scrolls (%.0f -> %.0f px)" % [rx0, v.amb.tick_text.region_rect.position.x],
+		v.amb.sign_line() == "NEXT STOP: HOPE" and v.amb.tick_text.region_rect.position.x > rx0)
+	var keep_res: Dictionary = (Game.s.res as Dictionary).duplicate()
+	var keep_phase: String = Threat.phase
+	Game.s.res.water = 0.0
+	Threat.phase = "raid"
+	var al := DeckerSign.alerts()
+	_check("decker sign: alerts = raid first, then low water (%s)" % str(al), al.size() >= 2 and str(al[0][0]) == "RAID!"
+		and str(al[0][1]) == "raid" and al.any(func(a): return str(a[0]) == "WATER LOW"))
+	Threat.phase = keep_phase
+	Game.s.res = keep_res
+	_check("decker sign: font draws every character of the cheerful lines, 6 px per glyph",
+		DeckerSign.CHEERS.all(func(t: String): return Array(t.split("")).all(func(c: String): return DeckerSign.FONT.has(c)))
+		and DeckerSign.text_image("RAID!").get_width() == 29)
+	var happy_on := Game.decker_sign_happy()
+	Features.set_override("features", "decker_sign", false)
+	var happy_off := Game.decker_sign_happy()
+	Features.set_override("features", "decker_sign", true)
+	_check("decker sign: lifts crew happiness a little (+%.0f), nothing with the switch off" % happy_on, happy_on > 0.0
+		and happy_on <= 5.0 and happy_off == 0.0)
+	_check("decker horn: air horn + raid siren are in the sound set, on for the Decker",
+		"air_horn" in Sound.SFX and "bus_siren" in Sound.SFX and ResourceLoader.exists(Sound.SFX_DIR + "air_horn.wav")
+		and ResourceLoader.exists(Sound.SFX_DIR + "bus_siren.wav") and Sound.decker_horn_on())
 	Dev.decker_anim("brake")
 	await wait(1.6)
 	_check("decker: braking to a stop lights the brake lamp", v.amb.lamp_alpha("tail0") > 0.7)
@@ -13444,6 +13701,91 @@ func _decker_test() -> void:
 	Features.set_override("features", "decker", false)
 	_check("decker: switch off = 2 vehicles again, a Decker save drives the road train, research hidden",
 		Game.tier_order() == ["van", "rig"] and Game.tier() == "rig" and Meta.perk_hidden("tier_bus"))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Dev._vehicle_changed()
+	await wait(0.3)
+
+
+## MV-738 (switch bastion): Bastion 42-B, the ex-army 8x8 command truck, is the other pick of the Decker's research:
+## one tier_bus research unlocks both, the next generation picks one; 2 -> 3 decks like the Decker, heavier + more armour
+func _bastion_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "road_train", true)
+	Features.set_override("features", "decker", true)
+	Features.set_override("features", "bastion", true)
+	_check("bastion: the ladder is ambulance, Decker, Bastion, road train", Game.tier_order() == ["van", "bus", "bastion", "rig"])
+	var dk := Game.vehicle_def_for("bus")
+	var bs := Game.vehicle_def_for("bastion")
+	_check("bastion: named BASTION 42-B, same decks as the Decker, heavier with much more hull",
+		str(bs.en) == "BASTION 42-B" and int(bs.floors) == int(dk.floors) and float(bs.weight) > float(dk.weight) and float(bs.hull) >= float(dk.hull) + 80.0)
+	Game.s.tier = "van"
+	var mm := Meta.m()
+	mm.perks = {}
+	mm.legacy = 999
+	Meta.add_blueprint("bp_bus")
+	_check("bastion: not unlocked before the research", not Meta.tier_unlocked("bastion") and not Meta.tier_unlocked("bus"))
+	_check("bastion: the one tier_bus research unlocks both picks, the Decker stays the default",
+		str(Meta.perk_def("tier_bus").en) == "DECKER / BASTION" and Meta.buy("tier_bus") and Meta.tier_unlocked("bus") and Meta.tier_unlocked("bastion") and Meta.best_tier() == "bus")
+	Features.set_override("features", "five_floors", true)
+	Game.s.tier = "bastion"
+	_check("bastion: 2 decks at the start, 3 from the first floor-gain level, never more", Game.tier() == "bastion" and Game.floors_at(1) == 2 and Game.floors_at(Data.FLOOR_GAIN_LEVELS[0]) == 3 and Game.floors_at(6) == 3)
+	# next generation picks the Bastion
+	Game.s.tier = "van"
+	Meta.next_generation([], "bastion")
+	await wait(0.3)
+	_check("bastion: the next generation can pick the Bastion (2 decks, 6 rooms, its hull bonus)",
+		Game.tier() == "bastion" and Game.main_slots() == 6 and Game.hull_max() >= 100.0 + float(bs.hull))
+	var n := Dev.bastion_preview(2, false)
+	await wait(0.3)
+	_check("bastion: GOD drives Bastion with 2 decks in place", n == 2 and Game.tier() == "bastion" and main.vehicle.room_views.size() == Game.slot_count())
+	var old_window := get_window().size
+	get_window().size = Vector2i(405, 720)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.BS_DIR + "shell.json"))
+	var shells_ok := true
+	for d in [2, 3]:
+		Dev.bastion_preview(d, false)
+		Dev.rooms_v3_open()
+		await wait(0.4)
+		var tex := panel.amb_shell.texture
+		shells_ok = shells_ok and panel.dk() and panel.amb_shell.visible and tex.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
+			and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
+		var img := tex.get_image()
+		for slot in Game.main_slots():
+			var c := Game.slot_cell(slot)
+			var want := Vector2(-1, -1)
+			for cc in spec.floors[str(d)].cells:
+				if int(cc.floor) == c.y and int(cc.col) == c.x:
+					want = panel.amb_shell.position + Vector2(float(cc.x), float(cc.y))
+			var cp := (panel.cells[slot] as RoomV3Cell).position
+			var lp := cp - panel.amb_shell.position + Vector2(72, 48)
+			_fold("bastion: v3 interior room sits in its cut-out window", cp.is_equal_approx(want) and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1, "%d decks slot %d" % [d, slot])
+		await shot("bastion_interior_f%d" % d)
+		panel.close()
+	_fold_flush()
+	_check("bastion: v3 interior draws the Bastion shell (2 and 3 decks)", shells_ok)
+	get_window().size = old_window
+	var v: Vehicle = main.vehicle
+	var world_ok := true
+	for d in [2, 3]:
+		Dev.bastion_preview(d)
+		await wait(0.4)
+		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+		world_ok = world_ok and v.v2 and v.v2_dk() and v.v2_shell.texture.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
+			and v.v2_cells.size() == Game.main_slots() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5
+		var img := v.v2_shell.texture.get_image()
+		for slot in Game.main_slots():
+			var wc: RoomV3Cell = v.v2_cells[slot]
+			var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
+			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
+		await shot("bastion_world_f%d" % d)
+	_check("bastion: on the road (world v2) the truck carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
+	Features.set_override("features", "bastion", false)
+	_check("bastion: switch off = a Bastion save drives the Decker, ladder without it", Game.tier() == "bus" and not Game.tier_order().has("bastion"))
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state
