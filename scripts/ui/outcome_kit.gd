@@ -55,7 +55,7 @@ static func lists(v: VBoxContainer, rows: Array, crew: Array, col: Color, rows_t
 		var fl := UIKit.flow(4)
 		v.add_child(fl)
 		for c in crew.slice(0, 8):
-			fl.add_child(crew_chip(c.d, c.tags, delay))
+			fl.add_child(crew_chip(c.d, c.tags, delay, "sad" if col == UIKit.C_RED else "happy"))
 			delay += 0.07
 		if crew.size() > 8:
 			fl.add_child(UIKit.label(Loc.t("+%d คน") % (crew.size() - 8), UIKit.FS_SMALL, UIKit.C_DIM))
@@ -87,11 +87,15 @@ static func change_row(r: Dictionary, delay: float) -> Control:
 	return p
 
 
-static func crew_chip(d: Dictionary, tags: Array, delay: float) -> Control:
+## MV-735: `ctx` = the outcome's face ("happy" good / "sad" bad); a dead member looks sad, a red (hurt) tag injured
+static func crew_chip(d: Dictionary, tags: Array, delay: float, ctx: String = "") -> Control:
 	var p := UIKit.panel(UIKit.C_BG2, UIKit.C_LINE_DARK)
 	var h := UIKit.hbox(3)
 	p.add_child(h)
-	var pt := UIKit.portrait(d.variant, false, d)
+	var hurt := false
+	for t in tags:
+		hurt = hurt or (t is Array and (t as Array).size() > 1 and t[1] == UIKit.C_RED)
+	var pt := UIKit.portrait(d.variant, false, d, "sad" if d.get("dead", false) else ("injured" if hurt else ctx))
 	if d.get("dead", false):
 		pt.modulate = Color(0.55, 0.4, 0.4)
 	h.add_child(pt)

@@ -671,6 +671,11 @@ func _run() -> void:
 		await _crew_portraits_v3_test()
 		_finish()
 		return
+	if "--only=crew_portrait_moods" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _crew_portrait_moods_test()
+		_finish()
+		return
 
 
 
@@ -1715,6 +1720,7 @@ func _run() -> void:
 	await _parallax_v2_test()
 	await _rooms_v3_test()
 	await _crew_portraits_v3_test()
+	await _crew_portrait_moods_test()
 	await _pets_v3_test()
 
 
@@ -6243,6 +6249,125 @@ func _crew_portraits_v3_test() -> void:
 	off.free()
 	Features.layers.dev = overrides
 	Features.changed.emit()
+	await wait(0.2)
+
+
+## MV-735: v3 portraits change face with the crew member's state (switch crew_portrait_moods)
+func _crew_portrait_moods_test() -> void:
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var keep: Array = Game.s.dwellers.duplicate(true)
+	var art_ok := true
+	for cid in V3Art.CREW_IDS:
+		var n := V3Art.portrait_tex(str(cid))
+		for m in V3Art.PORTRAIT_MOODS:
+			var t := V3Art.portrait_tex(str(cid), m)
+			art_ok = art_ok and t != null and t != n and t.get_size() == Vector2(64, 64)
+	_check("portrait moods: all 11 characters have happy / stressed / injured 64x64 faces", art_ok)
+	Features.set_override("features", "crew_portraits_v3", true)
+	Features.set_override("features", "crew_portrait_moods", true)
+	var size := (Game.s.dwellers as Array).size()
+	for m in ["injured", "stressed", "happy", ""]:
+		Dev.portrait_mood_preview(m)
+		var same := true
+		for d in Game.s.dwellers:
+			same = same and UIKit.portrait_mood(d) == m and UIKit.portrait_v3(d) == V3Art.portrait_tex(V3Art.crew_for(d), m)
+		_check("portrait moods: whole crew '%s' -> that face (%s)" % [m, Dev.portrait_mood_counts()], same and int(Dev.portrait_mood_counts()[m]) == size)
+	var d: Dictionary = Game.s.dwellers[0]
+	d.happy = 100.0
+	d.hp = float(d.max_hp) * 0.1
+	_check("portrait moods: low HP wins over high happiness", UIKit.portrait_mood(d) == "injured")
+	d.hp = float(d.max_hp)
+	d.happy = 90.0
+	d.mood = "depressed"
+	var dep := UIKit.portrait_mood(d)
+	d.mood = ""
+	_check("portrait moods: depressed shows stressed when morale v2 is on (%s)" % dep, dep == ("stressed" if Crew.v2() else "happy"))
+	Dev.portrait_mood_preview("injured")
+	main.hud.open_panel("dwellers")
+	main.hud.panels.dwellers.manage(int(Game.s.dwellers[0].id))
+	await wait(0.5)
+	var card_ok := false
+	for n in main.hud.panels.dwellers.find_children("*", "TextureRect", true, false):
+		if (n as TextureRect).texture == V3Art.portrait_tex(V3Art.crew_for(Game.s.dwellers[0]), "injured"):
+			card_ok = true
+	_check("portrait moods: crew card shows the injured face", card_ok)
+	await shot("crew_portrait_moods_injured")
+	main.hud.panels.dwellers.close()
+	await wait(0.3)
+	# Dr. Ren's extra faces, scene faces (ctx) and the fallback for characters without them
+	var extra_ok := true
+	for m in V3Art.PORTRAIT_MOODS_EXTRA:
+		extra_ok = extra_ok and V3Art.has_portrait_mood("ren", m) and V3Art.portrait_tex("ren", m).get_size() == Vector2(64, 64)
+	_check("portrait moods: Dr. Ren has the 8 extra faces", extra_ok)
+	Dev.portrait_mood_preview("")
+	var other := ""
+	for cid in V3Art.CREW_IDS:
+		if not V3Art.has_portrait_mood(str(cid), "angry"):
+			other = str(cid)
+	_check("portrait moods: a face a character lacks falls back (angry -> stressed, surprised -> neutral)",
+		other != "" and UIKit.mood_face(other, "angry") == "stressed" and UIKit.mood_face(other, "surprised") == ""
+		and UIKit.mood_face("ren", "angry") == "angry")
+	var dd: Dictionary = Game.s.dwellers[0]
+	var cid0 := V3Art.crew_for(dd)
+	_check("portrait moods: scene face 'thinking' (event choice) = that face or its fallback",
+		UIKit.portrait_v3(dd, "thinking") == V3Art.portrait_tex(cid0, UIKit.mood_face(cid0, "thinking")))
+	dd.hp = float(dd.max_hp) * 0.1
+	_check("portrait moods: a hurt member keeps the injured face over a calm scene face",
+		UIKit.portrait_v3(dd, "happy") == V3Art.portrait_tex(cid0, "injured"))
+	dd.hp = float(dd.max_hp)
+	dd.rads = 80.0
+	_check("portrait moods: high radiation = sick face (stressed for those without it)",
+		UIKit.portrait_mood(dd) == "sick" and UIKit.portrait_v3(dd) == V3Art.portrait_tex(cid0, UIKit.mood_face(cid0, "sick")))
+	dd.rads = 0.0
+	var chip := OutcomeKit.crew_chip(dd, [["-20 HP", UIKit.C_RED]], 0.0, "happy")
+	var chip_ok := false
+	for n in chip.find_children("*", "TextureRect", true, false):
+		chip_ok = chip_ok or (n as TextureRect).texture == V3Art.portrait_tex(cid0, "injured")
+	chip.free()
+	_check("portrait moods: outcome chip with a red (hurt) tag shows the injured face", chip_ok)
+	# tutorial / tip guide
+	Features.set_override("features", "ren_guide", true)
+	var gp := UIKit.guide_portrait("combat")
+	UIKit.set_guide_mood(gp, Tutorial.guide_face("combat"))
+	_check("ren guide: tutorial combat step = Dr. Ren angry, 64 px, named DR.REN",
+		(gp.get_child(0) as TextureRect).texture == V3Art.portrait_tex("ren", "angry") and str(gp.get_meta("guide_mood", "")) == "angry"
+		and (gp.get_child(0) as TextureRect).custom_minimum_size == Vector2(64, 64) and Tutorial.guide_name() == "DR.REN")
+	var faces_ok := true
+	for st in Tutorial.STEPS:
+		faces_ok = faces_ok and (Tutorial.guide_face(str(st.id)) == "" or V3Art.has_portrait_mood("ren", Tutorial.guide_face(str(st.id))))
+	for k in Tutorial.TIPS:
+		faces_ok = faces_ok and V3Art.has_portrait_mood("ren", Tutorial.guide_face(str(k)))
+	_check("ren guide: every tutorial step and tip has a Dr. Ren face", faces_ok)
+	var poses_ok := true
+	for m in V3Art.PORTRAIT_POSES:
+		poses_ok = poses_ok and V3Art.has_portrait_mood("ren", m) and UIKit.mood_face("clara", m) == UIKit.mood_face("clara", "talking")
+	_check("ren guide: Dr. Ren has the 4 explaining poses (others fall back to talking)", poses_ok)
+	Dev.ren_guide_point(true)
+	var fr := Rect2(100, 400, 64, 64)
+	_check("ren guide point: target above = point_up, far above-left = point_left, beside right = point_right, below = face",
+		Tutorial.guide_point("talking", Rect2(110, 40, 40, 20), true, fr) == "point_up"
+		and Tutorial.guide_point("talking", Rect2(-300, 40, 40, 20), true, fr) == "point_left"
+		and Tutorial.guide_point("thinking", Rect2(400, 410, 40, 40), true, fr) == "point_right"
+		and Tutorial.guide_point("talking", Rect2(110, 600, 40, 40), true, fr) == "talking")
+	var keep_ok := Tutorial.guide_point("angry", Rect2(110, 40, 40, 20), true, fr) == "angry" \
+		and Tutorial.guide_point("talking", Rect2(), false, fr) == "talking"
+	Dev.ren_guide_point(false)
+	_check("ren guide point: angry face, no target or switch off keep the face",
+		keep_ok and Tutorial.guide_point("talking", Rect2(110, 40, 40, 20), true, fr) == "talking")
+	Dev.ren_guide_point(true)
+	UIKit.set_guide_mood(gp, Tutorial.guide_face("skills"))
+	_check("ren guide: skills tip = raised-finger pose", (gp.get_child(0) as TextureRect).texture == V3Art.portrait_tex("ren", "finger_up"))
+	Dev.ren_guide(false)
+	UIKit.set_guide_mood(gp, "angry")
+	_check("ren guide: off = Sgt. Mark's 40 px portrait", not gp.has_meta("guide_mood") and Tutorial.guide_name() == "SGT.MARK"
+		and (gp.get_child(0) as TextureRect).custom_minimum_size == Vector2(40, 40))
+	gp.free()
+	Dev.crew_portrait_moods(false)
+	_check("portrait moods: switch off = neutral face", UIKit.portrait_mood(d) == "" and UIKit.portrait_v3(d) == V3Art.portrait_tex(V3Art.crew_for(d)))
+	Game.s.dwellers = keep
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.dwellers_changed.emit()
 	await wait(0.2)
 
 
@@ -12791,6 +12916,20 @@ func _ambulance_v3_test() -> void:
 				holes_ok = holes_ok and img.get_pixel(int(c.x) + 72, int(c.y) + 48).a < 0.1 and img.get_pixel(int(c.x) + 72, int(c.y) - 6).a > 0.9
 	_check("ambulance v3: shells for 1-5 floors load at 638 wide with 3 cells per floor", files_ok)
 	_check("ambulance v3: every cell window is cut out and the deck above it is solid", holes_ok)
+	# MV-741 cleanup (tools/art/ambulance/cleanup.py): no see-through pockets in the cab, no stray specks, framed windows
+	var clean_ok := true
+	var frames_ok := true
+	for n in [1, 3]:
+		var img: Image = (load(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % n) as Texture2D).get_image()
+		img.decompress()
+		img.convert(Image.FORMAT_RGBA8)
+		var r := _amb_shell_flaws(img)
+		clean_ok = clean_ok and r.x == 0 and r.y == 0
+		for c in spec.floors[str(n)].cells:      # 1 px black lip right over the opening's top edge
+			var lip := img.get_pixel(int(c.x) + 72, int(c.y) + 3)
+			frames_ok = frames_ok and lip.a > 0.9 and lip.r < 0.1 and lip.g < 0.1
+	_check("MV-741: the ambulance cab has no see-through holes and the shell has no stray pixels", clean_ok)
+	_check("MV-741: every room window has a frame lip, so the rooms sit inside the body", frames_ok)
 	var hud: HUD = main.hud
 	var panel: InteriorV3Panel = hud.panels.interior
 	var f := Dev.ambulance_v3_preview(3)
@@ -12830,6 +12969,58 @@ func _ambulance_v3_test() -> void:
 	await wait(0.3)
 
 
+## MV-741: (see-through pixels enclosed by the cab, opaque pixels with no opaque neighbour) in an ambulance shell.
+## The cab is the front 146 px (up to the first window) of the bottom 144 rows; enclosed = not reachable from the image border through
+## transparent pixels.
+func _amb_shell_flaws(img: Image) -> Vector2i:
+	var w := img.get_width()
+	var h := img.get_height()
+	var d := img.get_data()
+	var seen := PackedByteArray()
+	seen.resize(w * h)
+	var stack := PackedInt32Array()
+	for x in w:
+		stack.append(x)
+		stack.append((h - 1) * w + x)
+	for y in h:
+		stack.append(y * w)
+		stack.append(y * w + w - 1)
+	while not stack.is_empty():
+		var i: int = stack[stack.size() - 1]
+		stack.resize(stack.size() - 1)
+		if seen[i] or d[i * 4 + 3] > 0:
+			continue
+		seen[i] = 1
+		var x := i % w
+		@warning_ignore("integer_division")
+		var y := i / w
+		if x > 0: stack.append(i - 1)
+		if x < w - 1: stack.append(i + 1)
+		if y > 0: stack.append(i - w)
+		if y < h - 1: stack.append(i + w)
+	var holes := 0
+	for y in range(h - 144, h):
+		for x in 146:              # up to the first room window (cells start at x 146)
+			var i := y * w + x
+			if d[i * 4 + 3] == 0 and not seen[i]:
+				holes += 1
+	var strays := 0
+	var around := PackedInt32Array([-w - 1, -w, -w + 1, -1, 1, w - 1, w, w + 1])
+	for y in range(1, h - 1):
+		for x in range(1, w - 1):
+			var i := y * w + x
+			if d[i * 4 + 3] == 0:
+				continue
+			var lone := true
+			for o in around:
+				if d[(i + o) * 4 + 3] > 0:
+					lone = false
+					break
+			if lone:
+				strays += 1
+	return Vector2i(holes, strays)
+
+
 ## MV-726: the world v2 ambulance moves: rolling tyres on the road, body on its springs, lights, flag
 func _vehicle_anim_test() -> void:
 	var old_state: Dictionary = Game.s.duplicate(true)
@@ -12855,6 +13046,32 @@ func _vehicle_anim_test() -> void:
 	var g1 := v.amb.flag_frame()
 	await wait(0.13)
 	_check("vehicle anim: driving rolls the tyres and waves the flag", f1 != v.amb.spin_frame() and g1 != v.amb.flag_frame())
+	# MV-741: the lantern is cut out of the shell and swings from its bail while driving
+	var lsw := 0.0
+	for i in 30:
+		await wait(0.05)
+		lsw = maxf(lsw, absf(v.amb.lamp_angle))
+	var lr: Array = spot.lantern_still
+	_check("MV-741: the lantern hangs on its own sprite and swings while the vehicle moves", v.amb.lamp != null
+		and img.get_pixel(int(lr[0]) + 4, int(lr[1]) + 8).a == 0.0 and lsw > 0.03 and absf(v.amb.lamp.rotation - v.amb.lamp_angle) < 0.001)
+	# MV-741 micro anims: Dr. Ren drives, the roof plants lean into the headwind, the pipe puffs, the cells glint by day
+	var pr: Array = spot.clips.potsL.rect
+	var pot_frames := {}
+	var puffed := false
+	var glinted := false
+	v.amb._glint_wait = 0.0
+	for i in 16:
+		await wait(0.05)
+		puffed = puffed or not v.amb.puffs.is_empty()
+		pot_frames[v.amb.clip_i.get("potsL", -1)] = true
+		glinted = glinted or (v.amb.glint != null and v.amb.glint.visible)
+	_check("MV-741: Dr. Ren drives the ambulance (driver.png 'drive' loop over the cab glass)", v.amb.driver != null
+		and v.amb.driver_state == "drive" and (AmbulanceMotion.driver_frames().drive as Array).has(v.amb.driver.texture))
+	_check("MV-741: the PixelLab roof clips (flag, both pot rows, birdhouses) are cut from the shell and the leaves sway",
+		v.amb.clips.has("potsL") and v.amb.clips.has("potsR") and v.amb.clips.has("birds") and (spot.clips as Dictionary).has("flag")
+		and img.get_pixel(int(pr[0]) + 10, int(pr[1]) + 20).a == 0.0 and pot_frames.size() >= 3)
+	_check("MV-741: the copper pipe puffs smoke and the solar cells glint by day", puffed
+		and (glinted or v._night > 0.6) and v.amb.glint != null)
 	_check("vehicle anim: headlight lens + tail lamps on while driving", v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1)
 	var y_before: Array = v.amb.tyres.map(func(t): return t.global_position.y)
 	v.amb.bump(90.0)
@@ -12881,10 +13098,20 @@ func _vehicle_anim_test() -> void:
 		marker_seen = marker_seen or v.amb.lamp_alpha("marker") > 0.5
 	_check("vehicle anim: the raid light bar flashes left then right", bl and br)
 	_check("vehicle anim: the amber marker blinks after pulling over", marker_seen)
+	# MV-741: the roof lantern's PixelLab flame flickers over its glass and its glow follows the flame, day or night
+	var fl_seen := {}
+	var lit := true
+	for i in 20:
+		await wait(0.05)
+		fl_seen[v.amb.flame_frame()] = true
+		lit = lit and v.amb.lamp_alpha("lantern") > 0.05
+	_check("MV-741: the lantern flame flickers (PixelLab frames over the glass) and always glows", v.amb.flame != null
+		and v.amb.flame_frames.size() == (spot.lantern_frames as Array).size() and fl_seen.size() >= 3 and lit)
 	await shot("vehicle_anim_beacon")
 	var f2 := v.amb.spin_frame()
 	await wait(0.3)
 	_check("vehicle anim: parked tyres stand still", f2 == v.amb.spin_frame())
+	_check("MV-741: parked, Dr. Ren idles at the wheel", v.amb.driver_state == "idle")
 	v.amb.force_beacon = false
 	v.debug_speed = -1.0
 	_check("vehicle anim: GOD MODE actions drive it", Dev.vehicle_anim("fast") and v.debug_speed > 1.0 and Dev.vehicle_anim("park"))

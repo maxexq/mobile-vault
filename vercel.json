@@ -4,6 +4,7 @@
   "installCommand": "",
   "framework": null,
   "outputDirectory": "web",
+  "git": { "deploymentEnabled": false },
   "headers": [
     {
       "source": "/(.*)\\.wasm",
