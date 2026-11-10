@@ -483,6 +483,7 @@ func _build_v2() -> void:
 	v2_shell.texture = load(v2_shell_path())
 	v2_shell.position = Vector2(V2_X, v2_top()) / V2_K
 	InteriorV3Panel.attach_nose(v2_shell, v2_rt() or v2_dk())   # MV-731 bumper tip + tow hook in front of the shell
+	DeckerMods.attach(v2_shell, floors, tier == "bus")         # MV-760 approved Decker exterior mods
 	_build_v2_trailers()
 	for slot in Game.main_slots():
 		var c := RoomV3Cell.new()
@@ -933,6 +934,8 @@ func _mod_sprite(region: String, pos: Vector2) -> Sprite2D:
 
 
 func _refresh_mods() -> void:
+	if v2 and v2_shell != null:
+		DeckerMods.attach(v2_shell, floors, tier == "bus")
 	for ch in _mods_root.get_children():
 		_mods_root.remove_child(ch)
 		ch.queue_free()

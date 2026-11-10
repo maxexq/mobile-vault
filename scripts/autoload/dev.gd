@@ -1300,6 +1300,27 @@ func decker_sign(text: String = "", kind: String = "cheer") -> bool:
 	return true
 
 
+## MV-760: drive the Decker (its decks now, else 2) with every exterior mod at art level lv (0 = none, 1-3; a mod with fewer
+## levels shows its top one). Solar panels: L1 bare, L2 + shutters, L3 + 4 panels. Returns the parts drawn on the road view.
+func decker_mods(lv: int) -> int:
+	feature_set("decker_mods", true)
+	decker_preview(Game.floors() if Game.tier() == "bus" else 2)
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "fuel_tanks", "armor_plates", "roof_turret", "rad_shield", "heater"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	Game.s.mods["solar_covers"] = 1 if lv >= 2 else 0
+	Game.s.solar.panels = 4 if lv >= 3 else maxi(1, mini(int(Game.s.solar.panels), 3))
+	act("decker mods", {"level": lv})
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or v.v2_shell == null:
+		return 0
+	var root := v.v2_shell.get_node_or_null(DeckerMods.NODE)
+	return root.get_child_count() if root != null and root.visible else 0
+
+
 ## MV-744: play the Decker's air horn or raid siren (a preview: changes nothing in the run)
 func decker_horn(id: String = "air_horn") -> void:
 	sound_preview("sound", id)

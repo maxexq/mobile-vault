@@ -13692,6 +13692,29 @@ func _decker_test() -> void:
 	_check("decker horn: air horn + raid siren are in the sound set, on for the Decker",
 		"air_horn" in Sound.SFX and "bus_siren" in Sound.SFX and ResourceLoader.exists(Sound.SFX_DIR + "air_horn.wav")
 		and ResourceLoader.exists(Sound.SFX_DIR + "bus_siren.wav") and Sound.decker_horn_on())
+	# MV-760: the approved exterior mods drawn on the Decker (switch decker_mods), children of the shell sprite
+	var mods_none := Dev.decker_mods(0)
+	await wait(0.2)
+	var mods_max := Dev.decker_mods(3)
+	await wait(0.3)
+	var mroot := v.v2_shell.get_node_or_null(DeckerMods.NODE) as Node2D
+	var gun := 0 if Combat.room_mode() else 1          # MV-727: no outside gun while the squad fights from the gunner room
+	_check("decker mods: none = only the roof solar panels, all max = %d parts (%d / %d)" % [6 + gun, mods_none, mods_max],
+		mods_none == 1 and mods_max == 6 + gun and mroot != null and mroot.visible
+		and (mroot.get_node("heater") as Sprite2D).texture.resource_path.ends_with("heater_L2.png")
+		and (mroot.get_node("solar") as Sprite2D).texture.resource_path.ends_with("solar_L3.png")
+		and (mroot.get_node("rad_shield") as Sprite2D).texture.resource_path.ends_with("rad_shield_L2.png"))
+	await shot("decker_mods_max")
+	_check("decker mods: body parts move down one deck on 3 decks, roof parts stay on the roof, parts sit at their spot",
+		DeckerMods.pos("spike_ram", 1, 3).y - DeckerMods.pos("spike_ram", 1, 2).y == 112.0
+		and DeckerMods.pos("heater", 1, 3) == DeckerMods.pos("heater", 1, 2)
+		and (mroot.get_node("spike_ram") as Node2D).position == DeckerMods.pos("spike_ram", 3, Game.floors()))
+	Features.set_override("features", "decker_mods", false)
+	Features.changed.emit()
+	await wait(0.2)
+	_check("decker mods: switch off = the bare bus", not mroot.visible and mroot.get_child_count() == 0)
+	Features.set_override("features", "decker_mods", true)
+	Dev.decker_mods(0)
 	Dev.decker_anim("brake")
 	await wait(1.6)
 	_check("decker: braking to a stop lights the brake lamp", v.amb.lamp_alpha("tail0") > 0.7)

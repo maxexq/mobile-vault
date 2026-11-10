@@ -100,6 +100,7 @@
     "decker": true,
     "decker_sign": true,
     "decker_horn": true,
+    "decker_mods": true,
     "bastion": true,
     "ambulance_v3": true,
     "ambulance_pup": true,
