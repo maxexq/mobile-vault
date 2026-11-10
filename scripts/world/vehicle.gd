@@ -130,6 +130,8 @@ var v2_cells: Dictionary = {}    # slot -> RoomV3Cell
 var _v2_tick := 0.0
 var amb := AmbulanceMotion.new()  # MV-726 wheels / suspension / lights / flag on the world v2 ambulance
 var amb_on := false
+var rt_units: Array[AmbulanceMotion] = []  # MV-740: the road train's container trailers (wheels, legs, lamps)
+var rt_couplings: RtCouplings              # MV-740: air lines + tow links between the road train's units
 var debug_speed := -1.0           # GOD MODE / autotest: speed factor to show (>= 0), the game's own speed otherwise
 var _night := 0.0
 
@@ -470,6 +472,9 @@ func _build_v2() -> void:
 		cab_view.visible = not v2
 	amb.clear()
 	amb_on = false
+	for m in rt_units:
+		m.clear()
+	rt_units.clear()
 	v2_root.position.x = 0.0
 	for p in puffs:               # the old shells hide the puffs' start behind them; the ambulance's stack is in front
 		body.move_child(p, (body.get_child_count() - 1) if v2 else smoke.get_index() + 1)
@@ -492,6 +497,7 @@ func _build_v2() -> void:
 		amb_on = true
 		v2_shell.texture = AmbulanceMotion.cut_shell(floors, amb_dir())
 		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K, amb_dir())
+	_build_rt_couplings()
 	_pups_on_top()
 	for rv in room_views:
 		if v2_cells.has(rv.slot):
@@ -511,8 +517,9 @@ func _build_v2_trailers() -> void:
 		return
 	if not v2_rt_trailers():
 		return
-	var tex: Texture2D = load(InteriorV3Panel.RT_DIR + "trailer_f%d.png" % v2_trailer_floors())
 	for u in range(n_trailers - 1, -1, -1):
+		var kind := InteriorV3Panel.rt_trailer_kind(u, n_trailers, v2_trailer_floors())
+		var tex: Texture2D = load(InteriorV3Panel.RT_DIR + "%s_f%d.png" % [kind, v2_trailer_floors()])
 		for i in Data.TRAILER_SLOTS:
 			var slot := Game.main_slots() + u * Data.TRAILER_SLOTS + i
 			if slot >= Game.slot_count():
@@ -530,6 +537,31 @@ func _build_v2_trailers() -> void:
 		sp.position = Vector2(unit_x(u), ROAD_Y + 1.0 - tex.get_height() * V2_K) / V2_K
 		v2_root.add_child(sp)
 		v2_tshells.append(sp)
+		var tf := v2_trailer_floors()
+		if amb_wanted() and AmbulanceMotion.ok(tf, AmbulanceMotion.RT_DIR, kind):
+			sp.texture = AmbulanceMotion.cut_shell(tf, AmbulanceMotion.RT_DIR, kind)
+			var m := AmbulanceMotion.new()
+			m.build(tf, sp.position, _wheels_root, v2_root, V2_K, AmbulanceMotion.RT_DIR, kind)
+			m.set_meta("lead", (unit_x(u) - V2_X) + 0.0)
+			rt_units.append(m)
+
+
+## MV-740: air lines between the container trailers (and coupler heads on the lead trailer when nothing is behind it),
+## over every shell
+func _build_rt_couplings() -> void:
+	if rt_couplings == null:
+		rt_couplings = RtCouplings.new()
+		rt_couplings.name = "RoadTrainCouplings"
+		v2_root.add_child(rt_couplings)
+	rt_couplings.visible = v2_rt()
+	if not v2_rt():
+		return
+	v2_root.move_child(rt_couplings, v2_root.get_child_count() - 1)
+	var pos: Array = []
+	for i in range(v2_tshells.size() - 1, -1, -1):     # v2_tshells is rearmost first
+		pos.append(v2_tshells[i].position)
+	var th := v2_tshells[0].texture.get_height() if not v2_tshells.is_empty() else 0
+	rt_couplings.setup(v2_shell.position, float(v2_shell.texture.get_height()), pos, float(th))
 
 
 ## MV-737: the ambulance's pups: cells first, then the shells front to rear (each tow plate over the unit in front);
@@ -572,15 +604,19 @@ func _pups_on_top() -> void:
 
 ## MV-726: the ambulance's own wheels / suspension / lights / flag (switch vehicle_anim; anchors from anim.json)
 func amb_wanted() -> bool:
+	if v2_rt():                   # MV-740: the road train: tractor + lead trailer here, each container trailer in rt_units
+		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.RT_DIR)
 	if v2_dk() and tier == "bastion":
 		return false              # MV-738: no wheel / suspension anchors for Bastion 42-B yet (static shell)
 	if v2_dk():                   # MV-739: the Decker bus gets the same wheels / suspension / lights + its sign
 		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.DK_DIR)
-	return v2 and tier == "van" and Features.on("vehicle_anim") and AmbulanceMotion.ok(floors)   # the road train (MV-721) has its own shells
+	return v2 and tier == "van" and Features.on("vehicle_anim") and AmbulanceMotion.ok(floors)
 
 
 ## anchors / spin strip set for the current world v2 body
 func amb_dir() -> String:
+	if v2_rt():
+		return AmbulanceMotion.RT_DIR
 	return AmbulanceMotion.DK_DIR if v2_dk() else AmbulanceMotion.DIR
 
 
@@ -1095,6 +1131,8 @@ func _process(delta: float) -> void:
 			_bump = -px_amp(k) if randf() < 0.3 else 0.0     # rails are smoother
 		if amb_on and _bump < 0.0:
 			amb.bump(_speed * AmbulanceMotion.ROAD_PX)        # the tyres take the bump first, front axle to rear
+			for m in rt_units:
+				m.bump(_speed * AmbulanceMotion.ROAD_PX, float(m.get_meta("lead")))
 	_bump = move_toward(_bump, 0.0, delta * 14.0)
 	# engine rumble: the body buzzes 1 px while the engine runs (driving, title backdrop), slower when idling;
 	# every other beat is a buzz, and fx.engine_shake decides how many of those beats really move (MV-176)
@@ -1109,6 +1147,11 @@ func _process(delta: float) -> void:
 		var engine := moving or not Game.started or bool(Game.s.get("traveling", false)) or debug_speed >= 0.0
 		amb.tick(delta, _speed * AmbulanceMotion.ROAD_PX, accel, engine, _night, body.position.y,
 			Combat.wave_active, EngineBay.state_key() == "broken")
+		for m in rt_units:
+			m.tick(delta, _speed * AmbulanceMotion.ROAD_PX, accel, engine, _night, body.position.y,
+				Combat.wave_active, EngineBay.state_key() == "broken")
+	if rt_couplings and rt_couplings.visible:
+		rt_couplings.set_sway(clampf(-body.position.y, 0.0, 1.0))     # the air lines bounce with the road
 	var sun := Game.sun_level()
 	var az := clampf((float(Game.s.tod) - 0.25) / 0.5, 0.0, 1.0)
 	var frame := 2

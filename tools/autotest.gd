@@ -1542,11 +1542,16 @@ func _run() -> void:
 	Game.s.res.scrap = 9000.0
 	Game.s.items.components = 9999
 	Meta.add_blueprint("bp_trailer")
-	_check("hitch two wagons to the train", Mods.add_trailer() and Mods.add_trailer() and Game.slot_count() == Game.main_slots() + 12)
+	var hitched := true
+	for i in Data.MAX_TRAILERS:
+		hitched = hitched and Mods.add_trailer()
+	# Parames 2026-11-10: first patch = Data.MAX_TRAILERS (1) trailer / wagon; one more is refused
+	_check("hitch wagons to the train up to the limit", hitched and not Mods.add_trailer()
+		and Game.slot_count() == Game.main_slots() + Data.TRAILER_SLOTS * Data.MAX_TRAILERS)
 	Game.vault_level_changed.emit(6)
 	main.set_zoom_mode("wide")
 	await wait(1.6)
-	await shot("train_two_wagons_wide")
+	await shot("train_wagons_wide")
 	main.set_zoom_mode("auto")
 	Features.set_override("features", "road_train", null)
 	# ---- tester console (god mode) + trace log
@@ -1581,7 +1586,9 @@ func _run() -> void:
 	_check("god: free build", free_slot >= 0 and Game.build_room(free_slot, "kitchen") and is_equal_approx(float(Game.s.res.scrap), scrap_before))
 	Dev.set_flag("free", false)
 	Dev.set_tier("van")
-	_check("god: swap chassis keeps trailers", Game.tier() == "van" and Game.slot_count() == Game.main_slots() + 12 		and main.vehicle.room_views.size() == Game.main_slots() + 12)
+	var tslots := Data.TRAILER_SLOTS * Data.MAX_TRAILERS
+	_check("god: swap chassis keeps trailers", Game.tier() == "van" and Game.slot_count() == Game.main_slots() + tslots \
+		and main.vehicle.room_views.size() == Game.main_slots() + tslots)
 	Dev.set_tier("train")
 	Dev.set_flag("invincible", true)
 	Dev.set_hull(0.1)
@@ -7181,7 +7188,7 @@ func _exterior_mods_test() -> void:
 	var matrix_ok := true
 	for tier in Data.TIER_ORDER:
 		Dev.set_tier(tier)
-		for trailers in 3:
+		for trailers in Data.MAX_TRAILERS + 1:
 			Dev.set_trailers(trailers)
 			for lv in range(1, 4):
 				for id in Mods.MODS:
@@ -7204,7 +7211,7 @@ func _exterior_mods_test() -> void:
 					matrix_ok = matrix_ok and m.pool.size() == 12 and m.active_fx() == 0
 				if trailers == 0 and lv == 2:
 					await shot("exterior_mods_" + tier)
-	_check("exterior mods: all chassis, 0-2 trailers, all levels, cutaway/closed, rail/track/rim precedence", matrix_ok)
+	_check("exterior mods: all chassis, 0-max trailers, all levels, cutaway/closed, rail/track/rim precedence", matrix_ok)
 	var floors_ok := true
 	for tier in Data.TIER_ORDER:
 		Dev.set_tier(tier)
@@ -13229,8 +13236,8 @@ func _ambulance_pup_test() -> void:
 	var tex_ok: bool = ResourceLoader.exists(InteriorV3Panel.PUP_DIR + "pup_f2.png") and int(spec.size[0]) == int(InteriorV3Panel.PUP_W) \
 		and int(spec.size[1]) == int(InteriorV3Panel.PUP_H) and int(spec.rear) == int(InteriorV3Panel.PUP_REAR) and spec.cells.size() == Data.TRAILER_SLOTS
 	_check("ambulance pup: the pup shell fits the trailer grid (3 rooms x 2 floors) and its pup.json", tex_ok)
-	var road_ok: bool = n == 2 and Game.tier() == "van" and v.v2 and v.v2_pup_trailers() and not v.v2_rt_trailers() \
-		and v.v2_tshells.size() == 2 and v.v2_cells.size() == Game.slot_count() and v.wheels.is_empty()
+	var road_ok: bool = n == Data.MAX_TRAILERS and Game.tier() == "van" and v.v2 and v.v2_pup_trailers() and not v.v2_rt_trailers() \
+		and v.v2_tshells.size() == n and v.v2_cells.size() == Game.slot_count() and v.wheels.is_empty()
 	for k in v.v2_tshells.size():
 		var tsp: Sprite2D = v.v2_tshells[k]
 		road_ok = road_ok and tsp.texture.resource_path.ends_with("ambulance_pup/pup_f2.png") \
@@ -13238,7 +13245,7 @@ func _ambulance_pup_test() -> void:
 			and tsp.get_index() > v.v2_shell.get_index()          # the tow plate sits on the ambulance's rear
 	road_ok = road_ok and is_equal_approx(v.unit_x(0), Vehicle.V2_X + InteriorV3Panel.PUP_X0 * Vehicle.V2_K) \
 		and is_equal_approx(v.unit_x(1) - v.unit_x(0), InteriorV3Panel.PUP_STEP * Vehicle.V2_K) \
-		and is_equal_approx(v.length(), v.unit_x(1) + InteriorV3Panel.PUP_REAR * Vehicle.V2_K)
+		and is_equal_approx(v.length(), v.unit_x(n - 1) + InteriorV3Panel.PUP_REAR * Vehicle.V2_K)
 	for slot in range(Game.main_slots(), Game.slot_count()):
 		var tc: RoomV3Cell = v.v2_cells[slot]
 		road_ok = road_ok and tc.world_view
@@ -13252,7 +13259,7 @@ func _ambulance_pup_test() -> void:
 	var panel: InteriorV3Panel = main.hud.panels.interior
 	Dev.ambulance_pup_preview(2, true)
 	await wait(0.4)
-	var in_ok: bool = panel.amb() and panel.pup() and panel.pup_shells.size() == 2
+	var in_ok: bool = panel.amb() and panel.pup() and panel.pup_shells.size() == n
 	for slot in range(Game.main_slots(), Game.slot_count()):
 		var u := Game.slot_unit(slot)
 		var c := Game.slot_cell(slot)
@@ -13314,7 +13321,7 @@ func _road_train_test() -> void:
 	var panel: InteriorV3Panel = main.hud.panels.interior
 	var shells_ok := true
 	for lv in [1, 6]:
-		for trailers in [0, 2]:
+		for trailers in [0, Data.MAX_TRAILERS]:
 			Dev.set_vault(lv)
 			Dev.set_trailers(trailers)
 			Dev.rooms_v3_open()
@@ -13336,10 +13343,10 @@ func _road_train_test() -> void:
 				var img := sp.texture.get_image()
 				var lp := (panel.cells[slot] as RoomV3Cell).position - sp.position + Vector2(72, 48)
 				shells_ok = shells_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1
-			if lv == 6 and trailers == 2:
+			if lv == 6 and trailers == Data.MAX_TRAILERS:
 				await shot("road_train_interior_v3")
 			panel.close()
-	_check("road train: v3 interior draws the B-double shells, every room in its window (2/3 decks, 0/2 trailers)", shells_ok)
+	_check("road train: v3 interior draws the B-double shells, every room in its window (2/3 decks, 0/max trailers)", shells_ok)
 	get_window().size = old_window
 	# on the road (world v2): the B-double body with v3 cells, standing on the road, taps on the cells
 	var v: Vehicle = main.vehicle
@@ -13347,7 +13354,7 @@ func _road_train_test() -> void:
 	var wf := Dev.road_train_world(2)
 	await wait(0.4)
 	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
-	var world_ok := wf == 2 and v.v2 and v.v2_rt() and v.v2_shell.texture.resource_path.ends_with("road_train_v3/body_f2.png") \
+	var world_ok := wf == 2 and v.v2 and v.v2_rt() and (v.v2_shell.texture.resource_path.ends_with("road_train_v3/body_f2.png") or v.amb_on) \
 		and v.v2_cells.size() == Game.main_slots() and v.wheels.is_empty() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
 		and is_equal_approx(v.v2_extra(), Vehicle.V2_W_RT - Vehicle.MAIN_W)
 	for slot in Game.main_slots():
@@ -13359,13 +13366,13 @@ func _road_train_test() -> void:
 			and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and cl.y < 2
 	await shot("road_train_world_f2")
 	wf = Dev.road_train_world(3)
-	Dev.set_trailers(2)
+	Dev.set_trailers(Data.MAX_TRAILERS)
 	await wait(0.4)
 	world_ok = world_ok and wf == 3 and v.v2 and v.v2_shell.texture.get_size().y == 492.0
 	await shot("road_train_world_f3")
 	_check("road train: on the road (world v2) the B-double body carries the v3 rooms, on the road line, 2/3 decks", world_ok)
 	# MV-721: the trailers behind it are the 2D red container shells, nose on the unit in front, no old drawbar / wheels
-	var tr_ok := v.v2_rt_trailers() and v.v2_tshells.size() == 2 and v.wheels.is_empty() and v.v2_cells.size() == Game.slot_count()
+	var tr_ok := v.v2_rt_trailers() and v.v2_tshells.size() == Data.MAX_TRAILERS and v.wheels.is_empty() and v.v2_cells.size() == Game.slot_count()
 	for k in v.v2_tshells.size():
 		var tsp: Sprite2D = v.v2_tshells[k]
 		var tb := (tsp.position.y + tsp.texture.get_size().y) * Vehicle.V2_K
@@ -13379,6 +13386,113 @@ func _road_train_test() -> void:
 			and (tc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and v.cell_size(slot) == Vehicle.V2_CELL, str(slot))
 	_fold_flush()
 	_check("road train: on the road the trailers are the container shells on the road line, no gap, no old trailer wheels", tr_ok)
+	# MV-740: shell clean-up (no see-through pinholes, the cab glass back, the lead trailer's rear closed, a frame round
+	# every room window) and micro animations (tyres, landing legs, shock absorbers, lamps) on every unit
+	var rt_spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.RT_DIR + "shell.json"))
+	var clean_ok := true
+	var frame_ok := true
+	for kind in ["body", "trailer"]:
+		for d in [2, 3]:                                  # (the road train body has 2 or 3 decks, RT_DECKS)
+			var img: Image = (load(InteriorV3Panel.RT_DIR + "%s_f%d.png" % [kind, d]) as Texture2D).get_image()
+			img.decompress()
+			var dy: int = img.get_height() - 380
+			if kind == "body":
+				clean_ok = clean_ok and img.get_pixel(140, 245 + dy).a > 0.9 and img.get_pixel(693, 150).a > 0.9 \
+					and img.get_pixel(360, 368 + dy).a == 0.0
+			for y in range(100, img.get_height() - 1):      # 1 px slits between two opaque pixels (side to side)
+				for x in range(1, img.get_width() - 1):
+					if img.get_pixel(x, y).a == 0.0 and img.get_pixel(x - 1, y).a > 0.0 and img.get_pixel(x + 1, y).a > 0.0:
+						var in_win := false                         # (a tyre is cut out and drawn on its own)
+						for wx in AmbulanceMotion.spot(d, AmbulanceMotion.RT_DIR, "" if kind == "body" else "trailer").wheels:
+							in_win = in_win or Vector2(x + 0.5, y + 0.5).distance_to(Vector2(float(wx[0]), float(wx[1]))) <= 24.0
+						for cc in rt_spec[kind][str(d)].cells:
+							in_win = in_win or Rect2i(int(cc.x), int(cc.y), 144, 96).has_point(Vector2i(x, y))
+						clean_ok = clean_ok and in_win
+			for cc in rt_spec[kind][str(d)].cells:
+				var cx := int(cc.x)
+				var cy := int(cc.y)
+				frame_ok = frame_ok and img.get_pixel(cx + 72, cy - 1).v < 0.06 and img.get_pixel(cx - 1, cy + 48).v < 0.06 \
+					and img.get_pixel(cx + 72, cy).a > 0.3 and img.get_pixel(cx + 72, cy + 48).a < 0.1
+	_check("road train: no see-through pinholes, cab glass filled, rear ladder cage closed, no far-side leg shadow (2/3 decks + trailers)", clean_ok)
+	_check("road train: every room window has a frame (black edge outside, inner shadow lip, clear middle)", frame_ok)
+	var rt_anim := Dev.road_train_anim("drive")
+	await wait(0.8)
+	var rsp0 := v.amb.spin_frame()
+	await wait(0.4)
+	var units_ok := rt_anim and v.amb_on and v.amb.dir == AmbulanceMotion.RT_DIR and v.amb.tyres.size() == 6 \
+		and v.rt_units.size() == Data.MAX_TRAILERS and v.amb.legs.size() == 1
+	for m in v.rt_units:
+		units_ok = units_ok and m.unit.begins_with("trailer") and m.tyres.size() == 3 and m.legs.size() == 1
+	_check("road train: GOD drives it with animated tyres on every unit (6 + 3 per trailer) and landing legs", units_ok)
+	_check("road train: tyres roll, legs cranked up while driving, headlight on", rsp0 != v.amb.spin_frame()
+		and v.amb.legs_down() == 0.0 and v.rt_units[0].legs_down() == 0.0 and v.amb.lamp_alpha("head") > 0.2)
+	# MV-740: unbroken air lines: with one trailer the lead trailer's lines run on into its nose art (no code hoses, no caps);
+	# 4 code hoses join container trailers (checked with 2 when Data.MAX_TRAILERS allows it)
+	var cp: RtCouplings = v.rt_couplings
+	var hoses_ok := cp != null and cp.visible and cp.caps.is_empty() and cp.hoses.size() == 4 * (Data.MAX_TRAILERS - 1)
+	_check("road train: air lines run unbroken from the lead trailer into the trailer (no shock absorbers on the tyres)", hoses_ok
+		and not "shocks" in v.amb)
+	# MV-740 round 3: a trailer with another behind it ends in a B-link beam (no plate / tow hook / lit tail lamps), the last
+	# one keeps the truck rear end; the beam reaches the canvas edge on the nose beam's rows so the joint is one steel line.
+	# Parames 2026-11-10: first patch = 1 trailer (Data.MAX_TRAILERS), so the B-link shells are checked as files only
+	var last: AmbulanceMotion = v.rt_units[0]
+	var link_ok: bool = last.unit == "trailer" and last.glows.has("tail0") and Data.MAX_TRAILERS == 1 \
+		and InteriorV3Panel.rt_trailer_kind(0, 2, 2) == "trailer_link" and InteriorV3Panel.rt_trailer_kind(0, 1, 2) == "trailer"
+	for dk in [2, 3]:
+		var li: Image = (load(InteriorV3Panel.RT_DIR + "trailer_link_f%d.png" % dk) as Texture2D).get_image()
+		var ti: Image = (load(InteriorV3Panel.RT_DIR + "trailer_f%d.png" % dk) as Texture2D).get_image()
+		li.decompress()
+		ti.decompress()
+		var bdy := li.get_height() - 380
+		link_ok = link_ok and li.get_size() == ti.get_size() and li.get_pixel(499, 350 + bdy).a > 0.9 \
+			and ti.get_pixel(0, 350 + bdy).a > 0.9 and li.get_pixel(460, 331 + bdy).r < 0.7 \
+			and ti.get_pixel(4, 150).a > 0.9 and ti.get_pixel(4, 290 + bdy).a > 0.9
+	_check("road train: one trailer max (first patch) with tail lamps, B-link shells ready, the nose has a full front post", link_ok)
+	await shot("road_train_anim_drive")
+	Dev.road_train_anim("brake")
+	await wait(3.6)
+	_check("road train: stopped -> the landing legs crank down onto the road", v.amb.legs_down() == 1.0 and v.rt_units[0].legs_down() == 1.0
+		and v.amb.legs[0].position.y == float(v.amb.legs[0].get_meta("y0")))
+	await shot("road_train_anim_parked")
+	Dev.road_train_anim("park")
+	v.debug_speed = -1.0
+	Dev.set_trailers(0)
+	await wait(0.3)
+	_check("road train: no trailer behind -> the lead trailer's air lines end in coupler heads", v.rt_couplings.visible
+		and v.rt_couplings.caps.size() == 2 and v.rt_couplings.hoses.is_empty())
+	# Parames 2026-11-10: an older save with 2 trailers folds into 1; the rooms of the removed trailer move into empty cells
+	# that stay (crew with them), else their build cost comes back as scrap
+	var keep_rooms: Array = Game.s.rooms.duplicate(true)
+	var keep_dw2: Array = Game.s.dwellers.duplicate(true)
+	Dev.set_trailers(1)
+	var rtype := ""
+	for k in Data.ROOMS:
+		if int(Data.ROOMS[k].get("cost", 0)) > 0:
+			rtype = str(k)
+			break
+	var base_n: int = Game.s.rooms.size()
+	for i in Data.TRAILER_SLOTS:
+		Game.s.rooms.append({"type": rtype if i == 0 else "empty", "level": 1, "job": {}})
+	Game.s.trailers = 2
+	if not Game.s.dwellers.is_empty():
+		Game.s.dwellers[0].room = base_n
+	var empty_before := 0
+	for i in base_n:
+		if i != Data.ENGINE_SLOT and str(Game.s.rooms[i].type) == "empty" and (Game.s.rooms[i].get("build", {}) as Dictionary).is_empty():
+			empty_before += 1
+	var tscrap0 := float(Game.s.res.get("scrap", 0.0))
+	var folded := Game.fit_trailers()
+	var moved_ok := true
+	if empty_before > 0:
+		moved_ok = Game.s.dwellers.is_empty() or str(Game.s.rooms[int(Game.s.dwellers[0].room)].type) == rtype
+	else:
+		moved_ok = float(Game.s.res.get("scrap", 0.0)) > tscrap0
+	_check("road train: a 2-trailer save folds into 1 trailer, the removed trailer's room is rehomed (or refunded)", folded
+		and int(Game.s.trailers) == 1 and Game.trailers() == 1 and Game.s.rooms.size() == Game.slot_count() and moved_ok)
+	Game.s.rooms = keep_rooms
+	Game.s.dwellers = keep_dw2
+	Game.s.trailers = 0
+	Dev._vehicle_changed()
 	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
