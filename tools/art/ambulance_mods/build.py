@@ -75,6 +75,21 @@ def label(m):
     return lab, n
 
 
+def grow(m, k):
+    for _ in range(k):
+        o = m.copy()
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                o |= np.roll(np.roll(m, dy, 0), dx, 1)
+        m = o
+    return m
+
+
+def close(m, k):
+    """morphological closing (8-neighbour): fills gaps and notches up to 2k px wide inside a part"""
+    return ~grow(~grow(m, k), k)
+
+
 def part_mask(a, b, tol=30, speck=24):
     pa = np.asarray(a).astype(int); pb = np.asarray(b).astype(int)
     d = np.abs(pa[..., :3] - pb[..., :3]).sum(-1) > tol
@@ -91,6 +106,9 @@ def part_mask(a, b, tol=30, speck=24):
     for i in range(1, n + 1):                                        # drop specks, keep the ones touching a part
         if (lab == i).sum() < speck and not (near & (lab == i)).any():
             d[lab == i] = False
+    # close 2 px gaps: approved pixels that happen to match the old shell (outline/rust colours on a part's edge, the
+    # ram's mount over the bumper, tank ends over the chassis shadow) belong to the part when the part surrounds them
+    d = close(d, 2) & ~(np.abs(pa[..., :3] - np.array(BG)).sum(-1) <= 6)
     # fill holes: non-part pixels not reachable from the canvas border, plus 1 px gaps between part pixels
     lab, n = label(~d)
     border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
