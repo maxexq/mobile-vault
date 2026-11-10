@@ -4924,7 +4924,7 @@ func _features_test() -> void:
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
 	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
 	# (MV-546) rides on the world map, so it ships off with it
-	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers"]  # strangers: door screening paused (MV-719)
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764)
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
 	for k in ["road_train", "gear_sets", "gear_frame64"]:
@@ -14225,6 +14225,9 @@ func _bastion_test() -> void:
 	await wait(0.3)
 	Features.set_override("features", "bastion", false)
 	_check("bastion: switch off = a Bastion save drives the Decker, ladder without it", Game.tier() == "bus" and not Game.tier_order().has("bastion"))
+	Game.s.hull = 99999.0
+	Game.clamp_parked_hull()
+	_check("bastion: parked (switch off) = a Bastion save's hull is cut to the Decker's max on load (MV-764)", is_equal_approx(float(Game.s.hull), Game.hull_max()))
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state

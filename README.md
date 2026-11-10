@@ -662,7 +662,7 @@ vehicle and the 64x52 rooms in the world stay as they are until the v3 vehicle s
   unit in front), cells at x 86 + 152 col, y 88 / 200, standing on the road, in the v3 interior (`InteriorV3Panel.pup()`)
   and on the world v2 road (`Vehicle.v2_pup_trailers()`). GOD → รถ → พ่วงรถพยาบาล: 1 pup on the road, open the
   interior (`Dev.ambulance_pup_preview`) + switch. Autotest: `--only=ambulance_pup`.
-- **Bastion 42-B (MV-738, switch `bastion`, needs `decker`):** the ex-army 8x8 command truck (`bastion` id,
+- **Bastion 42-B (MV-738, switch `bastion`, needs `decker`; PARKED since 2026-11-10, MV-764: switch off by default, a Bastion save drives the Decker and its hull is cut to the Decker's max on load by `Game.clamp_parked_hull()`; GOD Bastion buttons still turn it on):** the ex-army 8x8 command truck (`bastion` id,
   `Data.TIER_ORDER_4` = van, bus, bastion, rig; stats in `Data.BASTION` merged over the bus: weight 40 t vs 28, hull +140 vs
   +40, same engine, so it drives slower and burns more fuel). The same `tier_bus` research unlocks **both** the Decker and
   the Bastion (`Meta.TIER_PERK`); the next-generation screen lets the player pick one (a line under the vehicle buttons
