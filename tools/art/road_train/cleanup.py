@@ -11,6 +11,7 @@ Run after designs/road-train/game/shell.py has written assets/vehicles/road_trai
    the game caps their ends with couplers, scripts/world/rt_couplings.gd)
 3) the dark far-side landing leg shadow behind the near leg (stray dark pixels) is removed
 4) the container trailer's nose loses the lead trailer's ladder cage scraps that shell.py's cut left on it
+   + a full front corner post on the nose (nose_post), so the trailer does not look cut off where it faces the sky
 6) trailer_link_f<n>.png: a container trailer with another behind it ends in a B-link beam, not a rear end (link())
 5) every room window gets a steel frame like the Decker bus (MV-739): 1 px black + 2 px riveted steel around the
    opening, and a soft inner shadow on its top / sides so the rooms sit inside the box instead of floating
@@ -166,6 +167,23 @@ def trailer_nose(im, n):
             px[x, y] = (0, 0, 0, 0)
 
 
+def nose_post(im, n):
+    """MV-740 round 4 (Parames 2026-11-10: the trailer's edge looks cut off): with the lead trailer's cage scraps gone the
+    nose was a thin post under a wider roof band, open to the sky. The post is widened to the roof band's edge (x 3-9,
+    the nose post's own clean columns repeated) with an outline at x 2 (the roof band's edge), from the roof band down to the chassis; the air
+    line ends that come in from the left stay on top. Idempotent (skips a shell that already has it)."""
+    px = im.load(); dy = im.size[1] - 380
+    if px[4, 150][3]:
+        return
+    for y in range(80, 322 + dy):
+        for x in range(2, 10):
+            if px[x, y][3] and (y > 302 + dy or y < 108):
+                continue                                   # an air line end / the roof band itself
+            px[x, y] = OUT if x == 2 else px[10 + (x - 3) % 7, y]
+        if px[0, y][3] and not px[1, y][3]:
+            px[1, y] = OUT                                 # no 1 px slit between an air line and the post
+
+
 def ring(px, x, y, d, tl, x0, y0, x1, y1):
     if d == 1:
         px[x, y] = (8, 8, 10, 255); return
@@ -256,16 +274,20 @@ def run(kind, n):
             f += holes(kind, n, im)                        # slits the new rail closed off between the air lines
     else:
         trailer_nose(im, n)
+        nose_post(im, n)
     frames(kind, n, im)
     im.save(p)
     print(kind, n, "filled", f)
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] != ["link"]:
+    if not sys.argv[1:]:
         for n in (1, 2, 3):
             run("body", n)
-    if sys.argv[1:] != ["link"]:                           # `cleanup.py link` only rebuilds the B-link variants
+    if sys.argv[1:] == ["nose"]:                           # `cleanup.py nose` only adds the nose post (then the links)
+        for n in (2, 3):
+            pth = os.path.join(D, f"trailer_f{n}.png"); im = Image.open(pth).convert("RGBA"); nose_post(im, n); im.save(pth)
+    elif sys.argv[1:] != ["link"]:                         # `cleanup.py link` only rebuilds the B-link variants
         for n in (2, 3):
             run("trailer", n)
     for n in (2, 3):

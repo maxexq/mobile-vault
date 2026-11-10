@@ -255,6 +255,7 @@ func _migrate() -> void:
 	(s.res as Dictionary).merge(Data.START_RAW, false)
 	_migrate_v4()
 	fit_body(true)
+	fit_trailers()
 	while s.rooms.size() < slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for d in s.dwellers:
@@ -696,6 +697,27 @@ func _rehome_room(main_part: Array, new_main: int, room: Dictionary) -> int:
 			return i
 	s.res.scrap = float(s.res.get("scrap", 0.0)) + float(int(Data.ROOMS[t].get("cost", 0)) * maxi(1, int(room.get("level", 1))))
 	return -1
+
+
+## a save with more trailers than Data.MAX_TRAILERS (2 before the 2026-11-10 first patch) keeps its rooms: each room on a
+## removed trailer moves into an empty cell that stays (crew with it), else its build cost comes back as scrap; crew in
+## a removed trailer with nowhere to go turn idle. Returns true when anything changed.
+func fit_trailers() -> bool:
+	var had := int(s.get("trailers", 0))
+	if had <= Data.MAX_TRAILERS:
+		return false
+	var keep := main_slots() + Data.TRAILER_SLOTS * Data.MAX_TRAILERS
+	var rooms: Array = s.rooms
+	var kept := rooms.slice(0, keep)
+	for idx in range(keep, rooms.size()):
+		var to := _rehome_room(kept, keep, rooms[idx])
+		for d in s.dwellers:
+			if int(d.room) == idx:
+				d.room = to
+	s.rooms = kept
+	s.trailers = Data.MAX_TRAILERS
+	_unl_key = -1
+	return true
 
 
 func trailers() -> int:

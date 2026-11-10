@@ -286,8 +286,11 @@ func _tab_vehicle() -> void:
 		var tid: String = t
 		tb.append(_b(str(Game.vehicle_def_for(t).th), func(): Dev.set_tier(tid), "yellow" if Game.tier() == tid else "gray"))
 	_row(tb)
-	_row([_b("0", func(): Dev.set_trailers(0), "yellow" if Game.trailers() == 0 else "gray"), _b("1", func(): Dev.set_trailers(1), "yellow" if Game.trailers() == 1 else "gray"),
-		_b("2", func(): Dev.set_trailers(2), "yellow" if Game.trailers() == 2 else "gray")], "โบกี้พ่วง")
+	var trb := []
+	for n in Data.MAX_TRAILERS + 1:                # first patch: 0 / 1 (Data.MAX_TRAILERS, Parames 2026-11-10)
+		var tn: int = n
+		trb.append(_b(str(n), func(): Dev.set_trailers(tn), "yellow" if Game.trailers() == n else "gray"))
+	_row(trb, "โบกี้พ่วง")
 	var vb := []
 	for n in range(1, Data.MAX_VAULT_LEVEL + 1):
 		var lv: int = n
