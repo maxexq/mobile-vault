@@ -6508,6 +6508,26 @@ func _rooms_v3_test() -> void:
 				hot_ok = hot_ok and r.size() == 4 and Rect2(Vector2.ZERO, V3Art.CELL).encloses(Rect2(r[0], r[1], r[2], r[3]))
 	_check("rooms v3: every level image is 144x96 and its idle sheet loads", files_ok)
 	_check("rooms v3: hotspot rects stay inside the cell", hot_ok)
+	# MV-757: quarters got an idle micro-animation; the grow room's centre window is cut out and has a rect
+	var q_idle := true
+	var win_ok := true
+	for lv in [1, 2, 3]:
+		q_idle = q_idle and V3Art.level("quarters", lv).has("idle")
+		var gd := V3Art.level("hydroponics", lv)
+		var wr: Array = gd.get("window", [])
+		win_ok = win_ok and wr.size() == 4 and Rect2(Vector2.ZERO, V3Art.CELL).encloses(Rect2(wr[0], wr[1], wr[2], wr[3]))
+		if win_ok:
+			var img := V3Art.room_tex("hydroponics", str(gd.file)).get_image()
+			var cut := 0
+			for yy in int(wr[3]):
+				for xx in int(wr[2]):
+					cut += 1 if img.get_pixel(int(wr[0]) + xx, int(wr[1]) + yy).a < 0.5 else 0
+			win_ok = win_ok and cut >= 20
+	_check("rooms v3: quarters has an idle animation on every level", q_idle)
+	_check("rooms v3: grow room window rect + see-through window pixels on L1-L3", win_ok)
+	var wb := RoomWindowView.load_biome("industrial")
+	_check("rooms v3: window view loads the biome sky + far + mid strips", wb.tex.size() == 2 + ParallaxV2Backdrop.SKY_NAMES.size() and wb.tex.far != null)
+	_check("rooms v3: window sky follows the hour (night 0 / day 2)", int(RoomWindowView.sky_for(1.0)[0]) == 0 and int(RoomWindowView.sky_for(12.0)[0]) == 2 and float(RoomWindowView.sky_for(1.0)[1]) == 1.0)
 	var crew_ok := true
 	for cid in V3Art.crew_ids():
 		var sf := V3Art.crew_frames(cid)
@@ -6542,6 +6562,15 @@ func _rooms_v3_test() -> void:
 		for a in (panel.cells[slot] as RoomV3Cell).actors.values():
 			moved = moved or (a as CrewV3Actor).clip() in ["walk", "work", "carrywalk", "talk", "eat", "drink", "idle", "construct"]
 	_check("rooms v3: crew play their clips", moved)
+	var wslot := Dev.room_window_preview(0, 1)
+	await wait(0.5)
+	var wcell: RoomV3Cell = panel.cells.get(wslot)
+	_check("rooms v3: GOD window preview = grow room cell with the biome behind its window",
+		wcell != null and wcell.kind == "v3" and wcell.window_view.visible and wcell.window_view.biome == RoomWindowView.biome_now() and wcell.window_view.rect.size.x > 10)
+	await shot("rooms_v3_window")
+	Dev.room_window_bg(false)
+	_check("rooms v3: room_window_bg off = flat window light", not RoomWindowView.on())
+	Dev.room_window_bg(true)
 	await shot("rooms_v3_interior")
 	# MV-724: crisp room-toned pixel shadow (same width), lighter crew grade, GOD buttons drive both tunes
 	var old_a := 1.0 - (1.0 - 0.43) * (1.0 - 0.25)   # the MV-711 draw_circle shadow
