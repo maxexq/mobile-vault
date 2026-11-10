@@ -89,6 +89,19 @@ var sign_dead: Sprite2D            # Decker: covers one glyph while it drops out
 var _sign := 1.0
 var _sign_t := 0.0
 var _dead_t := 0.0
+## MV-744 Decker status sign (switch decker_sign, DeckerSign): a blank face over the baked "9 DEPOT" + scrolling text
+var tick_face: Sprite2D
+var tick_text: Sprite2D
+var _tk_msg := ""                  # the line on the sign now ("" = the plain route sign)
+var _tk_kind := ""                 # raid / warn / cheer
+var _tk_x := 0.0                   # scroll offset (px) into the text strip
+var _tk_end := 0.0                 # scroll offset where the line has run out (0 = a static line)
+var _tk_hold := 0.0                # a static line stays this long
+var _tk_i := 0
+var _tk_poll := 0.0
+var _tk_alerts: Array = []
+var _tk_cheer_t := 8.0
+var _tk_force: Array = []          # GOD MODE / autotest: [text, kind] shown next
 var flame: Sprite2D                # MV-741: the whole lantern, cut from the shell, with the PixelLab flame flicker
 var flame_frames: Array[ImageTexture] = []
 var _flame_i := 0
@@ -684,6 +697,41 @@ func _build_sign(f: Dictionary, origin: Vector2) -> void:
 	sign_dead.set_meta("o", origin + Vector2(0, sr[1]))
 	sign_dead.set_meta("h", float(sr[3]))
 	over.add_child(sign_dead)
+	if DeckerSign.on():
+		_build_ticker(sr, origin)
+
+
+## the sign face (one px inside its frame, around the glyph rect) with the glyphs painted out, and the text strip
+## sprite behind a window as wide as the face; both hidden until a line runs
+func _build_ticker(sr: Array, origin: Vector2) -> void:
+	var face := Rect2i(int(sr[0]) - 3, int(sr[1]) + 1, int(sr[2]) + 4, 10)
+	var img: Image = (load(dir + "shell_f%d.png" % floors) as Texture2D).get_image()
+	img.decompress()
+	var blank := img.get_region(face)
+	blank.convert(Image.FORMAT_RGBA8)
+	var base := Color("19130e")
+	for y in blank.get_height():
+		for x in blank.get_width():
+			var c := blank.get_pixel(x, y)
+			if c.r > 0.2 and c.r - c.b > 0.06:          # a lit or ghost glyph pixel -> the dark face
+				blank.set_pixel(x, y, base)
+	tick_face = Sprite2D.new()
+	tick_face.centered = false
+	tick_face.position = origin + Vector2(face.position)
+	tick_face.texture = ImageTexture.create_from_image(blank)
+	tick_face.visible = false
+	over.add_child(tick_face)
+	tick_text = Sprite2D.new()
+	tick_text.centered = false
+	tick_text.position = origin + Vector2(face.position) + Vector2(0, 1)
+	tick_text.region_enabled = true
+	tick_text.set_meta("w", face.size.x)
+	var m := CanvasItemMaterial.new()
+	m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	tick_text.material = m
+	tick_text.visible = false
+	over.add_child(tick_text)
+	_tk_cheer_t = randf_range(DeckerSign.CHEER_GAP.x * 0.3, DeckerSign.CHEER_GAP.x)
 
 
 func _glow(id: String, at: Vector2, radius: float, col: Color) -> Sprite2D:
@@ -713,6 +761,9 @@ func clear() -> void:
 	swings.clear()
 	sign_lit = null
 	sign_dead = null
+	tick_face = null
+	tick_text = null
+	_tk_msg = ""
 	flag = null
 	lamp = null
 	flame = null
@@ -847,6 +898,10 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 func _tick_sign(delta: float, engine_on: bool, dark: float, hazard: bool) -> void:
 	if sign_lit == null:
 		return
+	if _tick_ticker(delta, engine_on, dark):
+		sign_lit.visible = false
+		sign_dead.visible = false
+		return
 	_sign_t -= delta
 	if _sign_t <= 0.0:
 		var glitch := randf() < 0.12
@@ -869,6 +924,86 @@ func _tick_sign(delta: float, engine_on: bool, dark: float, hazard: bool) -> voi
 	sign_lit.visible = a > 0.01
 	if not engine_on:
 		sign_dead.visible = false
+
+
+## MV-744 status sign: alerts (DeckerSign.alerts, polled twice a second) take turns on the sign whatever the engine
+## does (it runs on the battery); with nothing wrong and the engine on, a cheerful line scrolls by now and then.
+## A line that fits stands still (a raid blinks), a longer one scrolls in from the right and out to the left once.
+## Returns true while a line owns the sign.
+func _tick_ticker(delta: float, engine_on: bool, dark: float) -> bool:
+	if tick_text == null:
+		return false
+	_tk_poll -= delta
+	if _tk_poll <= 0.0:
+		_tk_poll = 0.5
+		_tk_alerts = DeckerSign.alerts()
+	if _tk_msg == "":
+		if not _tk_force.is_empty():
+			_show_line(str(_tk_force[0]), str(_tk_force[1]))
+			_tk_force = []
+		elif not _tk_alerts.is_empty():
+			var a: Array = _tk_alerts[_tk_i % _tk_alerts.size()]
+			_tk_i += 1
+			_show_line(str(a[0]), str(a[1]))
+		elif engine_on:
+			_tk_cheer_t -= delta
+			if _tk_cheer_t <= 0.0:
+				_tk_cheer_t = randf_range(DeckerSign.CHEER_GAP.x, DeckerSign.CHEER_GAP.y)
+				_show_line(DeckerSign.CHEERS[randi() % DeckerSign.CHEERS.size()], "cheer")
+	if _tk_msg == "":
+		tick_face.visible = false
+		tick_text.visible = false
+		return false
+	var w := int(tick_text.get_meta("w"))
+	if _tk_end > 0.0:
+		_tk_x += DeckerSign.SCROLL_PX * delta
+		if _tk_x >= _tk_end:
+			_tk_msg = ""
+	else:
+		_tk_hold -= delta
+		if _tk_hold <= 0.0:
+			_tk_msg = ""
+	tick_text.region_rect = Rect2(floorf(minf(_tk_x, _tk_end)), 0, w, DeckerSign.GLYPH_H)
+	var a := 0.55 + 0.4 * dark
+	if _tk_kind == "cheer":
+		a = 0.45 + 0.4 * dark
+	elif _tk_kind == "raid" and fmod(_t, 0.8) >= 0.5:
+		a = 0.0
+	tick_text.modulate.a = a
+	tick_face.visible = true
+	tick_text.visible = a > 0.01
+	return true
+
+
+func _show_line(text: String, kind: String) -> void:
+	var w := int(tick_text.get_meta("w"))
+	var tw := DeckerSign.text_w(text)
+	var img: Image
+	if tw <= w:                  # fits: centred, standing still
+		img = Image.create_empty(w, DeckerSign.GLYPH_H, false, Image.FORMAT_RGBA8)
+		img.blit_rect(DeckerSign.text_image(text), Rect2i(0, 0, tw, DeckerSign.GLYPH_H), Vector2i((w - tw) / 2, 0))
+		_tk_end = 0.0
+		_tk_hold = 2.6 if kind != "cheer" else 3.5
+	else:                        # scrolls through once: in from the right edge, out past the left one
+		img = DeckerSign.text_image(text, w)
+		_tk_end = float(tw + w)
+	_tk_x = 0.0
+	_tk_msg = text
+	_tk_kind = kind
+	tick_text.texture = ImageTexture.create_from_image(img)
+	var col := Color(1.0, 0.22, 0.14) if kind == "raid" else Color(1.0, 0.62, 0.18)
+	tick_text.modulate = Color(col, 0.0)
+
+
+## GOD MODE / autotest: put a line on the status sign now (kind raid / warn / cheer)
+func sign_say(text: String, kind := "warn") -> void:
+	_tk_force = [text, kind]
+	_tk_msg = ""
+
+
+## the line the status sign shows now ("" = the plain route sign)
+func sign_line() -> String:
+	return _tk_msg
 
 
 ## loose cables sway: a lazy swing parked with the engine idling, more on the road, a kick at every bump
@@ -922,4 +1057,3 @@ func _tick_legs(delta: float, moving: bool) -> void:
 
 func legs_down() -> float:
 	return leg_down if not legs.is_empty() else -1.0
-

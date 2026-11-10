@@ -376,7 +376,10 @@ func _tab_vehicle() -> void:
 	_row([_b("สีแบบเดิม (เข้ม)", func(): Dev.crew_v3_grade(1.0)), _b("ย้อม 0.5", func(): Dev.crew_v3_grade(0.5)),
 		_b("สีสไปรต์ล้วน", func(): Dev.crew_v3_grade(0.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_grade(-1.0), "gray")], "สีลูกเรือ")
 	_row([_b("สว่าง x1 (สีเดิม)", func(): Dev.crew_v3_lift(1.0)), _b("สว่าง x1.25", func(): Dev.crew_v3_lift(1.25)), _b("สว่าง x1.5", func(): Dev.crew_v3_lift(1.5)),
-		_b("ค่าเริ่มต้น", func(): Dev.crew_v3_lift(-1.0), "gray")], "ความสว่างลูกเรือ (%.2f)" % CrewV3Actor.lift_k())
+		_b("สว่าง x2", func(): Dev.crew_v3_lift(2.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_lift(-1.0), "gray")], "ความสว่างลูกเรือ (%.2f)" % CrewV3Actor.lift_k())
+	_row([_b("ขอบดำเดิม", func(): Dev.crew_v3_outline(0.0)), _b("ขอบนุ่ม 0.35", func(): Dev.crew_v3_outline(0.35)),
+		_b("ขอบนุ่ม 0.6", func(): Dev.crew_v3_outline(0.6)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_outline(-1.0), "gray")],
+		"เส้นขอบลูกเรือ (%.2f, MV-745)" % CrewV3Actor.outline_k())
 	_row([_b("เต็มพิกเซล (คม)", func(): Dev.crew_world_full(true), "green" if Features.on("crew_world_full") else "gray"),
 		_b("ย่อ 2/3 (แบบเดิม)", func(): Dev.crew_world_full(false), "gray" if Features.on("crew_world_full") else "red"),
 		_b("ค่าเริ่มต้น", func(): Dev.crew_world_full(null), "gray")], "ลูกเรือบนรถ (MV-734)")
@@ -405,6 +408,14 @@ func _tab_vehicle() -> void:
 		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),
 		_b("Decker: " + ("เปิด" if Features.on("decker") else "ปิด"), func(): Dev.feature_set("decker", not Features.on("decker")),
 		"green" if Features.on("decker") else "red")], "รถบัส 2 ชั้น")
+	_row([_b("ป้าย: RAID!", func(): Dev.decker_sign("RAID!", "raid"), "red"),
+		_b("WATER LOW", func(): Dev.decker_sign("WATER LOW", "warn")), _b("ให้กำลังใจ", func(): Dev.decker_sign()),
+		_b("แตรลม", func(): Dev.decker_horn("air_horn")), _b("ไซเรน", func(): Dev.decker_horn("bus_siren")),
+		_b("ป้ายสถานะ: " + ("เปิด" if Features.on("decker_sign") else "ปิด"),
+		func(): Dev.feature_set("decker_sign", not Features.on("decker_sign")), "green" if Features.on("decker_sign") else "red"),
+		_b("แตร: " + ("เปิด" if Features.on("decker_horn") else "ปิด"),
+		func(): Dev.feature_set("decker_horn", not Features.on("decker_horn")), "green" if Features.on("decker_horn") else "red")],
+		"ป้าย+แตร Decker")
 	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
 		_b("ภายใน", func(): Dev.bastion_interior()),
 		_b("ขับ+ไฟ", func(): Dev.bastion_anim("drive"), "green"), _b("เบรก", func(): Dev.bastion_anim("brake")),
