@@ -13755,6 +13755,19 @@ func _bastion_test() -> void:
 		shells_ok = shells_ok and panel.dk() and panel.amb_shell.visible and tex.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
 			and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
 		var img := tex.get_image()
+		# MV-738 round 2 (tools/art/bastion/cleanup.py): the roof rail runs unbroken from the front end post to the rear
+		# ladder (the old inpaint seam at x 499 cut it), and no PixelLab backdrop colour is left on the roof
+		var rail := true
+		var backdrop := 0
+		for x in range(160, 600):
+			rail = rail and img.get_pixel(x, 28).a > 0.5 and img.get_pixel(x, 29).a > 0.5
+			for y in 36:
+				if y >= 27 and y <= 31:
+					continue   # the rail tube's dark underside is close to the backdrop colour by design
+				var c := img.get_pixel(x, y)
+				if c.a > 0.5 and absf(c.r8 - 46) + absf(c.g8 - 44) + absf(c.b8 - 48) <= 6:
+					backdrop += 1
+		_fold("bastion: roof rail unbroken to the ladder, no backdrop pockets on the roof", rail and backdrop == 0, "%d decks, %d backdrop px" % [d, backdrop])
 		for slot in Game.main_slots():
 			var c := Game.slot_cell(slot)
 			var want := Vector2(-1, -1)
@@ -13775,7 +13788,8 @@ func _bastion_test() -> void:
 		Dev.bastion_preview(d)
 		await wait(0.4)
 		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
-		world_ok = world_ok and v.v2 and v.v2_dk() and v.v2_shell.texture.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
+		world_ok = world_ok and v.v2 and v.v2_dk() and (v.v2_shell.texture.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
+			or (v.amb_on and v.amb.dir == AmbulanceMotion.BS_DIR and v.amb.floors == d)) \
 			and v.v2_cells.size() == Game.main_slots() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5
 		var img := v.v2_shell.texture.get_image()
 		for slot in Game.main_slots():
@@ -13784,6 +13798,32 @@ func _bastion_test() -> void:
 			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
 		await shot("bastion_world_f%d" % d)
 	_check("bastion: on the road (world v2) the truck carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
+	# MV-738 round 3 (cleanup.py + anim.py): no pinholes in the body, a frame round every room window, the solar array
+	# on deck 2, and the micro animations on the road (4 tyres roll, headlamp / tail lamps, solar glint)
+	var art_ok := true
+	for d in [2, 3]:
+		var img: Image = (load(InteriorV3Panel.BS_DIR + "shell_f%d.png" % d) as Texture2D).get_image()
+		var dy: int = 112 * (int(d) - 2)
+		for cc in (spec.floors[str(d)].cells as Array):
+			var x0 := int(cc.x)
+			var y0 := int(cc.y)
+			_fold("bastion: every room window has a frame (black edge outside, clear middle)", img.get_pixel(x0 - 1, y0 + 40).get_luminance() < 0.08
+				and img.get_pixel(x0 + 72, y0 - 1).get_luminance() < 0.08 and img.get_pixel(x0 + 72, y0 + 48).a < 0.1, "%d decks %d,%d" % [d, x0, y0])
+		var solar := img.get_pixel(104, 56 + dy + 12)
+		art_ok = art_ok and solar.a > 0.9 and solar.b > solar.r + 0.08 and img.get_pixel(41, 271 + dy - 1).get_luminance() > 0.7
+		art_ok = art_ok and img.get_pixel(612, 277 + dy).a > 0.9 and img.get_pixel(232, 300 + dy).a > 0.9   # old hitch / chassis pinholes
+	_fold_flush()
+	_check("bastion: solar array on the box front at deck 2, code headlamp, hitch and chassis pinholes filled (2 and 3 decks)", art_ok)
+	var anim_ok := Dev.bastion_anim("drive")
+	await wait(0.6)
+	var sp0 := v.amb.spin_frame()
+	await wait(0.4)
+	_check("bastion: GOD drives the Bastion with its own animated tyres (4), headlamp and tail lamp on", anim_ok and v.amb_on
+		and v.amb.dir == AmbulanceMotion.BS_DIR and v.amb.tyres.size() == 4 and sp0 != v.amb.spin_frame()
+		and v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1 and v.amb.glint != null)
+	await shot("bastion_anim_drive")
+	Dev.bastion_anim("brake")
+	await wait(0.3)
 	Features.set_override("features", "bastion", false)
 	_check("bastion: switch off = a Bastion save drives the Decker, ladder without it", Game.tier() == "bus" and not Game.tier_order().has("bastion"))
 	Features.layers.dev = overrides

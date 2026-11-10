@@ -1311,6 +1311,17 @@ func decker_interior() -> bool:
 	return rooms_v3_open()
 
 
+## MV-738 round 3: Bastion 42-B on the road with its micro animations (switch vehicle_anim): tyres, headlamp + beam,
+## tail / marker, solar glint, hitch lines; mode as vehicle_anim ("drive", "brake", ...). False when they did not build.
+func bastion_anim(mode := "drive") -> bool:
+	feature_set("vehicle_anim", true)
+	bastion_preview(Game.floors() if Game.tier() == "bastion" else 2)
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or not v.amb_on or v.amb.dir != AmbulanceMotion.BS_DIR:
+		return false
+	return vehicle_anim(mode)
+
+
 ## MV-738: switch bastion on and drive Bastion 42-B with n decks (2 or 3); on_road = world v2 too. Returns the decks.
 func bastion_preview(n: int, on_road := true) -> int:
 	feature_set("road_train", true)
