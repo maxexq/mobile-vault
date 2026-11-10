@@ -5,7 +5,8 @@ Same format as tools/ambulance_anim.py (read by AmbulanceMotion with dir RT_DIR)
   anim.json       "floors" = the body (tractor + lead trailer) per deck count, "trailer" = the container trailer per
                   deck count; each: wheel centres, landing legs (the inner leg + foot that cranks up / down),
                   headlight, tail / clearance lamps, searchlight, mast tip
-  wheel_spin.png  24-frame strip (47x47 each) of one tyre rolling west (the cab faces west)
+  wheel_spin.png  48-frame strip (47x47 each) of one tyre rolling west (the cab faces west); the whole tyre turns,
+                  edge included, and the tread blocks cut into the outline roll with it (Parames 2026-11-10)
 Run after designs/road-train/game/shell.py + tools/art/road_train/cleanup.py; the autotest checks anim.json against
 the shell sizes. Code only, no PixelLab.
 """
@@ -42,7 +43,8 @@ def unit(kind, n, d):
     return s
 
 
-def spin_strip():
+def spin_strip(lug=amb.TREAD_LUG, save=True):
+    """lug=1.0 gives a plain round tyre (no tread blocks): the base the off-road wheel mods re-cut."""
     im = Image.open(os.path.join(DIR, "body_f2.png")).convert("RGBA")
     cx, cy = 643.5, 380 - CY                       # the last tyre of the lead trailer: only the mudflap behind it
     c = SIZE / 2
@@ -54,26 +56,10 @@ def spin_strip():
                 # the top of the tyre hides under the chassis rail: mirror the clean lower tread up there
                 q = sp[x, SIZE - 1 - y] if y < c - 13 else sp[x, y]
                 dp[x, y] = q[:3] + (255,) if q[3] else (20, 18, 18, 255)
-    out = Image.new("RGBA", (SIZE * SPIN_N, SIZE)); k = 8
-    up = disc.resize((SIZE * k, SIZE * k), Image.NEAREST)
-    for i in range(SPIN_N):
-        rot = up.rotate(360.0 * i / SPIN_N, resample=Image.NEAREST, center=(SIZE * k / 2, SIZE * k / 2)).load()
-        fr = Image.new("RGBA", (SIZE, SIZE)); fp = fr.load()
-        for y in range(SIZE):
-            for x in range(SIZE):
-                if not dp[x, y][3]:
-                    continue
-                if math.hypot(x + 0.5 - c, y + 0.5 - c) > R - 1.5:
-                    fp[x, y] = dp[x, y]; continue
-                votes = {}
-                for yy in range(y * k + 1, y * k + k, 2):
-                    for xx in range(x * k + 1, x * k + k, 2):
-                        q = rot[xx, yy]
-                        if q[3]:
-                            votes[q] = votes.get(q, 0) + 1
-                fp[x, y] = max(votes, key=votes.get) if votes else dp[x, y]
-        out.paste(fr, (SIZE * i, 0))
-    out.save(os.path.join(DIR, "wheel_spin.png"))
+    out = amb.roll_strip(disc, lug)                # shared with every vehicle (MV-759)
+    if save:
+        out.save(os.path.join(DIR, "wheel_spin.png"))
+    return out
 
 
 if __name__ == "__main__":
