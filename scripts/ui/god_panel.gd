@@ -405,6 +405,14 @@ func _tab_vehicle() -> void:
 		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),
 		_b("Decker: " + ("เปิด" if Features.on("decker") else "ปิด"), func(): Dev.feature_set("decker", not Features.on("decker")),
 		"green" if Features.on("decker") else "red")], "รถบัส 2 ชั้น")
+	_row([_b("ป้าย: RAID!", func(): Dev.decker_sign("RAID!", "raid"), "red"),
+		_b("WATER LOW", func(): Dev.decker_sign("WATER LOW", "warn")), _b("ให้กำลังใจ", func(): Dev.decker_sign()),
+		_b("แตรลม", func(): Dev.decker_horn("air_horn")), _b("ไซเรน", func(): Dev.decker_horn("bus_siren")),
+		_b("ป้ายสถานะ: " + ("เปิด" if Features.on("decker_sign") else "ปิด"),
+		func(): Dev.feature_set("decker_sign", not Features.on("decker_sign")), "green" if Features.on("decker_sign") else "red"),
+		_b("แตร: " + ("เปิด" if Features.on("decker_horn") else "ปิด"),
+		func(): Dev.feature_set("decker_horn", not Features.on("decker_horn")), "green" if Features.on("decker_horn") else "red")],
+		"ป้าย+แตร Decker")
 	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
 		_b("ภายใน", func(): Dev.bastion_interior()),
 		_b("Bastion: " + ("เปิด" if Features.on("bastion") else "ปิด"), func(): Dev.feature_set("bastion", not Features.on("bastion")),

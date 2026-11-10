@@ -13644,6 +13644,40 @@ func _decker_test() -> void:
 	_check("decker: the loose cables under the floor swing while driving (%d frames seen)" % sw_seen.size(),
 		v.amb.swings.size() == 1 and sw_seen.size() >= 3)
 	await shot("decker_anim_drive")
+	# MV-744: the 9 DEPOT sign is a status board (switch decker_sign) + air horn / raid siren (switch decker_horn)
+	var sign_ok := Dev.decker_sign("RAID!", "raid")
+	await wait(0.3)
+	_check("decker sign: GOD puts RAID! on the sign, the blank face covers 9 DEPOT, the baked glyphs stay dark",
+		sign_ok and v.amb.sign_line() == "RAID!" and v.amb.tick_face.visible and not v.amb.sign_lit.visible
+		and v.amb.tick_text.region_rect.size == Vector2(44, DeckerSign.GLYPH_H))
+	await shot("decker_sign_raid")
+	Dev.decker_sign("NEXT STOP: HOPE", "cheer")
+	await wait(0.4)
+	var rx0 := v.amb.tick_text.region_rect.position.x
+	await wait(0.5)
+	_check("decker sign: a line longer than the face scrolls (%.0f -> %.0f px)" % [rx0, v.amb.tick_text.region_rect.position.x],
+		v.amb.sign_line() == "NEXT STOP: HOPE" and v.amb.tick_text.region_rect.position.x > rx0)
+	var keep_res: Dictionary = (Game.s.res as Dictionary).duplicate()
+	var keep_phase: String = Threat.phase
+	Game.s.res.water = 0.0
+	Threat.phase = "raid"
+	var al := DeckerSign.alerts()
+	_check("decker sign: alerts = raid first, then low water (%s)" % str(al), al.size() >= 2 and str(al[0][0]) == "RAID!"
+		and str(al[0][1]) == "raid" and al.any(func(a): return str(a[0]) == "WATER LOW"))
+	Threat.phase = keep_phase
+	Game.s.res = keep_res
+	_check("decker sign: font draws every character of the cheerful lines, 6 px per glyph",
+		DeckerSign.CHEERS.all(func(t: String): return Array(t.split("")).all(func(c: String): return DeckerSign.FONT.has(c)))
+		and DeckerSign.text_image("RAID!").get_width() == 29)
+	var happy_on := Game.decker_sign_happy()
+	Features.set_override("features", "decker_sign", false)
+	var happy_off := Game.decker_sign_happy()
+	Features.set_override("features", "decker_sign", true)
+	_check("decker sign: lifts crew happiness a little (+%.0f), nothing with the switch off" % happy_on, happy_on > 0.0
+		and happy_on <= 5.0 and happy_off == 0.0)
+	_check("decker horn: air horn + raid siren are in the sound set, on for the Decker",
+		"air_horn" in Sound.SFX and "bus_siren" in Sound.SFX and ResourceLoader.exists(Sound.SFX_DIR + "air_horn.wav")
+		and ResourceLoader.exists(Sound.SFX_DIR + "bus_siren.wav") and Sound.decker_horn_on())
 	Dev.decker_anim("brake")
 	await wait(1.6)
 	_check("decker: braking to a stop lights the brake lamp", v.amb.lamp_alpha("tail0") > 0.7)

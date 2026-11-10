@@ -1281,6 +1281,24 @@ func decker_anim(mode := "drive") -> bool:
 	return vehicle_anim(mode)
 
 
+## MV-744: drive the Decker and put a line on its status sign (kind raid / warn / cheer); "" = a random cheerful line
+func decker_sign(text: String = "", kind: String = "cheer") -> bool:
+	feature_set("decker_sign", true)
+	if not decker_anim("drive"):
+		return false
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v.amb.tick_text == null:
+		return false
+	v.amb.sign_say(text if text != "" else DeckerSign.CHEERS[randi() % DeckerSign.CHEERS.size()], kind)
+	act("decker sign", {"text": text, "kind": kind})
+	return true
+
+
+## MV-744: play the Decker's air horn or raid siren (a preview: changes nothing in the run)
+func decker_horn(id: String = "air_horn") -> void:
+	sound_preview("sound", id)
+
+
 ## MV-736: the Decker (its decks now, else 2) in the v3 interior
 func decker_interior() -> bool:
 	decker_preview(Game.floors() if Game.tier() == "bus" else 2, false)

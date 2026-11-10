@@ -29,7 +29,7 @@ const WEATHER_SOUNDS := ["overcast", "rain", "storm", "sandstorm", "snow", "fog"
 const SFX := ["thunder_1", "thunder_2", "shot", "shot_heavy", "shot_energy", "hit", "hit_crit", "hit_metal", "hit_hero",
 	"enemy_die", "heal", "skill", "boss_roar", "alarm", "build", "build_done", "demolish", "loot", "loot_rare",
 	"engine_start", "engine_stall", "radio", "depart", "return", "checkpoint", "knock", "wreck", "toast_good", "toast_bad",
-	"res_gain", "event_good", "event_bad", "exp_start", "exp_encounter", "exp_home", "exp_fail", "exp_loot"]
+	"res_gain", "event_good", "event_bad", "exp_start", "exp_encounter", "exp_home", "exp_fail", "exp_loot", "air_horn", "bus_siren"]
 ## MV-555 cue sounds (switch audio_cues, level audio.cue_gain); a cue keeps the toast that comes with it quiet
 const CUES := ["res_gain", "event_good", "event_bad", "exp_start", "exp_encounter", "exp_home", "exp_fail", "exp_loot"]
 const UI := ["tap", "confirm", "cancel", "open"]
@@ -40,6 +40,7 @@ const GROUPS := {
 	"build": ["build", "build_done", "demolish"],
 	"loot": ["loot", "loot_rare"],
 	"engine": ["engine_start", "engine_stall"],
+	"decker": ["air_horn", "bus_siren"],
 	"road": ["radio", "knock", "checkpoint", "wreck", "thunder_1", "thunder_2"],
 	"expedition": ["exp_start", "exp_encounter", "exp_home", "exp_loot", "exp_fail", "depart", "return"],
 	"events": ["res_gain", "event_good", "event_bad", "radio"],
@@ -53,7 +54,7 @@ const TRIM := {
 	"heal": -10.0, "skill": -8.0, "loot": -8.0, "loot_rare": -3.0, "radio": -4.0, "tap": -14.0, "confirm": -11.0,
 	"cancel": -11.0, "open": -13.0, "knock": -2.0, "thunder_1": -2.0, "thunder_2": -2.0,
 	"res_gain": -15.0, "event_good": -7.0, "event_bad": -6.0, "exp_start": -4.0, "exp_encounter": -6.0,
-	"exp_home": -5.0, "exp_fail": -6.0, "exp_loot": -6.0,
+	"exp_home": -5.0, "exp_fail": -6.0, "exp_loot": -6.0, "air_horn": -9.0, "bus_siren": -13.0,
 }
 const SFX_VOICES := 10
 const UI_VOICES := 3
@@ -117,6 +118,9 @@ func _ready() -> void:
 		_refresh())
 	Game.weather_changed.connect(func(_w: String): _refresh())
 	Game.game_started.connect(_refresh)
+	Threat.phase_changed.connect(func(p: String):      # MV-744: the Decker winds its siren when a raid is coming
+		if p == "warning" and decker_horn_on():
+			sfx("bus_siren", 0.0))
 	Game.construction_started.connect(func(_s: int, _k: String): sfx("build"))
 	Game.construction_finished.connect(func(_s: int, _k: String): sfx("build_done"))
 	Game.event_triggered.connect(func(_id: String): sfx("radio"))
@@ -468,7 +472,14 @@ func _watch() -> void:
 	var cp := Game.started and not Game.s.is_empty() and Game.at_checkpoint()
 	if cp and not _at_checkpoint:
 		sfx("checkpoint")
+	elif _at_checkpoint and not cp and decker_horn_on():
+		sfx("air_horn", 0.02)      # MV-744: the Decker honks as it pulls out of a stop
 	_at_checkpoint = cp
+
+
+## MV-744 (switch decker_horn): the Decker bus is the current body
+func decker_horn_on() -> bool:
+	return Features.on("decker_horn") and not Game.s.is_empty() and Game.decker_on() and Game.tier() == "bus"
 
 
 func _thunder(dt: float) -> void:
