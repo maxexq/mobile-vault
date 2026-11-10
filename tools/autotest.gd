@@ -13244,6 +13244,7 @@ func _ambulance_mods_test() -> void:
 					bad += 1
 		_fold("ambulance mods: no pinholes or lone pixels in any mod layer", bad == 0, "%s (%d px)" % [fn, bad])
 	_fold_flush()
+	Dev.feature_set("vehicle_anim", true)             # the spinning off-road tyres need it (an earlier run may have left it off)
 	var gun := 0 if Combat.room_mode() else 1          # MV-727: no outside gun while the squad fights from the gunner room
 	var none := Dev.ambulance_mods(0, 1)
 	await wait(0.3)
