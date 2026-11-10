@@ -13295,6 +13295,7 @@ func _road_train_test() -> void:
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	Features.set_override("features", "road_train", true)
 	Features.set_override("features", "decker", false)     # MV-736: the Decker joins the ladder in _decker_test
+	Features.set_override("features", "rt_start_trailer", false)   # MV-753 has its own check below; these cover 0 trailers
 	_check("road train: the ladder is the ambulance and the road train", Game.tier_order() == ["van", "rig"])
 	Game.s.tier = "bus"
 	var bus_ok := Game.tier() == "rig"
@@ -13493,6 +13494,29 @@ func _road_train_test() -> void:
 	Game.s.dwellers = keep_dw2
 	Game.s.trailers = 0
 	Dev._vehicle_changed()
+	# MV-753 (switch rt_start_trailer, Parames 2026-11-10): the road train comes with its trailer, a loaded road train
+	# save without one gets it (empty rooms), it can't be unhitched; the ambulance starts without one; off = buy it
+	var st_keep: Dictionary = Game.s.duplicate(true)
+	Dev.rt_start_trailer(true)
+	var st_load: bool = (Game.trailers() == 1 and Game.s.rooms.size() == Game.slot_count()
+		and str(Game.s.rooms[Game.slot_count() - 1].type) == "empty")
+	Dev.set_trailers(0)
+	var st_keep1: bool = Game.trailers() == 1
+	Game.s = {"meta": st_keep.get("meta", {}), "tier": "rig"}
+	Game.setup_default_state(true, false)
+	var st_new: bool = Game.tier() == "rig" and Game.trailers() == 1 and Game.s.rooms.size() == Game.slot_count()
+	Game.s = {"meta": st_keep.get("meta", {}), "tier": "van"}
+	Game.setup_default_state(true, false)
+	var st_van: bool = Game.trailers() == 0 and Game.min_trailers() == 0
+	Game.s = st_keep
+	Dev._vehicle_changed()
+	_check("road train: comes with its trailer (new run + loaded save), can't unhitch it; the ambulance starts with none",
+		st_load and st_keep1 and st_new and st_van)
+	await shot("road_train_start_trailer")
+	Dev.rt_start_trailer(false)
+	Dev.set_trailers(0)
+	_check("road train: start-trailer switch off -> the trailer is bought again (0 trailers allowed)", Game.trailers() == 0
+		and Game.min_trailers() == 0)
 	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")

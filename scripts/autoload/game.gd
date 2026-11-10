@@ -86,7 +86,7 @@ func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = tru
 	var meta: Dictionary = s.get("meta", {}) if keep_meta else {}
 	var tier_id: String = str(s.get("tier", "van")) if keep_meta else "van"
 	s = {
-		"version": 1, "route_v": 2, "slots_v": 5, "tier": tier_id, "trailers": 0, "pets": [], "outage": {},
+		"version": 1, "route_v": 2, "slots_v": 5, "tier": tier_id, "trailers": min_trailers(tier_id), "pets": [], "outage": {},
 		"vault_level": 1,
 		"res": {"power": 60.0, "water": 50.0, "food": 50.0, "scrap": 150.0, "fuel": 30.0, "crops": Data.START_RAW.crops, "meat": Data.START_RAW.meat},
 		"items": {"stimpack": 2, "radaway": 1, "ammo": 5},
@@ -256,6 +256,7 @@ func _migrate() -> void:
 	_migrate_v4()
 	fit_body(true)
 	fit_trailers()
+	ensure_min_trailers()
 	while s.rooms.size() < slot_count():
 		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	for d in s.dwellers:
@@ -736,6 +737,31 @@ func fit_trailers() -> bool:
 				d.room = to
 	s.rooms = kept
 	s.trailers = Data.MAX_TRAILERS
+	_unl_key = -1
+	return true
+
+
+## MV-753 (switch rt_start_trailer, Parames 2026-11-10): the road train comes with its trailer hitched from the start
+## (its roof turret sits at the rear of the trailer roof), so a road train never runs with fewer trailers than this
+func min_trailers(t := "") -> int:
+	if t == "":
+		t = str(s.get("tier", "van")) if not s.is_empty() else "van"
+	if t == "rig" and Features.on("road_train") and Features.on("rt_start_trailer"):
+		return mini(1, Data.MAX_TRAILERS)
+	return 0
+
+
+## hitch the free starting trailer(s) of min_trailers() with empty rooms (a fresh run, a loaded save, a chassis swap).
+## Returns true when a trailer was added.
+func ensure_min_trailers() -> bool:
+	if s.is_empty() or int(s.get("trailers", 0)) >= min_trailers():
+		return false
+	var main := main_slots()
+	while s.rooms.size() < main:
+		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
+	s.trailers = min_trailers()
+	while s.rooms.size() < slot_count():
+		s.rooms.append({"type": "empty", "level": 1, "job": {}, "build": {}})
 	_unl_key = -1
 	return true
 
