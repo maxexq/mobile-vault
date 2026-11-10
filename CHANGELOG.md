@@ -9,6 +9,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Gear sets: 5 sets of 4 pieces (Tinker Crew, Raider Hunter, Titan Breaker, Rust Bulwark, Scavenger) with 2 / 3 / 4-piece bonuses, each dropping from its own source with a pity counter; salvaged set pieces become set parts that craft a missing piece (MV-767)
+- New item frame: a detailed steel vault hatch whose lamps, lights and locks show the rarity, a red +N badge on the corner and a set-colour emblem (MV-767)
 - New expedition scene: while a team is out you watch them inside the site in the new detailed interiors (hospital, supermarket, armory, plant, lab, mine, ruins) with flickering lamps and drifting dust, walking in with flashlights or pistols drawn, searching crates and wall cabinets, hauling crates, shooting monsters and carrying the loot home (MV-758)
 - The road train now comes with its container trailer already hitched: 6 more rooms from the start, no need to buy it (MV-753)
 - The crew look a little lighter on the vehicle: brighter colours and softer dark-brown outlines instead of heavy black ones (MV-745)

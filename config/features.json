@@ -53,6 +53,8 @@
     "blur_still": true,
     "gear_slot_style": true,
     "gear_slot_vfx": true,
+    "gear_sets": true,
+    "gear_frame64": true,
     "trait_card_style": true,
     "trait_card_vfx": true,
     "trait_tiers": true,

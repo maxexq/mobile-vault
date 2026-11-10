@@ -148,7 +148,7 @@ func _role_card(i: int) -> Control:
 		var it := Loot.equipped_on(d, slot)
 		var tile := UIKit.gear_tile(it, slot, 30)
 		# MV-473: the steel frame is drawn for its width: keep it, don't stretch the tile
-		tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not Features.on("gear_slot_style") else Control.SIZE_SHRINK_BEGIN
+		tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not (Features.on("gear_slot_style") or Features.on("gear_frame64")) else Control.SIZE_SHRINK_BEGIN
 		tile.tooltip_text = Loot.SLOT_TH[slot]
 		var sl2: String = slot
 		var did2: int = did
@@ -159,6 +159,7 @@ func _role_card(i: int) -> Control:
 				_hud().open_loot_equipped(it, did2))
 		gh.add_child(tile)
 	v.add_child(UIKit.gear_pad(gh))
+	v.add_child(UIKit.set_bonus_lines(d))      # MV-767
 	if Features.on("individual_auto_equip"):
 		v.add_child(_hud().auto_equip_button(did))
 	return p

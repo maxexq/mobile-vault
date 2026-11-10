@@ -493,6 +493,10 @@ func _run() -> void:
 	if not bl.has("features"):
 		bl["features"] = {}
 	bl.features["road_train"] = false
+	# MV-767: the older gear / loot checks were written for the MV-473 tile and drops without set pieces; pin both new
+	# switches off under the dev layer, _gear_sets_test turns them on for itself
+	bl.features["gear_sets"] = false
+	bl.features["gear_frame64"] = false
 	if "--only=legal" not in OS.get_cmdline_user_args():
 		_legal_test_fixture()
 	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
@@ -836,6 +840,11 @@ func _run() -> void:
 	if "--only=responsive" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _responsive_test()
+		_finish()
+		return
+	if "--only=gear_sets" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _gear_sets_test()
 		_finish()
 		return
 	if "--only=icons_v2" in OS.get_cmdline_user_args():
@@ -1730,6 +1739,7 @@ func _run() -> void:
 	await _engine_shake_test()
 	await _icon_art_test()
 	await _icons_v2_test()
+	await _gear_sets_test()
 	await _crew_roster_test()
 	await _announce_test()
 	await _scene_art_test()
@@ -13015,6 +13025,169 @@ func _icons_v2_test() -> void:
 	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
 	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
 	Dev.icons_v2(was)
+
+
+## MV-767: gear sets v1 (switch gear_sets) + the 64 px Vault hatch item frame (switch gear_frame64)
+func _gear_sets_test() -> void:
+	var saved_state := Game.s
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_processing := [Game.is_processing(), Combat.is_processing()]
+	Game.set_process(false)
+	Combat.set_process(false)
+	Game.s = saved_state.duplicate(true)
+	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true}, "tune": {}}
+	Features.layers.remote = {}
+	Features.layers.mode = {}
+	# --- data: 5 sets x 4 pieces, bases + icons
+	for sid in GearSets.ORDER:
+		var slots: Array = GearSets.SETS[sid].slots
+		_fold("gear sets: every set has 4 pieces in 4 different hero slots", slots.size() == 4 and slots.all(func(x): return Loot.HERO_SLOTS.has(x)) and slots.duplicate().filter(func(x): return slots.count(x) == 1).size() == 4, sid)
+		_fold("gear sets: every set has 3 bonus lines (2 / 3 / 4 pieces)", (GearSets.SETS[sid].bonus as Array).size() == 3, sid)
+		for slot in slots:
+			var bid := GearSets.base_id(sid, slot)
+			var b: Dictionary = Loot.BASES.get(bid, {})
+			_fold("gear sets: every piece is a Loot base of its slot and set", str(b.get("slot", "")) == slot and str(b.get("set", "")) == sid, bid)
+			var t := GearSets.icon(sid + "_" + slot)
+			_fold("gear sets: every piece has its 32 px icon (IconTex 16 slot)", t is IconTex and t.get_width() == 16 and (t as IconTex).inner.get_width() == 32, bid)
+	_fold_flush()
+	var icons_png: Texture2D = load(GearSets.ICONS_PNG)
+	var frames_png: Texture2D = load(GearFrame64.FRAMES_PNG)
+	_check("gear sets: icons.png 20 x 32 px and frames.png 16 x 96 by 7 rows load", icons_png != null and icons_png.get_size() == Vector2(640, 32) and frames_png != null and frames_png.get_size() == Vector2(GearFrame64.CELL * GearFrame64.N, GearFrame64.CELL * 7))
+	var pool_ok := true
+	for i in 300:
+		pool_ok = pool_ok and GearSets.set_of(Loot.roll_item(Loot.HERO_SLOTS[i % 6], 1 + i % 30, i % 6)) == ""
+	_check("gear sets: set pieces never come from the normal random pool", pool_ok)
+	# --- bonuses
+	var d: Dictionary = Game.s.dwellers[0]
+	d.gear = {}
+	var plain := Combat.hero_stats(d, 0)
+	for slot in GearSets.SETS.hunter.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("hunter", slot))
+	_check("gear sets: counts / worn see 4 hunter pieces", GearSets.counts(d).get("hunter", 0) == 4 and GearSets.worn(d, "hunter") == 4 and GearSets.has(d, "hunter", 4))
+	var hst := Combat.hero_stats(d, 0)
+	var hunter_base := Combat.hero_stats(d, 0)
+	Features.layers.dev.features.gear_sets = false
+	var off := Combat.hero_stats(d, 0)
+	_check("gear sets: switch off = no set bonus (worn 0, no flags)", GearSets.worn(d, "hunter") == 0 and not off.has("set_mark"))
+	Features.layers.dev.features.gear_sets = true
+	_check("gear sets: hunter 2 = +10 % damage", absf(float(hst.dmg) / float(off.dmg) - 1.10) < 0.001)
+	_check("gear sets: hunter 3 = +6 crit, +20 crit damage", absf(float(hst.crit) - float(off.crit) - 6.0) < 0.01 and absf(float(hst.critd) - float(off.critd) - 20.0) < 0.01)
+	_check("gear sets: hunter 4 = Mark flag", hst.get("set_mark", false) and hunter_base.get("set_mark", false))
+	var h := {"st": hst, "shots": 0}
+	var marks := 0
+	for i in 10:
+		marks += 1 if Combat._set_mark(h) else 0
+	_check("gear sets: Mark makes every 5th attack a crit", marks == 2)
+	d.gear = {}
+	for slot in GearSets.SETS.bulwark.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("bulwark", slot))
+	var bst := Combat.hero_stats(d, 0)
+	Features.layers.dev.features.gear_sets = false
+	var boff := Combat.hero_stats(d, 0)
+	Features.layers.dev.features.gear_sets = true
+	_check("gear sets: bulwark 2 = +15 % HP, 3 = +8 DEF + reflect, 4 = Last stand", absf(float(bst.hp) / float(boff.hp) - 1.15) < 0.001 and float(bst.def) > float(boff.def) + 7.0 and float(bst.get("set_reflect", 0.0)) > 0.0 and bst.get("set_last_stand", false))
+	var hero := {"st": bst, "hp": 100.0, "max": 100.0, "alive": true}
+	var taken := Combat._set_on_hurt(0, hero, 80.0, {})
+	_check("gear sets: Last stand shield (25 % max HP) soaks the blow that drops under 30 %, once a wave", hero.get("ls_used", false) and absf(taken - 55.0) < 0.01 and float(hero.shield) == 0.0)
+	d.gear = {}
+	for slot in GearSets.SETS.titan.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("titan", slot))
+	var tst := Combat.hero_stats(d, 0)
+	var boss := {"boss": true, "hp": 1000.0}
+	var m1 := Combat._set_hit_mult(tst, boss)
+	for i in 30:
+		Combat._set_hit_mult(tst, boss)
+	_check("gear sets: titan +15 % on bosses, Armor break stacks to 15", absf(m1 - 1.15 * 1.01) < 0.001 and int(boss.armor_break) == 15 and absf(Combat._set_hit_mult({}, {"boss": true, "armor_break": 15}) - 1.15) < 0.001)
+	_check("gear sets: titan off a boss = no bonus", Combat._set_hit_mult(tst, {"hp": 10.0}) == 1.0 and tst.get("set_slayer", false))
+	d.gear = {}
+	for slot in GearSets.SETS.tinker.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("tinker", slot))
+	d.erase("set_ot")
+	_check("gear sets: tinker room +10 % / +3 room stat / craft x1.15", absf(GearSets.room_mult([d]) - 1.10) < 0.001 and GearSets.room_stat_bonus(d) == 3.0 and GearSets.craft_mult([d]) == 1.15)
+	_check("gear sets: Overtime pays 1 minute of output per 5 minutes worked", GearSets.overtime_minutes([d], 299.0) == 0.0 and GearSets.overtime_minutes([d], 2.0) == 1.0 and GearSets.overtime_minutes([d], 600.0) == 2.0)
+	d.gear = {}
+	for slot in GearSets.SETS.scav.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("scav", slot))
+	_check("gear sets: scav 4 = Lucky haul team", GearSets.team_lucky([d]) and not GearSets.team_lucky([Game.s.dwellers[1] if Game.s.dwellers.size() > 1 else {}]))
+	# --- drops, pity, parts, craft
+	d.gear = {}
+	Game.s.erase("set_pity")
+	Features.layers.dev.tune = {"sets.drop_pct": 0.0, "sets.pity": 3.0}
+	var r1 := GearSets.roll("kill", 5)
+	var r2 := GearSets.roll("kill", 5)
+	var r3 := GearSets.roll("boss", 5, 2)
+	_check("gear sets: below the pity a 0 % roll gives nothing and counts", r1.is_empty() and r2.is_empty() and int(GearSets.pity().get("hunter", 0)) == 2)
+	var r4 := GearSets.roll("kill", 5)
+	_check("gear sets: the pity drop is a hunter piece and resets the counter", GearSets.set_of(r4) == "hunter" and int(GearSets.pity().hunter) == 0)
+	_check("gear sets: boss drops are titan pieces, min rarity kept", r3.is_empty() or (GearSets.set_of(r3) == "titan" and int(r3.rar) >= 2))
+	Features.layers.dev.tune = {"sets.drop_pct": 100.0}
+	var src_ok := true
+	for src in GearSets.SOURCE:
+		src_ok = src_ok and GearSets.set_of(GearSets.roll(src, 5)) == GearSets.SOURCE[src]
+	_check("gear sets: each source drops its own set", src_ok)
+	Features.layers.dev.features.gear_sets = false
+	_check("gear sets: switch off = no set drops", GearSets.roll("kill", 5).is_empty())
+	Features.layers.dev.features.gear_sets = true
+	Features.layers.dev.tune = {}
+	Game.s.gear = [r4]
+	Game.s.erase("set_parts")
+	r4.lock = false
+	Loot.salvage(int(r4.uid))
+	_check("gear sets: salvaging a set piece gives set parts", GearSets.parts_of("hunter") == GearSets.salvage_parts(r4) and GearSets.salvage_parts(r4) >= 3)
+	_check("gear sets: not enough parts = no craft", not GearSets.can_craft("hunter") and GearSets.craft_missing("hunter").is_empty())
+	GearSets.parts()["hunter"] = GearSets.craft_cost()
+	for dd in Game.s.dwellers:
+		dd.gear = {}
+	Game.s.gear = [Loot.roll_item("weapon", 3, 0, GearSets.base_id("hunter", "weapon"))]
+	var crafted := GearSets.craft_missing("hunter")
+	_check("gear sets: craft spends the parts on a missing piece", GearSets.set_of(crafted) == "hunter" and str(crafted.slot) != "weapon" and GearSets.parts_of("hunter") == 0 and Game.s.gear.size() == 2 and int(crafted.rar) >= 1)
+	# --- 64 px frame tile
+	var it := Loot.roll_item("weapon", 5, 4, GearSets.base_id("hunter", "weapon"))
+	it.plus = 7
+	it.lock = true
+	var t := UIKit.gear_tile(it, "weapon", 32)
+	var fr: GearFrame64 = t.find_child("GearFrame64", false, false)
+	var badge: Label = t.find_child("PlusBadge", false, false)
+	var ic: TextureRect = t.find_child("Icon", false, false)
+	_check("frame64: tile = frame (rarity row) + 32 px icon in the porthole + red +N, no item level", fr != null and fr.rank == 4 and badge != null and badge.text == "+7" and ic != null and ic.texture is IconTex and ic.size == Vector2(16, 16) and not _has_label_text(t, str(int(it.ilvl))))
+	_check("frame64: set piece carries its set colour emblem", fr != null and fr.set_col == GearSets.color("hunter"))
+	t.free()
+	var e := UIKit.gear_tile({}, "boots", 30)
+	var efr: GearFrame64 = e.find_child("GearFrame64", false, false)
+	_check("frame64: empty slot = lamps-off row, grey silhouette", efr != null and efr.rank == -1 and (e.find_child("Icon", false, false) as TextureRect).material != null)
+	e.free()
+	var plain_tile := UIKit.gear_tile(Loot.roll_item("armor", 5, 0, "leather_jacket"), "armor", 28)
+	_check("frame64: a plain item has no set emblem", (plain_tile.find_child("GearFrame64", false, false) as GearFrame64).set_col.a == 0.0)
+	plain_tile.free()
+	Features.layers.dev.features.gear_frame64 = false
+	var old := UIKit.gear_tile(it, "weapon", 32)
+	_check("frame64: switch off = the old tile (no GearFrame64), set icon still shown", old.find_child("GearFrame64", false, false) == null)
+	old.free()
+	Features.layers.dev.features.gear_frame64 = true
+	# --- UI: crew card + item detail set panel
+	var lead := Dev.gear_set_wear("hunter", 4)
+	var lines := UIKit.set_bonus_lines(lead)
+	_check("gear sets: crew card shows the worn set with its active lines", lines.get_child_count() >= 1 and lines.find_child("SetBonus_hunter", false, false) != null)
+	lines.free()
+	var loot: LootPanel = main.hud.panels.inventory
+	main.hud.open_panel("inventory")
+	loot.open_equipped(Loot.equipped_on(lead, "weapon"), int(lead.id))
+	await wait(0.25)
+	_check("gear sets: item detail of a set piece shows the set panel + craft button", loot.find_child("SetPanel", true, false) != null and loot.find_child("SetCraftButton", true, false) != null)
+	await shot("gear_sets_detail")
+	loot.close()
+	Game.s = saved_state
+	Features.layers = saved_layers
+	Game.set_process(saved_processing[0])
+	Combat.set_process(saved_processing[1])
+	Game.gear_changed.emit()
+
+
+func _has_label_text(n: Node, text: String) -> bool:
+	for c in n.get_children():
+		if c is Label and (c as Label).text == text:
+			return true
+	return false
 
 
 ## MV-715: the van's main body in the v3 interior is Dr. Ren's ambulance shell (switch ambulance_v3)

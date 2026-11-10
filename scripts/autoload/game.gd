@@ -1235,7 +1235,7 @@ func stat_sum(slot: int, workers: Variant = null) -> float:
 	var st: String = Data.room_def(r.type).get("stat", "str")
 	var sum := 0.0
 	for d in (room_workers(slot) if workers == null else workers):
-		sum += float(d[st])
+		sum += float(d[st]) + GearSets.room_stat_bonus(d)      # MV-767 tinker 3-piece
 	return sum
 
 
@@ -1315,6 +1315,7 @@ func room_rate_pm(slot: int) -> Dictionary:
 	var stat_mult := 0.5 * float(work_span(slot)) + stat_sum(slot, workers) / 10.0          # 1 avg worker per cell = 1.0 per cell
 	var happy_mult: float = g.happy
 	var mult := lvl_mult * stat_mult * span_efficiency(slot) * happy_mult * float(g.science) * Crew.room_mult(slot, workers) * Synergy.room_mult(slot) * float(g.env) * outage_mult(slot) * float(g.vault)
+	mult *= GearSets.room_mult(workers)      # MV-767 tinker 2-piece
 	if def.get("weather_crop", false):
 		mult *= float(weather_def().crop)
 	if def.power > 0.0 and s.res.power <= 0.5:
@@ -1381,7 +1382,7 @@ func craft_speed(slot: int) -> float:
 		sk += Skills.val(d, "craft") / workers.size()
 	var n := float(work_span(slot))
 	var g := prod_globals()
-	return (0.6 + stat_sum(slot, workers) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * float(g.science) * (1.0 + sk) * Crew.room_mult(slot, workers) * Synergy.room_mult(slot) * float(g.env) * outage_mult(slot) * float(g.vault)
+	return GearSets.craft_mult(workers) * (0.6 + stat_sum(slot, workers) / (12.0 * n)) * (1.0 + 0.5 * (n - 1.0)) * span_efficiency(slot) * (1.0 + 0.25 * float(r.level - 1)) * float(g.science) * (1.0 + sk) * Crew.room_mult(slot, workers) * Synergy.room_mult(slot) * float(g.env) * outage_mult(slot) * float(g.vault)
 
 
 func medical_power() -> float:
@@ -1554,6 +1555,11 @@ func _sim_world_body(dt: float, offline: bool) -> void:
 			_add_res(k, amt)
 			if not offline:
 				_accumulate_float(slot, k, amt)
+		if not rate.is_empty():
+			var ot := GearSets.overtime_minutes(room_workers(slot), dt)     # MV-767 tinker 4-piece Overtime
+			if ot > 0.0:
+				for k in rate:
+					_add_res(k, rate[k] * ot * frac)
 		_tick_job(slot, dt, offline)
 		if def.has("heal") and not room_workers(slot).is_empty():
 			var hm := Crew.room_mult(slot) * room_scale(slot)
@@ -1778,6 +1784,7 @@ func _tick_job(slot: int, dt: float, offline: bool) -> void:
 		var rec := _recipe(r.type, r.job.id)
 		r.job = {}
 		var got := give_rewards(rec.get("out", {}))
+		GearSets.give(GearSets.roll("work", Combat.enemy_level()))      # MV-767 tinker set source
 		if not offline:
 			toast.emit("%s เสร็จแล้ว: %s" % [rec.get("th", ""), got], "good")
 			floating_text.emit(slot, "DONE", Data.item_icon((rec.out as Dictionary).keys()[0]))
