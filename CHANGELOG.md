@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- All 13 expedition sites are redrawn: sharper art that matches the ambulance and the road, wider buildings whose ground fades into the scenery instead of ending at a hard edge, and the team walks in through each site's own door (MV-750)
 - New expedition scene: while a team is out you watch them inside the site in the new detailed interiors (hospital, supermarket, armory, plant, lab, mine, ruins) with flickering lamps and drifting dust, walking in with flashlights or pistols drawn, searching crates and wall cabinets, hauling crates, shooting monsters and carrying the loot home (MV-758)
 - The road train now comes with its container trailer already hitched: 6 more rooms from the start, no need to buy it (MV-753)
 - The crew look a little lighter on the vehicle: brighter colours and softer dark-brown outlines instead of heavy black ones (MV-745)

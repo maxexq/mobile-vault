@@ -742,6 +742,8 @@ func _tab_world() -> void:
 		_row([_b("ล้างประวัติจุดพิเศษ", func(): Dev.encounter_recent_clear())])
 	_row([_b("ภาพจุดพิเศษ v2: " + ("เปิด" if Features.on("enc_art_v2") else "ปิด"), func(): Dev.enc_art_v2(not Features.on("enc_art_v2")),
 		"green" if Features.on("enc_art_v2") else "red")])
+	_row([_b("สถานที่ v2: " + ("เปิด" if Features.on("landmarks_v2") else "ปิด"), func(): Dev.landmarks_v2(not Features.on("landmarks_v2")),
+		"green" if Features.on("landmarks_v2") else "red")])
 	_row([_b("ฉากสำรวจ v2: " + ("เปิด" if Features.on("exp_scene_v2") else "ปิด"), func(): Dev.exp_scene_v2(not Features.on("exp_scene_v2")),
 		"green" if Features.on("exp_scene_v2") else "red")])
 	if not Expedition.active():

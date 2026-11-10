@@ -651,6 +651,11 @@ func _run() -> void:
 		await _event_art_v2_test()
 		_finish()
 		return
+	if "--only=landmarks_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _landmarks_v2_test()
+		_finish()
+		return
 	if "--only=exp_scene_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _exp_scene_v2_test()
@@ -1524,6 +1529,7 @@ func _run() -> void:
 	Expedition.skip_site()
 	await _encounter_test()
 	await _enc_art_v2_test()
+	await _landmarks_v2_test()
 	await _exp_scene_v2_test()
 	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
@@ -3088,6 +3094,71 @@ func _encounter_test() -> void:
 	Game.s.exp.enc.at = Time.get_unix_time_from_system() + 99999999.0
 	var r4 := await _enc_finish()
 	_check("encounter: scheduled-but-unreached is dropped", not r4.has("enc") and not Expedition.active())
+
+
+## MV-750: landmarks v2 (switch landmarks_v2): 13 sites at 2x density, wider, ground fades out at both ends,
+## per-site door; the site beside the convoy uses it and the switch swaps back to the old 100 px sprite
+func _landmarks_v2_test() -> void:
+	Features.set_override("features", "landmarks_v2", true)
+	for id in Expedition.SITES:
+		var key := str(Expedition.SITES[id].sprite)
+		var ok := LandmarkArt.on(key)
+		_fold("landmarks v2: every site has v2 art", ok, key)
+		if not ok:
+			continue
+		var im: Image = LandmarkArt.texture(key).get_image()
+		var w := im.get_width()
+		var h := im.get_height()
+		_fold("landmarks v2: 2x density and wider than the old 100 px (>= 140 art px)", LandmarkArt.scale(key) == 0.5 and LandmarkArt.size(key).x >= 140.0, key)
+		var used := im.get_used_rect()
+		_fold("landmarks v2: trimmed, bottom row is the ground", used == Rect2i(0, 0, w, h), key)
+		# never cut by a frame: the outer columns hold only a low sliver of ground, not a straight cut wall
+		var edge := 0
+		for x in [0, w - 1]:
+			var n := 0
+			for y in h:
+				if im.get_pixel(x, y).a > 0.5:
+					n += 1
+			edge = maxi(edge, n)
+		_fold("landmarks v2: both ends fade out (outer columns < 15% opaque)", edge < int(h * 0.15), key)
+		var door := LandmarkArt.door(key)
+		_fold("landmarks v2: door inside the left 60% of the site", door > 4.0 and door < LandmarkArt.size(key).x * 0.6, key)
+		var g := false
+		var dx := int(door / LandmarkArt.scale(key))
+		for y in range(h - int(h * 0.2), h):
+			for x in range(maxi(0, dx - 12), mini(w, dx + 12)):
+				if im.get_pixel(x, y).a > 0.5:
+					g = true
+		_fold("landmarks v2: the door stands in the bottom 20% of the site", g, key)
+	_fold_flush()
+	if Expedition.active():
+		Dev.finish_expedition()
+		await wait(0.4)
+	Expedition.skip_site()
+	await wait(0.2)
+	Dev.arrive("hospital")
+	await wait(2.6)
+	var view: ExpeditionView = main.expedition_view
+	_check("landmarks v2: site beside the convoy uses the v2 art at scale 0.5",
+		view.site_spr.visible and view.site_spr.scale == Vector2(0.5, 0.5) and view.site_spr.texture.get_width() == int(LandmarkArt.cfg().sites.lm_hospital.w))
+	_check("landmarks v2: site stands on the road shoulder", is_equal_approx(view.site_spr.position.y + LandmarkArt.size("lm_hospital").y, ExpeditionView.GROUND_Y + 2.0))
+	_check("landmarks v2: team walks to the drawn door", is_equal_approx(view.door_x(), view.site_x() + LandmarkArt.door("lm_hospital")))
+	_check("landmarks v2: panel thumbnail is a 128 px crop of the v2 art", LandmarkArt.thumb("lm_hospital").get_size() == Vector2(128, 128))
+	for p in main.hud.panels.values():
+		if p.is_open:
+			p.close()
+	Tutorial.skip()
+	await wait(0.4)
+	await shot("landmarks_v2_hospital")
+	Dev.landmarks_v2(false)
+	await wait(0.3)
+	_check("landmarks v2: switch off -> old 100 px sprite, door x=30",
+		view.site_spr.scale == Vector2.ONE and view.site_spr.texture.get_width() == 100 and is_equal_approx(view.door_x(), view.site_x() + 30.0))
+	Dev.landmarks_v2(true)
+	await wait(0.3)
+	_check("landmarks v2: GOD toggle turns it back on", Features.on("landmarks_v2") and view.site_spr.scale == Vector2(0.5, 0.5))
+	Expedition.skip_site()
+	await wait(0.3)
 
 
 ## MV-758: the new expedition scene (switch exp_scene_v2): approved interiors + ambience + v3 crew expedition clips
@@ -6270,7 +6341,7 @@ func _scene_art_test() -> void:
 		var ground := used.end.y - 1
 		var door := false
 		for y in range(ground - 5, ground + 1):
-			door = door or im.get_pixel(int(ExpeditionView.DOOR_OFF), y).a > 0.5
+			door = door or im.get_pixel(int(LandmarkArt.OLD_DOOR), y).a > 0.5
 		var binary := true
 		for y in range(0, im.get_height(), 2):
 			for x in im.get_width():
