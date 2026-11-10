@@ -19,6 +19,7 @@ const LAMPS := {"engine": Vector2(24, 7), "refinery": Vector2(29, 9), "default":
 const CAB := {
 	"van": {"lamp": Vector2(10, 2), "block": [9, 33, 14], "gauge": Vector2(26, 9), "led": Vector2(26, 13)},
 	"bus": {"lamp": Vector2(10, 2), "block": [9, 19, 15], "gauge": Vector2(26, 9), "led": Vector2(26, 13)},
+	"bastion": {"lamp": Vector2(10, 2), "block": [9, 19, 15], "gauge": Vector2(26, 9), "led": Vector2(26, 13)},
 	"rig": {"lamp": Vector2(10, 2), "block": [8, 15, 16], "gauge": Vector2(26, 9), "led": Vector2(26, 13)},
 	"train": {"lamp": Vector2(10, 2), "block": [8, 37, 20], "gauge": Vector2(30, 9), "led": Vector2(30, 13)},
 }

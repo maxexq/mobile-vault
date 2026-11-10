@@ -286,8 +286,11 @@ func _tab_vehicle() -> void:
 		var tid: String = t
 		tb.append(_b(str(Game.vehicle_def_for(t).th), func(): Dev.set_tier(tid), "yellow" if Game.tier() == tid else "gray"))
 	_row(tb)
-	_row([_b("0", func(): Dev.set_trailers(0), "yellow" if Game.trailers() == 0 else "gray"), _b("1", func(): Dev.set_trailers(1), "yellow" if Game.trailers() == 1 else "gray"),
-		_b("2", func(): Dev.set_trailers(2), "yellow" if Game.trailers() == 2 else "gray")], "โบกี้พ่วง")
+	var trb := []
+	for n in Data.MAX_TRAILERS + 1:                # first patch: 0 / 1 (Data.MAX_TRAILERS, Parames 2026-11-10)
+		var tn: int = n
+		trb.append(_b(str(n), func(): Dev.set_trailers(tn), "yellow" if Game.trailers() == n else "gray"))
+	_row(trb, "โบกี้พ่วง")
 	var vb := []
 	for n in range(1, Data.MAX_VAULT_LEVEL + 1):
 		var lv: int = n
@@ -384,7 +387,7 @@ func _tab_vehicle() -> void:
 		_b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)), _b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)),
 		_b("รถพยาบาล: " + ("เปิด" if Features.on("ambulance_v3") else "ปิด"), func(): Dev.feature_set("ambulance_v3", not Features.on("ambulance_v3")),
 		"green" if Features.on("ambulance_v3") else "red")], "รถพยาบาล v3")
-	_row([_b("พ่วง pup 1 คัน", func(): Dev.ambulance_pup_preview(1)), _b("2 คัน", func(): Dev.ambulance_pup_preview(2)),
+	_row([_b("พ่วง pup 1 คัน", func(): Dev.ambulance_pup_preview(1)),
 		_b("ดูภายใน", func(): Dev.ambulance_pup_preview(maxi(Game.trailers(), 1), true)),
 		_b("พ่วง pup: " + ("เปิด" if Features.on("ambulance_pup") else "ปิด"), func(): Dev.feature_set("ambulance_pup", not Features.on("ambulance_pup")),
 		"green" if Features.on("ambulance_pup") else "red")], "พ่วงรถพยาบาล")
@@ -394,6 +397,7 @@ func _tab_vehicle() -> void:
 		"green" if Features.on("world_v2") else "red")], "โลก v2")
 	_row([_b("ขับโร้ดเทรน", func(): Dev.road_train_preview()),
 		_b("บนถนน 2 ชั้น", func(): Dev.road_train_world(2)), _b("3 ชั้น", func(): Dev.road_train_world(3)),
+		_b("ขับ+ล้อ", func(): Dev.road_train_anim("drive"), "green"), _b("จอด (ขาค้ำลง)", func(): Dev.road_train_anim("brake")),
 		_b("รถ 2 คัน: " + ("เปิด" if Features.on("road_train") else "ปิด"), func(): Dev.feature_set("road_train", not Features.on("road_train")),
 		"green" if Features.on("road_train") else "red")], "โร้ดเทรน")
 	_row([_b("ขับ Decker 2 ชั้น", func(): Dev.decker_preview(2)), _b("3 ชั้น", func(): Dev.decker_preview(3)),
@@ -409,6 +413,10 @@ func _tab_vehicle() -> void:
 		_b("แตร: " + ("เปิด" if Features.on("decker_horn") else "ปิด"),
 		func(): Dev.feature_set("decker_horn", not Features.on("decker_horn")), "green" if Features.on("decker_horn") else "red")],
 		"ป้าย+แตร Decker")
+	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
+		_b("ภายใน", func(): Dev.bastion_interior()),
+		_b("Bastion: " + ("เปิด" if Features.on("bastion") else "ปิด"), func(): Dev.feature_set("bastion", not Features.on("bastion")),
+		"green" if Features.on("bastion") else "red")], "Bastion 42-B")
 	_row([_b("ขับ", func(): Dev.vehicle_anim("drive"), "green"), _b("เร็ว", func(): Dev.vehicle_anim("fast")),
 		_b("เบรกจอด", func(): Dev.vehicle_anim("brake")), _b("ดับเครื่อง", func(): Dev.vehicle_anim("park")),
 		_b("หลุม", func(): Dev.vehicle_anim("bump")), _b("ไซเรน", func(): Dev.vehicle_anim("beacon"), "yellow"),
@@ -554,6 +562,23 @@ func _crew_portraits_v3() -> void:
 		cell.add_child(UIKit.label(str(cid), UIKit.FS_SMALL, UIKit.C_TEXT))
 		grid.add_child(cell)
 	_list.add_child(grid)
+	_crew_portrait_moods()
+
+
+## MV-735: mood faces (happy / stressed / injured) for each v3 portrait, the switch, and a whole-crew preview
+func _crew_portrait_moods() -> void:
+	var on := Features.on("crew_portrait_moods")
+	var c := Dev.portrait_mood_counts()
+	_head("สีหน้า v3", "สีหน้าลูกเรือ (MV-735) · สวิตช์ %s · ปกติ %d ยิ้ม %d เครียด %d บาดเจ็บ %d" % ["เปิด" if on else "ปิด",
+		int(c[""]), int(c.happy), int(c.stressed), int(c.injured)])
+	_row([_b("สีหน้า: " + ("เปิด" if on else "ปิด"), func(): Dev.crew_portrait_moods(not on), "green" if on else "red")], "สวิตช์")
+	_row([_b("ปกติ", func(): Dev.portrait_mood_preview("")), _b("ยิ้ม", func(): Dev.portrait_mood_preview("happy")),
+		_b("เครียด", func(): Dev.portrait_mood_preview("stressed")), _b("บาดเจ็บ", func(): Dev.portrait_mood_preview("injured"))], "ทั้งทีม")
+	var g := Features.on("ren_guide")
+	var gp := Features.on("ren_guide_point")
+	_row([_b("หมอเรนนำทาง: " + ("เปิด" if g else "ปิด"), func(): Dev.ren_guide(not g), "green" if g else "red"),
+		_b("ชี้มือ: " + ("เปิด" if gp else "ปิด"), func(): Dev.ren_guide_point(not gp), "green" if gp else "red")], "สอนเล่น")
+	_note("ดูหน้าจริงในหน้าลูกเรือ / ทีม หลังกดปุ่มทั้งทีม · หมอเรนมีหน้าเพิ่ม 8 แบบ + ท่าชี้มือ 4 แบบ ใช้ในสอนเล่น การ์ดคำแนะนำ และเหตุการณ์ (MV-720: ไม่มีกริดรูปใน GOD)")
 
 
 func _tab_fight() -> void:

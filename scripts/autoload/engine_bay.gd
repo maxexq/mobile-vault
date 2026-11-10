@@ -34,7 +34,7 @@ const TYPES := {
 }
 const SIZE_TH := ["", "S", "M", "L"]
 ## biggest engine each cab takes
-const MAX_SIZE := {"van": 2, "bus": 3, "rig": 3, "train": 3}
+const MAX_SIZE := {"van": 2, "bus": 3, "bastion": 3, "rig": 3, "train": 3}
 
 ## drive modes: speed, fuel, noise (dB), heat, wear
 const MODES := {

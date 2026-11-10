@@ -65,11 +65,12 @@ rules also go into this file.
   vehicles, inpaint ...) must end with `python tools/asset_log.py backfill <its output folder>`; it is
   idempotent, so re-run it after every batch. Needs `.asset-log.json` or env `ASSET_LOG_URL` +
   `CF_ACCESS_CLIENT_ID` + `CF_ACCESS_CLIENT_SECRET`, and on claude.ai cloud the domain in Allowed domains.
-- **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served by Vercel
-  from `web/`, and by Cloudflare Pages in parallel while it is being verified (MV-499,
-  `docs/hosting-cloudflare.md`: the engine wasm comes from R2; a Godot upgrade needs a new R2 upload).
+- **Web export is single-threaded** (Compatibility renderer, no COOP/COEP), served from `web/` by
+  Cloudflare Pages (MV-499, `docs/hosting-cloudflare.md`: the engine wasm comes from R2; a Godot
+  upgrade needs a new R2 upload). Vercel no longer deploys (MV-746: `vercel.json`
+  `git.deploymentEnabled: false`); don't re-enable it or add Vercel steps to CI.
 - Never commit secrets: `cloud_config.json`, `.plane-api-key`, `ai/.env` are git-ignored.
-- PR, review, CI and Vercel deploy events post to Discord (`.github/workflows/discord-notify.yml`,
+- PR, review, CI and Cloudflare Pages deploy events post to Discord (`.github/workflows/discord-notify.yml`,
   secret `DISCORD_WEBHOOK_URL`). A new CI workflow must be added to its `workflow_run.workflows` list.
   Player error spikes go to a separate alerts channel (`.github/workflows/error-spike.yml`, secret
   `DISCORD_ALERTS_WEBHOOK_URL`, falls back to the dev feed). Never put `SUPABASE_SERVICE_KEY` in game code.
@@ -104,7 +105,7 @@ rules also go into this file.
 ## Git workflow
 
 Environments (MV-112, `docs/environments.md`): `staging` = internal test, `uat` = open test,
-`main` = production (only what players have). Each branch deploys its own Vercel URL; one build
+`main` = production (only what players have). Each branch deploys its own Cloudflare Pages URL; one build
 serves all of them and picks its environment from the host name (`config/environments.json`).
 
 - **Feature work branches from and PRs into `staging`** (the default branch since MV-421).
@@ -112,7 +113,7 @@ serves all of them and picks its environment from the host name (`config/environ
   GitHub ruleset (MV-421) blocks it anyway. All three need a PR, a green **autotest** check and a
   branch that is up to date with its base; no force push or deletion; `main` and `uat` accept merge
   commits only. Merged branches are deleted automatically.
-- **Alpha / beta testers play on `uat`** (its Vercel URL, test Supabase). `main` is production.
+- **Alpha / beta testers play on `uat`** (its Cloudflare Pages URL, test Supabase). `main` is production.
 - Promotion is a PR `staging` → `uat`, then `uat` → `main`, merged with a merge commit (not
   squash). Only when Parames asks; Parames merges them.
 - Hotfix: branch from `main`, PR into `main`, then PRs `main` → `uat` → `staging` so the fix

@@ -104,7 +104,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [ambulance-drive-anim](ambulance-drive-anim.md): MV-646 ambulance drive anim 6 speed states, code wheels/shake/dust, PixelLab flag only (wheel takes failed), In Review
 - [art-audit-2026-10-30](art-audit-2026-10-30.md): MV-651 art audit Claude Doc, what still needs new graphics P0-P4 (world v2 MV-602 blocks rooms v3 + crew v2)
 - [dr-ren-25d-redraw](dr-ren-25d-redraw.md): MV-655 Dr. Ren 2.5D side view 10 options (gen-v2 64 canvas ~60 px), artifact Dr. Ren 2.5D Redraw, awaiting pick
-- [crew-portraits-v3](crew-portraits-v3.md): MV-708 v3 crew portraits 64x64 (v2 style, own outfit) all 11 APPROVED; in game via MV-722 (switch crew_portraits_v3)
+- [crew-portraits-v3](crew-portraits-v3.md): MV-708 v3 crew portraits 64x64 (v2 style, own outfit) all 11 APPROVED; in game via MV-722 (switch crew_portraits_v3); mood faces happy/stressed/injured MV-735 (switch crew_portrait_moods)
 - [medic-sofa-sleep](medic-sofa-sleep.md): MV-668 Medic sleeps on Living Room L3 sofa preview (2 takes, 12 gens), artifact Medic Sofa Sleep, awaiting pick
 
 - [medic-25d-walk](medic-25d-walk.md): Dr. Ren/Medic 2.5D APPROVED set (still, walk W-3, eat, drink, work, construct, talk) in designs/medic-25d-walk/approved/, skin matched; rifle scene MV-671 DROPPED (Cancelled); 38 px rejected; artifact Medic 2.5D Walk
@@ -159,6 +159,8 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [enc-art-redraw](enc-art-redraw.md): MV-717 encounter art x6 APPROVED (designs/enc-art/approved/), in game via EncArt + switch enc_art_v2; silhouettes = crew v3 size
 - [ambulance-v3-ingame](ambulance-v3-ingame.md): MV-715 ambulance replaces the van: v3 interior shell (switch ambulance_v3) done, outside world v2 picked, next
 - [road-train-ingame](road-train-ingame.md): MV-721 two vehicles (ambulance + road train, switch road_train), B-double shells in the v3 interior, body 2-3 decks; on the road too (container trailers); RULE vehicles flat 2D
-- [vehicle-2floor](vehicle-2floor.md): MV-736 Decker double-decker bus: starts 2 decks, 3rd scrap deck by Vault, researched with tier_bus, in game behind switch decker
+- [vehicle-2floor](vehicle-2floor.md): MV-736 Decker double-decker bus: starts 2 decks, 3rd scrap deck by Vault, researched with tier_bus, in game behind switch decker; MV-738 Bastion 42-B = the other pick of the same research (switch bastion)
 - [ambulance-pup](ambulance-pup.md): MV-737 ambulance + pup B with code coupling APPROVED (12_ambulance_pup), in game as the ambulance trailers (switch ambulance_pup, pup_f2.png 3x2 grid)
 - [vehicle-anim](vehicle-anim.md): MV-726 ambulance on the road: rolling tyres, suspension hops, lights, flag (switch vehicle_anim, code only); rerun tools/ambulance_anim.py after shell rebuilds
+- [road-train-fix-anim](road-train-fix-anim.md): MV-740 road train shell cleanup (pinholes, cab glass, rear cage, room frames) + tyres, landing legs, lamps, code air lines between units; rerun shell.py -> tools/art/road_train/cleanup.py -> anim.py
+- [ambulance-fix](ambulance-fix.md): MV-741 Dr. Ren ambulance clean-up (code only): cab holes refilled, strays removed, room windows framed (tools/art/ambulance/cleanup.py)

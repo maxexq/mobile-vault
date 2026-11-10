@@ -1,0 +1,13 @@
+{
+ "size": [
+  30,
+  26
+ ],
+ "states": {
+  "drive": 8,
+  "chill": 12,
+  "idle": 12,
+  "still": 8
+ },
+ "fps": 8
+}

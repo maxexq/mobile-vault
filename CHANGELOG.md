@@ -10,6 +10,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Added
 - The Decker bus's 9 DEPOT sign is now a status board: it flashes RAID! and runs HULL / WATER / FOOD / FUEL / POWER LOW warnings, scrolls cheerful lines that lift the crew's mood a little, and the bus honks its air horn leaving a stop and winds a siren before a raid (MV-744)
+- New vehicle choice: Bastion 42-B, an armoured 8x8 army command truck with 2 decks. The same research that unlocks the double-decker bus now lets you pick either one for your next vehicle: the bus is light and thrifty, the Bastion is heavily armoured but slow and thirsty (MV-738)
 - Dr. Ren's ambulance tows new pup trailers: a cream box with red stripes on a centred twin axle, hooked on with a heavy steel drawbar, safety chains and air lines (MV-737)
 - Sharper crew on the vehicle: the new crew are drawn at full pixel size in the main view, so faces and outlines no longer lose pixels (MV-734)
 - New pets: 3 dogs, 3 cats and 3 chickens in their real size, trotting around the rooms of Dr. Ren's ambulance and hopping from room to room, preferring rooms with people (MV-733)
@@ -18,6 +19,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - Two vehicles only: Dr. Ren's ambulance and the new road train (prime mover + lead trailer, 2-3 decks, red container trailers); the armoured bus and train are gone, their saves drive the road train and keep their rooms (MV-721)
 - Free camera: pinch or scroll to zoom through every sharp pixel level around your fingers, drag to look around in any direction, and tap FIT to snap back to the automatic view (MV-723)
 - New art for all six expedition special encounters: bigger detailed scenes where the team's flashlight sweeps in from the left onto the find, with HELP letters, toxic fumes, falling dust and pebbles (MV-717)
+- Crew portraits now show how each person is doing: a smile when they are happy, a worried face when they are stressed or depressed, a bandaged, pained face when they are badly hurt and a pale face when sick; faces also react in events (thinking over a choice, surprised by an encounter, happy or sad at the result) (MV-735)
+- Dr. Ren now guides the tutorial and the tip cards, with a face that matches each line, and points at what to tap next (MV-735)
 - New crew portraits: every crew member's face in menus and popups is now the detailed portrait of the new 2.5D character who plays them (MV-722)
 - The defence squad now fights from inside the rear gunner room: a gunner, a loader and a spotter (the spotter joins as the Mobile Vault grows); nobody shoots from the roof or the rear wall any more and enemies can only hit the vehicle. Only one gunner room, and only at the rear of the vehicle (MV-727)
 - The ambulance on the road comes alive: its tyres roll with the speed and hop over bumps one axle after another while the body rides on its springs, it rocks when pulling out and braking, and it has working lights (headlight, tail and brake lights, a blinking marker when it pulls out or over, the red light bar flashing during raids, a flickering lantern at night) and a flag waving in the wind (MV-726)
