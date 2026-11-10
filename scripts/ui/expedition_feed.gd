@@ -155,6 +155,15 @@ func _walk_out_at() -> float:
 	return _dur - minf(Expedition.WALK_SEC, _dur * 0.2)
 
 
+## MV-758: beat / move lengths are functions so ExpeditionFeedV2 (bigger scene, slower walk) can override them
+func _beat() -> float:
+	return BEAT
+
+
+func _move() -> float:
+	return MOVE
+
+
 func _anchor(beat: int) -> float:
 	return 60.0 + beat * STEP
 
@@ -182,7 +191,7 @@ func plan(beat: int) -> Dictionary:
 		p.fighter = best
 		p.mob = mob_id
 		p.melee = float(fd.get("str", 1)) > float(fd.get("agi", 1)) + 1.0
-		p.spawn = MOVE + rng.randf_range(0.2, 1.4)
+		p.spawn = _move() + rng.randf_range(0.2, 1.4)
 		p.die = p.spawn + rng.randf_range(3.6, 5.4)
 		p.hurt = rng.randf() < (1.0 - _chance) * 0.8
 	for i in _team.size():
@@ -219,15 +228,15 @@ func log_lines(max_lines: int = 3) -> Array:
 	var el := elapsed()
 	out.append({"t": 0.0, "text": Loc.t("ทีมเข้าไปใน %s") % Expedition.site_def(site).th, "col": UIKit.C_DIM})
 	var wi := _walk_in()
-	var last_beat := int((minf(el, _walk_out_at()) - wi) / BEAT)
+	var last_beat := int((minf(el, _walk_out_at()) - wi) / _beat())
 	for b in range(0, last_beat + 1):
 		var p := plan(b)
-		var t0 := wi + b * BEAT
+		var t0 := wi + b * _beat()
 		for i in _team.size():
 			var a: String = p.acts[i]
 			var nm: String = _team[i].name
 			if a == "search" or a == "special":
-				var te := t0 + BEAT - 1.5
+				var te := t0 + _beat() - 1.5
 				if te <= el and te < _walk_out_at():
 					var what := Data.item_name(str(p["loot_%d" % i]))
 					out.append({"t": te, "text": Loc.t("%s เจอ %s") % [nm, what], "col": UIKit.C_TEXT})
@@ -269,7 +278,7 @@ func _process(delta: float) -> void:
 		_hide_zombie()
 	elif el >= wo:
 		# hauling the loot back out
-		var last := int((wo - wi) / BEAT)
+		var last := int((wo - wi) / _beat())
 		var k := clampf((el - wo) / maxf(0.1, _dur - wo), 0.0, 1.0)
 		var ax := _anchor(last)
 		cam_x = ax - _lead()
@@ -279,13 +288,13 @@ func _process(delta: float) -> void:
 			(_crates[i] as Sprite2D).visible = true
 		_hide_zombie()
 	else:
-		var beat := int((el - wi) / BEAT)
-		var lt := (el - wi) - beat * BEAT
+		var beat := int((el - wi) / _beat())
+		var lt := (el - wi) - beat * _beat()
 		var p := plan(beat)
 		var a0 := _anchor(maxi(0, beat - 1)) if beat > 0 else _anchor(0)
 		var a1 := _anchor(beat)
-		var moving := lt < MOVE and beat > 0
-		var ax := lerpf(a0, a1, clampf(lt / MOVE, 0.0, 1.0)) if moving else a1
+		var moving := lt < _move() and beat > 0
+		var ax := lerpf(a0, a1, clampf(lt / _move(), 0.0, 1.0)) if moving else a1
 		cam_x = ax - _lead()
 		for i in _actors.size():
 			var bx: float = ax - i * GAP + float(p.jit[i])
@@ -456,13 +465,13 @@ func _draw_fx() -> void:
 	var wi := _walk_in()
 	var off := Vector2(-cam_x, 0)
 	if el >= wi and el < _walk_out_at():
-		var beat := int((el - wi) / BEAT)
-		var lt := (el - wi) - beat * BEAT
+		var beat := int((el - wi) / _beat())
+		var lt := (el - wi) - beat * _beat()
 		var p := plan(beat)
 		var ax := _anchor(beat)
 		# loot pops: an item icon floats up when a search finishes
-		if lt >= BEAT - 1.5:
-			var k := (lt - (BEAT - 1.5)) / 1.5
+		if lt >= _beat() - 1.5:
+			var k := (lt - (_beat() - 1.5)) / 1.5
 			for i in _team.size():
 				var a: String = p.acts[i]
 				if a == "search" or a == "special":

@@ -2306,6 +2306,13 @@ func event_art_v2(on: bool) -> void:
 	act("road event art v2 " + ("on" if on else "off"))
 
 
+## MV-758: the new expedition scene (approved interiors + v3 crew expedition clips, switch exp_scene_v2); open the
+## expedition panel while a team is out to see it
+func exp_scene_v2(on: bool) -> void:
+	feature_set("exp_scene_v2", on)
+	act("expedition scene v2 " + ("on" if on else "off"))
+
+
 ## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2); open an encounter to see it
 func enc_art_v2(on: bool) -> void:
 	feature_set("enc_art_v2", on)
