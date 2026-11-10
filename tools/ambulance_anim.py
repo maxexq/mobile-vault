@@ -15,7 +15,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIR = os.path.join(ROOT, "assets", "vehicles", "ambulance_v3")
 WHEEL_R = 22.5          # tyre radius (shell px); contact run is 17 px wide, centre 23 px above the bottom row
 WHEEL_DY = 23           # wheel centre row = shell height - WHEEL_DY
-SPIN_N = 24
+SPIN_N = 48             # 7.5 deg a frame: tread blocks 18 deg apart never strobe backwards (MV-759)
+TREAD_N, TREAD_LUG = 20, .8   # tread blocks cut into the tyre outline; rubber share of each block sector
 SIZE = 47               # wheel sprite, centre (23.5, 23.5)
 
 
@@ -169,6 +170,45 @@ def lantern_hang(im):
     return {}
 
 
+def roll_strip(disc, lug=TREAD_LUG, n=SPIN_N, r=WHEEL_R):
+    """SPIN_N frames of one tyre rolling west (counter-clockwise; every vehicle faces west). MV-759 (Parames: the
+    edge must roll too): the WHOLE disc turns, edge included, and TREAD_N tread blocks cut into the outline roll
+    with it; a 1 px dark outline is redrawn round each frame. Nearest rotate at 8x, then each 8x8 block takes its
+    most common colour: no blended (blurry) pixels. lug=1.0 gives a plain round tyre (base for off-road mods)."""
+    S = disc.width; c = S / 2; k = 8; dp = disc.load(); OL = (22, 18, 20, 255); sec_w = 2 * math.pi / TREAD_N
+    out = Image.new("RGBA", (S * n, S))
+    up = disc.resize((S * k, S * k), Image.NEAREST)
+    for i in range(n):
+        rot = up.rotate(360.0 * i / n, resample=Image.NEAREST, center=(S * k / 2, S * k / 2)).load()
+        ang = -2 * math.pi * i / n                                         # the same turn in atan2 terms (y down)
+        fr = Image.new("RGBA", (S, S)); fp = fr.load(); fill = [[False] * S for _ in range(S)]
+        for y in range(S):
+            for x in range(S):
+                if not dp[x, y][3]:
+                    continue
+                dx, dy = x + 0.5 - c, y + 0.5 - c; d = math.hypot(dx, dy)
+                groove = ((math.atan2(dy, dx) - ang) % sec_w) / sec_w >= lug
+                if d > r - 1.0 and groove:
+                    continue                                              # groove between tread blocks: cut from the outline
+                votes = {}
+                for yy in range(y * k + 1, y * k + k, 2):
+                    for xx in range(x * k + 1, x * k + k, 2):
+                        q = rot[xx, yy]
+                        if q[3]:
+                            votes[q] = votes.get(q, 0) + 1
+                q = max(votes, key=votes.get) if votes else dp[x, y]
+                if r - 3.0 < d <= r - 1.0 and groove:
+                    q = tuple(int(v * .55) for v in q[:3]) + (255,)        # the groove runs a little into the tread
+                fp[x, y] = q; fill[y][x] = True
+        for y in range(S):
+            for x in range(S):
+                if fill[y][x] and any(not (0 <= x + ex < S and 0 <= y + ey < S) or not fill[y + ey][x + ex]
+                                      for ex, ey in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    fp[x, y] = OL
+        out.paste(fr, (S * i, 0))
+    return out
+
+
 def spin_strip():
     im = Image.open(os.path.join(DIR, "shell_f1.png")).convert("RGBA")
     src = im.crop((208, 217 - 23, 208 + SIZE, 217 - 23 + SIZE))       # the isolated first rear tyre, centre (231.5, 217.5)
@@ -180,30 +220,7 @@ def spin_strip():
             if (x + 0.5 - c) ** 2 + (y + 0.5 - c) ** 2 <= WHEEL_R ** 2:
                 # the top of the tyre hides in the wheel arch (chassis pixels): mirror the clean lower tread up there
                 dp[x, y] = (sp[x, SIZE - 1 - y] if y < c - 13 else sp[x, y])[:3] + (255,)
-    out = Image.new("RGBA", (SIZE * SPIN_N, SIZE))
-    k = 8
-    up = disc.resize((SIZE * k, SIZE * k), Image.NEAREST)
-    for i in range(SPIN_N):
-        # PIL rotates counter-clockwise for positive angles: frame i+1 = the tyre rolled further west.
-        # Nearest rotate at 8x, then each 8x8 block takes its most common colour: no blended (blurry) pixels
-        rot = up.rotate(360.0 * i / SPIN_N, resample=Image.NEAREST, center=(SIZE * k / 2, SIZE * k / 2)).load()
-        fr = Image.new("RGBA", (SIZE, SIZE)); fp = fr.load()
-        for y in range(SIZE):
-            for x in range(SIZE):
-                if not dp[x, y][3]:
-                    continue
-                if math.hypot(x + 0.5 - c, y + 0.5 - c) > WHEEL_R - 1.5:
-                    fp[x, y] = dp[x, y]                                   # crisp outline ring
-                    continue
-                votes = {}
-                for yy in range(y * k + 1, y * k + k, 2):
-                    for xx in range(x * k + 1, x * k + k, 2):
-                        q = rot[xx, yy]
-                        if q[3]:
-                            votes[q] = votes.get(q, 0) + 1
-                fp[x, y] = max(votes, key=votes.get) if votes else dp[x, y]
-        out.paste(fr, (SIZE * i, 0))
-    out.save(os.path.join(DIR, "wheel_spin.png"))
+    roll_strip(disc).save(os.path.join(DIR, "wheel_spin.png"))
 
 
 if __name__ == "__main__":
