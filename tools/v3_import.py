@@ -21,8 +21,9 @@ LV = ("L1", "L2", "L3")
 
 # game room type -> source set. status: approved = Parames approved / Done, review = finished set still In Review
 ROOMS = {
-    "quarters":    dict(status="approved", ticket="MV-614", files=[RP + "rest/out/rs_B_7_0.png", RP + "rest/out/rs_L2_s1_0.png", RP + "rest/out/rs_L3_s1_0.png"]),
-    "kitchen":     dict(status="approved", ticket="MV-620", files=[RP + "kitchen_v3/out/kv3_L%d.png"], hot=RP + "kitchen_v3/hotspots.json", idle=RP + "kitchen_v3/kv3_L%d_idle.gif"),
+    # MV-757: rest room idle = code-only micro-animation (rest/anim_rest.py: fire, candle, lamp, kettle steam, L3 TV)
+    "quarters":    dict(status="approved", ticket="MV-614", files=[RP + "rest/out/rs_B_7_0.png", RP + "rest/out/rs_L2_s1_0.png", RP + "rest/out/rs_L3_s1_0.png"], idle=RP + "rest/rs3_L%d_idle.gif"),
+    "kitchen":     dict(status="approved", ticket="MV-620", files=[RP + "kitchen_v3/out/kv3_L%d.png"], hot=RP + "kitchen_v3/hotspots.json", idle=RP + "kitchen_v3/kv3_L%d_idle_room.gif"),   # MV-757: crew-free idle (the old one had the cook baked in)
     "medical":     dict(status="approved", ticket="MV-617", files=[RP + "infirmary_v3/out/inf3_A_7_1.png", RP + "infirmary_v3/out/inf3_L2_s1_0.png", RP + "infirmary_v3/out/inf3_L3_s1_0.png"], hot=RP + "infirmary_v3/hotspots.json", idle=RP + "infirmary_v3/inf3_L%d_idle.gif"),
     "armory":      dict(status="approved", ticket="MV-609", files=[RP + "armory/out/ar_L1shabby_s2_0.png", RP + "armory/out/ar_L2_s1_0.png", RP + "armory/out/ar_L3_s2_0.png"], hot=RP + "armory/hotspots.json", idle=RP + "armory/ar_L%d_idle.gif"),
     "hydroponics": dict(status="review", ticket="MV-619", files=[RP + "grow3/final/grow_L%d.png"], stages=RP + "grow3/final/grow_L%d_stage%d.png", hot=RP + "grow3/hotspots.json", idle=RP + "grow3/gr3_L%d_idle.gif"),
@@ -34,6 +35,38 @@ ROOMS = {
     # MV-716: rear gunner post (MV-705 art), the default rear room; idle overlay from the crew-free idle render (_room.gif)
     "rear_gunner": dict(status="approved", ticket="MV-705", files=[RP + "gunner_v3/final/gunner_L%d.png"], hot=RP + "gunner_v3/final/hotspots.json", idle=RP + "gunner_v3/gunner3_L%d_idle_room.gif"),
 }
+# MV-757: the grow room's centre window is cut out so the biome outside shows through (RoomV3Cell + RoomWindowView,
+# switch room_window_bg). Per level: [x, y, w, h] and the alpha the light pixels keep (0 = open slits between the
+# L1/L2 boards, 40 = the L3 glass stays faintly visible). Only the bright pixels (window light) inside the rect are cut.
+WINDOWS = {"hydroponics": {"L1": ([38, 25, 21, 19], 0), "L2": ([38, 25, 21, 19], 0), "L3": ([37, 27, 70, 20], 40)}}
+WINDOW_LUMA = 140
+
+
+def cut_window(im, rect, keep):
+    """make the window light inside rect see-through; returns the mask (rect-local bool array) of cut pixels"""
+    x, y, w, h = rect
+    a = np.asarray(im).copy()
+    sub = a[y:y + h, x:x + w]
+    mask = sub[..., :3].astype(int).mean(2) > WINDOW_LUMA
+    sub[..., 3] = np.where(mask, keep, sub[..., 3])
+    a[y:y + h, x:x + w] = sub
+    return Image.fromarray(a, "RGBA"), mask
+
+
+def clear_overlay(png, ov, rect, mask):
+    """the idle overlay must not paint over the cut window"""
+    sheet = np.asarray(Image.open(png).convert("RGBA")).copy()
+    ox, oy, w, h = ov["rect"]
+    wx, wy, ww, wh = rect
+    for k in range(ov["n"]):
+        cx, cy = (k % ov["cols"]) * w, (k // ov["cols"]) * h
+        for j, i in zip(*np.where(mask)):
+            px, py = wx + i - ox, wy + j - oy
+            if 0 <= px < w and 0 <= py < h:
+                sheet[cy + py, cx + px, 3] = 0
+    Image.fromarray(sheet, "RGBA").save(png)
+
+
 EMPTY = dict(status="review", ticket="MV-621", files=[RP + "empty3/final/empty_stage%d.png"], hot=RP + "empty3/hotspots.json", idle=RP + "empty3/em3_s%d_idle.gif")
 
 # ref v3 crew (MV-669..700, all approved): id -> folder; Ren has no idle clip (his still is the idle)
@@ -126,8 +159,14 @@ def room_entry(rtype, cfg, src, keys):
         im = Image.open(src_path(src, pat, n)).convert("RGBA")
         if im.size != (144, 96):
             sys.exit("%s %s is %s, not 144x96" % (rtype, key, im.size))
-        im.save(os.path.join(d, key + ".png"))
         tint, dark, lamp_x = colours(im)
+        win = WINDOWS.get(rtype, {}).get(key)
+        mask = None
+        if win:
+            im_cut, mask = cut_window(im, *win)
+            im_cut.save(os.path.join(d, key + ".png"))
+        else:
+            im.save(os.path.join(d, key + ".png"))
         hs = images.get(key, {})
         e = {"file": key + ".png", "tint": tint, "dark": dark, "lamp_x": lamp_x,
              "floor": norm_floor(hs) if hs else DEFAULT_FLOOR,
@@ -136,7 +175,10 @@ def room_entry(rtype, cfg, src, keys):
         if cfg.get("stages"):
             e["stages"] = []
             for s in (1, 2):
-                Image.open(src_path(src, cfg["stages"], n, s)).convert("RGBA").save(os.path.join(d, "%s_stage%d.png" % (key, s)))
+                st = Image.open(src_path(src, cfg["stages"], n, s)).convert("RGBA")
+                if win:
+                    st = cut_window(st, *win)[0]
+                st.save(os.path.join(d, "%s_stage%d.png" % (key, s)))
                 e["stages"].append("%s_stage%d.png" % (key, s))
             e["stages"].append(key + ".png")   # the level image is the fully grown stage
         if cfg.get("idle"):
@@ -144,7 +186,11 @@ def room_entry(rtype, cfg, src, keys):
             if os.path.exists(g):
                 ov = idle_overlay(g, im, os.path.join(d, key + "_idle.png"))
                 if ov:
+                    if win:
+                        clear_overlay(os.path.join(d, key + "_idle.png"), ov, win[0], mask)
                     e["idle"] = ov
+        if win:
+            e["window"] = win[0]
         levels[key] = e
     return {"status": cfg["status"], "ticket": cfg["ticket"], "levels": levels}
 

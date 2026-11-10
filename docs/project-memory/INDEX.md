@@ -128,6 +128,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [biome-bosses-v2](biome-bosses-v2.md): MV-704 6 lore biome bosses, picks approved/<boss>/, code light grade page Boss Lighting
 - [biome-bosses-hd](biome-bosses-hd.md): MV-704 boss HD = Crew v3 pixels (B2-2 in-scene redraw x2), Foreman approved, other 5 done awaiting OK, page Boss Pixel Size
 - [rooms-crew-v3-ingame](rooms-crew-v3-ingame.md): MV-711 v3 rooms + v3 crew in game via v3 interior view (rooms_v3/rooms_v3_review), PR #193 on #192, web/ export pending (no cloud_config)
+- [room-art-fixes-mv757](room-art-fixes-mv757.md): MV-757 kitchen idle without baked cook, rest room idle anim, grow room centre window shows the biome (room_window_bg)
 
 ## Other memory files (not in the short index above)
 
@@ -165,3 +166,4 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [vehicle-anim](vehicle-anim.md): MV-726 ambulance on the road: rolling tyres, suspension hops, lights, flag (switch vehicle_anim, code only); rerun tools/ambulance_anim.py after shell rebuilds
 - [road-train-fix-anim](road-train-fix-anim.md): MV-740 road train shell cleanup (pinholes, cab glass, rear cage, room frames) + tyres, landing legs, lamps, code air lines between units; rerun shell.py -> tools/art/road_train/cleanup.py -> anim.py
 - [ambulance-fix](ambulance-fix.md): MV-741 Dr. Ren ambulance clean-up (code only): cab holes refilled, strays removed, room windows framed (tools/art/ambulance/cleanup.py)
+- [landmarks-v2](landmarks-v2.md): RULE MV-750 lm_* sites at 2x density, never frame-cut, door per site; all 13 APPROVED (designs/landmarks-v2/approved/), in game behind landmarks_v2

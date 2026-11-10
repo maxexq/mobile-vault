@@ -10,11 +10,12 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 
 ### Added
 - The Decker bus shows its upgrades: spiked ram, spare fuel tanks, side armour, a gun on the rear wall, lead plates over the front of both decks, a heater flue and solar panels on the roof, each changing look with its level (MV-760)
+- The grow room's centre window now looks outside: sky, skyline and hills of the biome you are driving through slide past, and the sky follows the time of day. The kitchen no longer shows a second, painted cook at the stove, and the rest room comes alive with a flickering stove, candle, lamp glow, a steaming kettle and a TV that is on at L3 (MV-757)
+- All 13 expedition sites are redrawn: sharper art that matches the ambulance and the road, wider buildings whose ground fades into the scenery instead of ending at a hard edge, and the team walks in through each site's own door (MV-750)
 - New expedition scene: while a team is out you watch them inside the site in the new detailed interiors (hospital, supermarket, armory, plant, lab, mine, ruins) with flickering lamps and drifting dust, walking in with flashlights or pistols drawn, searching crates and wall cabinets, hauling crates, shooting monsters and carrying the loot home (MV-758)
 - The road train now comes with its container trailer already hitched: 6 more rooms from the start, no need to buy it (MV-753)
 - The crew look a little lighter on the vehicle: brighter colours and softer dark-brown outlines instead of heavy black ones (MV-745)
 - The Decker bus's 9 DEPOT sign is now a status board: it flashes RAID! and runs HULL / WATER / FOOD / FUEL / POWER LOW warnings, scrolls cheerful lines that lift the crew's mood a little, and the bus honks its air horn leaving a stop and winds a siren before a raid (MV-744)
-- New vehicle choice: Bastion 42-B, an armoured 8x8 army command truck with 2 decks. The same research that unlocks the double-decker bus now lets you pick either one for your next vehicle: the bus is light and thrifty, the Bastion is heavily armoured but slow and thirsty (MV-738)
 - Dr. Ren's ambulance tows new pup trailers: a cream box with red stripes on a centred twin axle, hooked on with a heavy steel drawbar, safety chains and air lines (MV-737)
 - Sharper crew on the vehicle: the new crew are drawn at full pixel size in the main view, so faces and outlines no longer lose pixels (MV-734)
 - New pets: 3 dogs, 3 cats and 3 chickens in their real size, trotting around the rooms of Dr. Ren's ambulance and hopping from room to room, preferring rooms with people (MV-733)
