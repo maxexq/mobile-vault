@@ -12,6 +12,10 @@ uniform float grade = 1.0;
 // MV-724: brighten + saturate the crew toward the v2 crew look (tune crew_v3.lift). 1 = off; above 1 lifts the
 // mid-tones (gamma 1/lift) and saturation a little. Outline pixels stay dark so the silhouette stays crisp.
 uniform float lift = 1.0;
+// MV-745: soften the near-black outline toward a warm dark brown (tune crew_v3.outline, 0 = off), so the full-size
+// crew in the vehicle view read less heavy (Parames 2026-11-10: "ตัวละครดูเข้มไป")
+uniform float soft_outline = 0.0;
+uniform vec3 soft_col = vec3(0.275, 0.235, 0.212);
 
 void fragment() {
 	vec4 c = texture(TEXTURE, UV);
@@ -19,6 +23,7 @@ void fragment() {
 	vec3 rgb = mix(vec3(l), c.rgb, 1.0 - 0.3 * grade) * mix(vec3(1.0), tint, grade) * mix(1.0, light, grade);
 	if (l < 40.0 / 255.0) {
 		rgb = mix(rgb, dark_col, grade);
+		rgb = mix(rgb, soft_col, soft_outline);
 	} else if (lift != 1.0) {
 		rgb = pow(max(rgb, vec3(0.0)), vec3(1.0 / lift));
 		float l2 = dot(rgb, vec3(0.299, 0.587, 0.114));

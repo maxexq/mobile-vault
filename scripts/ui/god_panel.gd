@@ -376,7 +376,10 @@ func _tab_vehicle() -> void:
 	_row([_b("สีแบบเดิม (เข้ม)", func(): Dev.crew_v3_grade(1.0)), _b("ย้อม 0.5", func(): Dev.crew_v3_grade(0.5)),
 		_b("สีสไปรต์ล้วน", func(): Dev.crew_v3_grade(0.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_grade(-1.0), "gray")], "สีลูกเรือ")
 	_row([_b("สว่าง x1 (สีเดิม)", func(): Dev.crew_v3_lift(1.0)), _b("สว่าง x1.25", func(): Dev.crew_v3_lift(1.25)), _b("สว่าง x1.5", func(): Dev.crew_v3_lift(1.5)),
-		_b("ค่าเริ่มต้น", func(): Dev.crew_v3_lift(-1.0), "gray")], "ความสว่างลูกเรือ (%.2f)" % CrewV3Actor.lift_k())
+		_b("สว่าง x2", func(): Dev.crew_v3_lift(2.0)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_lift(-1.0), "gray")], "ความสว่างลูกเรือ (%.2f)" % CrewV3Actor.lift_k())
+	_row([_b("ขอบดำเดิม", func(): Dev.crew_v3_outline(0.0)), _b("ขอบนุ่ม 0.35", func(): Dev.crew_v3_outline(0.35)),
+		_b("ขอบนุ่ม 0.6", func(): Dev.crew_v3_outline(0.6)), _b("ค่าเริ่มต้น", func(): Dev.crew_v3_outline(-1.0), "gray")],
+		"เส้นขอบลูกเรือ (%.2f, MV-745)" % CrewV3Actor.outline_k())
 	_row([_b("เต็มพิกเซล (คม)", func(): Dev.crew_world_full(true), "green" if Features.on("crew_world_full") else "gray"),
 		_b("ย่อ 2/3 (แบบเดิม)", func(): Dev.crew_world_full(false), "gray" if Features.on("crew_world_full") else "red"),
 		_b("ค่าเริ่มต้น", func(): Dev.crew_world_full(null), "gray")], "ลูกเรือบนรถ (MV-734)")

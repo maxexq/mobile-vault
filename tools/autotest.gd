@@ -6560,6 +6560,20 @@ func _rooms_v3_test() -> void:
 	var lift_off := CrewV3Actor.lift_k()
 	Dev.crew_v3_lift(-1.0)
 	_check("rooms v3: crew colours lifted toward v2 by default, GOD x1 turns it off", lift_off == 1.0 and CrewV3Actor.lift_k() > 1.0)
+	# MV-745: crew a bit lighter (lift 1.75) with a softened outline; GOD 0 = the old black outline, reaches the shader
+	Dev.crew_v3_outline(0.0)
+	var ol_off := CrewV3Actor.outline_k()
+	var mat_ok := true
+	for slot in panel.cells:
+		for a in (panel.cells[slot] as RoomV3Cell).actors.values():
+			mat_ok = mat_ok and is_zero_approx(float((a as CrewV3Actor)._mat.get_shader_parameter("soft_outline")))
+	Dev.crew_v3_outline(-1.0)
+	for slot in panel.cells:
+		for a in (panel.cells[slot] as RoomV3Cell).actors.values():
+			mat_ok = mat_ok and is_equal_approx(float((a as CrewV3Actor)._mat.get_shader_parameter("soft_outline")), CrewV3Actor.OUTLINE)
+	_check("rooms v3: crew lighter (lift %.2f) + soft outline %.2f by default, GOD outline buttons reach the shader (MV-745)"
+		% [CrewV3Actor.lift_k(), CrewV3Actor.outline_k()], is_equal_approx(CrewV3Actor.lift_k(), 1.75) and ol_off == 0.0
+		and is_equal_approx(CrewV3Actor.outline_k(), 0.35) and mat_ok)
 	_check("rooms v3: GOD crew shadow / grade buttons", none_a == 0.0 and g_full == 1.0 and CrewV3Actor.grade_k() < 1.0
 		and is_equal_approx(CrewV3Actor.shadow_k(), CrewV3Actor.SHADOW))
 	var first := -1
