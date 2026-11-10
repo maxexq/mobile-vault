@@ -100,7 +100,7 @@
     "decker": true,
     "decker_sign": true,
     "decker_horn": true,
-    "bastion": true,
+    "bastion": false,
     "ambulance_v3": true,
     "ambulance_pup": true,
     "world_v2": true,

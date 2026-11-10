@@ -13826,6 +13826,9 @@ func _bastion_test() -> void:
 	await wait(0.3)
 	Features.set_override("features", "bastion", false)
 	_check("bastion: switch off = a Bastion save drives the Decker, ladder without it", Game.tier() == "bus" and not Game.tier_order().has("bastion"))
+	Game.s.hull = 99999.0
+	Game.clamp_parked_hull()
+	_check("bastion: parked (switch off) = a Bastion save's hull is cut to the Decker's max on load (MV-764)", is_equal_approx(float(Game.s.hull), Game.hull_max()))
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state

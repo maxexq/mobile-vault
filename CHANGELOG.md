@@ -11,7 +11,6 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ### Added
 - The crew look a little lighter on the vehicle: brighter colours and softer dark-brown outlines instead of heavy black ones (MV-745)
 - The Decker bus's 9 DEPOT sign is now a status board: it flashes RAID! and runs HULL / WATER / FOOD / FUEL / POWER LOW warnings, scrolls cheerful lines that lift the crew's mood a little, and the bus honks its air horn leaving a stop and winds a siren before a raid (MV-744)
-- New vehicle choice: Bastion 42-B, an armoured 8x8 army command truck with 2 decks. The same research that unlocks the double-decker bus now lets you pick either one for your next vehicle: the bus is light and thrifty, the Bastion is heavily armoured but slow and thirsty (MV-738)
 - Dr. Ren's ambulance tows new pup trailers: a cream box with red stripes on a centred twin axle, hooked on with a heavy steel drawbar, safety chains and air lines (MV-737)
 - Sharper crew on the vehicle: the new crew are drawn at full pixel size in the main view, so faces and outlines no longer lose pixels (MV-734)
 - New pets: 3 dogs, 3 cats and 3 chickens in their real size, trotting around the rooms of Dr. Ren's ambulance and hopping from room to room, preferring rooms with people (MV-733)
