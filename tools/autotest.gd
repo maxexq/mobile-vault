@@ -4743,7 +4743,7 @@ func _features_test() -> void:
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
 	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
 	# (MV-546) rides on the world map, so it ships off with it
-	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers"]  # strangers: door screening paused (MV-719)
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764)
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
 	pin.erase("road_train")         # the run's MV-721 test pin is not what ships
