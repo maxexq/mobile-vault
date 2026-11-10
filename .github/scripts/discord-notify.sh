@@ -94,31 +94,6 @@ case "$EVENT_NAME" in
     add_field "Commit" "[\`${sha:0:7}\`](https://github.com/$REPO/commit/$sha)"
     add_field "โดย" "$(ev '.deployment_status.creator.login // .sender.login')" ;;
 
-  status)
-    # Vercel reports deploys as a commit status (context "Vercel"), not as GitHub deployments.
-    context=$(ev .context); state=$(ev .state)
-    [[ "$context" == Vercel* ]] || { echo "status '$context' not notified"; exit 0; }
-    # a promoted commit sits on several branches: name the most public one (MV-112: main > uat > staging)
-    branch=$(jq -r '[.branches[].name] | if index("main") then "main" elif index("uat") then "uat" elif index("staging") then "staging" else (.[0] // "") end' "$EVENT_PATH")
-    case "$branch" in main) env_name=Production ;; uat) env_name=UAT ;; staging) env_name=Staging ;; *) env_name=Preview ;; esac
-    case "$state" in
-      success)
-        if [ "${SKIP_PREVIEW_SUCCESS:-}" = "true" ] && [ "$env_name" = "Preview" ]; then
-          echo "Preview success skipped (SKIP_PREVIEW_SUCCESS)"; exit 0
-        fi
-        title="🚀 Deploy สำเร็จ ($env_name)"; color=$GREEN ;;
-      failure|error) title="🔥 Deploy ล้มเหลว ($env_name)"; color=$RED ;;
-      *) echo "Vercel state '$state' not notified"; exit 0 ;;
-    esac
-    url=$(ev .target_url)
-    desc=$(short "$(ev .description)" 200)
-    sha=$(ev .sha)
-    [ -n "$branch" ] && add_field "Branch" "\`$branch\`"
-    add_field "Commit" "[\`${sha:0:7}\`](https://github.com/$REPO/commit/$sha)"
-    [ "$env_name" = "Production" ] && [ "$state" = "success" ] && \
-      add_field "เว็บ" "https://apocarlypse-mobile-vault.vercel.app/" false
-    add_field "Commit message" "$(short "$(ev .commit.commit.message | head -n1)" 200)" false ;;
-
   check_run)
     # Cloudflare Pages (MV-499) reports deploys as a check run "Cloudflare Pages"; other apps' runs aren't news
     name=$(ev .check_run.name); conclusion=$(ev .check_run.conclusion)
