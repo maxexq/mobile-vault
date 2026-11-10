@@ -5,7 +5,8 @@ Same format as tools/ambulance_anim.py (read by AmbulanceMotion with dir RT_DIR)
   anim.json       "floors" = the body (tractor + lead trailer) per deck count, "trailer" = the container trailer per
                   deck count; each: wheel centres, landing legs (the inner leg + foot that cranks up / down),
                   headlight, tail / clearance lamps, searchlight, mast tip
-  wheel_spin.png  24-frame strip (47x47 each) of one tyre rolling west (the cab faces west)
+  wheel_spin.png  48-frame strip (47x47 each) of one tyre rolling west (the cab faces west); the whole tyre turns,
+                  edge included, and the tread blocks cut into the outline roll with it (Parames 2026-11-10)
 Run after designs/road-train/game/shell.py + tools/art/road_train/cleanup.py; the autotest checks anim.json against
 the shell sizes. Code only, no PixelLab.
 """
@@ -16,7 +17,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.a
 DIR = os.path.join(ROOT, "assets", "vehicles", "road_train_v3")
 spec = importlib.util.spec_from_file_location("amb", os.path.join(ROOT, "tools", "ambulance_anim.py"))
 amb = importlib.util.module_from_spec(spec); spec.loader.exec_module(amb)
-SIZE, SPIN_N, R = amb.SIZE, amb.SPIN_N, amb.WHEEL_R
+SIZE, R = amb.SIZE, amb.WHEEL_R
+SPIN_N = 48                        # 7.5 deg a frame: tread blocks 18 deg apart never strobe backwards
+TREAD_N, TREAD_LUG = 20, .8        # tread blocks round the edge; share of each block sector that is rubber
+OL = (22, 18, 20, 255)
 CY = 22.5                          # tyre centre row = shell height - CY (contact patch on the bottom row)
 # 2-deck shell px; rows of the chassis shift with the deck count (bottom-aligned), roof rows stay
 BODY = {"wheels": (80.0, 252.0, 303.5, 556.5, 600.5, 643.5),
@@ -42,7 +46,8 @@ def unit(kind, n, d):
     return s
 
 
-def spin_strip():
+def spin_strip(lug=TREAD_LUG, save=True):
+    """lug=1.0 gives a plain round tyre (no tread blocks): the base the off-road wheel mods re-cut."""
     im = Image.open(os.path.join(DIR, "body_f2.png")).convert("RGBA")
     cx, cy = 643.5, 380 - CY                       # the last tyre of the lead trailer: only the mudflap behind it
     c = SIZE / 2
@@ -56,24 +61,39 @@ def spin_strip():
                 dp[x, y] = q[:3] + (255,) if q[3] else (20, 18, 18, 255)
     out = Image.new("RGBA", (SIZE * SPIN_N, SIZE)); k = 8
     up = disc.resize((SIZE * k, SIZE * k), Image.NEAREST)
+    sec_w = 2 * math.pi / TREAD_N
     for i in range(SPIN_N):
+        # PIL rotates counter-clockwise for positive angles = the tyre rolling west. The WHOLE disc turns, edge too
         rot = up.rotate(360.0 * i / SPIN_N, resample=Image.NEAREST, center=(SIZE * k / 2, SIZE * k / 2)).load()
-        fr = Image.new("RGBA", (SIZE, SIZE)); fp = fr.load()
+        ang = -2 * math.pi * i / SPIN_N                                    # same turn in atan2 terms (y down)
+        fr = Image.new("RGBA", (SIZE, SIZE)); fp = fr.load(); fill = [[False] * SIZE for _ in range(SIZE)]
         for y in range(SIZE):
             for x in range(SIZE):
                 if not dp[x, y][3]:
                     continue
-                if math.hypot(x + 0.5 - c, y + 0.5 - c) > R - 1.5:
-                    fp[x, y] = dp[x, y]; continue
+                dx, dy = x + 0.5 - c, y + 0.5 - c; d = math.hypot(dx, dy)
+                sec = ((math.atan2(dy, dx) - ang) % sec_w) / sec_w
+                if d > R - 1.0 and sec >= lug:
+                    continue                                              # groove between tread blocks: cut from the outline
                 votes = {}
                 for yy in range(y * k + 1, y * k + k, 2):
                     for xx in range(x * k + 1, x * k + k, 2):
                         q = rot[xx, yy]
                         if q[3]:
                             votes[q] = votes.get(q, 0) + 1
-                fp[x, y] = max(votes, key=votes.get) if votes else dp[x, y]
+                q = max(votes, key=votes.get) if votes else dp[x, y]
+                if R - 3.0 < d <= R - 1.0 and sec >= lug:
+                    q = tuple(int(v * .55) for v in q[:3]) + (255,)        # the groove runs a little into the tread
+                fp[x, y] = q; fill[y][x] = True
+        for y in range(SIZE):                                              # 1 px dark outline round the new silhouette
+            for x in range(SIZE):
+                if fill[y][x] and any(not (0 <= x + ex < SIZE and 0 <= y + ey < SIZE) or not fill[y + ey][x + ex]
+                                      for ex, ey in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    fp[x, y] = OL
         out.paste(fr, (SIZE * i, 0))
-    out.save(os.path.join(DIR, "wheel_spin.png"))
+    if save:
+        out.save(os.path.join(DIR, "wheel_spin.png"))
+    return out
 
 
 if __name__ == "__main__":
