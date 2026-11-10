@@ -13026,6 +13026,24 @@ func _ambulance_mods_test() -> void:
 									ok = false
 				_fold("ambulance mods: no part covers a tyre at any floor count", ok, "%s L%d f%d" % [id, lv, n])
 	_fold_flush()
+	# Parames: no missing pixels: no see-through pinhole inside a part, no lone floating pixel, in every mod layer
+	for fn in DirAccess.get_files_at(D + "mods"):
+		if not fn.ends_with(".png") or fn.contains("_spin"):
+			continue
+		var img: Image = (load(D + "mods/" + fn) as Texture2D).get_image()
+		img.decompress()
+		var bad := 0
+		for y in range(1, img.get_height() - 1):
+			for x in range(1, img.get_width() - 1):
+				var op := img.get_pixel(x, y).a > 0.1
+				var n4 := int(img.get_pixel(x - 1, y).a > 0.1) + int(img.get_pixel(x + 1, y).a > 0.1) \
+					+ int(img.get_pixel(x, y - 1).a > 0.1) + int(img.get_pixel(x, y + 1).a > 0.1)
+				var n8 := n4 + int(img.get_pixel(x - 1, y - 1).a > 0.1) + int(img.get_pixel(x + 1, y - 1).a > 0.1) \
+					+ int(img.get_pixel(x - 1, y + 1).a > 0.1) + int(img.get_pixel(x + 1, y + 1).a > 0.1)
+				if (not op and n4 == 4) or (op and n8 == 0):
+					bad += 1
+		_fold("ambulance mods: no pinholes or lone pixels in any mod layer", bad == 0, "%s (%d px)" % [fn, bad])
+	_fold_flush()
 	var gun := 0 if Combat.room_mode() else 1          # MV-727: no outside gun while the squad fights from the gunner room
 	var none := Dev.ambulance_mods(0, 1)
 	await wait(0.3)

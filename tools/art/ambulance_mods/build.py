@@ -75,13 +75,21 @@ def label(m):
     return lab, n
 
 
-def part_mask(a, b, tol=30, speck=6):
+def part_mask(a, b, tol=30, speck=24):
     pa = np.asarray(a).astype(int); pb = np.asarray(b).astype(int)
     d = np.abs(pa[..., :3] - pb[..., :3]).sum(-1) > tol
     d &= ~(np.abs(pa[..., :3] - np.array(BG)).sum(-1) <= 6)          # backdrop is never part of a part
     lab, n = label(d)
-    for i in range(1, n + 1):                                        # drop specks
-        if (lab == i).sum() < speck:
+    big = np.zeros_like(d)
+    for i in range(1, n + 1):
+        if (lab == i).sum() >= 40:
+            big |= lab == i
+    near = big.copy()                                                # 1 px ring around the real parts
+    for dy in (-1, 0, 1):                                            # 8-neighbour (corner pixels of outlines too)
+        for dx in (-1, 0, 1):
+            near |= np.roll(np.roll(big, dy, 0), dx, 1)
+    for i in range(1, n + 1):                                        # drop specks, keep the ones touching a part
+        if (lab == i).sum() < speck and not (near & (lab == i)).any():
             d[lab == i] = False
     # fill holes: non-part pixels not reachable from the canvas border, plus 1 px gaps between part pixels
     lab, n = label(~d)
@@ -104,14 +112,31 @@ def wheels(n):
     return [tuple(w) for w in f["wheels"]], float(f["wheel_r"])
 
 
+OL = (22, 18, 20, 255)
+
+
 def clip_wheels(im, ox, oy, n, r_extra=0.0):
-    """clear the part's pixels over any tyre disc (+CLEAR) of the n-floor shell; (ox, oy) = layer origin in shell px"""
+    """clear the part's pixels over any tyre disc (+CLEAR) of the n-floor shell; (ox, oy) = layer origin in shell px.
+    The new cut edge gets the 1 px dark outline every part edge has, and scraps the cut leaves (< 24 px) are dropped."""
     ws, r = wheels(n)
     arr = np.asarray(im).copy(); h, w = arr.shape[:2]
     ys, xs = np.mgrid[0:h, 0:w]
+    cut = np.zeros((h, w), bool)
     for (cx, cy) in ws:
-        dd = np.hypot(xs + ox + 0.5 - cx, ys + oy + 0.5 - cy)
-        arr[dd <= r + CLEAR + r_extra] = 0
+        cut |= np.hypot(xs + ox + 0.5 - cx, ys + oy + 0.5 - cy) <= r + CLEAR + r_extra
+    was = arr[..., 3] > 0
+    if not (cut & was).any():
+        return Image.fromarray(arr)
+    arr[cut] = 0
+    op = arr[..., 3] > 0
+    lost = cut & was                                                 # pixels the clip removed
+    edge = np.zeros_like(op)
+    edge[1:] |= lost[:-1]; edge[:-1] |= lost[1:]; edge[:, 1:] |= lost[:, :-1]; edge[:, :-1] |= lost[:, 1:]
+    arr[edge & op] = OL
+    lab, k = label(op)
+    for i in range(1, k + 1):
+        if (lab == i).sum() < 24:
+            arr[lab == i] = 0
     return Image.fromarray(arr)
 
 
@@ -219,7 +244,10 @@ def main():
     ys = np.where(np.asarray(t2[0])[..., 3].any(1))[0]
     meta["fuel_rack"] = {"anchor": "body"}
     save(t2[0], "fuel_rack_L2"); meta["fuel_rack"]["2"] = [t2[1], t2[2]]
-    one = np.asarray(t2[0]).copy(); one[: one.shape[0] // 2 - 1] = 0     # lower drum only
+    one = np.asarray(t2[0]).copy(); half = one.shape[0] // 2 - 1      # lower drum only, under the rack's own top bar
+    top = one[:4].copy(); one[:half] = 0
+    rows = np.where(one[..., 3].any(1))[0]; y0 = rows[0]
+    one[y0 - 4:y0] = np.where(top[..., 3:4] > 0, top, one[y0 - 4:y0])
     t1 = trim(Image.fromarray(one), t2[1], t2[2])
     save(t1[0], "fuel_rack_L1"); meta["fuel_rack"]["1"] = [t1[1], t1[2]]
     # off-road wheels
@@ -237,7 +265,7 @@ def main():
             hh, ww = sa.shape; ys_, xs_ = np.mgrid[0:hh, 0:ww]
             tyre = np.zeros_like(sa)
             for (cx, cy) in ws:
-                tyre |= np.hypot(xs_ + 0.5 - cx, ys_ + 0.5 - cy) <= r + 0.5
+                tyre |= np.hypot(xs_ + 0.5 - cx, ys_ + 0.5 - cy) <= r + 1.5   # the stock tyre incl. its rim pixels
             body = sa & ~tyre
             lay = Image.new("RGBA", (ww, hh), (0, 0, 0, 0))
             for (cx, cy) in ws:
