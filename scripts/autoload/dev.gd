@@ -1393,6 +1393,71 @@ func decker_sign(text: String = "", kind: String = "cheer") -> bool:
 	return true
 
 
+## MV-760: drive the Decker (its decks now, else 2) with every exterior mod at art level lv (0 = none, 1-3; a mod with fewer
+## levels shows its top one). Solar panels: L1 bare, L2 + shutters, L3 + 4 panels. Returns the parts drawn on the road view.
+func decker_mods(lv: int) -> int:
+	feature_set("decker_mods", true)
+	decker_preview(Game.floors() if Game.tier() == "bus" else 2)
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "fuel_tanks", "armor_plates", "roof_turret", "rad_shield", "heater"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	Game.s.mods["solar_covers"] = 1 if lv >= 2 else 0
+	Game.s.solar.panels = 4 if lv >= 3 else maxi(1, mini(int(Game.s.solar.panels), 3))
+	act("decker mods", {"level": lv})
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or v.v2_shell == null:
+		return 0
+	var root := v.v2_shell.get_node_or_null(ShellMods.NODE)
+	return root.get_child_count() if root != null and root.visible else 0
+
+
+## MV-763: drive Dr. Ren's ambulance (van, world v2) at `n` floors (-1 = its floors now, at least 1) with every approved
+## exterior mod at level lv (0 = none, 1-3; rad shield tops out at 2): ram, roof gun, fuel tanks (+ rack), armor, lead,
+## heavy suspension, off-road tyres. `interior` also opens the v3 interior. Returns the parts drawn on the road view.
+func ambulance_mods(lv: int, n: int = -1, interior: bool = false) -> int:
+	feature_set("ambulance_mods", true)
+	feature_set("ambulance_v3", true)
+	feature_set("world_v2", true)
+	if Game.tier() != "van":
+		set_tier("van")
+	_van_floors(n if n > 0 else maxi(Game.floors(), 1))
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "roof_turret", "fuel_tanks", "armor_plates", "rad_shield", "suspension", "offroad_wheels"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	act("ambulance mods", {"level": lv, "floors": Game.floors()})
+	_vehicle_changed()
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	if interior:
+		rooms_v3_open()
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or v.v2_shell == null:
+		return 0
+	var root := v.v2_shell.get_node_or_null(ShellMods.NODE)
+	return root.get_child_count() if root != null and root.visible else 0
+## MV-762: the road train on the road (its decks now, else 2) with its trailer and every exterior mod at art level lv
+## (0 = none, 1-3; a mod with fewer levels shows its top one): ram, cab armour (+ side rail from L2), fuel tanks, solar
+## shutters (from L1), lead, heater flue, rear roof turret, heavy suspension, off-road wheels. Returns the parts drawn on the
+## shells (suspension and wheels are counted by the autotest on AmbulanceMotion).
+func road_train_mods(lv: int) -> int:
+	feature_set("road_train_mods", true)
+	road_train_world(Game.floors() if Game.tier() == "rig" and Game.floors() >= 2 else 2)
+	Game.ensure_min_trailers()
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "fuel_tanks", "armor_plates", "roof_turret", "rad_shield", "heater", "solar_covers",
+			"suspension", "offroad_wheels"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	act("road train mods", {"level": lv})
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	return RoadTrainMods.count(get_tree().get_first_node_in_group("vehicle_fx"))
+
+
 ## MV-744: play the Decker's air horn or raid siren (a preview: changes nothing in the run)
 func decker_horn(id: String = "air_horn") -> void:
 	sound_preview("sound", id)
