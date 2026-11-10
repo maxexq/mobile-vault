@@ -12,7 +12,7 @@ metadata:
   cloth cut out of the shell at load (get_image -> ImageTexture, cached per floor count), tyres drawn in
   _wheels_root (behind body, stay on road), dark wheel-well half discs ride with body.y; bump() hops tyres front->rear
   at road speed; lurch moves v2_root.x 2 shell px on start/brake. Lights = additive stepped GradientTexture2D glows.
-- tools/ambulance_anim.py -> assets/vehicles/ambulance_v3/anim.json + wheel_spin.png (24 frames). MUST rerun after
+- tools/ambulance_anim.py -> assets/vehicles/ambulance_v3/anim.json + wheel_spin.png (48 frames since MV-759, rolling edge via roll_strip). MUST rerun after
   the ambulance shells are rebuilt (mf/shell.py); AmbulanceMotion.ok(n) checks size and the autotest fails otherwise.
 - Fixed on the way: exhaust puffs now from the ambulance stack and drawn over the body; old van driver_cab frames
   were floating beside the ambulance (hidden when v2).

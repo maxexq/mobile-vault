@@ -11,5 +11,5 @@ metadata:
 - Clips: `tools/v3_import.py --crew-only` adds gunwalk/torchwalk/search/wall to every v3 crew sheet (rows 9-12); torchwalk has "lens" [x,y] per frame (beam origin rule MV-686).
 - Clip rules: hotspot rect bottom < 130 -> wall (back view); force_door/mine_ore/salvage -> construct; hack_terminal/take_fuel/collect_sample -> work; else search. Dark kinds: even members torchwalk, odd gunwalk.
 - Monsters: only BIOME_MOBS_V2 ids with EnemiesV2 art.
-- Web export: cloud container can't rebuild cloud_config.json (reading it from web/index.pck is blocked as credential access), so the committed web/ was not re-exported; preview artifact built without cloud save.
+- Web export: rebuilt on the PC after merging staging for PR #228, using the existing cloud configuration. The committed web/ includes the expedition scene and crew clips; pack size 21,655,168 bytes (under 25 MiB).
 Related: [[exp-interior-redraw]], [[expedition-25d]], [[enemies-v2-per-biome]], [[landmarks-v2]].
