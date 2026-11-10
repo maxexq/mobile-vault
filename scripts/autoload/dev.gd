@@ -1156,6 +1156,23 @@ func world_v2_preview(n: int) -> int:
 	return Game.floors()
 
 
+## MV-737: the ambulance with `n` pups (up to Data.MAX_TRAILERS) behind it on the road (world v2, switch ambulance_pup on); `interior` also
+## opens the v3 interior. Returns how many trailers it has now.
+func ambulance_pup_preview(n: int, interior: bool = false) -> int:
+	feature_set("ambulance_v3", true)
+	feature_set("world_v2", true)
+	feature_set("ambulance_pup", true)
+	if Game.tier() != "van":
+		set_tier("van")
+	_van_floors(maxi(Game.floors(), 1))
+	set_trailers(clampi(n, 1, Data.MAX_TRAILERS))
+	act("ambulance pup preview", {"trailers": Game.trailers()})
+	_vehicle_changed()
+	if interior:
+		rooms_v3_open()
+	return Game.trailers()
+
+
 ## MV-726 vehicle micro animations on the world v2 ambulance (switch vehicle_anim): "drive" (cruise speed),
 ## "fast", "brake" (slow down to a stop), "park" (engine off), "beacon" (raid light bar on/off), "bump" (one road
 ## bump: the tyres hop front to rear). Returns false when the ambulance animation is not up.
@@ -1270,6 +1287,31 @@ func decker_interior() -> bool:
 	return rooms_v3_open()
 
 
+## MV-738: switch bastion on and drive Bastion 42-B with n decks (2 or 3); on_road = world v2 too. Returns the decks.
+func bastion_preview(n: int, on_road := true) -> int:
+	feature_set("road_train", true)
+	feature_set("decker", true)
+	feature_set("bastion", true)
+	if on_road:
+		feature_set("world_v2", true)
+	set_tier("bastion")
+	Features.set_override("features", "five_floors", true)
+	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
+		if Game.floors_at(lv) >= clampi(n, 2, 3) or lv == Data.MAX_VAULT_LEVEL:
+			Game.s.vault_level = lv
+			break
+	Game.fit_body()
+	act("bastion preview", {"floors": Game.floors()})
+	_vehicle_changed()
+	return Game.floors()
+
+
+## MV-738: Bastion 42-B (its decks now, else 2) in the v3 interior
+func bastion_interior() -> bool:
+	bastion_preview(Game.floors() if Game.tier() == "bastion" else 2, false)
+	return rooms_v3_open()
+
+
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
 ## the v3 interior opens; returns how many rooms have v3 art now
 func rooms_v3_showcase(lv: int) -> int:
@@ -1297,6 +1339,54 @@ func rooms_v3_showcase(lv: int) -> int:
 func crew_portraits_v3(on: bool) -> void:
 	feature_set("crew_portraits_v3", on)
 	Game.dwellers_changed.emit()
+
+
+## MV-735: switch crew_portrait_moods on/off (portraits follow happiness / morale / HP)
+func crew_portrait_moods(on: bool) -> void:
+	feature_set("crew_portrait_moods", on)
+	Game.dwellers_changed.emit()
+
+
+## MV-735: switch ren_guide on/off (Dr. Ren's faces as the tutorial / tip guide instead of Sgt. Mark)
+func ren_guide(on: bool) -> void:
+	feature_set("ren_guide", on)
+
+
+## MV-735: switch ren_guide_point on/off (Dr. Ren points his hand at the tutorial target, raised finger on tips)
+func ren_guide_point(on: bool) -> void:
+	feature_set("ren_guide_point", on)
+
+
+## MV-735: put the whole crew in the state that shows `mood` ("happy" / "stressed" / "injured" / "" = neutral)
+## by setting HP and happiness (morale stage cleared), so every portrait can be checked in its panels
+func portrait_mood_preview(mood: String) -> void:
+	for d in Game.s.dwellers:
+		var mx := float(d.max_hp)
+		d.mood = ""
+		match mood:
+			"injured":
+				d.hp = maxf(1.0, mx * Features.num("portrait.injured_hp", 0.4) * 0.5)
+				d.happy = 60.0
+			"stressed":
+				d.hp = mx
+				d.happy = maxf(0.0, Features.num("portrait.stressed_happy", 30.0) - 10.0)
+			"happy":
+				d.hp = mx
+				d.happy = 100.0
+			_:
+				d.hp = mx
+				d.happy = 60.0
+	Trace.rec("god", "portrait mood preview %s" % (mood if mood != "" else "neutral"))
+	Game.dwellers_changed.emit()
+
+
+## MV-735: how many of the crew show each face right now {"": n, "happy": n, ...}
+func portrait_mood_counts() -> Dictionary:
+	var c := {"": 0, "happy": 0, "stressed": 0, "injured": 0}
+	for d in Game.s.dwellers:
+		var m := UIKit.portrait_mood(d)
+		c[m] = int(c.get(m, 0)) + 1
+	return c
 
 
 ## how many of the current crew show a v3 portrait right now

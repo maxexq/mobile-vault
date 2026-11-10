@@ -11,12 +11,12 @@ const COLS := [44, 118, 184]
 const TRAILER_COLS := [22, 88, 154]
 const ROOM_SIZE := Vector2(64, 52)
 const FLOOR_H := 56
-const WALL_DRUMS := ["rig", "bus"]   # tiers whose spare fuel drums stack on the front (others: on the roof)
+const WALL_DRUMS := ["rig", "bus", "bastion"]   # tiers whose spare fuel drums stack on the front (others: on the roof)
 const SHELL_H := 300              # height of a 4-floor (or smaller) shell; taller shells sit above it
 const ROW0 := 210                 # y of the bottom floor's rooms
 const MAIN_W := 280.0
 const TRAILER_W := 248.0
-const TRACKS_X := {"van": 200, "bus": 200, "rig": 202}
+const TRACKS_X := {"van": 200, "bus": 200, "bastion": 200, "rig": 202}
 const SOLAR_X := [79, 105]
 const TITLE_CRUISE := 0.35         # title-screen backdrop speed (matches the road scroll in background.gd)
 ## body rumble + road bumps strength x (tune fx.engine_shake; 1.0 = before MV-176, players felt dizzy at full)
@@ -50,7 +50,7 @@ const ROOF_LEGACY_X := 38
 ## MV-519 driving cabs: Viktor is baked into every veh_/ext_ shell (decal_<tier>_driver_cockpit at these anchors);
 ## switch driver_cab now and then shows one of its idle frames over the window: 1 = he blinks, 2 = the dash
 ## indicator goes dark, 3 = his hand nudges the wheel. Frame 0 is the baked look, so between moves nothing is drawn.
-const DRIVER_CAB := {"van": Vector2(11, 153), "bus": Vector2(18, 195), "rig": Vector2(17, 193), "train": Vector2(18, 66)}
+const DRIVER_CAB := {"van": Vector2(11, 153), "bus": Vector2(18, 195), "bastion": Vector2(18, 195), "rig": Vector2(17, 193), "train": Vector2(18, 66)}
 const DRIVER_GAP := 4.0                   # s between moves on average (tune vehicle.driver_gap)
 const DRIVER_ACTS := {"blink": [[1, 0.14]], "lamp": [[2, 0.2], [0, 0.16], [2, 0.2]], "wheel": [[3, 0.45]]}
 ## MV-715 world v2 phase 1 (switch world_v2): the van is Dr. Ren's ambulance with the v3 rooms + crew, drawn at
@@ -71,6 +71,7 @@ const V2_TW_RT := 250.0
 ## MV-736: the world v2 Decker bus (switch decker, tier bus): 640 shell px (InteriorV3Panel.DK_*), same cell grid and K
 const V2_W_DK := 320.0
 var v2_tshells: Array[Sprite2D] = []
+var _pups_up := false              # MV-737: v2_tshells are the ambulance's pups
 
 var body: Node2D
 var room_views: Array[RoomView] = []
@@ -144,6 +145,8 @@ func roof_dy() -> float:
 	if v2_rt():
 		return v2_top() + 48.0 - ROOF_Y      # the road train's roof slab is 97 shell px under the shell top
 	if v2_dk():
+		if tier == "bastion":
+			return v2_top() + 18.0 - ROOF_Y  # MV-738: the Bastion box top is 36 shell px under the shell top
 		return v2_top() + 20.0 - ROOF_Y      # MV-736: the bus roof rail sits 40 shell px under the shell top
 	if v2:
 		return v2_top() + 40.0 - ROOF_Y      # the ambulance roof deck is 80 shell px above the top floor's cells
@@ -156,9 +159,9 @@ static func v2_wanted() -> bool:
 		return false
 	if Game.tier() == "rig" and Features.on("road_train"):
 		return Game.floors() <= 3 and ResourceLoader.exists(InteriorV3Panel.RT_DIR + "body_f%d.png" % Game.floors())
-	if Game.tier() == "bus" and Game.decker_on():
+	if Game.dk_tier():
 		return Game.floors() >= 2 and Game.floors() <= 3 \
-			and ResourceLoader.exists(InteriorV3Panel.DK_DIR + "shell_f%d.png" % Game.floors())
+			and ResourceLoader.exists(str(InteriorV3Panel.shell_spec(Game.tier()).dir) + "shell_f%d.png" % Game.floors())
 	return Game.tier() == "van" and Game.floors() <= 5 \
 		and ResourceLoader.exists(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % Game.floors())
 
@@ -168,9 +171,9 @@ func v2_rt() -> bool:
 	return v2 and tier == "rig"
 
 
-## MV-736: is the world v2 body the Decker bus?
+## MV-736/738: is the world v2 body the Decker bus or Bastion 42-B (both 640 shell px)?
 func v2_dk() -> bool:
-	return v2 and tier == "bus"
+	return v2 and (tier == "bus" or tier == "bastion")
 
 
 ## the world v2 body's shell texture for the current floors
@@ -203,6 +206,8 @@ func roof_y() -> float:
 func unit_x(unit: int) -> float:
 	if unit < 0:
 		return 0.0
+	if v2_pup_trailers():
+		return V2_X + (InteriorV3Panel.PUP_X0 + InteriorV3Panel.PUP_STEP * unit) * V2_K
 	if v2_rt_trailers():
 		return V2_X + V2_W_RT + V2_TW_RT * unit
 	return MAIN_W + v2_extra() + TRAILER_W * unit
@@ -213,6 +218,17 @@ func v2_rt_trailers() -> bool:
 	return v2_rt() and n_trailers > 0 and ResourceLoader.exists(InteriorV3Panel.RT_DIR + "trailer_f%d.png" % v2_trailer_floors())
 
 
+## MV-737: are the ambulance's trailers drawn as the approved pup shell (world v2 ambulance, switch ambulance_pup)?
+func v2_pup_trailers() -> bool:
+	return v2 and tier == "van" and n_trailers > 0 and Features.on("ambulance_pup") and v2_trailer_floors() == 2 \
+		and ResourceLoader.exists(InteriorV3Panel.PUP_DIR + "pup_f2.png")
+
+
+## trailers drawn as their own v3 shells (road train containers or ambulance pups) instead of the old trailer sprites
+func v2_shell_trailers() -> bool:
+	return v2_rt_trailers() or v2_pup_trailers()
+
+
 func v2_trailer_floors() -> int:
 	return Data.TRAILER_SLOTS / Data.ROOMS_PER_FLOOR
 
@@ -220,6 +236,10 @@ func v2_trailer_floors() -> int:
 ## top-left of a trailer cell of the road train (floor 0 at the bottom)
 func v2_trailer_cell_pos(unit: int, col: int, fl: int) -> Vector2:
 	var tf := v2_trailer_floors()
+	if v2_pup_trailers():
+		var ptop := ROAD_Y + 1.0 - InteriorV3Panel.PUP_H * V2_K
+		return Vector2(unit_x(unit) + (InteriorV3Panel.PUP_CX0 + 152.0 * col) * V2_K,
+			ptop + (InteriorV3Panel.PUP_CY0 + 112.0 * float(tf - 1 - fl)) * V2_K)
 	var top := ROAD_Y + 1.0 - (268.0 + 112.0 * float(tf - 1)) * V2_K
 	return Vector2(unit_x(unit) + (InteriorV3Panel.RT_TX0 + 152.0 * col) * V2_K,
 		top + (InteriorV3Panel.RT_Y0 + InteriorV3Panel.RT_FH * float(tf - 1 - fl)) * V2_K)
@@ -227,6 +247,8 @@ func v2_trailer_cell_pos(unit: int, col: int, fl: int) -> Vector2:
 
 ## how far the convoy's rear deck moved back because of trailers (and the longer world v2 ambulance)
 func rear_shift() -> float:
+	if v2_pup_trailers():
+		return unit_x(n_trailers - 1) + InteriorV3Panel.PUP_REAR * V2_K - MAIN_W
 	if v2_rt_trailers():
 		return unit_x(n_trailers) - MAIN_W
 	return TRAILER_W * n_trailers + v2_extra()
@@ -340,7 +362,7 @@ func _ready() -> void:
 			_refresh_mods())
 	Meta.generation_started.connect(func(_g): rebuild())
 	Features.changed.connect(func():
-		if v2 != v2_wanted() or amb_on != amb_wanted():
+		if v2 != v2_wanted() or amb_on != amb_wanted() or _pups_drawn() != v2_pup_trailers():
 			rebuild()
 			return
 		_sync_detail()
@@ -358,6 +380,7 @@ func rebuild() -> void:
 	floors = 4 if empty else Game.floors()
 	n_trailers = 0 if empty else Game.trailers()
 	v2 = v2_wanted()
+	_pups_up = false
 	var vd: Dictionary = Data.VEHICLES.get(tier, Data.VEHICLES.rig)
 	var dy := roof_dy()
 	for n in [_shells, _exteriors, _wheels_root]:
@@ -375,7 +398,7 @@ func rebuild() -> void:
 	sh.visible = not v2           # world v2: the ambulance shell replaces the van's (cut-away only, no closed hull)
 	ex.visible = not v2
 	var kind: String = vd.get("trailer", "trailer")
-	for t in (0 if v2_rt_trailers() else n_trailers):
+	for t in (0 if v2_shell_trailers() else n_trailers):
 		var x := unit_x(t)
 		_add_sprite(_shells, "veh_" + kind, Vector2(x, 0))
 		_add_sprite(_exteriors, "ext_" + kind, Vector2(x, 0))
@@ -397,6 +420,9 @@ func rebuild() -> void:
 		if v2_dk():               # MV-736: rear engine: exhaust over the rear grille, headlight at the flat front
 			smoke.position = v2_cell_pos(2, 0) + Vector2(91, 77)   # MV-739: the tail pipe under the rear bumper
 			headlight.position = v2_cell_pos(0, 0) + Vector2(-45, 51)
+			if tier == "bastion":     # MV-738: front engine: snorkel top over the nose, headlight on the hood front
+				smoke.position = v2_cell_pos(0, 0) + Vector2(-36, -25)
+				headlight.position = v2_cell_pos(0, 0) + Vector2(-72, 41)
 	tracks.position = Vector2(TRACKS_X.get(tier, 202), 284)
 	var rear := length()
 	dusts[0].position = Vector2(rear - 60, 298)
@@ -456,6 +482,7 @@ func _build_v2() -> void:
 		return
 	v2_shell.texture = load(v2_shell_path())
 	v2_shell.position = Vector2(V2_X, v2_top()) / V2_K
+	InteriorV3Panel.attach_nose(v2_shell, v2_rt() or v2_dk())   # MV-731 bumper tip + tow hook in front of the shell
 	_build_v2_trailers()
 	for slot in Game.main_slots():
 		var c := RoomV3Cell.new()
@@ -471,6 +498,7 @@ func _build_v2() -> void:
 		v2_shell.texture = AmbulanceMotion.cut_shell(floors, amb_dir())
 		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K, amb_dir())
 	_build_rt_couplings()
+	_pups_on_top()
 	for rv in room_views:
 		if v2_cells.has(rv.slot):
 			rv.visible = false
@@ -483,6 +511,10 @@ func _build_v2_trailers() -> void:
 	for sp in v2_tshells:
 		sp.queue_free()
 	v2_tshells.clear()
+	_pups_up = v2_pup_trailers()
+	if _pups_up:
+		_build_v2_pups()
+		return
 	if not v2_rt_trailers():
 		return
 	for u in range(n_trailers - 1, -1, -1):
@@ -532,10 +564,50 @@ func _build_rt_couplings() -> void:
 	rt_couplings.setup(v2_shell.position, float(v2_shell.texture.get_height()), pos, float(th))
 
 
+## MV-737: the ambulance's pups: cells first, then the shells front to rear (each tow plate over the unit in front);
+## _pups_on_top() moves them over the ambulance shell once it is placed
+func _build_v2_pups() -> void:
+	var tex: Texture2D = load(InteriorV3Panel.PUP_DIR + "pup_f2.png")
+	for u in n_trailers:
+		for i in Data.TRAILER_SLOTS:
+			var slot := Game.main_slots() + u * Data.TRAILER_SLOTS + i
+			if slot >= Game.slot_count():
+				continue
+			var c := RoomV3Cell.new()
+			c.slot = slot
+			c.world_view = true      # MV-734: pup crew use the same pixel size as the main vehicle
+			var cell := Game.slot_cell(slot)
+			c.position = v2_trailer_cell_pos(u, cell.x, cell.y) / V2_K
+			v2_root.add_child(c)
+			v2_cells[slot] = c
+	for u in n_trailers:
+		var sp := Sprite2D.new()
+		sp.name = "PupShell%d" % u
+		sp.centered = false
+		sp.texture = tex
+		sp.position = Vector2(unit_x(u), ROAD_Y + 1.0 - InteriorV3Panel.PUP_H * V2_K) / V2_K
+		v2_root.add_child(sp)
+		v2_tshells.append(sp)
+
+
+## the pup shells are up (to rebuild when the ambulance_pup switch flips)
+func _pups_drawn() -> bool:
+	return _pups_up
+
+
+func _pups_on_top() -> void:
+	if not v2_pup_trailers():
+		return
+	for sp in v2_tshells:
+		v2_root.move_child(sp, v2_root.get_child_count() - 1)
+
+
 ## MV-726: the ambulance's own wheels / suspension / lights / flag (switch vehicle_anim; anchors from anim.json)
 func amb_wanted() -> bool:
 	if v2_rt():                   # MV-740: the road train: tractor + lead trailer here, each container trailer in rt_units
 		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.RT_DIR)
+	if v2_dk() and tier == "bastion":
+		return false              # MV-738: no wheel / suspension anchors for Bastion 42-B yet (static shell)
 	if v2_dk():                   # MV-739: the Decker bus gets the same wheels / suspension / lights + its sign
 		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.DK_DIR)
 	return v2 and tier == "van" and Features.on("vehicle_anim") and AmbulanceMotion.ok(floors)
@@ -550,6 +622,8 @@ func amb_dir() -> String:
 
 ## atlas region of a main shell ("veh" / "ext") of this tier with n floors: its own shell, or the grown one
 static func shell_region(kind: String, t: String, n: int) -> String:
+	if t == "bastion":
+		t = "bus"         # MV-738: no closed-hull atlas art of its own (world v2 draws its shell); fall back to the bus
 	var grown := "%sf%d_%s" % [kind, n, t]
 	return grown if n != int(Data.VEHICLES.get(t, Data.VEHICLES.rig).floors) and Atlas.has(grown) else "%s_%s" % [kind, t]
 
@@ -629,7 +703,7 @@ func slot_local_pos(slot: int) -> Vector2:
 	var cell := Game.slot_cell(slot)
 	if v2 and unit < 0:
 		return v2_cell_pos(cell.x, cell.y)
-	if v2_rt_trailers():
+	if v2_shell_trailers():
 		return v2_trailer_cell_pos(unit, cell.x, cell.y)
 	var cols: Array = COLS if unit < 0 else TRAILER_COLS
 	return Vector2(unit_x(unit) + cols[cell.x], ROW0 - FLOOR_H * cell.y)
@@ -648,7 +722,7 @@ func room_size(slot: int) -> Vector2:
 
 ## one cell of the room at `slot`: 64x52, or 72x48 in the world v2 ambulance
 func cell_size(slot: int) -> Vector2:
-	if v2 and slot != Data.CAB_SLOT and (Game.slot_unit(slot) < 0 or v2_rt_trailers()):
+	if v2 and slot != Data.CAB_SLOT and (Game.slot_unit(slot) < 0 or v2_shell_trailers()):
 		return V2_CELL
 	return ROOM_SIZE
 
@@ -930,7 +1004,7 @@ func _sync_roof() -> void:
 		_roof_parts.remove_child(ch)
 		ch.queue_free()
 	if not Features.on("cozy_roof"):
-		_add_sprite(_roof_parts, "roof_legacy_" + tier, Vector2(ROOF_LEGACY_X, 0))
+		_add_sprite(_roof_parts, "roof_legacy_" + ("bus" if tier == "bastion" else tier), Vector2(ROOF_LEGACY_X, 0))
 		return
 	for region in ROOF_PARTS:
 		for pos in ROOF_PARTS[region]:
@@ -961,7 +1035,7 @@ func _sync_detail() -> void:
 		for w in vd.wheels:
 			if not (tracked and float(w[0]) > 100.0):
 				spots.append(float(w[0]))
-	if str(vd.get("trailer", "trailer")) == "trailer" and not v2_rt_trailers():
+	if str(vd.get("trailer", "trailer")) == "trailer" and not v2_shell_trailers():
 		for t in n_trailers:
 			for w in TRAILER_WHEELS:
 				spots.append(unit_x(t) + w.x)
@@ -1131,7 +1205,7 @@ func _place_idle_motion() -> void:
 	chain.position = CHAIN_POS + Vector2(rear_shift(), 0)
 	# mudflap behind the convoy's rearmost road tyre (trailer tyres are never under the tracks)
 	var flap_x := -1.0
-	if str(vd.get("trailer", "trailer")) == "trailer" and n_trailers > 0 and not v2_rt_trailers():
+	if str(vd.get("trailer", "trailer")) == "trailer" and n_trailers > 0 and not v2_shell_trailers():
 		flap_x = unit_x(n_trailers - 1) + TRAILER_WHEELS[-1].x + 16.0
 	elif v2:
 		flap_x = -1.0                 # world v2: the ambulance's axles are in its shell, no old-van mudflap

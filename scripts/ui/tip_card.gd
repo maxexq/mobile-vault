@@ -8,6 +8,7 @@ var hud: HUD
 var key := ""            # tip on screen ("" = none)
 var _card: PanelContainer
 var _head: Label
+var _face: PanelContainer   # MV-735: guide portrait (Dr. Ren's face changes per line with ren_guide)
 var _text: Label
 var _ok: Button
 
@@ -23,8 +24,9 @@ func _ready() -> void:
 	var h := UIKit.hbox(5)
 	_card.add_child(h)
 	var pv := UIKit.vbox(1)
-	pv.add_child(UIKit.portrait("dw_army_brown", true))
-	var radio := UIKit.label("CH.7", UIKit.FP, UIKit.C_GREEN, true)
+	_face = UIKit.guide_portrait()
+	pv.add_child(_face)
+	var radio := UIKit.label("MEDIC" if Features.on("ren_guide") else "CH.7", UIKit.FP, UIKit.C_GREEN, true)
 	radio.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pv.add_child(radio)
 	h.add_child(pv)
@@ -63,7 +65,8 @@ func _process(_d: float) -> void:
 	if want != key:
 		key = want
 		if key != "":
-			_head.text = "SGT.MARK · TIP"
+			_head.text = Tutorial.guide_name() + " · TIP"
+			UIKit.set_guide_mood(_face, Tutorial.guide_face(key))
 			_text.text = Tutorial.tip_text(key)
 			_ok.text = Loc.t("เข้าใจแล้ว")
 			_card.modulate.a = 0.0

@@ -671,6 +671,11 @@ func _run() -> void:
 		await _crew_portraits_v3_test()
 		_finish()
 		return
+	if "--only=crew_portrait_moods" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _crew_portrait_moods_test()
+		_finish()
+		return
 
 
 
@@ -679,9 +684,19 @@ func _run() -> void:
 		await _world_v2_test()
 		_finish()
 		return
+	if "--only=bastion" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _bastion_test()
+		_finish()
+		return
 	if "--only=decker" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _decker_test()
+		_finish()
+		return
+	if "--only=ambulance_pup" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _ambulance_pup_test()
 		_finish()
 		return
 	if "--only=road_train" in OS.get_cmdline_user_args():
@@ -1712,6 +1727,7 @@ func _run() -> void:
 	await _parallax_v2_test()
 	await _rooms_v3_test()
 	await _crew_portraits_v3_test()
+	await _crew_portrait_moods_test()
 	await _pets_v3_test()
 
 
@@ -1720,6 +1736,8 @@ func _run() -> void:
 	await _world_v2_test()
 	await _road_train_test()
 	await _decker_test()
+	await _bastion_test()
+	await _ambulance_pup_test()
 	await _vehicle_anim_test()
 	await _raw_food_test()
 	await _pity_test()
@@ -6238,6 +6256,125 @@ func _crew_portraits_v3_test() -> void:
 	off.free()
 	Features.layers.dev = overrides
 	Features.changed.emit()
+	await wait(0.2)
+
+
+## MV-735: v3 portraits change face with the crew member's state (switch crew_portrait_moods)
+func _crew_portrait_moods_test() -> void:
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var keep: Array = Game.s.dwellers.duplicate(true)
+	var art_ok := true
+	for cid in V3Art.CREW_IDS:
+		var n := V3Art.portrait_tex(str(cid))
+		for m in V3Art.PORTRAIT_MOODS:
+			var t := V3Art.portrait_tex(str(cid), m)
+			art_ok = art_ok and t != null and t != n and t.get_size() == Vector2(64, 64)
+	_check("portrait moods: all 11 characters have happy / stressed / injured 64x64 faces", art_ok)
+	Features.set_override("features", "crew_portraits_v3", true)
+	Features.set_override("features", "crew_portrait_moods", true)
+	var size := (Game.s.dwellers as Array).size()
+	for m in ["injured", "stressed", "happy", ""]:
+		Dev.portrait_mood_preview(m)
+		var same := true
+		for d in Game.s.dwellers:
+			same = same and UIKit.portrait_mood(d) == m and UIKit.portrait_v3(d) == V3Art.portrait_tex(V3Art.crew_for(d), m)
+		_check("portrait moods: whole crew '%s' -> that face (%s)" % [m, Dev.portrait_mood_counts()], same and int(Dev.portrait_mood_counts()[m]) == size)
+	var d: Dictionary = Game.s.dwellers[0]
+	d.happy = 100.0
+	d.hp = float(d.max_hp) * 0.1
+	_check("portrait moods: low HP wins over high happiness", UIKit.portrait_mood(d) == "injured")
+	d.hp = float(d.max_hp)
+	d.happy = 90.0
+	d.mood = "depressed"
+	var dep := UIKit.portrait_mood(d)
+	d.mood = ""
+	_check("portrait moods: depressed shows stressed when morale v2 is on (%s)" % dep, dep == ("stressed" if Crew.v2() else "happy"))
+	Dev.portrait_mood_preview("injured")
+	main.hud.open_panel("dwellers")
+	main.hud.panels.dwellers.manage(int(Game.s.dwellers[0].id))
+	await wait(0.5)
+	var card_ok := false
+	for n in main.hud.panels.dwellers.find_children("*", "TextureRect", true, false):
+		if (n as TextureRect).texture == V3Art.portrait_tex(V3Art.crew_for(Game.s.dwellers[0]), "injured"):
+			card_ok = true
+	_check("portrait moods: crew card shows the injured face", card_ok)
+	await shot("crew_portrait_moods_injured")
+	main.hud.panels.dwellers.close()
+	await wait(0.3)
+	# Dr. Ren's extra faces, scene faces (ctx) and the fallback for characters without them
+	var extra_ok := true
+	for m in V3Art.PORTRAIT_MOODS_EXTRA:
+		extra_ok = extra_ok and V3Art.has_portrait_mood("ren", m) and V3Art.portrait_tex("ren", m).get_size() == Vector2(64, 64)
+	_check("portrait moods: Dr. Ren has the 8 extra faces", extra_ok)
+	Dev.portrait_mood_preview("")
+	var other := ""
+	for cid in V3Art.CREW_IDS:
+		if not V3Art.has_portrait_mood(str(cid), "angry"):
+			other = str(cid)
+	_check("portrait moods: a face a character lacks falls back (angry -> stressed, surprised -> neutral)",
+		other != "" and UIKit.mood_face(other, "angry") == "stressed" and UIKit.mood_face(other, "surprised") == ""
+		and UIKit.mood_face("ren", "angry") == "angry")
+	var dd: Dictionary = Game.s.dwellers[0]
+	var cid0 := V3Art.crew_for(dd)
+	_check("portrait moods: scene face 'thinking' (event choice) = that face or its fallback",
+		UIKit.portrait_v3(dd, "thinking") == V3Art.portrait_tex(cid0, UIKit.mood_face(cid0, "thinking")))
+	dd.hp = float(dd.max_hp) * 0.1
+	_check("portrait moods: a hurt member keeps the injured face over a calm scene face",
+		UIKit.portrait_v3(dd, "happy") == V3Art.portrait_tex(cid0, "injured"))
+	dd.hp = float(dd.max_hp)
+	dd.rads = 80.0
+	_check("portrait moods: high radiation = sick face (stressed for those without it)",
+		UIKit.portrait_mood(dd) == "sick" and UIKit.portrait_v3(dd) == V3Art.portrait_tex(cid0, UIKit.mood_face(cid0, "sick")))
+	dd.rads = 0.0
+	var chip := OutcomeKit.crew_chip(dd, [["-20 HP", UIKit.C_RED]], 0.0, "happy")
+	var chip_ok := false
+	for n in chip.find_children("*", "TextureRect", true, false):
+		chip_ok = chip_ok or (n as TextureRect).texture == V3Art.portrait_tex(cid0, "injured")
+	chip.free()
+	_check("portrait moods: outcome chip with a red (hurt) tag shows the injured face", chip_ok)
+	# tutorial / tip guide
+	Features.set_override("features", "ren_guide", true)
+	var gp := UIKit.guide_portrait("combat")
+	UIKit.set_guide_mood(gp, Tutorial.guide_face("combat"))
+	_check("ren guide: tutorial combat step = Dr. Ren angry, 64 px, named DR.REN",
+		(gp.get_child(0) as TextureRect).texture == V3Art.portrait_tex("ren", "angry") and str(gp.get_meta("guide_mood", "")) == "angry"
+		and (gp.get_child(0) as TextureRect).custom_minimum_size == Vector2(64, 64) and Tutorial.guide_name() == "DR.REN")
+	var faces_ok := true
+	for st in Tutorial.STEPS:
+		faces_ok = faces_ok and (Tutorial.guide_face(str(st.id)) == "" or V3Art.has_portrait_mood("ren", Tutorial.guide_face(str(st.id))))
+	for k in Tutorial.TIPS:
+		faces_ok = faces_ok and V3Art.has_portrait_mood("ren", Tutorial.guide_face(str(k)))
+	_check("ren guide: every tutorial step and tip has a Dr. Ren face", faces_ok)
+	var poses_ok := true
+	for m in V3Art.PORTRAIT_POSES:
+		poses_ok = poses_ok and V3Art.has_portrait_mood("ren", m) and UIKit.mood_face("clara", m) == UIKit.mood_face("clara", "talking")
+	_check("ren guide: Dr. Ren has the 4 explaining poses (others fall back to talking)", poses_ok)
+	Dev.ren_guide_point(true)
+	var fr := Rect2(100, 400, 64, 64)
+	_check("ren guide point: target above = point_up, far above-left = point_left, beside right = point_right, below = face",
+		Tutorial.guide_point("talking", Rect2(110, 40, 40, 20), true, fr) == "point_up"
+		and Tutorial.guide_point("talking", Rect2(-300, 40, 40, 20), true, fr) == "point_left"
+		and Tutorial.guide_point("thinking", Rect2(400, 410, 40, 40), true, fr) == "point_right"
+		and Tutorial.guide_point("talking", Rect2(110, 600, 40, 40), true, fr) == "talking")
+	var keep_ok := Tutorial.guide_point("angry", Rect2(110, 40, 40, 20), true, fr) == "angry" \
+		and Tutorial.guide_point("talking", Rect2(), false, fr) == "talking"
+	Dev.ren_guide_point(false)
+	_check("ren guide point: angry face, no target or switch off keep the face",
+		keep_ok and Tutorial.guide_point("talking", Rect2(110, 40, 40, 20), true, fr) == "talking")
+	Dev.ren_guide_point(true)
+	UIKit.set_guide_mood(gp, Tutorial.guide_face("skills"))
+	_check("ren guide: skills tip = raised-finger pose", (gp.get_child(0) as TextureRect).texture == V3Art.portrait_tex("ren", "finger_up"))
+	Dev.ren_guide(false)
+	UIKit.set_guide_mood(gp, "angry")
+	_check("ren guide: off = Sgt. Mark's 40 px portrait", not gp.has_meta("guide_mood") and Tutorial.guide_name() == "SGT.MARK"
+		and (gp.get_child(0) as TextureRect).custom_minimum_size == Vector2(40, 40))
+	gp.free()
+	Dev.crew_portrait_moods(false)
+	_check("portrait moods: switch off = neutral face", UIKit.portrait_mood(d) == "" and UIKit.portrait_v3(d) == V3Art.portrait_tex(V3Art.crew_for(d)))
+	Game.s.dwellers = keep
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.dwellers_changed.emit()
 	await wait(0.2)
 
 
@@ -12786,6 +12923,20 @@ func _ambulance_v3_test() -> void:
 				holes_ok = holes_ok and img.get_pixel(int(c.x) + 72, int(c.y) + 48).a < 0.1 and img.get_pixel(int(c.x) + 72, int(c.y) - 6).a > 0.9
 	_check("ambulance v3: shells for 1-5 floors load at 638 wide with 3 cells per floor", files_ok)
 	_check("ambulance v3: every cell window is cut out and the deck above it is solid", holes_ok)
+	# MV-741 cleanup (tools/art/ambulance/cleanup.py): no see-through pockets in the cab, no stray specks, framed windows
+	var clean_ok := true
+	var frames_ok := true
+	for n in [1, 3]:
+		var img: Image = (load(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % n) as Texture2D).get_image()
+		img.decompress()
+		img.convert(Image.FORMAT_RGBA8)
+		var r := _amb_shell_flaws(img)
+		clean_ok = clean_ok and r.x == 0 and r.y == 0
+		for c in spec.floors[str(n)].cells:      # 1 px black lip right over the opening's top edge
+			var lip := img.get_pixel(int(c.x) + 72, int(c.y) + 3)
+			frames_ok = frames_ok and lip.a > 0.9 and lip.r < 0.1 and lip.g < 0.1
+	_check("MV-741: the ambulance cab has no see-through holes and the shell has no stray pixels", clean_ok)
+	_check("MV-741: every room window has a frame lip, so the rooms sit inside the body", frames_ok)
 	var hud: HUD = main.hud
 	var panel: InteriorV3Panel = hud.panels.interior
 	var f := Dev.ambulance_v3_preview(3)
@@ -12798,6 +12949,9 @@ func _ambulance_v3_test() -> void:
 		pos_ok = pos_ok and (panel.cells[slot] as RoomV3Cell).position.is_equal_approx(want)
 	_check("ambulance v3: every room sits in its shell window (floor 0 at the bottom)", pos_ok)
 	_check("ambulance v3: the shell draws over the cells", panel.amb_shell.get_index() == panel.world.get_child_count() - 1)
+	var nose := panel.amb_shell.get_node_or_null("Nose") as Sprite2D
+	_check("MV-731: the flat front's bumper + tow hook (nose.png) sits just in front of the shell, bottom aligned", nose != null and nose.visible
+		and nose.position.x == -nose.texture.get_width() and nose.position.y + nose.texture.get_height() == panel.amb_shell.texture.get_height())
 	await shot("ambulance_v3_f3")
 	Dev.set_trailers(1)
 	await wait(0.4)
@@ -12820,6 +12974,58 @@ func _ambulance_v3_test() -> void:
 	Game.rooms_changed.emit()
 	get_window().size = old_window
 	await wait(0.3)
+
+
+## MV-741: (see-through pixels enclosed by the cab, opaque pixels with no opaque neighbour) in an ambulance shell.
+## The cab is the front 146 px (up to the first window) of the bottom 144 rows; enclosed = not reachable from the image border through
+## transparent pixels.
+func _amb_shell_flaws(img: Image) -> Vector2i:
+	var w := img.get_width()
+	var h := img.get_height()
+	var d := img.get_data()
+	var seen := PackedByteArray()
+	seen.resize(w * h)
+	var stack := PackedInt32Array()
+	for x in w:
+		stack.append(x)
+		stack.append((h - 1) * w + x)
+	for y in h:
+		stack.append(y * w)
+		stack.append(y * w + w - 1)
+	while not stack.is_empty():
+		var i: int = stack[stack.size() - 1]
+		stack.resize(stack.size() - 1)
+		if seen[i] or d[i * 4 + 3] > 0:
+			continue
+		seen[i] = 1
+		var x := i % w
+		@warning_ignore("integer_division")
+		var y := i / w
+		if x > 0: stack.append(i - 1)
+		if x < w - 1: stack.append(i + 1)
+		if y > 0: stack.append(i - w)
+		if y < h - 1: stack.append(i + w)
+	var holes := 0
+	for y in range(h - 144, h):
+		for x in 146:              # up to the first room window (cells start at x 146)
+			var i := y * w + x
+			if d[i * 4 + 3] == 0 and not seen[i]:
+				holes += 1
+	var strays := 0
+	var around := PackedInt32Array([-w - 1, -w, -w + 1, -1, 1, w - 1, w, w + 1])
+	for y in range(1, h - 1):
+		for x in range(1, w - 1):
+			var i := y * w + x
+			if d[i * 4 + 3] == 0:
+				continue
+			var lone := true
+			for o in around:
+				if d[(i + o) * 4 + 3] > 0:
+					lone = false
+					break
+			if lone:
+				strays += 1
+	return Vector2i(holes, strays)
 
 
 ## MV-726: the world v2 ambulance moves: rolling tyres on the road, body on its springs, lights, flag
@@ -12847,6 +13053,32 @@ func _vehicle_anim_test() -> void:
 	var g1 := v.amb.flag_frame()
 	await wait(0.13)
 	_check("vehicle anim: driving rolls the tyres and waves the flag", f1 != v.amb.spin_frame() and g1 != v.amb.flag_frame())
+	# MV-741: the lantern is cut out of the shell and swings from its bail while driving
+	var lsw := 0.0
+	for i in 30:
+		await wait(0.05)
+		lsw = maxf(lsw, absf(v.amb.lamp_angle))
+	var lr: Array = spot.lantern_still
+	_check("MV-741: the lantern hangs on its own sprite and swings while the vehicle moves", v.amb.lamp != null
+		and img.get_pixel(int(lr[0]) + 4, int(lr[1]) + 8).a == 0.0 and lsw > 0.03 and absf(v.amb.lamp.rotation - v.amb.lamp_angle) < 0.001)
+	# MV-741 micro anims: Dr. Ren drives, the roof plants lean into the headwind, the pipe puffs, the cells glint by day
+	var pr: Array = spot.clips.potsL.rect
+	var pot_frames := {}
+	var puffed := false
+	var glinted := false
+	v.amb._glint_wait = 0.0
+	for i in 16:
+		await wait(0.05)
+		puffed = puffed or not v.amb.puffs.is_empty()
+		pot_frames[v.amb.clip_i.get("potsL", -1)] = true
+		glinted = glinted or (v.amb.glint != null and v.amb.glint.visible)
+	_check("MV-741: Dr. Ren drives the ambulance (driver.png 'drive' loop over the cab glass)", v.amb.driver != null
+		and v.amb.driver_state == "drive" and (AmbulanceMotion.driver_frames().drive as Array).has(v.amb.driver.texture))
+	_check("MV-741: the PixelLab roof clips (flag, both pot rows, birdhouses) are cut from the shell and the leaves sway",
+		v.amb.clips.has("potsL") and v.amb.clips.has("potsR") and v.amb.clips.has("birds") and (spot.clips as Dictionary).has("flag")
+		and img.get_pixel(int(pr[0]) + 10, int(pr[1]) + 20).a == 0.0 and pot_frames.size() >= 3)
+	_check("MV-741: the copper pipe puffs smoke and the solar cells glint by day", puffed
+		and (glinted or v._night > 0.6) and v.amb.glint != null)
 	_check("vehicle anim: headlight lens + tail lamps on while driving", v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1)
 	var y_before: Array = v.amb.tyres.map(func(t): return t.global_position.y)
 	v.amb.bump(90.0)
@@ -12873,10 +13105,20 @@ func _vehicle_anim_test() -> void:
 		marker_seen = marker_seen or v.amb.lamp_alpha("marker") > 0.5
 	_check("vehicle anim: the raid light bar flashes left then right", bl and br)
 	_check("vehicle anim: the amber marker blinks after pulling over", marker_seen)
+	# MV-741: the roof lantern's PixelLab flame flickers over its glass and its glow follows the flame, day or night
+	var fl_seen := {}
+	var lit := true
+	for i in 20:
+		await wait(0.05)
+		fl_seen[v.amb.flame_frame()] = true
+		lit = lit and v.amb.lamp_alpha("lantern") > 0.05
+	_check("MV-741: the lantern flame flickers (PixelLab frames over the glass) and always glows", v.amb.flame != null
+		and v.amb.flame_frames.size() == (spot.lantern_frames as Array).size() and fl_seen.size() >= 3 and lit)
 	await shot("vehicle_anim_beacon")
 	var f2 := v.amb.spin_frame()
 	await wait(0.3)
 	_check("vehicle anim: parked tyres stand still", f2 == v.amb.spin_frame())
+	_check("MV-741: parked, Dr. Ren idles at the wheel", v.amb.driver_state == "idle")
 	v.amb.force_beacon = false
 	v.debug_speed = -1.0
 	_check("vehicle anim: GOD MODE actions drive it", Dev.vehicle_anim("fast") and v.debug_speed > 1.0 and Dev.vehicle_anim("park"))
@@ -12980,6 +13222,70 @@ func _world_v2_test() -> void:
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state
+	Dev._vehicle_changed()
+	await wait(0.3)
+## MV-737 (switch ambulance_pup): the ambulance's trailers are the approved pup shell, in the v3 interior and on the
+## road (world v2): every trailer cell in its own window, shells on the road line, tow plates riding on the unit in front
+func _ambulance_pup_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var v: Vehicle = main.vehicle
+	var n := Dev.ambulance_pup_preview(2)
+	await wait(0.4)
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.PUP_DIR + "pup.json"))
+	var tex_ok: bool = ResourceLoader.exists(InteriorV3Panel.PUP_DIR + "pup_f2.png") and int(spec.size[0]) == int(InteriorV3Panel.PUP_W) \
+		and int(spec.size[1]) == int(InteriorV3Panel.PUP_H) and int(spec.rear) == int(InteriorV3Panel.PUP_REAR) and spec.cells.size() == Data.TRAILER_SLOTS
+	_check("ambulance pup: the pup shell fits the trailer grid (3 rooms x 2 floors) and its pup.json", tex_ok)
+	var road_ok: bool = n == Data.MAX_TRAILERS and Game.tier() == "van" and v.v2 and v.v2_pup_trailers() and not v.v2_rt_trailers() \
+		and v.v2_tshells.size() == n and v.v2_cells.size() == Game.slot_count() and v.wheels.is_empty()
+	for k in v.v2_tshells.size():
+		var tsp: Sprite2D = v.v2_tshells[k]
+		road_ok = road_ok and tsp.texture.resource_path.ends_with("ambulance_pup/pup_f2.png") \
+			and absf((tsp.position.y + tsp.texture.get_size().y) * Vehicle.V2_K - (Vehicle.ROAD_Y + 1.0)) < 0.5 \
+			and tsp.get_index() > v.v2_shell.get_index()          # the tow plate sits on the ambulance's rear
+	road_ok = road_ok and is_equal_approx(v.unit_x(0), Vehicle.V2_X + InteriorV3Panel.PUP_X0 * Vehicle.V2_K) \
+		and is_equal_approx(v.unit_x(1) - v.unit_x(0), InteriorV3Panel.PUP_STEP * Vehicle.V2_K) \
+		and is_equal_approx(v.length(), v.unit_x(n - 1) + InteriorV3Panel.PUP_REAR * Vehicle.V2_K)
+	for slot in range(Game.main_slots(), Game.slot_count()):
+		var tc: RoomV3Cell = v.v2_cells[slot]
+		road_ok = road_ok and tc.world_view
+		var own: Sprite2D = v.v2_tshells[Game.slot_unit(slot)]
+		var tlp := tc.position - own.position + Vector2(72, 48)
+		_fold("ambulance pup: on the road each trailer cell sits in its pup window", own.texture.get_image().get_pixel(int(tlp.x), int(tlp.y)).a < 0.1
+			and (tc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot)) and v.cell_size(slot) == Vehicle.V2_CELL, str(slot))
+	_fold_flush()
+	_check("ambulance pup: on the road the trailers are the pup shells on the road line, behind the ambulance, no old trailer art", road_ok)
+	await shot("ambulance_pup_world")
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	Dev.ambulance_pup_preview(2, true)
+	await wait(0.4)
+	var in_ok: bool = panel.amb() and panel.pup() and panel.pup_shells.size() == n
+	for slot in range(Game.main_slots(), Game.slot_count()):
+		var u := Game.slot_unit(slot)
+		var c := Game.slot_cell(slot)
+		var sp: Sprite2D = panel.pup_shells[u]
+		var want := Vector2.ZERO
+		for cc in spec.cells:
+			if int(cc.floor) == c.y and int(cc.col) == c.x:
+				want = sp.position + Vector2(float(cc.x), float(cc.y))
+		var cell: RoomV3Cell = panel.cells[slot]
+		in_ok = in_ok and not cell.world_view
+		var lp := cell.position - sp.position + Vector2(72, 48)
+		_fold("ambulance pup: in the v3 interior each trailer room sits in its pup window", cell.position.is_equal_approx(want)
+			and sp.texture.get_image().get_pixel(int(lp.x), int(lp.y)).a < 0.1, str(slot))
+	_fold_flush()
+	in_ok = in_ok and absf(panel._unit_top(0) + InteriorV3Panel.PUP_H - panel._world_h()) < 0.5 \
+		and absf(panel._unit_top(-1) + panel._amb_h() - panel._world_h()) < 0.5
+	await shot("ambulance_pup_interior")
+	panel.close()
+	_check("ambulance pup: v3 interior draws the pups behind the ambulance, both on the road line", in_ok)
+	Dev.feature_set("ambulance_pup", false)
+	await wait(0.3)
+	_check("ambulance pup: switch off brings back the old trailers", not v.v2_pup_trailers() and not panel.pup() and v.v2_tshells.is_empty())
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
 	Dev._vehicle_changed()
 	await wait(0.3)
 ## MV-721 (switch road_train): two vehicles only, the ambulance (van) and the road train (rig); bus / train saves
@@ -13225,6 +13531,7 @@ func _decker_test() -> void:
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	Features.set_override("features", "road_train", true)
 	Features.set_override("features", "decker", true)
+	Features.set_override("features", "bastion", false)     # MV-738: Bastion joins the ladder in _bastion_test
 	_check("decker: the ladder is ambulance, Decker, road train", Game.tier_order() == ["van", "bus", "rig"])
 	Game.s.tier = "bus"
 	_check("decker: a bus save drives the Decker, named DECKER BUS", Game.tier() == "bus" and str(Game.vehicle_def().en) == "DECKER BUS")
@@ -13252,6 +13559,8 @@ func _decker_test() -> void:
 		Dev.rooms_v3_open()
 		await wait(0.4)
 		var tex := panel.amb_shell.texture
+		var nose := panel.amb_shell.get_node_or_null("Nose") as Sprite2D
+		_fold("decker: no ambulance nose in the interior", nose == null or not nose.visible, str(d))
 		shells_ok = shells_ok and panel.dk() and panel.amb() and panel.amb_shell.visible and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
 		var img := tex.get_image()
 		for slot in Game.main_slots():
@@ -13265,6 +13574,7 @@ func _decker_test() -> void:
 			shells_ok = shells_ok and cp.is_equal_approx(want) and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1
 		await shot("decker_interior_f%d" % d)
 		panel.close()
+	_fold_flush()
 	_check("decker: v3 interior draws the bus shell, every room in its window (2 and 3 decks)", shells_ok)
 	get_window().size = old_window
 	var v: Vehicle = main.vehicle
@@ -13272,6 +13582,8 @@ func _decker_test() -> void:
 	for d in [2, 3]:
 		Dev.decker_preview(d)
 		await wait(0.4)
+		var nose := v.v2_shell.get_node_or_null("Nose") as Sprite2D
+		_fold("decker: no ambulance nose on the road", nose == null or not nose.visible, str(d))
 		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
 		world_ok = world_ok and v.v2 and v.v2_dk() and (v.v2_shell.texture.resource_path.ends_with("decker_v3/shell_f%d.png" % d) \
 			or (v.amb_on and v.amb.dir == AmbulanceMotion.DK_DIR and v.amb.floors == d)) \
@@ -13283,6 +13595,7 @@ func _decker_test() -> void:
 			var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
 			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
 		await shot("decker_world_f%d" % d)
+	_fold_flush()
 	_check("decker: on the road (world v2) the bus carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
 	# MV-739: shell clean-up (plate in front of the headlight, stray pixels under the chassis / around the tyres) and
 	# a steel frame around every room window
@@ -13292,7 +13605,7 @@ func _decker_test() -> void:
 		var img: Image = (load(InteriorV3Panel.DK_DIR + "shell_f%d.png" % d) as Texture2D).get_image()
 		img.decompress()
 		var dy: int = 112 * (int(d) - 2)
-		for y in range(253, 282):
+		for y in range(253, 276):
 			for x in range(0, 9):
 				clean_ok = clean_ok and img.get_pixel(x, y + dy).a == 0.0
 		for y in range(331 + dy, img.get_height()):
@@ -13307,6 +13620,9 @@ func _decker_test() -> void:
 			var cy := int(cc.y)
 			frame_ok = frame_ok and img.get_pixel(cx + 72, cy - 1).v < 0.06 and img.get_pixel(cx - 1, cy + 48).v < 0.06 \
 				and img.get_pixel(cx + 72, cy).a > 0.3 and img.get_pixel(cx + 72, cy + 48).a < 0.1
+		for x in range(300, 480):             # roof rail band and the gap between the cables / chassis: see-through
+			clean_ok = clean_ok and img.get_pixel(x, 30).is_equal_approx(Color8(46, 44, 48)) == false
+		clean_ok = clean_ok and img.get_pixel(16, 264 + dy).get_luminance() > 0.7      # MV-739 PixelLab headlight lens
 	_check("decker: no plate over the headlight, no stray pixels under the chassis / around the tyres (2 and 3 decks)", clean_ok)
 	_check("decker: every room window has a frame (black edge outside, inner shadow lip, clear middle)", frame_ok)
 	# MV-739: micro animations on the road (switch vehicle_anim): tyres roll with the speed, lights, flickering sign
@@ -13321,6 +13637,12 @@ func _decker_test() -> void:
 		and v.amb.dir == AmbulanceMotion.DK_DIR and v.amb.tyres.size() == 3 and sign_seen)
 	_check("decker: tyres roll and the headlight / tail lamps are on while driving", sp0 != v.amb.spin_frame()
 		and v.amb.lamp_alpha("head") > 0.2 and v.amb.lamp_alpha("tail0") > 0.1 and v.amb.flag == null)
+	var sw_seen := {}
+	for i in 12:
+		await wait(0.08)
+		sw_seen[v.amb.swing_frame()] = true
+	_check("decker: the loose cables under the floor swing while driving (%d frames seen)" % sw_seen.size(),
+		v.amb.swings.size() == 1 and sw_seen.size() >= 3)
 	await shot("decker_anim_drive")
 	Dev.decker_anim("brake")
 	await wait(1.6)
@@ -13331,6 +13653,91 @@ func _decker_test() -> void:
 	Features.set_override("features", "decker", false)
 	_check("decker: switch off = 2 vehicles again, a Decker save drives the road train, research hidden",
 		Game.tier_order() == ["van", "rig"] and Game.tier() == "rig" and Meta.perk_hidden("tier_bus"))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Dev._vehicle_changed()
+	await wait(0.3)
+
+
+## MV-738 (switch bastion): Bastion 42-B, the ex-army 8x8 command truck, is the other pick of the Decker's research:
+## one tier_bus research unlocks both, the next generation picks one; 2 -> 3 decks like the Decker, heavier + more armour
+func _bastion_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "road_train", true)
+	Features.set_override("features", "decker", true)
+	Features.set_override("features", "bastion", true)
+	_check("bastion: the ladder is ambulance, Decker, Bastion, road train", Game.tier_order() == ["van", "bus", "bastion", "rig"])
+	var dk := Game.vehicle_def_for("bus")
+	var bs := Game.vehicle_def_for("bastion")
+	_check("bastion: named BASTION 42-B, same decks as the Decker, heavier with much more hull",
+		str(bs.en) == "BASTION 42-B" and int(bs.floors) == int(dk.floors) and float(bs.weight) > float(dk.weight) and float(bs.hull) >= float(dk.hull) + 80.0)
+	Game.s.tier = "van"
+	var mm := Meta.m()
+	mm.perks = {}
+	mm.legacy = 999
+	Meta.add_blueprint("bp_bus")
+	_check("bastion: not unlocked before the research", not Meta.tier_unlocked("bastion") and not Meta.tier_unlocked("bus"))
+	_check("bastion: the one tier_bus research unlocks both picks, the Decker stays the default",
+		str(Meta.perk_def("tier_bus").en) == "DECKER / BASTION" and Meta.buy("tier_bus") and Meta.tier_unlocked("bus") and Meta.tier_unlocked("bastion") and Meta.best_tier() == "bus")
+	Features.set_override("features", "five_floors", true)
+	Game.s.tier = "bastion"
+	_check("bastion: 2 decks at the start, 3 from the first floor-gain level, never more", Game.tier() == "bastion" and Game.floors_at(1) == 2 and Game.floors_at(Data.FLOOR_GAIN_LEVELS[0]) == 3 and Game.floors_at(6) == 3)
+	# next generation picks the Bastion
+	Game.s.tier = "van"
+	Meta.next_generation([], "bastion")
+	await wait(0.3)
+	_check("bastion: the next generation can pick the Bastion (2 decks, 6 rooms, its hull bonus)",
+		Game.tier() == "bastion" and Game.main_slots() == 6 and Game.hull_max() >= 100.0 + float(bs.hull))
+	var n := Dev.bastion_preview(2, false)
+	await wait(0.3)
+	_check("bastion: GOD drives Bastion with 2 decks in place", n == 2 and Game.tier() == "bastion" and main.vehicle.room_views.size() == Game.slot_count())
+	var old_window := get_window().size
+	get_window().size = Vector2i(405, 720)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.BS_DIR + "shell.json"))
+	var shells_ok := true
+	for d in [2, 3]:
+		Dev.bastion_preview(d, false)
+		Dev.rooms_v3_open()
+		await wait(0.4)
+		var tex := panel.amb_shell.texture
+		shells_ok = shells_ok and panel.dk() and panel.amb_shell.visible and tex.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
+			and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
+		var img := tex.get_image()
+		for slot in Game.main_slots():
+			var c := Game.slot_cell(slot)
+			var want := Vector2(-1, -1)
+			for cc in spec.floors[str(d)].cells:
+				if int(cc.floor) == c.y and int(cc.col) == c.x:
+					want = panel.amb_shell.position + Vector2(float(cc.x), float(cc.y))
+			var cp := (panel.cells[slot] as RoomV3Cell).position
+			var lp := cp - panel.amb_shell.position + Vector2(72, 48)
+			_fold("bastion: v3 interior room sits in its cut-out window", cp.is_equal_approx(want) and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1, "%d decks slot %d" % [d, slot])
+		await shot("bastion_interior_f%d" % d)
+		panel.close()
+	_fold_flush()
+	_check("bastion: v3 interior draws the Bastion shell (2 and 3 decks)", shells_ok)
+	get_window().size = old_window
+	var v: Vehicle = main.vehicle
+	var world_ok := true
+	for d in [2, 3]:
+		Dev.bastion_preview(d)
+		await wait(0.4)
+		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+		world_ok = world_ok and v.v2 and v.v2_dk() and v.v2_shell.texture.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
+			and v.v2_cells.size() == Game.main_slots() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5
+		var img := v.v2_shell.texture.get_image()
+		for slot in Game.main_slots():
+			var wc: RoomV3Cell = v.v2_cells[slot]
+			var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
+			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
+		await shot("bastion_world_f%d" % d)
+	_check("bastion: on the road (world v2) the truck carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
+	Features.set_override("features", "bastion", false)
+	_check("bastion: switch off = a Bastion save drives the Decker, ladder without it", Game.tier() == "bus" and not Game.tier_order().has("bastion"))
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state

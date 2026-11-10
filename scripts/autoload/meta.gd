@@ -22,7 +22,7 @@ const PERKS := {
 	"tier_rig": {"th": "รถพ่วง 18 ล้อ", "en": "18-WHEELER RIG", "icon": "hull", "max": 1, "cost": [16], "bp": "bp_rig", "req": "tier_bus", "desc": "รถบรรทุก 4 ชั้น (12 ห้อง) เครื่องแรง · ต้องมีพิมพ์เขียว"},
 	"tier_train": {"th": "รถไฟหุ้มเกราะ", "en": "ARMORED TRAIN", "icon": "hull", "max": 1, "cost": [30], "bp": "bp_train", "req": "tier_rig", "desc": "หัวรถจักรหุ้มเกราะ 4 ชั้น วิ่งบนราง ลากโบกี้ได้ · ต้องมีพิมพ์เขียว"},
 }
-const TIER_PERK := {"bus": "tier_bus", "rig": "tier_rig", "train": "tier_train"}
+const TIER_PERK := {"bus": "tier_bus", "bastion": "tier_bus", "rig": "tier_rig", "train": "tier_train"}   # MV-738: one research, two picks
 const RESEARCH_TH := "แต้มวิจัยพันธุกรรม"
 ## rebirth stories: picked by how the run ended
 const STORIES := {
@@ -56,6 +56,8 @@ func vehicle_name() -> String:
 func best_tier() -> String:
 	var best := "van"
 	for t in Game.tier_order():
+		if t == "bastion":
+			continue      # MV-738: Bastion is a side pick of the bus research, never the default
 		if t == "van" or perk(TIER_PERK[t]) > 0:
 			best = t
 	return best
@@ -87,6 +89,10 @@ func perk_def(id: String) -> Dictionary:
 		p.th = Data.DECKER.th
 		p.en = Data.DECKER.en
 		p.desc = "รุ่นถัดไปออกเดินทางด้วยรถบัส 2 ชั้น: 6 ห้องตั้งแต่เริ่ม ได้ชั้นที่ 3 เมื่ออัป Vault · ต้องมีพิมพ์เขียว"
+		if Game.bastion_on():
+			p.th = "รถ 2 ชั้น: บัส หรือ บาสเตียน"
+			p.en = "DECKER / BASTION"
+			p.desc = "ปลดรถ 2 ชั้นสองแบบ เลือกคันใดคันหนึ่งตอนสร้างรุ่นถัดไป: รถบัส Decker (เบา ไว ประหยัด) หรือรถบัญชาการ Bastion 42-B (เกราะหนา หนัก ช้า) · ได้ชั้นที่ 3 เมื่ออัป Vault · ต้องมีพิมพ์เขียว"
 	return p
 
 
