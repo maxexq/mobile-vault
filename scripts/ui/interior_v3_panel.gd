@@ -316,6 +316,10 @@ func _rebuild() -> void:
 			sp.position = Vector2(_unit_x(u - 1), _unit_top(u - 1))
 			world.add_child(sp)
 			rt_shells.append(sp)
+			if u == 0:                                                  # MV-762 approved road train exterior mods
+				RoadTrainMods.attach_body(sp, Game.floors(), true)
+			else:
+				RoadTrainMods.attach_trailer(sp, _unit_floors(u - 1), true, u == units - 1)
 	amb_shell.visible = amb()
 	if amb_shell.visible:
 		amb_shell.texture = load(str(shell_spec(Game.tier()).dir) + "shell_f%d.png" % Game.floors())

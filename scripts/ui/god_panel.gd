@@ -409,6 +409,11 @@ func _tab_vehicle() -> void:
 		_b("พ่วงติดรถ: " + ("เปิด" if Features.on("rt_start_trailer") else "ปิด"),
 		func(): Dev.rt_start_trailer(not Features.on("rt_start_trailer")),
 		"green" if Features.on("rt_start_trailer") else "red")], "โร้ดเทรน")
+	_row([_b("ไม่มี", func(): Dev.road_train_mods(0)), _b("L1", func(): Dev.road_train_mods(1)), _b("L2", func(): Dev.road_train_mods(2)),
+		_b("L3", func(): Dev.road_train_mods(3), "green"),
+		_b("อัปเกรดโร้ดเทรน: " + ("เปิด" if Features.on("road_train_mods") else "ปิด"),
+		func(): Dev.feature_set("road_train_mods", not Features.on("road_train_mods")), "green" if Features.on("road_train_mods") else "red")],
+		"อัปเกรดภายนอกโร้ดเทรน")
 	_row([_b("ขับ Decker 2 ชั้น", func(): Dev.decker_preview(2)), _b("3 ชั้น", func(): Dev.decker_preview(3)),
 		_b("ภายใน", func(): Dev.decker_interior()),
 		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),

@@ -1333,6 +1333,25 @@ func decker_mods(lv: int) -> int:
 	return root.get_child_count() if root != null and root.visible else 0
 
 
+## MV-762: the road train on the road (its decks now, else 2) with its trailer and every exterior mod at art level lv
+## (0 = none, 1-3; a mod with fewer levels shows its top one): ram, cab armour (+ side rail from L2), fuel tanks, solar
+## shutters (from L1), lead, heater flue, rear roof turret, heavy suspension, off-road wheels. Returns the parts drawn on the
+## shells (suspension and wheels are counted by the autotest on AmbulanceMotion).
+func road_train_mods(lv: int) -> int:
+	feature_set("road_train_mods", true)
+	road_train_world(Game.floors() if Game.tier() == "rig" and Game.floors() >= 2 else 2)
+	Game.ensure_min_trailers()
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "fuel_tanks", "armor_plates", "roof_turret", "rad_shield", "heater", "solar_covers",
+			"suspension", "offroad_wheels"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	act("road train mods", {"level": lv})
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	return RoadTrainMods.count(get_tree().get_first_node_in_group("vehicle_fx"))
+
+
 ## MV-744: play the Decker's air horn or raid siren (a preview: changes nothing in the run)
 func decker_horn(id: String = "air_horn") -> void:
 	sound_preview("sound", id)
