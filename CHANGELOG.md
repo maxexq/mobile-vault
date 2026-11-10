@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- The road train now comes with its container trailer already hitched: 6 more rooms from the start, no need to buy it (MV-753)
 - The crew look a little lighter on the vehicle: brighter colours and softer dark-brown outlines instead of heavy black ones (MV-745)
 - The Decker bus's 9 DEPOT sign is now a status board: it flashes RAID! and runs HULL / WATER / FOOD / FUEL / POWER LOW warnings, scrolls cheerful lines that lift the crew's mood a little, and the bus honks its air horn leaving a stop and winds a siren before a raid (MV-744)
 - New vehicle choice: Bastion 42-B, an armoured 8x8 army command truck with 2 decks. The same research that unlocks the double-decker bus now lets you pick either one for your next vehicle: the bus is light and thrifty, the Bastion is heavily armoured but slow and thirsty (MV-738)
