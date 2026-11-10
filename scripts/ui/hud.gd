@@ -236,7 +236,7 @@ func _ready() -> void:
 	add_child(pager)
 	move_child(pager, _bottom.get_index())
 	pager.room_requested.connect(func(s): closeup_requested.emit(s))
-	Features.changed.connect(func(): _apply_layout.call_deferred())
+	Features.changed.connect(_on_features_changed)
 	_sync_interior_btn()
 	(panels.build as BuildPanel).placement_requested.connect(func(t): build_placement_requested.emit(t))
 	event_popup = EventPopup.new()
@@ -621,6 +621,14 @@ func _sync_dock() -> void:
 			cap.add_theme_color_override("font_color", UIKit.C_GOLD if on else UIKit.C_DIM)
 
 
+## MV-768 UI v5: the HUD lays itself out again only when the ui_v5 switch itself flips (any other switch leaves the
+## layout and the camera fit alone, as before)
+func _on_features_changed() -> void:
+	var vp := size if size.x > 0 else get_viewport_rect().size
+	if (Features.on("ui_v5") and vp.y >= vp.x) != _v5:
+		_apply_layout.call_deferred()
+
+
 ## the tool button for a window: the dock's while the v5 dock is up, else the old one (tutorial pointer)
 func tool_button(key: String) -> Control:
 	if _v5 and _dock_buttons.has(key):
@@ -661,6 +669,8 @@ func _sync_v5() -> void:
 	if _log_badge != null:
 		UIKit.style_button(_log_btn, "yellow" if _log_badge.visible else "gray")
 	pager.visible = bars and v5 and Features.on("rooms_v3") and V3Art.ok()
+	# a hidden pager keeps no room animating (its cells process on their own otherwise)
+	pager.process_mode = Node.PROCESS_MODE_INHERIT if pager.visible else Node.PROCESS_MODE_DISABLED
 	ModalPanel.sheet_bottom = DOCK_H if v5 and _hud_shown else 0.0
 
 
