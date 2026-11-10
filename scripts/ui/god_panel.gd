@@ -421,6 +421,7 @@ func _tab_vehicle() -> void:
 		"ป้าย+แตร Decker")
 	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
 		_b("ภายใน", func(): Dev.bastion_interior()),
+		_b("ขับ+ไฟ", func(): Dev.bastion_anim("drive"), "green"), _b("เบรก", func(): Dev.bastion_anim("brake")),
 		_b("Bastion: " + ("เปิด" if Features.on("bastion") else "ปิด"), func(): Dev.feature_set("bastion", not Features.on("bastion")),
 		"green" if Features.on("bastion") else "red")], "Bastion 42-B")
 	_row([_b("ขับ", func(): Dev.vehicle_anim("drive"), "green"), _b("เร็ว", func(): Dev.vehicle_anim("fast")),
