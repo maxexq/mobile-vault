@@ -645,6 +645,8 @@ vehicle and the 64x52 rooms in the world stay as they are until the v3 vehicle s
   2, then 3 at the first floor-gain Vault level (`Game.dk_tier()`). Shells: `assets/vehicles/bastion_v3/shell_f<2-3>.png`
   (640 px, cells at x 158 + col x 152, y 56 + row x 112), built by `tools/art/bastion/shell.py` from the approved concept C
   (cab number hand-fixed to 42-B, dust cloud removed; the 3-deck body repeats the riveted top deck in code, no new gens).
+  Then `tools/art/bastion/cleanup.py` (MV-738 round 2, 0 gens): the roof rail runs on to the rear ladder, the tarp roll and
+  red crate cut by the old inpaint seam at x 499 get a real outline, backdrop pockets and stray pixels are cleared.
   It has no closed-hull atlas art: with world v2 off it falls back to the bus sprites. GOD → รถ → Bastion 42-B: drive it
   with 2 / 3 decks (`Dev.bastion_preview`), its interior (`Dev.bastion_interior`) + switch. Switch off = a Bastion save
   drives the Decker. Autotest: `--only=bastion`.

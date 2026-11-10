@@ -27,3 +27,6 @@ Related: [[vehicles-flat-2d]], [[road-train-approved-set]], [[ambulance-v3-ingam
   s4 picked, halo stripped) -> front/out/decker_{2,3}deck_1x.png are now the shell.py sources. cleanup.py strays() sweeps
   backdrop fringe / 1 px specks / detached bits, mesh backdrop -> dark glass; stray scan images in stray-check/. Front not yet
   copied into approved/ (await Parames OK).
+- 2026-11-10 Bastion round 2 (Parames: stray pixels, roof rail + roof items cut): seam of the two 512 inpaint windows at x 499.
+  tools/art/bastion/cleanup.py (0 gens) after shell.py: rail to rear ladder + 2 posts + bent end, tarp/crate outlined, pockets + strays.
+  Before/after: /mnt/project-files/designs/vehicle-2floor/bastion-cleanup/.

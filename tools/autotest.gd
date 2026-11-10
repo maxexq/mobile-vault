@@ -13593,6 +13593,19 @@ func _bastion_test() -> void:
 		shells_ok = shells_ok and panel.dk() and panel.amb_shell.visible and tex.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
 			and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
 		var img := tex.get_image()
+		# MV-738 round 2 (tools/art/bastion/cleanup.py): the roof rail runs unbroken from the front end post to the rear
+		# ladder (the old inpaint seam at x 499 cut it), and no PixelLab backdrop colour is left on the roof
+		var rail := true
+		var backdrop := 0
+		for x in range(160, 600):
+			rail = rail and img.get_pixel(x, 28).a > 0.5 and img.get_pixel(x, 29).a > 0.5
+			for y in 36:
+				if y >= 27 and y <= 31:
+					continue   # the rail tube's dark underside is close to the backdrop colour by design
+				var c := img.get_pixel(x, y)
+				if c.a > 0.5 and absf(c.r8 - 46) + absf(c.g8 - 44) + absf(c.b8 - 48) <= 6:
+					backdrop += 1
+		_fold("bastion: roof rail unbroken to the ladder, no backdrop pockets on the roof", rail and backdrop == 0, "%d decks, %d backdrop px" % [d, backdrop])
 		for slot in Game.main_slots():
 			var c := Game.slot_cell(slot)
 			var want := Vector2(-1, -1)
