@@ -4856,10 +4856,12 @@ func _features_test() -> void:
 	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers"]  # strangers: door screening paused (MV-719)
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
-	pin.erase("road_train")         # the run's MV-721 test pin is not what ships
+	for k in ["road_train", "gear_sets", "gear_frame64"]:
+		pin.erase(k)                # the run's MV-721 / MV-767 test pins are not what ships
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
-	pin["road_train"] = false
+	for k in ["road_train", "gear_sets", "gear_frame64"]:
+		pin[k] = false
 	_check("features: every switch on by default (except %s, off)" % ", ".join(ships_off), all_on)
 	_check("features: tune falls back to the code constant", Features.num("threat.rate_scale", Threat.RATE_SCALE) == Threat.RATE_SCALE)
 	var base: Array = Data.biome(0).events
