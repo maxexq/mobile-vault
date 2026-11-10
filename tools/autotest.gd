@@ -719,6 +719,11 @@ func _run() -> void:
 		await _vehicle_anim_test()
 		_finish()
 		return
+	if "--only=ambulance_mods" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _ambulance_mods_test()
+		_finish()
+		return
 	if "--only=ambulance_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _ambulance_v3_test()
@@ -1748,6 +1753,7 @@ func _run() -> void:
 
 
 	await _ambulance_v3_test()
+	await _ambulance_mods_test()
 	await _world_v2_test()
 	await _road_train_test()
 	await _decker_test()
@@ -13187,6 +13193,111 @@ func _ambulance_v3_test() -> void:
 	Game.s = old_state
 	Game.rooms_changed.emit()
 	get_window().size = old_window
+	await wait(0.3)
+
+
+## MV-763: the approved ambulance exterior mods (switch ambulance_mods) on the world v2 ambulance and in the v3 interior
+func _ambulance_mods_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var D := AmbulanceMods.DIR
+	# RULE (Parames): no part covers a wheel at any floor count (suspension + off-road tyres are the wheel parts)
+	var spot: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(D + "anim.json")).floors
+	for n in range(1, 6):
+		var f: Dictionary = spot[str(n)]
+		var r := float(f.wheel_r) + 1.0
+		for id in ShellMods.ids(D):
+			if id in ["suspension", "offroad_wheels"]:
+				continue
+			for lv in range(1, ShellMods.max_art(D, id) + 1):
+				if id == "fuel_tanks" and lv > int(AmbulanceMods.FUEL_FIT[n]) or not (ShellMods.meta(D)[id] as Dictionary).has(str(lv)):
+					continue                  # those tanks hang on the rear rack instead / the L3-only roof band
+				var file := ShellMods.file(D, id, lv, n)
+				var ok := ResourceLoader.exists(file)
+				if ok:
+					var img: Image = (load(file) as Texture2D).get_image()
+					img.decompress()
+					var p := ShellMods.pos(D, id, lv, n)
+					for w in f.wheels:
+						var c := Vector2(w[0], w[1]) - p
+						for y in range(maxi(0, int(c.y - r)), mini(img.get_height(), int(c.y + r) + 1)):
+							for x in range(maxi(0, int(c.x - r)), mini(img.get_width(), int(c.x + r) + 1)):
+								if img.get_pixel(x, y).a > 0.1 and Vector2(x + 0.5, y + 0.5).distance_to(c) <= r:
+									ok = false
+				_fold("ambulance mods: no part covers a tyre at any floor count", ok, "%s L%d f%d" % [id, lv, n])
+	_fold_flush()
+	# Parames: no missing pixels: no see-through pinhole inside a part, no lone floating pixel, in every mod layer
+	for fn in DirAccess.get_files_at(D + "mods"):
+		if not fn.ends_with(".png") or fn.contains("_spin"):
+			continue
+		var img: Image = (load(D + "mods/" + fn) as Texture2D).get_image()
+		img.decompress()
+		var bad := 0
+		for y in range(1, img.get_height() - 1):
+			for x in range(1, img.get_width() - 1):
+				var op := img.get_pixel(x, y).a > 0.1
+				var n4 := int(img.get_pixel(x - 1, y).a > 0.1) + int(img.get_pixel(x + 1, y).a > 0.1) \
+					+ int(img.get_pixel(x, y - 1).a > 0.1) + int(img.get_pixel(x, y + 1).a > 0.1)
+				var n8 := n4 + int(img.get_pixel(x - 1, y - 1).a > 0.1) + int(img.get_pixel(x + 1, y - 1).a > 0.1) \
+					+ int(img.get_pixel(x - 1, y + 1).a > 0.1) + int(img.get_pixel(x + 1, y + 1).a > 0.1)
+				if (not op and n4 == 4) or (op and n8 == 0):
+					bad += 1
+		_fold("ambulance mods: no pinholes or lone pixels in any mod layer", bad == 0, "%s (%d px)" % [fn, bad])
+	_fold_flush()
+	Dev.feature_set("vehicle_anim", true)             # the spinning off-road tyres need it (an earlier run may have left it off)
+	var gun := 0 if Combat.room_mode() else 1          # MV-727: no outside gun while the squad fights from the gunner room
+	var none := Dev.ambulance_mods(0, 1)
+	await wait(0.3)
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	var drawn := Dev.ambulance_mods(3, 1)
+	await wait(0.4)
+	var root := v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	# ram, armor, armor roof band, lead, suspension, 3 fuel tanks (+ gun); the off-road tyres spin as AmbulanceMotion sprites
+	_check("ambulance mods: none = bare ambulance, all max at 1 floor = %d parts (%d / %d)" % [6 + gun, none, drawn],
+		none == 0 and drawn == 6 + gun and root != null and root.visible and root.get_node_or_null("offroad_wheels") == null
+		and (root.get_node("fuel_tanks") as Sprite2D).texture.resource_path.ends_with("fuel_tanks_L3.png")
+		and root.get_node_or_null("fuel_rack") == null
+		and (root.get_node("rad_shield") as Sprite2D).texture.resource_path.ends_with("rad_shield_L2.png"))
+	var lift := AmbulanceMods.wheel_r(3) - AmbulanceMods.STOCK_R
+	var spin := AmbulanceMods.spin_frames(3)
+	_check("ambulance mods: off-road L3 tyres spin on the road, the body rides %.1f px higher, Dr. Ren hides behind the lead" % lift,
+		v.amb_on and spin.size() == 48 and not v.amb.tyres.is_empty() and v.amb.tyres[0].texture in spin
+		and is_equal_approx(v.amb.lift, lift) and is_equal_approx(v.v2_root.position.y, -lift * Vehicle.V2_K)
+		and (v.amb.driver == null or not v.amb.driver.visible))
+	await shot("ambulance_mods_f1_L3")
+	drawn = Dev.ambulance_mods(3, 3)
+	await wait(0.4)
+	root = v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("ambulance mods: 3 floors = 1 tank under the body, 2 on the rear rack; body parts drop 2 floors, the gun stays on the roof",
+		root != null and (root.get_node("fuel_tanks") as Sprite2D).texture.resource_path.ends_with("fuel_tanks_L1.png")
+		and (root.get_node("fuel_rack") as Sprite2D).texture.resource_path.ends_with("fuel_rack_L2.png")
+		and AmbulanceMods.pos("spike_ram", 3, 3).y - AmbulanceMods.pos("spike_ram", 3, 1).y == 224.0
+		and AmbulanceMods.pos("roof_turret", 3, 3) == AmbulanceMods.pos("roof_turret", 3, 1)
+		and (root.get_node("armor_plates") as Node2D).position == AmbulanceMods.pos("armor_plates", 3, 3))
+	await shot("ambulance_mods_f3_L3")
+	Dev.ambulance_mods(1, 2, true)
+	await wait(0.5)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var proot := panel.amb_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("ambulance mods: the v3 interior draws the parts too, with still off-road tyres (no wheel animation there)",
+		panel.is_open and proot != null and proot.visible and proot.get_node_or_null("offroad_wheels") != null
+		and proot.get_node_or_null("spike_ram") != null)
+	await shot("ambulance_mods_interior_f2_L1")
+	panel.close()
+	Dev.ambulance_mods(3, 2)
+	Features.set_override("features", "ambulance_mods", false)
+	Features.changed.emit()
+	Mods.mods_changed.emit()
+	await wait(0.3)
+	root = v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("ambulance mods: switch off = the bare ambulance on stock tyres at road height",
+		(root == null or (not root.visible and root.get_child_count() == 0)) and v.amb.lift == 0.0
+		and v.v2_root.position.y == 0.0 and (v.amb.driver == null or v.amb.driver.visible))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Mods.mods_changed.emit()
 	await wait(0.3)
 
 

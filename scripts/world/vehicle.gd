@@ -483,7 +483,7 @@ func _build_v2() -> void:
 	v2_shell.texture = load(v2_shell_path())
 	v2_shell.position = Vector2(V2_X, v2_top()) / V2_K
 	InteriorV3Panel.attach_nose(v2_shell, v2_rt() or v2_dk())   # MV-731 bumper tip + tow hook in front of the shell
-	DeckerMods.attach(v2_shell, floors, tier == "bus")         # MV-760 approved Decker exterior mods
+	_attach_shell_mods()                                       # MV-760 / MV-763 approved exterior mods on the shell
 	_build_v2_trailers()
 	for slot in Game.main_slots():
 		var c := RoomV3Cell.new()
@@ -499,9 +499,10 @@ func _build_v2() -> void:
 		v2_shell.texture = AmbulanceMotion.cut_shell(floors, amb_dir())
 		amb.wheel_lv = RoadTrainMods.wheel_level() if v2_rt() else 0
 		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K, amb_dir())
+		_attach_shell_mods()                                   # MV-763: off-road tyres spin on the road, no still layer
 		if v2_rt():
 			RoadTrainMods.rt_mods(amb, true)                       # MV-762 suspension + off-road tyres
-	if v2_rt():          # MV-762 approved road train exterior mods (ShellMods node shared with the Decker: only when it's ours)
+	if v2_rt():          # MV-762 approved road train exterior mods (after _attach_shell_mods: the ShellMods node is shared)
 		RoadTrainMods.attach_body(v2_shell, floors, true)
 	_build_rt_couplings()
 	_pups_on_top()
@@ -942,9 +943,27 @@ func _mod_sprite(region: String, pos: Vector2) -> Sprite2D:
 	return s
 
 
+## MV-760 / MV-763: one ShellMods layer per shell: the Decker's parts on the bus, the ambulance's on the ambulance shell.
+## The ambulance also gets its off-road tyres (AmbulanceMotion spins them, the body rides R - 22.5 px higher) and
+## Dr. Ren hides behind the L2 lead plate.
+func _attach_shell_mods() -> void:
+	if v2_shell == null:
+		return
+	if tier == "bus":
+		DeckerMods.attach(v2_shell, floors, v2)
+	else:
+		AmbulanceMods.attach(v2_shell, floors, v2 and not v2_rt() and not v2_dk(), amb_on)
+	var amb_body := v2 and amb_on and amb_dir() == AmbulanceMotion.DIR
+	var wl := AmbulanceMods.wheel_level() if amb_body else 0
+	amb.set_tyres(AmbulanceMods.spin_frames(wl), AmbulanceMods.wheel_r(wl))
+	if v2_root != null:
+		v2_root.position.y = -amb.lift * V2_K
+	amb.set_driver_hidden(amb_body and AmbulanceMods.driver_hidden())
+
+
 ## MV-762: redraw the road train's exterior parts, suspension and tyres after an upgrade or a switch change
 func _refresh_rt_mods() -> void:
-	if v2_rt():                  # the Decker's attach (just before) owns the shared ShellMods node on other vehicles
+	if v2_rt():                  # _attach_shell_mods (just before) owns the shared ShellMods node on other vehicles
 		RoadTrainMods.attach_body(v2_shell, floors, true)
 	for sp in v2_tshells:
 		RoadTrainMods.attach_trailer(sp, v2_trailer_floors(), v2_rt(), bool(sp.get_meta("rear", false)))
@@ -956,7 +975,7 @@ func _refresh_rt_mods() -> void:
 
 func _refresh_mods() -> void:
 	if v2 and v2_shell != null:
-		DeckerMods.attach(v2_shell, floors, tier == "bus")
+		_attach_shell_mods()
 		_refresh_rt_mods()
 	for ch in _mods_root.get_children():
 		_mods_root.remove_child(ch)

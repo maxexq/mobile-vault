@@ -5,6 +5,9 @@ extends RefCounted
 ##   {"_deck_h": 112, "_base_floors": 2, "<mod>": {"anchor": "body"|"roof", "<n>": [x, y], ...}, ...}
 ## [x, y] = top-left in the shell's pixels at _base_floors decks. "body" parts move down _deck_h per deck above
 ## _base_floors (shells that grow upward), "roof" parts stay put. A per-deck override "<n>@<floors>": [x, y] wins.
+## MV-763 optional extras: a third element names another file in mods/ for that entry ([x, y, "armor_plates_L2_f3"]: a
+## layer clipped clear of that deck count's wheels), and "z": n on a mod draws it n z-steps over the shell's other
+## overlays (the ambulance's roof gun over the animated plant pots).
 ## Parts are children of the shell sprite (node "ShellMods"), so they ride every hop and lurch. The caller decides which
 ## art level each mod shows (levels: {mod: n}, 0 = none) and whether the vehicle shows mods at all.
 
@@ -32,6 +35,19 @@ static func max_art(dir: String, id: String) -> int:
 		if str(k).is_valid_int():
 			n = maxi(n, int(k))
 	return n
+
+
+## the entry ([x, y] or [x, y, file]) a part uses at the given deck count
+static func _entry(dir: String, id: String, lv: int, floors: int) -> Array:
+	var m: Dictionary = meta(dir).get(id, {})
+	var over := "%d@%d" % [lv, floors]
+	return m[over] if m.has(over) else m.get(str(lv), [0, 0])
+
+
+## layer file of a part at the given deck count (MV-763: an entry may name its own clipped file)
+static func file(dir: String, id: String, lv: int, floors: int) -> String:
+	var e := _entry(dir, id, lv, floors)
+	return dir + "mods/" + (str(e[2]) if e.size() > 2 else "%s_L%d" % [id, lv]) + ".png"
 
 
 ## shell-pixel position of a part at the given deck count
@@ -66,13 +82,16 @@ static func attach(shell: Sprite2D, dir: String, floors: int, levels: Dictionary
 		return 0
 	for id in levels:
 		var lv := clampi(int(levels[id]), 0, max_art(dir, id))
-		var f := dir + "mods/%s_L%d.png" % [id, lv]
-		if lv <= 0 or not ResourceLoader.exists(f):
+		if lv <= 0:
+			continue
+		var f := file(dir, id, lv, floors)
+		if not ResourceLoader.exists(f):
 			continue
 		var sp := Sprite2D.new()
 		sp.name = id
 		sp.centered = false
 		sp.texture = load(f)
 		sp.position = pos(dir, id, lv, floors)
+		sp.z_index = int((meta(dir).get(id, {}) as Dictionary).get("z", 0))
 		root.add_child(sp)
 	return root.get_child_count()

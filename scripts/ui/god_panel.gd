@@ -393,6 +393,12 @@ func _tab_vehicle() -> void:
 		_b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)), _b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)),
 		_b("รถพยาบาล: " + ("เปิด" if Features.on("ambulance_v3") else "ปิด"), func(): Dev.feature_set("ambulance_v3", not Features.on("ambulance_v3")),
 		"green" if Features.on("ambulance_v3") else "red")], "รถพยาบาล v3")
+	_row([_b("ไม่มี", func(): Dev.ambulance_mods(0)), _b("L1", func(): Dev.ambulance_mods(1)), _b("L2", func(): Dev.ambulance_mods(2)),
+		_b("L3", func(): Dev.ambulance_mods(3), "green"), _b("L3 1 ชั้น", func(): Dev.ambulance_mods(3, 1)),
+		_b("L3 3 ชั้น", func(): Dev.ambulance_mods(3, 3)), _b("ดูภายใน", func(): Dev.ambulance_mods(maxi(1, Mods.level("spike_ram")), -1, true)),
+		_b("อัปเกรดรถพยาบาล: " + ("เปิด" if Features.on("ambulance_mods") else "ปิด"),
+		func(): Dev.feature_set("ambulance_mods", not Features.on("ambulance_mods")), "green" if Features.on("ambulance_mods") else "red")],
+		"อัปเกรดภายนอกรถพยาบาล")
 	_row([_b("พ่วง pup 1 คัน", func(): Dev.ambulance_pup_preview(1)),
 		_b("ดูภายใน", func(): Dev.ambulance_pup_preview(maxi(Game.trailers(), 1), true)),
 		_b("พ่วง pup: " + ("เปิด" if Features.on("ambulance_pup") else "ปิด"), func(): Dev.feature_set("ambulance_pup", not Features.on("ambulance_pup")),

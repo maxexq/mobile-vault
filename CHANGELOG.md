@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Dr. Ren's ambulance shows its upgrades: spiked ram, a gun on the roof, armour plates, lead plates on the cab, heavy suspension, spare fuel tanks (extra ones on a rack on the rear wall) and bigger off-road tyres that lift the body, each changing look with its level (MV-763)
 - The road train shows its upgrades: spiked ram, cab armour and side-rail plates, spare fuel tanks under the trailer beam, solar shutters, lead on the cab, a heater flue, a rear-facing turret on the trailer roof, heavy suspension behind the wheels and chunky off-road tyres, each changing look with its level (MV-762)
 - The Decker bus shows its upgrades: spiked ram, spare fuel tanks, side armour, a gun on the rear wall, lead plates over the front of both decks, a heater flue and solar panels on the roof, each changing look with its level (MV-760)
 - The grow room's centre window now looks outside: sky, skyline and hills of the biome you are driving through slide past, and the sky follows the time of day. The kitchen no longer shows a second, painted cook at the stove, and the rest room comes alive with a flickering stove, candle, lamp glow, a steaming kettle and a TV that is on at L3 (MV-757)
