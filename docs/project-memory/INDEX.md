@@ -167,3 +167,4 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [road-train-fix-anim](road-train-fix-anim.md): MV-740 road train shell cleanup (pinholes, cab glass, rear cage, room frames) + tyres, landing legs, lamps, code air lines between units; rerun shell.py -> tools/art/road_train/cleanup.py -> anim.py
 - [ambulance-fix](ambulance-fix.md): MV-741 Dr. Ren ambulance clean-up (code only): cab holes refilled, strays removed, room windows framed (tools/art/ambulance/cleanup.py)
 - [landmarks-v2](landmarks-v2.md): RULE MV-750 lm_* sites at 2x density, never frame-cut, door per site; all 13 APPROVED (designs/landmarks-v2/approved/), in game behind landmarks_v2
+- [ui-redesign-v5](ui-redesign-v5.md): MV-768 UI v5 option A picked; P1 (dock, 2-row HUD, bottom sheets, room pager) behind switch ui_v5

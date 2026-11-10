@@ -35,6 +35,13 @@ var _fit_tw: Tween
 var _fit_queued := false
 var _opened_ms := 0
 var _layout_vp := Vector2.ZERO
+## MV-768 UI v5 (switch ui_v5): the HUD's dock windows open as a bottom sheet: full width, standing on the dock (which
+## stays tappable: this control stops sheet_bottom px above the screen's bottom), as tall as the content needs but
+## never over the top sheet_top px, so the top bar and part of the road view stay in sight. The HUD sets both in its
+## layout; sheet_bottom = 0 means no sheets (switch off, landscape) and every window is centred as before.
+static var sheet_bottom := 0.0
+static var sheet_top := 0.0
+var sheet := false
 
 
 func _ready() -> void:
@@ -93,19 +100,31 @@ func _on_backdrop_tap() -> void:
 	close()
 
 
-func _layout() -> void:
+## true while this window shows as a bottom sheet (MV-768)
+func is_sheet() -> bool:
+	return sheet and sheet_bottom > 0.0
+
+
+## the screen area the window lives in: the whole screen, or above the dock for a sheet
+func _area() -> Vector2:
 	var vp := get_viewport_rect().size
+	return Vector2(vp.x, vp.y - sheet_bottom) if is_sheet() else vp
+
+
+func _layout() -> void:
+	offset_bottom = -sheet_bottom if is_sheet() else 0.0
+	var vp := _area()
 	# MV-537: a panel that re-lays itself out while open (new tab, new content) keeps its top edge too, or the
 	# window would jump between re-centred and kept-top under the finger; a new screen size still re-centres
 	var keep := Features.on("window_still") and is_open and vp == _layout_vp and Time.get_ticks_msec() - _opened_ms >= 250
 	_layout_vp = vp
 	var top := box.position.y
-	var sz := Vector2(minf(max_size.x, vp.x - margin * 2), max_height()).floor()
+	var sz := Vector2(minf(max_size.x, vp.x - (0.0 if is_sheet() else margin * 2.0)), max_height()).floor()
 	if fit_height:
 		sz.y = fit_target()
 	if _fit_tw:
 		_fit_tw.kill()
-	if keep and centered and fit_height:
+	if keep and centered and fit_height and not is_sheet():
 		# the rows the panel just replaced are still in the tree this frame and would measure it too tall (pushing
 		# the window up for good): set the width now, the height next frame
 		box.custom_minimum_size.x = sz.x
@@ -121,6 +140,8 @@ func _layout() -> void:
 
 ## the tallest the window may be on this screen
 func max_height() -> float:
+	if is_sheet():
+		return floorf(minf(max_size.y, _area().y - sheet_top))
 	return floorf(minf(max_size.y, get_viewport_rect().size.y - margin * 2))
 
 
@@ -204,7 +225,7 @@ func _set_h(h: float, keep_top: bool = false) -> void:
 	var top := box.position.y
 	box.custom_minimum_size.y = floorf(h)
 	box.size.y = floorf(h)
-	if keep_top and centered:
+	if keep_top and centered and not is_sheet():
 		var vp := get_viewport_rect().size
 		box.position = Vector2(floorf((vp.x - box.size.x) * 0.5), top)
 		box.position = box.position.clamp(Vector2.ZERO, (vp - box.size).max(Vector2.ZERO)).floor()
@@ -218,7 +239,10 @@ func _set_h(h: float, keep_top: bool = false) -> void:
 func _recenter() -> void:
 	if box == null:
 		return
-	var vp := get_viewport_rect().size
+	var vp := _area()
+	if is_sheet():
+		box.position = Vector2(floorf((vp.x - box.size.x) * 0.5), vp.y - box.size.y)
+		return
 	if centered:
 		box.position = ((vp - box.size) * 0.5).floor()
 	box.position = box.position.clamp(Vector2.ZERO, (vp - box.size).max(Vector2.ZERO)).floor()

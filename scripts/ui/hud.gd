@@ -13,6 +13,14 @@ signal layout_changed
 ## MV-247: raw food chips, shown after food while the raw_food switch is on
 const RAW_RES := [["crops", "seed", Color("a6d16a")], ["meat", "meat", Color("e08a7a")]]
 const RES := [["power", "power", Color("ffdc8e")], ["water", "water", Color("8cfff6")], ["food", "food", Color("f0644a")], ["fuel", "fuel", Color("ff9a1a")], ["scrap", "scrap", Color("cad8d0")]]
+## MV-768 UI v5 (switch ui_v5, portrait): the dock under the screen: big v2 icons + Thai captions, Log moves to
+## a button on the view bar. [caption, icon, panel key]
+const DOCK := [["สร้าง", "hammer", "build"], ["ลูกเรือ", "people", "dwellers"], ["ทีมยิง", "sword", "squad"],
+	["รถ", "engine", "garage"], ["ของ", "chest", "inventory"], ["แผนที่", "map", "map"]]
+const DOCK_H := 52.0
+## a sheet leaves this much of the screen under the top bar in sight (the road view)
+const SHEET_GAP := 64.0
+const SHEET_KEYS := ["build", "dwellers", "squad", "garage", "inventory", "map", "log", "engine", "solar", "skills"]
 const TOOLS := [["Build", "hammer", "build", "yellow"], ["Squad", "sword", "squad", "red"], ["Map", "map", "map", "green"],
 	["Crew", "people", "dwellers", "green"], ["Loot", "chest", "inventory", "green"], ["Mods", "wrench", "garage", "blue"], ["Log", "book", "log", "blue"]]
 
@@ -51,6 +59,18 @@ var _bottom: VBoxContainer
 var _travel: PanelContainer
 var _tools: BoxContainer
 var _tool_buttons := {}
+var _dock: HBoxContainer          # MV-768 ui_v5 dock (portrait)
+var _dock_buttons := {}
+var _dock_style_off: StyleBoxFlat
+var _dock_style_on: StyleBoxFlat
+var _log_btn: Button              # MV-768: Log on the view bar while the dock is up
+var pager: RoomPager              # MV-768: v3 room pages under the road view
+var _v5 := false                  # the v5 layout is in use (switch on + portrait)
+var _hud_shown := false
+var _vault_chip: PanelContainer
+var _pop_chip: PanelContainer
+var _weather_chip: PanelContainer
+var _status_chip: PanelContainer
 var _combat_box: PanelContainer
 var _portrait := true
 var _closeup_on := false
@@ -113,12 +133,20 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build_top()
 	_build_bottom()
+	_build_dock()
 	_build_combat_chip()
 	boss_bar = BossBar.new()
 	add_child(boss_bar)
 	boss_intro = BossIntro.new()
 	add_child(boss_intro)
 	_view_box = UIKit.hbox(2)
+	_log_btn = UIKit.button("", "gray", "book")
+	_log_btn.name = "LogButtonV5"
+	_log_btn.custom_minimum_size = Vector2(26, 22)
+	_log_btn.tooltip_text = Loc.t("บันทึกกิจกรรม")
+	_log_btn.pressed.connect(func(): open_panel("log"))
+	_log_btn.visible = false
+	_view_box.add_child(_log_btn)
 	_xray_btn = UIKit.button("", "gray", "eye")
 	_xray_btn.custom_minimum_size = Vector2(26, 22)
 	_xray_btn.tooltip_text = Loc.t("สลับมุมมอง ผ่าซีก (X-RAY) / เปลือกนอก")
@@ -199,6 +227,16 @@ func _ready() -> void:
 		add_child(p)
 		panels[k] = p
 	(panels.interior as InteriorV3Panel).room_requested.connect(func(s): closeup_requested.emit(s))
+	for k in SHEET_KEYS:
+		if panels.has(k):
+			(panels[k] as ModalPanel).sheet = true
+			(panels[k] as ModalPanel).closed.connect(_sync_dock)
+	pager = RoomPager.new()
+	pager.visible = false
+	add_child(pager)
+	move_child(pager, _bottom.get_index())
+	pager.room_requested.connect(func(s): closeup_requested.emit(s))
+	Features.changed.connect(func(): _apply_layout.call_deferred())
 	_sync_interior_btn()
 	(panels.build as BuildPanel).placement_requested.connect(func(t): build_placement_requested.emit(t))
 	event_popup = EventPopup.new()
@@ -293,8 +331,10 @@ func _show_offline_summary(report: Dictionary) -> void:
 
 
 func _set_hud_visible(v: bool) -> void:
+	_hud_shown = v
 	for c in [_top, _bottom, _combat_box, _tools, _view_box]:
 		c.visible = v
+	_sync_v5()
 	if v:
 		_refresh_res()
 		_refresh_travel()
@@ -352,6 +392,7 @@ func _build_top() -> void:
 	var vb := _chip_box(UIKit.C_LINE_DIM)
 	lvl_lbl = UIKit.label("VAULT 1", UIKit.FP, UIKit.C_GOLD, true)
 	vb.add_child(lvl_lbl)
+	_vault_chip = vb
 	vb.mouse_filter = Control.MOUSE_FILTER_STOP
 	vb.gui_input.connect(func(e: InputEvent):
 		if (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT) or (e is InputEventScreenTouch and e.pressed):
@@ -370,6 +411,7 @@ func _build_top() -> void:
 	happy_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	ph.add_child(happy_lbl)
 	pc.add_child(ph)
+	_pop_chip = pc
 	_info_row.add_child(pc)
 	# weather (tap -> solar system)
 	var wb := _chip_box()
@@ -385,12 +427,14 @@ func _build_top() -> void:
 	weather_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wh.add_child(weather_lbl)
 	wb.add_child(wh)
+	_weather_chip = wb
 	wb.gui_input.connect(func(e: InputEvent):
 		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 			open_panel("solar"))
 	_info_row.add_child(wb)
 	# status
 	var sb := _chip_box()
+	_status_chip = sb
 	status_lbl = UIKit.label("DRIVING", UIKit.FP, UIKit.C_ORANGE, true)
 	sb.add_child(status_lbl)
 	# MV-542: phones have no tooltips: a tap on STOPPED says why
@@ -513,6 +557,113 @@ func _build_bottom() -> void:
 	(_tool_buttons.log as Button).add_child(_log_badge)
 
 
+## MV-768 UI v5: the dock (portrait, switch ui_v5): one flat steel socket per window, the open one lit amber
+func _build_dock() -> void:
+	_dock = UIKit.hbox(0)
+	_dock.name = "DockV5"
+	_dock.visible = false
+	add_child(_dock)
+	_dock_style_off = UIKit.card_style(Color(0.05, 0.047, 0.043, 0.98), UIKit.C_LINE_DARK, 0)
+	_dock_style_on = UIKit.card_style(Color(0.16, 0.12, 0.07, 0.98), UIKit.C_GOLD, 0)
+	_dock_style_on.border_width_left = 0
+	_dock_style_on.border_width_right = 0
+	_dock_style_on.border_width_bottom = 0
+	_dock_style_on.border_width_top = 2
+	for t in DOCK:
+		var key: String = t[2]
+		var b := Button.new()
+		b.name = "Dock_" + key
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(40, DOCK_H)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var v := VBoxContainer.new()
+		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_theme_constant_override("separation", 1)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ic := UIKit.icon_rect(t[1], 32)
+		ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(ic)
+		var l := UIKit.label(Loc.t(t[0]), UIKit.FS_SMALL, UIKit.C_DIM)
+		l.name = "Caption"
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(l)
+		b.add_child(v)
+		b.pressed.connect(func(): _on_dock(key))
+		_dock.add_child(b)
+		_dock_buttons[key] = b
+	_sync_dock()
+
+
+## a dock button toggles its window (another open window closes, as with the old tool buttons)
+func _on_dock(key: String) -> void:
+	UIKit.pop(_dock_buttons[key])
+	if panels.has(key) and panels[key].is_open:
+		panels[key].close()
+	else:
+		open_panel(key)
+	_sync_dock()
+
+
+func _sync_dock() -> void:
+	if _dock == null:
+		return
+	for key in _dock_buttons:
+		var on: bool = panels.has(key) and panels[key].is_open
+		var b: Button = _dock_buttons[key]
+		for st in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			b.add_theme_stylebox_override(st, _dock_style_on if on else _dock_style_off)
+		b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		var cap := b.find_child("Caption", true, false) as Label
+		if cap:
+			cap.add_theme_color_override("font_color", UIKit.C_GOLD if on else UIKit.C_DIM)
+
+
+## the tool button for a window: the dock's while the v5 dock is up, else the old one (tutorial pointer)
+func tool_button(key: String) -> Control:
+	if _v5 and _dock_buttons.has(key):
+		return _dock_buttons[key]
+	return _tool_buttons.get(key)
+
+
+## the v5 rows are only used in portrait with the switch on
+func v5_active() -> bool:
+	return _v5
+
+
+## MV-768: show the v5 or the classic set of bars, and move the status chips between the old info row and the
+## v5 rows (resource row gets crew / mood, route row gets vault / weather / status)
+func _sync_v5() -> void:
+	if _top == null or _dock == null or pager == null or _log_btn == null:
+		return
+	var vp := size if size.x > 0 else get_viewport_rect().size
+	var v5 := Features.on("ui_v5") and vp.y >= vp.x
+	if v5 != _v5:
+		_v5 = v5
+		var moves := [[_pop_chip, _res_row], [_vault_chip, _route_row], [_weather_chip, _route_row], [_status_chip, _route_row]] if v5 \
+			else [[_vault_chip, _info_row], [_pop_chip, _info_row], [_weather_chip, _info_row], [_status_chip, _info_row]]
+		for m in moves:
+			var c: Control = m[0]
+			c.get_parent().remove_child(c)
+			(m[1] as Control).add_child(c)
+		if v5:
+			_route_row.move_child(_vault_chip, 0)
+		_weather_chip.size_flags_horizontal = Control.SIZE_SHRINK_END if v5 else Control.SIZE_EXPAND_FILL
+		weather_lbl.visible = not v5
+		_pop_chip.size_flags_horizontal = Control.SIZE_SHRINK_END
+	var bars := _hud_shown and not _closeup_on
+	_info_row.visible = not v5 and not _closeup_on
+	_tools.visible = bars and not v5
+	_dock.visible = bars and v5
+	_log_btn.visible = v5
+	if _log_badge != null:
+		UIKit.style_button(_log_btn, "yellow" if _log_badge.visible else "gray")
+	pager.visible = bars and v5 and Features.on("rooms_v3") and V3Art.ok()
+	ModalPanel.sheet_bottom = DOCK_H if v5 and _hud_shown else 0.0
+
+
 func _build_combat_chip() -> void:
 	_combat_box = _chip_box(Color("9c2426"))
 	_combat_box.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -569,6 +720,7 @@ func _apply_layout() -> void:
 		return
 	var vp := size
 	_portrait = vp.y >= vp.x
+	_sync_v5()
 	if _portrait:
 		_top.position = Vector2(M, M)
 		_top.size = Vector2(vp.x - M * 2, 0)
@@ -587,6 +739,15 @@ func _apply_layout() -> void:
 		_view_box.position = Vector2(M, _top.position.y + _top.size.y + 2)
 		boss_bar.position = Vector2(M, _top.position.y + _top.size.y + 28)
 		boss_bar.size = Vector2(vp.x - M * 2, 32)
+		if _v5:
+			# MV-768: dock at the very bottom, travel bar on it, the room pages above that, the road view in between
+			_dock.position = Vector2(0, vp.y - DOCK_H)
+			_dock.size = Vector2(vp.x, DOCK_H)
+			_bottom.position = Vector2(M, _dock.position.y - _bottom.size.y - 2)
+			var py := _bottom.position.y - (RoomPager.H if pager.visible else 0.0)
+			pager.position = Vector2(0, py - 2)
+			pager.size = Vector2(vp.x, RoomPager.H)
+			ModalPanel.sheet_top = _top.position.y + _top.size.y + SHEET_GAP
 	else:
 		_top.position = Vector2(M, M)
 		_top.custom_minimum_size.x = vp.x - 52 - M * 2
@@ -604,6 +765,10 @@ func _apply_layout() -> void:
 		_view_box.position = Vector2(M, _top.position.y + _top.size.y + 2)
 		boss_bar.position = Vector2(M + 60, _top.position.y + _top.size.y + 2)
 		boss_bar.size = Vector2(vp.x - 52 - M * 2 - 160, 32)
+	# MV-768: open dock windows follow a switch / rotation between bottom sheet and centred window
+	for k in SHEET_KEYS:
+		if panels.has(k) and panels[k].is_open and ((panels[k] as ModalPanel).is_sheet() or panels[k].offset_bottom != 0.0):
+			(panels[k] as ModalPanel)._layout()
 	hull_alert.place(M, _bottom.position.y, (vp.x - M * 2) if _portrait else minf(360.0, vp.x - 52 - M * 2))
 	# below the boss bar and the toasts that stack under it, in the open sky
 	boss_intro.band_y = roundf(maxf(boss_bar.position.y + BossBar.H + 14.0, vp.y * 0.36))
@@ -631,6 +796,8 @@ func world_rect() -> Rect2:
 	if vp.y >= vp.x:
 		var top := _combat_box.position.y + _combat_box.size.y + 2
 		var bottom := _bottom.position.y - 2
+		if _v5 and pager.visible:
+			bottom = pager.position.y - 2
 		return Rect2(0, top, vp.x, bottom - top)
 	return Rect2(0, 0, vp.x - 52, vp.y - 2)
 
@@ -871,6 +1038,8 @@ func _refresh_log_badge() -> void:
 		return
 	var seen := int(Game.s.get("lore_seen", 0))
 	_log_badge.visible = Lore.count_open() > seen
+	if _log_btn != null and _log_btn.visible:
+		UIKit.style_button(_log_btn, "yellow" if _log_badge.visible else "gray")
 
 
 # ------------------------------------------------------------------ toasts & panels
@@ -971,6 +1140,7 @@ func set_closeup_mode(on: bool) -> void:
 		c.visible = not on
 	_top.reset_size()
 	_closeup_on = on
+	_sync_v5()
 	_place_toasts()
 
 
@@ -1026,6 +1196,7 @@ func open_panel(key: String) -> void:
 		if k != key and panels[k].is_open:
 			panels[k].close()
 	panels[key].open()
+	_sync_dock()
 	if key == "log":
 		Game.s["lore_seen"] = Lore.count_open()
 		_refresh_log_badge()
