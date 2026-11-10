@@ -6,8 +6,8 @@ extends Node2D
 
 const SPOTS := [12.0, 18.0]      # at the engine block; the gauges at the back wall are added per size
 ## MV-388 phase 2, cab-local, matching tools/art/engine_bay.py BLOCK: engine block [x, y, w, h] and hose anchor
-const BLOCK := {"van": [9, 35, 14, 13], "bus": [9, 22, 17, 14], "rig": [8, 18, 16, 13], "train": [7, 36, 22, 20]}
-const HOSE := {"van": Vector2(24, 35), "bus": Vector2(27, 22), "rig": Vector2(25, 18), "train": Vector2(30, 36)}
+const BLOCK := {"van": [9, 35, 14, 13], "bus": [9, 22, 17, 14], "bastion": [9, 22, 17, 14], "rig": [8, 18, 16, 13], "train": [7, 36, 22, 20]}
+const HOSE := {"van": Vector2(24, 35), "bus": Vector2(27, 22), "bastion": Vector2(27, 22), "rig": Vector2(25, 18), "train": Vector2(30, 36)}
 const FAN_FPS := 4.0             # running; parked idle turns at half (tune vehicle.fan_fps)
 const VENT_GAP := 2.25           # s between hot-vent wisps on average (random 0.67x..1.33x, tune vehicle.vent_gap)
 
@@ -30,7 +30,7 @@ var _vent_t := 0.0
 
 func setup(t: String) -> void:
 	tier = t
-	var r: Array = Data.VEHICLES.get(t, Data.VEHICLES.van).get("cab", [2, 204, 31, 58])
+	var r: Array = Game.vehicle_def_for(t).get("cab", [2, 204, 31, 58])     # MV-738: bastion = the bus cab
 	position = Vector2(float(r[0]), float(r[1]))
 	size = Vector2(float(r[2]), float(r[3]))
 	interior = Sprite2D.new()

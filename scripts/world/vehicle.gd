@@ -11,12 +11,12 @@ const COLS := [44, 118, 184]
 const TRAILER_COLS := [22, 88, 154]
 const ROOM_SIZE := Vector2(64, 52)
 const FLOOR_H := 56
-const WALL_DRUMS := ["rig", "bus"]   # tiers whose spare fuel drums stack on the front (others: on the roof)
+const WALL_DRUMS := ["rig", "bus", "bastion"]   # tiers whose spare fuel drums stack on the front (others: on the roof)
 const SHELL_H := 300              # height of a 4-floor (or smaller) shell; taller shells sit above it
 const ROW0 := 210                 # y of the bottom floor's rooms
 const MAIN_W := 280.0
 const TRAILER_W := 248.0
-const TRACKS_X := {"van": 200, "bus": 200, "rig": 202}
+const TRACKS_X := {"van": 200, "bus": 200, "bastion": 200, "rig": 202}
 const SOLAR_X := [79, 105]
 const TITLE_CRUISE := 0.35         # title-screen backdrop speed (matches the road scroll in background.gd)
 ## body rumble + road bumps strength x (tune fx.engine_shake; 1.0 = before MV-176, players felt dizzy at full)
@@ -50,7 +50,7 @@ const ROOF_LEGACY_X := 38
 ## MV-519 driving cabs: Viktor is baked into every veh_/ext_ shell (decal_<tier>_driver_cockpit at these anchors);
 ## switch driver_cab now and then shows one of its idle frames over the window: 1 = he blinks, 2 = the dash
 ## indicator goes dark, 3 = his hand nudges the wheel. Frame 0 is the baked look, so between moves nothing is drawn.
-const DRIVER_CAB := {"van": Vector2(11, 153), "bus": Vector2(18, 195), "rig": Vector2(17, 193), "train": Vector2(18, 66)}
+const DRIVER_CAB := {"van": Vector2(11, 153), "bus": Vector2(18, 195), "bastion": Vector2(18, 195), "rig": Vector2(17, 193), "train": Vector2(18, 66)}
 const DRIVER_GAP := 4.0                   # s between moves on average (tune vehicle.driver_gap)
 const DRIVER_ACTS := {"blink": [[1, 0.14]], "lamp": [[2, 0.2], [0, 0.16], [2, 0.2]], "wheel": [[3, 0.45]]}
 ## MV-715 world v2 phase 1 (switch world_v2): the van is Dr. Ren's ambulance with the v3 rooms + crew, drawn at
@@ -143,6 +143,8 @@ func roof_dy() -> float:
 	if v2_rt():
 		return v2_top() + 48.0 - ROOF_Y      # the road train's roof slab is 97 shell px under the shell top
 	if v2_dk():
+		if tier == "bastion":
+			return v2_top() + 18.0 - ROOF_Y  # MV-738: the Bastion box top is 36 shell px under the shell top
 		return v2_top() + 20.0 - ROOF_Y      # MV-736: the bus roof rail sits 40 shell px under the shell top
 	if v2:
 		return v2_top() + 40.0 - ROOF_Y      # the ambulance roof deck is 80 shell px above the top floor's cells
@@ -155,9 +157,9 @@ static func v2_wanted() -> bool:
 		return false
 	if Game.tier() == "rig" and Features.on("road_train"):
 		return Game.floors() <= 3 and ResourceLoader.exists(InteriorV3Panel.RT_DIR + "body_f%d.png" % Game.floors())
-	if Game.tier() == "bus" and Game.decker_on():
+	if Game.dk_tier():
 		return Game.floors() >= 2 and Game.floors() <= 3 \
-			and ResourceLoader.exists(InteriorV3Panel.DK_DIR + "shell_f%d.png" % Game.floors())
+			and ResourceLoader.exists(str(InteriorV3Panel.shell_spec(Game.tier()).dir) + "shell_f%d.png" % Game.floors())
 	return Game.tier() == "van" and Game.floors() <= 5 \
 		and ResourceLoader.exists(InteriorV3Panel.AMB_DIR + "shell_f%d.png" % Game.floors())
 
@@ -167,9 +169,9 @@ func v2_rt() -> bool:
 	return v2 and tier == "rig"
 
 
-## MV-736: is the world v2 body the Decker bus?
+## MV-736/738: is the world v2 body the Decker bus or Bastion 42-B (both 640 shell px)?
 func v2_dk() -> bool:
-	return v2 and tier == "bus"
+	return v2 and (tier == "bus" or tier == "bastion")
 
 
 ## the world v2 body's shell texture for the current floors
@@ -416,6 +418,9 @@ func rebuild() -> void:
 		if v2_dk():               # MV-736: rear engine: exhaust over the rear grille, headlight at the flat front
 			smoke.position = v2_cell_pos(2, 0) + Vector2(91, 77)   # MV-739: the tail pipe under the rear bumper
 			headlight.position = v2_cell_pos(0, 0) + Vector2(-45, 51)
+			if tier == "bastion":     # MV-738: front engine: snorkel top over the nose, headlight on the hood front
+				smoke.position = v2_cell_pos(0, 0) + Vector2(-36, -25)
+				headlight.position = v2_cell_pos(0, 0) + Vector2(-72, 41)
 	tracks.position = Vector2(TRACKS_X.get(tier, 202), 284)
 	var rear := length()
 	dusts[0].position = Vector2(rear - 60, 298)
@@ -567,6 +572,8 @@ func _pups_on_top() -> void:
 
 ## MV-726: the ambulance's own wheels / suspension / lights / flag (switch vehicle_anim; anchors from anim.json)
 func amb_wanted() -> bool:
+	if v2_dk() and tier == "bastion":
+		return false              # MV-738: no wheel / suspension anchors for Bastion 42-B yet (static shell)
 	if v2_dk():                   # MV-739: the Decker bus gets the same wheels / suspension / lights + its sign
 		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.DK_DIR)
 	return v2 and tier == "van" and Features.on("vehicle_anim") and AmbulanceMotion.ok(floors)   # the road train (MV-721) has its own shells
@@ -579,6 +586,8 @@ func amb_dir() -> String:
 
 ## atlas region of a main shell ("veh" / "ext") of this tier with n floors: its own shell, or the grown one
 static func shell_region(kind: String, t: String, n: int) -> String:
+	if t == "bastion":
+		t = "bus"         # MV-738: no closed-hull atlas art of its own (world v2 draws its shell); fall back to the bus
 	var grown := "%sf%d_%s" % [kind, n, t]
 	return grown if n != int(Data.VEHICLES.get(t, Data.VEHICLES.rig).floors) and Atlas.has(grown) else "%s_%s" % [kind, t]
 
@@ -959,7 +968,7 @@ func _sync_roof() -> void:
 		_roof_parts.remove_child(ch)
 		ch.queue_free()
 	if not Features.on("cozy_roof"):
-		_add_sprite(_roof_parts, "roof_legacy_" + tier, Vector2(ROOF_LEGACY_X, 0))
+		_add_sprite(_roof_parts, "roof_legacy_" + ("bus" if tier == "bastion" else tier), Vector2(ROOF_LEGACY_X, 0))
 		return
 	for region in ROOF_PARTS:
 		for pos in ROOF_PARTS[region]:

@@ -1276,6 +1276,31 @@ func decker_interior() -> bool:
 	return rooms_v3_open()
 
 
+## MV-738: switch bastion on and drive Bastion 42-B with n decks (2 or 3); on_road = world v2 too. Returns the decks.
+func bastion_preview(n: int, on_road := true) -> int:
+	feature_set("road_train", true)
+	feature_set("decker", true)
+	feature_set("bastion", true)
+	if on_road:
+		feature_set("world_v2", true)
+	set_tier("bastion")
+	Features.set_override("features", "five_floors", true)
+	for lv in range(1, Data.MAX_VAULT_LEVEL + 1):
+		if Game.floors_at(lv) >= clampi(n, 2, 3) or lv == Data.MAX_VAULT_LEVEL:
+			Game.s.vault_level = lv
+			break
+	Game.fit_body()
+	act("bastion preview", {"floors": Game.floors()})
+	_vehicle_changed()
+	return Game.floors()
+
+
+## MV-738: Bastion 42-B (its decks now, else 2) in the v3 interior
+func bastion_interior() -> bool:
+	bastion_preview(Game.floors() if Game.tier() == "bastion" else 2, false)
+	return rooms_v3_open()
+
+
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
 ## the v3 interior opens; returns how many rooms have v3 art now
 func rooms_v3_showcase(lv: int) -> int:

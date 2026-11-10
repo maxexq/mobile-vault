@@ -536,6 +536,10 @@ func beds_short_text(left: int) -> String:
 # ------------------------------------------------------------------ vehicle tier / layout
 func tier() -> String:
 	var t := str(s.get("tier", "van")) if not s.is_empty() else "rig"
+	if t == "bastion":
+		if bastion_on():
+			return t      # MV-738: Bastion 42-B
+		t = "bus"         # switch off: the save drives the Decker (or the road train)
 	if Features.on("road_train") and t == "bus" and decker_on():
 		return "bus"      # MV-736: the bus slot is the Decker
 	if Features.on("road_train") and (t == "bus" or t == "train"):
@@ -550,6 +554,8 @@ func vehicle_def() -> Dictionary:
 ## MV-721: the vehicle ladder in play (switch road_train: ambulance + road train only)
 func tier_order() -> Array:
 	if Features.on("road_train"):
+		if bastion_on():
+			return Data.TIER_ORDER_4
 		return Data.TIER_ORDER_3 if decker_on() else Data.TIER_ORDER_2
 	return Data.TIER_ORDER
 
@@ -557,6 +563,18 @@ func tier_order() -> Array:
 ## MV-736: the Decker double-decker bus is in play (switch decker, only with road_train)
 func decker_on() -> bool:
 	return Features.on("decker") and Features.on("road_train")
+
+
+## MV-738: Bastion 42-B is in play (switch bastion, only with the Decker): the other pick of the bus research
+func bastion_on() -> bool:
+	return Features.on("bastion") and decker_on()
+
+
+## MV-736/738: is this tier (default: the current one) a 2-3 deck Decker-type body (Decker bus or Bastion 42-B)?
+func dk_tier(t := "") -> bool:
+	if t == "":
+		t = tier()
+	return (t == "bus" and decker_on()) or (t == "bastion" and bastion_on())
 
 
 func vehicle_def_for(t: String) -> Dictionary:
@@ -568,6 +586,8 @@ func vehicle_def_for(t: String) -> Dictionary:
 			return d.merged(Data.VAN_AMBULANCE, true)
 		if t == "bus" and decker_on():
 			return d.merged(Data.DECKER, true)
+		if t == "bastion" and bastion_on():
+			return (Data.VEHICLES.bus as Dictionary).merged(Data.BASTION, true)
 	return d
 
 
@@ -605,8 +625,8 @@ func floors_at(lv: int) -> int:
 		if lv >= int(Features.num("vault.floor_gain_1", float(Data.FLOOR_GAIN_LEVELS[0]))):
 			d += 1
 		return mini(d, Data.RT_DECKS[1])
-	if decker_on() and tier() == "bus":
-		# MV-736: the Decker starts with 2 decks, the scrap 3rd deck at the first floor-gain Vault level, never taller
+	if dk_tier():
+		# MV-736/738: the Decker starts with 2 decks, the scrap 3rd deck at the first floor-gain Vault level, never taller
 		var k := int(Data.DK_DECKS[0])
 		if lv >= int(Features.num("vault.floor_gain_1", float(Data.FLOOR_GAIN_LEVELS[0]))):
 			k += 1
@@ -638,7 +658,7 @@ func fit_body(keep_used := false) -> bool:
 		if Features.on("road_train") and tier() == "rig":
 			# MV-721: the road train is never taller than its 3 decks; rooms above move down or refund (_rehome_room)
 			new_main = mini(old, Data.ROOMS_PER_FLOOR * int(Data.RT_DECKS[1]))
-		elif decker_on() and tier() == "bus":
+		elif dk_tier():
 			new_main = mini(old, Data.ROOMS_PER_FLOOR * int(Data.DK_DECKS[1]))     # MV-736: the Decker tops out at 3 decks
 	s.body_slots = new_main
 	if old == new_main or s.rooms.size() < old:

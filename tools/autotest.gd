@@ -684,6 +684,11 @@ func _run() -> void:
 		await _world_v2_test()
 		_finish()
 		return
+	if "--only=bastion" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _bastion_test()
+		_finish()
+		return
 	if "--only=decker" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _decker_test()
@@ -1724,6 +1729,7 @@ func _run() -> void:
 	await _world_v2_test()
 	await _road_train_test()
 	await _decker_test()
+	await _bastion_test()
 	await _ambulance_pup_test()
 	await _vehicle_anim_test()
 	await _raw_food_test()
@@ -13411,6 +13417,7 @@ func _decker_test() -> void:
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	Features.set_override("features", "road_train", true)
 	Features.set_override("features", "decker", true)
+	Features.set_override("features", "bastion", false)     # MV-738: Bastion joins the ladder in _bastion_test
 	_check("decker: the ladder is ambulance, Decker, road train", Game.tier_order() == ["van", "bus", "rig"])
 	Game.s.tier = "bus"
 	_check("decker: a bus save drives the Decker, named DECKER BUS", Game.tier() == "bus" and str(Game.vehicle_def().en) == "DECKER BUS")
@@ -13532,6 +13539,91 @@ func _decker_test() -> void:
 	Features.set_override("features", "decker", false)
 	_check("decker: switch off = 2 vehicles again, a Decker save drives the road train, research hidden",
 		Game.tier_order() == ["van", "rig"] and Game.tier() == "rig" and Meta.perk_hidden("tier_bus"))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Dev._vehicle_changed()
+	await wait(0.3)
+
+
+## MV-738 (switch bastion): Bastion 42-B, the ex-army 8x8 command truck, is the other pick of the Decker's research:
+## one tier_bus research unlocks both, the next generation picks one; 2 -> 3 decks like the Decker, heavier + more armour
+func _bastion_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "road_train", true)
+	Features.set_override("features", "decker", true)
+	Features.set_override("features", "bastion", true)
+	_check("bastion: the ladder is ambulance, Decker, Bastion, road train", Game.tier_order() == ["van", "bus", "bastion", "rig"])
+	var dk := Game.vehicle_def_for("bus")
+	var bs := Game.vehicle_def_for("bastion")
+	_check("bastion: named BASTION 42-B, same decks as the Decker, heavier with much more hull",
+		str(bs.en) == "BASTION 42-B" and int(bs.floors) == int(dk.floors) and float(bs.weight) > float(dk.weight) and float(bs.hull) >= float(dk.hull) + 80.0)
+	Game.s.tier = "van"
+	var mm := Meta.m()
+	mm.perks = {}
+	mm.legacy = 999
+	Meta.add_blueprint("bp_bus")
+	_check("bastion: not unlocked before the research", not Meta.tier_unlocked("bastion") and not Meta.tier_unlocked("bus"))
+	_check("bastion: the one tier_bus research unlocks both picks, the Decker stays the default",
+		str(Meta.perk_def("tier_bus").en) == "DECKER / BASTION" and Meta.buy("tier_bus") and Meta.tier_unlocked("bus") and Meta.tier_unlocked("bastion") and Meta.best_tier() == "bus")
+	Features.set_override("features", "five_floors", true)
+	Game.s.tier = "bastion"
+	_check("bastion: 2 decks at the start, 3 from the first floor-gain level, never more", Game.tier() == "bastion" and Game.floors_at(1) == 2 and Game.floors_at(Data.FLOOR_GAIN_LEVELS[0]) == 3 and Game.floors_at(6) == 3)
+	# next generation picks the Bastion
+	Game.s.tier = "van"
+	Meta.next_generation([], "bastion")
+	await wait(0.3)
+	_check("bastion: the next generation can pick the Bastion (2 decks, 6 rooms, its hull bonus)",
+		Game.tier() == "bastion" and Game.main_slots() == 6 and Game.hull_max() >= 100.0 + float(bs.hull))
+	var n := Dev.bastion_preview(2, false)
+	await wait(0.3)
+	_check("bastion: GOD drives Bastion with 2 decks in place", n == 2 and Game.tier() == "bastion" and main.vehicle.room_views.size() == Game.slot_count())
+	var old_window := get_window().size
+	get_window().size = Vector2i(405, 720)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(InteriorV3Panel.BS_DIR + "shell.json"))
+	var shells_ok := true
+	for d in [2, 3]:
+		Dev.bastion_preview(d, false)
+		Dev.rooms_v3_open()
+		await wait(0.4)
+		var tex := panel.amb_shell.texture
+		shells_ok = shells_ok and panel.dk() and panel.amb_shell.visible and tex.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
+			and tex.get_size() == Vector2(InteriorV3Panel.DK_W, 232.0 + 112.0 * (d - 1))
+		var img := tex.get_image()
+		for slot in Game.main_slots():
+			var c := Game.slot_cell(slot)
+			var want := Vector2(-1, -1)
+			for cc in spec.floors[str(d)].cells:
+				if int(cc.floor) == c.y and int(cc.col) == c.x:
+					want = panel.amb_shell.position + Vector2(float(cc.x), float(cc.y))
+			var cp := (panel.cells[slot] as RoomV3Cell).position
+			var lp := cp - panel.amb_shell.position + Vector2(72, 48)
+			_fold("bastion: v3 interior room sits in its cut-out window", cp.is_equal_approx(want) and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1, "%d decks slot %d" % [d, slot])
+		await shot("bastion_interior_f%d" % d)
+		panel.close()
+	_fold_flush()
+	_check("bastion: v3 interior draws the Bastion shell (2 and 3 decks)", shells_ok)
+	get_window().size = old_window
+	var v: Vehicle = main.vehicle
+	var world_ok := true
+	for d in [2, 3]:
+		Dev.bastion_preview(d)
+		await wait(0.4)
+		var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+		world_ok = world_ok and v.v2 and v.v2_dk() and v.v2_shell.texture.resource_path.ends_with("bastion_v3/shell_f%d.png" % d) \
+			and v.v2_cells.size() == Game.main_slots() and absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5
+		var img := v.v2_shell.texture.get_image()
+		for slot in Game.main_slots():
+			var wc: RoomV3Cell = v.v2_cells[slot]
+			var lp := wc.position - v.v2_shell.position + Vector2(72, 48)
+			world_ok = world_ok and img.get_pixel(int(lp.x), int(lp.y)).a < 0.1 and (wc.position * Vehicle.V2_K).is_equal_approx(v.slot_local_pos(slot))
+		await shot("bastion_world_f%d" % d)
+	_check("bastion: on the road (world v2) the truck carries the v3 rooms on the road line, 2 and 3 decks", world_ok)
+	Features.set_override("features", "bastion", false)
+	_check("bastion: switch off = a Bastion save drives the Decker, ladder without it", Game.tier() == "bus" and not Game.tier_order().has("bastion"))
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state
