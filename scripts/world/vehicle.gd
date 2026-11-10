@@ -606,8 +606,8 @@ func _pups_on_top() -> void:
 func amb_wanted() -> bool:
 	if v2_rt():                   # MV-740: the road train: tractor + lead trailer here, each container trailer in rt_units
 		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.RT_DIR)
-	if v2_dk() and tier == "bastion":
-		return false              # MV-738: no wheel / suspension anchors for Bastion 42-B yet (static shell)
+	if v2_dk() and tier == "bastion":   # MV-738 round 3: Bastion 42-B tyres / lights / solar glint / hitch lines
+		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.BS_DIR)
 	if v2_dk():                   # MV-739: the Decker bus gets the same wheels / suspension / lights + its sign
 		return Features.on("vehicle_anim") and AmbulanceMotion.ok(floors, AmbulanceMotion.DK_DIR)
 	return v2 and tier == "van" and Features.on("vehicle_anim") and AmbulanceMotion.ok(floors)
@@ -617,6 +617,8 @@ func amb_wanted() -> bool:
 func amb_dir() -> String:
 	if v2_rt():
 		return AmbulanceMotion.RT_DIR
+	if v2_dk() and tier == "bastion":
+		return AmbulanceMotion.BS_DIR
 	return AmbulanceMotion.DK_DIR if v2_dk() else AmbulanceMotion.DIR
 
 

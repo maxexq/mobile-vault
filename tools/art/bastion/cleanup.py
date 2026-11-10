@@ -106,11 +106,141 @@ def strays(px,W,H,floors):
     comps.sort(key=len,reverse=True)
     for c in comps[1:]:
         for x,y in c: px[x,y]=(0,0,0,0)
+# MV-738 round 3 (Parames 2026-11-10 "เพิ่มขอบแต่ละห้อง, โปะรู pixel ที่หาย, Solar cell งอกมาตรงหน้าโครงรถชั้น 2"):
+#  5) every enclosed see-through hole in the body (not a room window, not the gaps under the roof rail, not the
+#     bumper hoop) gets the darkest opaque neighbour, so no sky shows through the truck,
+#  6) every room window gets the Decker's steel frame (MV-739): 1 px black + 2 px riveted steel around the opening
+#     and a soft inner shadow, so the rooms sit in the box instead of floating,
+#  7) a fold-out solar array grows from the box's front wall at deck 2 (above the cab): two framed panels on two
+#     arms + a stay, flat side view (the panels face the viewer); its cells are SOLAR_CELL colours (anim.py finds them
+#     for the glint),
+#  8) a small red tail lamp + amber marker on the rear bumper (the art had none) for the code lights.
+STEEL=(85,81,69,255); LIGHT=(128,122,104,255); SHADE=(52,47,38,255); RIVET=(158,150,126,255)
+SOLAR_CELL=((28,34,52,255),(34,44,66,255),(52,64,88,255))
+SOLAR_GRID=(78,84,90,255)
+def holes(px,W,H,floors):
+    seen=bytearray(W*H); q=deque()
+    for x in range(W): q.extend(((x,0),(x,H-1)))
+    for y in range(H): q.extend(((0,y),(W-1,y)))
+    for r in range(floors):
+        for c in range(3): q.append((X0+152*c+5,Y0+FH*r+5))
+    while q:
+        x,y=q.popleft()
+        if not(0<=x<W and 0<=y<H) or seen[y*W+x] or px[x,y][3]: continue
+        seen[y*W+x]=1; q.extend(((x+1,y),(x-1,y),(x,y+1),(x,y-1)))
+    dy=H-344
+    for y in range(H):
+        for x in range(W):
+            if px[x,y][3] or seen[y*W+x]: continue
+            st=[(x,y)]; seen[y*W+x]=1; pts=[]
+            while st:
+                a,b=st.pop(); pts.append((a,b))
+                for c,d in ((a+1,b),(a-1,b),(a,b+1),(a,b-1)):
+                    if 0<=c<W and 0<=d<H and not seen[d*W+c] and px[c,d][3]==0: seen[d*W+c]=1; st.append((c,d))
+            ys=[b for a,b in pts]; xs=[a for a,b in pts]
+            if 31<=min(ys) and max(ys)<=36 and min(xs)>=X0: continue      # gaps between the roof rail and the roof
+            if len(pts)>60: continue                                        # the bumper hoop and other real openings
+            todo=set(pts)
+            while todo:
+                nxt=set()
+                for a,b in todo:
+                    nb=[px[a+i,b+j] for i,j in ((1,0),(-1,0),(0,1),(0,-1)) if 0<=a+i<W and 0<=b+j<H and px[a+i,b+j][3]]
+                    if nb: px[a,b]=min(nb,key=lambda c:sum(c[:3]))[:3]+(255,)
+                    else: nxt.add((a,b))
+                if nxt==todo: break
+                todo=nxt
+def frame(px,floors):
+    for row in range(floors):
+        for col in range(3):
+            x0,y0=X0+152*col,Y0+FH*row; x1,y1=x0+CW,y0+CH
+            for d in (1,2,3):
+                for x in range(x0-d,x1+d):
+                    for y in (y0-d,y1+d-1): ring(px,x,y,d,y==y0-d,x0,y0,x1,y1)
+                for y in range(y0-d,y1+d):
+                    for x in (x0-d,x1+d-1): ring(px,x,y,d,x==x0-d,x0,y0,x1,y1)
+            for x in range(x0,x1):
+                for i,a in enumerate((150,90,40)): shade(px,x,y0+i,a)
+                shade(px,x,y1-1,60)
+            for y in range(y0+3,y1-1):
+                for i,a in enumerate((90,35)): shade(px,x0+i,y,a); shade(px,x1-1-i,y,a)
+def ring(px,x,y,d,tl,x0,y0,x1,y1):
+    if d==1: px[x,y]=(8,8,10,255); return
+    if d==2:
+        c=LIGHT if tl else SHADE
+        along=x if y in (y0-2,y1+1) else y
+        if along%12==6 and x0-2<x<x1+1 and y0-2<y<y1+1: c=RIVET
+        px[x,y]=c; return
+    if px[x,y][3]==0 or sum(px[x,y][:3])>360: px[x,y]=STEEL
+def shade(px,x,y,a):
+    if px[x,y][3]==0: px[x,y]=(8,6,6,a)
+SOLAR=dict(x0=100,x1=140,top=8,pan=46,gap=4)     # panels: x 100-139, from deck top + 8, 2 x 46 tall, 4 px hinge gap
+def solar(px,floors):
+    top=Y0+FH*(floors-2)                         # deck 2 counted from the road
+    x0,x1=SOLAR["x0"],SOLAR["x1"]
+    wall=146
+    for k in range(2):
+        py0=top+SOLAR["top"]+k*(SOLAR["pan"]+SOLAR["gap"]); py1=py0+SOLAR["pan"]
+        for y in range(py0,py1):
+            for x in range(x0,x1):
+                e=x in (x0,x1-1) or y in (py0,py1-1)
+                f=x in (x0+1,x1-2) or y in (py0+1,py1-2)
+                if e: c=OUT
+                elif f: c=LIGHT if (y==py0+1 or x==x0+1) else SHADE
+                else:
+                    cx,cy=x-(x0+2),y-(py0+2)
+                    if cx%9==8 or cy%7==6: c=SOLAR_GRID
+                    else:
+                        band=(cx+cy//2)%9
+                        c=SOLAR_CELL[2] if band<2 and cy%7<2 else (SOLAR_CELL[1] if (cx//9+cy//7)%2 else SOLAR_CELL[0])
+                px[x,y]=c
+        # arm from the panel's mid height to the wall: 3 px steel bar with an outline, bolt plate on the wall
+        ay=py0+SOLAR["pan"]//2-1
+        for x in range(x1,wall+1):
+            px[x,ay-1]=OUT; px[x,ay]=LIGHT; px[x,ay+1]=STEEL; px[x,ay+2]=OUT
+        for y in range(ay-4,ay+6):
+            for x in (wall-2,wall-1):
+                px[x,y]=OUT if y in (ay-4,ay+5) or x==wall-2 else STEEL
+        px[wall-1,ay-2]=RIVET; px[wall-1,ay+3]=RIVET
+    # hinge between the panels, rust on the frames, one cracked cell and a power cable drooping to the wall
+    hy=top+SOLAR["top"]+SOLAR["pan"]
+    for y in range(hy,hy+SOLAR["gap"]):
+        for x in (x0+6,x0+7,x1-8,x1-7): px[x,y]=OUT if x in (x0+6,x1-8) else STEEL
+    RUST=((112,62,36,255),(92,50,30,255))
+    for k,(rx,ry) in enumerate(((x0+1,top+20),(x0+1,top+21),(x1-2,top+70),(x1-2,top+71),(x0+12,top+SOLAR["top"]+1),(x0+13,top+SOLAR["top"]+1),
+                                (x0+25,hy+SOLAR["gap"]+SOLAR["pan"]-2),(x0+26,hy+SOLAR["gap"]+SOLAR["pan"]-2))):
+        px[rx,ry]=RUST[k%2]
+    cx0,cy0=x0+2+9*2,top+SOLAR["top"]+2+7*3        # crack across one cell of the upper panel
+    for i in range(7):
+        px[cx0+i,cy0+(i*5)//7]=(120,136,160,255)
+    fy=top+SOLAR["top"]+2*SOLAR["pan"]+SOLAR["gap"]-6
+    for i,x in enumerate(range(x1,wall)):
+        y=fy+round(3*(1-((i-(wall-x1)/2)/((wall-x1)/2))**2))
+        px[x,y]=OUT; px[x,y+1]=(30,28,26,255)
+TAIL=(622,279); MARK=(622,272)                   # rear bumper end (2-deck coords; +dy below the top deck)
+HEAD=(40,271)                                    # round headlamp in the fender arch beside the winch
+def lamps(px,dy):
+    hx,hy=HEAD[0],HEAD[1]+dy
+    for y in range(hy-5,hy+6):
+        for x in range(hx-5,hx+6):
+            r=((x+.5-hx-.5)**2+(y+.5-hy-.5)**2)**.5
+            if r<=2.6: px[x,y]=(255,252,232,255) if (x<hx and y<hy) else ((236,228,184,255) if y<=hy else (204,192,146,255))
+            elif r<=3.7: px[x,y]=(140,134,114,255) if (x<=hx and y<=hy) else (70,66,56,255)
+            elif r<=4.6: px[x,y]=OUT
+    for (x0,y0),lit,dim in ((TAIL,(200,40,30,255),(120,20,16,255)),(MARK,(220,140,40,255),(140,84,24,255))):
+        y0+=dy
+        for y in range(y0-1,y0+4):
+            for x in range(x0-1,x0+3):
+                e=x in (x0-1,x0+2) or y in (y0-1,y0+3)
+                px[x,y]=OUT if e else (lit if y==y0 else dim)
 def clean(path,dy,floors):
     im=Image.open(path).convert("RGBA"); W,H=im.size; px=im.load()
     roof(px)
     pockets(px,W,H,dy)
     strays(px,W,H,floors)
+    holes(px,W,H,floors)
+    lamps(px,dy)
+    frame(px,floors)
+    solar(px,floors)
     im.save(path)
 if __name__=="__main__":
     clean(f"{D}/shell_f2.png",0,2); clean(f"{D}/shell_f3.png",112,3); print("ok")
