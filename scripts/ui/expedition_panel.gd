@@ -222,7 +222,7 @@ func _build_active() -> void:
 	var e := Expedition.state()
 	var def := Expedition.site_def(str(e.site))
 	set_title(Loc.t("EXPEDITION / ทีมกำลังสำรวจ %s") % def.th)
-	_feed = ExpeditionFeed.new()
+	_feed = ExpeditionFeedV2.new() if ExpeditionFeedV2.ok() else ExpeditionFeed.new()
 	_feed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_child(_feed)
 	_enc_btn = UIKit.button(Loc.t("วิทยุจากทีม: เจอจุดพิเศษ! แตะเพื่อสั่งการ"), "yellow", "explore")
@@ -296,6 +296,8 @@ func _build_report() -> void:
 	var col := UIKit.C_GREEN if ok else UIKit.C_RED
 	var kind: String = ExpeditionFeed.KIND.get(str(report.site), "ruins")
 	var tex: Texture2D = load("res://assets/exp/exp_%s.png" % kind)
+	if ExpeditionFeedV2.ok():
+		tex = ExpeditionFeedV2.report_tex(str(report.site))
 	var inner := box.custom_minimum_size.x - 30.0
 	var frame := media_frame(tex, col, 2 if inner >= tex.get_size().x * 2.0 + 2.0 else 1)
 	_list.add_child(frame)

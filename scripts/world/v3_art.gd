@@ -130,6 +130,12 @@ static func portrait_tex(cid: String, mood: String = "") -> Texture2D:
 	return _tex[p]
 
 
+## MV-758: one clip's entry in crew.json ({row, n, fps} + "lens" per frame for torchwalk), {} when missing
+static func clip_info(cid: String, clip: String) -> Dictionary:
+	_load()
+	return (_crew.get(cid, {}) as Dictionary).get("clips", {}).get(clip, {})
+
+
 static func crew_frames(cid: String) -> SpriteFrames:
 	_load()
 	if _frames.has(cid):

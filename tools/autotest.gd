@@ -656,6 +656,11 @@ func _run() -> void:
 		await _landmarks_v2_test()
 		_finish()
 		return
+	if "--only=exp_scene_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _exp_scene_v2_test()
+		_finish()
+		return
 	if "--only=enc_art_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _enc_art_v2_test()
@@ -1472,7 +1477,9 @@ func _run() -> void:
 	main.hud.panels.expedition.close()
 	await wait(2.2)
 	await shot("expedition_walkout")
-	# live helmet-cam feed in the expedition panel: a search beat, then a fight beat
+	# live helmet-cam feed in the expedition panel: a search beat, then a fight beat (the old feed; the v2 scene
+	# has its own test, _exp_scene_v2_test)
+	Features.set_override("features", "exp_scene_v2", false)
 	var now_t := Time.get_unix_time_from_system()
 	Game.s.exp.start = now_t - (7.0 + 2 * ExpeditionFeed.BEAT + 6.0)
 	main.hud.open_expedition("market")
@@ -1510,6 +1517,7 @@ func _run() -> void:
 	await wait(0.6)
 	await shot("expedition_feed_walkin")
 	main.hud.panels.expedition.close()
+	Features.set_override("features", "exp_scene_v2", true)
 	await wait(0.4)
 	await wait(4.0)
 	Game.s.exp.start = float(Game.s.exp.start) - 99999.0
@@ -1522,6 +1530,7 @@ func _run() -> void:
 	await _encounter_test()
 	await _enc_art_v2_test()
 	await _landmarks_v2_test()
+	await _exp_scene_v2_test()
 	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
 	Meta.m().legacy = 9999
@@ -3150,6 +3159,97 @@ func _landmarks_v2_test() -> void:
 	_check("landmarks v2: GOD toggle turns it back on", Features.on("landmarks_v2") and view.site_spr.scale == Vector2(0.5, 0.5))
 	Expedition.skip_site()
 	await wait(0.3)
+
+
+## MV-758: the new expedition scene (switch exp_scene_v2): approved interiors + ambience + v3 crew expedition clips
+func _exp_scene_v2_test() -> void:
+	Features.set_override("features", "exp_scene_v2", true)
+	_check("exp scene v2: switch on + art imported", ExpeditionFeedV2.ok())
+	for k in ["hospital", "store", "bunker", "plant", "lab", "mine", "ruins"]:
+		var sc := ExpeditionFeedV2.scene(k)
+		var st: Texture2D = load(ExpeditionFeedV2.DIR + str(sc.get("file", "")))
+		var am: Texture2D = load(ExpeditionFeedV2.DIR + str(sc.get("amb", {}).get("file", "")))
+		_fold("exp scene v2: 1536x200 strip + ambience atlas <= 4096 + hotspot stops", st != null and st.get_size() == Vector2(1536, 200)
+			and am != null and am.get_width() <= 4096 and am.get_height() <= 4096 and ExpeditionFeedV2.stops_of(sc).size() >= 3, k)
+	_fold_flush()
+	for cid in V3Art.crew_ids():
+		var sf := V3Art.crew_frames(cid)
+		var ok := true
+		for c in ["gunwalk", "torchwalk", "search", "wall", "carrywalk", "shoot"]:
+			ok = ok and sf.has_animation(c) and sf.get_frame_count(c) > 0
+		var tw := V3Art.clip_info(cid, "torchwalk")
+		_fold("exp scene v2: every v3 crew has the expedition clips + a lens point per torchwalk frame",
+			ok and (tw.get("lens", []) as Array).size() == int(tw.get("n", -1)), cid)
+	_fold_flush()
+	_check("exp scene v2: high wall cabinet -> wall clip, floor crate -> search, door -> construct",
+		ExpeditionFeedV2.clip_for({"action": "search", "rect": [250, 72, 38, 38]}) == "wall"
+		and ExpeditionFeedV2.clip_for({"action": "search", "rect": [3, 122, 24, 26]}) == "search"
+		and ExpeditionFeedV2.clip_for({"action": "force_door", "rect": [0, 80, 30, 70]}) == "construct")
+	var sup := {"food": 10, "water": 10, "stimpack": 1, "ammo": 10, "antibiotics": 0}
+	if not Expedition.active():
+		_check("exp scene v2: expedition starts", _enc_start(sup))
+	Game.s.exp.site = "hospital"
+	Game.s.exp.dur = maxf(float(Game.s.exp.dur), 600.0)
+	Game.s.exp.start = Time.get_unix_time_from_system() - 2.5
+	main.hud.open_expedition("hospital")
+	await wait(0.8)
+	var feed = main.hud.panels.expedition._feed
+	_check("exp scene v2: the panel shows the v2 scene", feed is ExpeditionFeedV2 and feed.size.y >= ExpeditionFeedV2.H)
+	if not feed is ExpeditionFeedV2:
+		main.hud.panels.expedition.close()
+		return
+	_check("exp scene v2: dark site -> leader walks in with the flashlight, beam from the lens",
+		feed.member_clip(0) == "torchwalk" and feed.member_clip(1) == "gunwalk"
+		and Rect2(feed._crew[0].position + Vector2(-32, -64), Vector2(64, 64)).has_point(feed.lens_point(0)))
+	await shot("exp_scene_v2_walkin")
+	var f0: int = feed.amb_frame()
+	await wait(0.3)
+	_check("exp scene v2: the ambience loop advances", feed.amb_frame() != f0)
+	Game.s.exp.start = Time.get_unix_time_from_system() - (7.0 + 2 * ExpeditionFeedV2.BEAT2 + 9.0)
+	feed.setup()
+	await wait(0.4)
+	var clips := ["search", "wall", "work", "construct", "gunwalk", "torchwalk", "carrywalk", "idle", "shoot"]
+	_check("exp scene v2: the squad works the hotspots", feed.member_status(0) != "" and feed.member_clip(0) in clips and feed.member_clip(1) in clips)
+	await shot("exp_scene_v2_search")
+	var fb := -1
+	for tries in 40:
+		Game.s.exp.seed = 2000 + tries
+		feed.setup()
+		for b in range(1, 11):
+			if feed.plan(b).fight and not bool(feed.plan(b).melee):
+				fb = b
+				break
+		if fb >= 0:
+			break
+	_check("exp scene v2: stages a gunfight", fb >= 0)
+	if fb >= 0:
+		Game.s.exp.start = Time.get_unix_time_from_system() - (7.0 + fb * ExpeditionFeedV2.BEAT2 + float(feed.plan(fb).spawn) + 2.0)
+		feed.setup()
+		await wait(0.3)
+		_check("exp scene v2: fighter shoots a v2 monster", feed.member_clip(int(feed.plan(fb).fighter)) == "shoot" and feed._mob.visible)
+		await shot("exp_scene_v2_fight")
+	Game.s.exp.site = "plant"
+	Game.s.exp.start = Time.get_unix_time_from_system() - (float(Game.s.exp.dur) - 2.0)
+	feed.setup()
+	await wait(0.4)
+	_check("exp scene v2: lit site, team carries the haul home", feed.member_clip(0) == "carrywalk" and feed._crew[0].flip_h)
+	await shot("exp_scene_v2_walkout")
+	for alt in ["store", "bunker", "lab", "mine", "ruins"]:
+		Game.s.exp.site = {"store": "market", "bunker": "depot", "lab": "lab", "mine": "mine", "ruins": "stilt_town"}[alt]
+		Game.s.exp.start = Time.get_unix_time_from_system() - (7.0 + 1 * ExpeditionFeedV2.BEAT2 + 9.0)
+		feed.setup()
+		await wait(0.4)
+		await shot("exp_scene_v2_" + alt)
+	main.hud.panels.expedition.close()
+	Dev.exp_scene_v2(false)
+	main.hud.open_expedition("hospital")
+	await wait(0.4)
+	_check("exp scene v2: switch off -> old feed", not main.hud.panels.expedition._feed is ExpeditionFeedV2)
+	main.hud.panels.expedition.close()
+	Dev.exp_scene_v2(true)
+	_check("exp scene v2: GOD toggle turns it back on", Features.on("exp_scene_v2"))
+	Game.s.exp.site = "scav"
+	await _enc_finish()
 
 
 ## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2)
@@ -13380,6 +13480,7 @@ func _road_train_test() -> void:
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	Features.set_override("features", "road_train", true)
 	Features.set_override("features", "decker", false)     # MV-736: the Decker joins the ladder in _decker_test
+	Features.set_override("features", "rt_start_trailer", false)   # MV-753 has its own check below; these cover 0 trailers
 	_check("road train: the ladder is the ambulance and the road train", Game.tier_order() == ["van", "rig"])
 	Game.s.tier = "bus"
 	var bus_ok := Game.tier() == "rig"
@@ -13578,6 +13679,29 @@ func _road_train_test() -> void:
 	Game.s.dwellers = keep_dw2
 	Game.s.trailers = 0
 	Dev._vehicle_changed()
+	# MV-753 (switch rt_start_trailer, Parames 2026-11-10): the road train comes with its trailer, a loaded road train
+	# save without one gets it (empty rooms), it can't be unhitched; the ambulance starts without one; off = buy it
+	var st_keep: Dictionary = Game.s.duplicate(true)
+	Dev.rt_start_trailer(true)
+	var st_load: bool = (Game.trailers() == 1 and Game.s.rooms.size() == Game.slot_count()
+		and str(Game.s.rooms[Game.slot_count() - 1].type) == "empty")
+	Dev.set_trailers(0)
+	var st_keep1: bool = Game.trailers() == 1
+	Game.s = {"meta": st_keep.get("meta", {}), "tier": "rig"}
+	Game.setup_default_state(true, false)
+	var st_new: bool = Game.tier() == "rig" and Game.trailers() == 1 and Game.s.rooms.size() == Game.slot_count()
+	Game.s = {"meta": st_keep.get("meta", {}), "tier": "van"}
+	Game.setup_default_state(true, false)
+	var st_van: bool = Game.trailers() == 0 and Game.min_trailers() == 0
+	Game.s = st_keep
+	Dev._vehicle_changed()
+	_check("road train: comes with its trailer (new run + loaded save), can't unhitch it; the ambulance starts with none",
+		st_load and st_keep1 and st_new and st_van)
+	await shot("road_train_start_trailer")
+	Dev.rt_start_trailer(false)
+	Dev.set_trailers(0)
+	_check("road train: start-trailer switch off -> the trailer is bought again (0 trailers allowed)", Game.trailers() == 0
+		and Game.min_trailers() == 0)
 	Features.set_override("features", "world_v2", false)
 	Features.set_override("features", "road_train", false)
 	_check("road train: switch off brings back the 4-vehicle ladder", Game.tier_order() == Data.TIER_ORDER and str(Game.vehicle_def().en) == "18-WHEELER RIG")
