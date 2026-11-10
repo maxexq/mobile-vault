@@ -9,6 +9,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- The road train shows its upgrades: spiked ram, cab armour and side-rail plates, spare fuel tanks under the trailer beam, solar shutters, lead on the cab, a heater flue, a rear-facing turret on the trailer roof, heavy suspension behind the wheels and chunky off-road tyres, each changing look with its level (MV-762)
+- The Decker bus shows its upgrades: spiked ram, spare fuel tanks, side armour, a gun on the rear wall, lead plates over the front of both decks, a heater flue and solar panels on the roof, each changing look with its level (MV-760)
 - The grow room's centre window now looks outside: sky, skyline and hills of the biome you are driving through slide past, and the sky follows the time of day. The kitchen no longer shows a second, painted cook at the stove, and the rest room comes alive with a flickering stove, candle, lamp glow, a steaming kettle and a TV that is on at L3 (MV-757)
 - All 13 expedition sites are redrawn: sharper art that matches the ambulance and the road, wider buildings whose ground fades into the scenery instead of ending at a hard edge, and the team walks in through each site's own door (MV-750)
 - New expedition scene: while a team is out you watch them inside the site in the new detailed interiors (hospital, supermarket, armory, plant, lab, mine, ruins) with flickering lamps and drifting dust, walking in with flashlights or pistols drawn, searching crates and wall cabinets, hauling crates, shooting monsters and carrying the loot home (MV-758)

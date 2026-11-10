@@ -483,6 +483,7 @@ func _build_v2() -> void:
 	v2_shell.texture = load(v2_shell_path())
 	v2_shell.position = Vector2(V2_X, v2_top()) / V2_K
 	InteriorV3Panel.attach_nose(v2_shell, v2_rt() or v2_dk())   # MV-731 bumper tip + tow hook in front of the shell
+	DeckerMods.attach(v2_shell, floors, tier == "bus")         # MV-760 approved Decker exterior mods
 	_build_v2_trailers()
 	for slot in Game.main_slots():
 		var c := RoomV3Cell.new()
@@ -496,7 +497,12 @@ func _build_v2() -> void:
 	if amb_wanted():
 		amb_on = true
 		v2_shell.texture = AmbulanceMotion.cut_shell(floors, amb_dir())
+		amb.wheel_lv = RoadTrainMods.wheel_level() if v2_rt() else 0
 		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K, amb_dir())
+		if v2_rt():
+			RoadTrainMods.rt_mods(amb, true)                       # MV-762 suspension + off-road tyres
+	if v2_rt():          # MV-762 approved road train exterior mods (ShellMods node shared with the Decker: only when it's ours)
+		RoadTrainMods.attach_body(v2_shell, floors, true)
 	_build_rt_couplings()
 	_pups_on_top()
 	for rv in room_views:
@@ -538,12 +544,16 @@ func _build_v2_trailers() -> void:
 		v2_root.add_child(sp)
 		v2_tshells.append(sp)
 		var tf := v2_trailer_floors()
+		sp.set_meta("rear", u == n_trailers - 1)
 		if amb_wanted() and AmbulanceMotion.ok(tf, AmbulanceMotion.RT_DIR, kind):
 			sp.texture = AmbulanceMotion.cut_shell(tf, AmbulanceMotion.RT_DIR, kind)
 			var m := AmbulanceMotion.new()
+			m.wheel_lv = RoadTrainMods.wheel_level()
 			m.build(tf, sp.position, _wheels_root, v2_root, V2_K, AmbulanceMotion.RT_DIR, kind)
+			RoadTrainMods.rt_mods(m, true)
 			m.set_meta("lead", (unit_x(u) - V2_X) + 0.0)
 			rt_units.append(m)
+		RoadTrainMods.attach_trailer(sp, tf, true, u == n_trailers - 1)   # MV-762 (after the wheel cut: the turret clears a copy)
 
 
 ## MV-740: air lines between the container trailers (and coupler heads on the lead trailer when nothing is behind it),
@@ -932,7 +942,22 @@ func _mod_sprite(region: String, pos: Vector2) -> Sprite2D:
 	return s
 
 
+## MV-762: redraw the road train's exterior parts, suspension and tyres after an upgrade or a switch change
+func _refresh_rt_mods() -> void:
+	if v2_rt():                  # the Decker's attach (just before) owns the shared ShellMods node on other vehicles
+		RoadTrainMods.attach_body(v2_shell, floors, true)
+	for sp in v2_tshells:
+		RoadTrainMods.attach_trailer(sp, v2_trailer_floors(), v2_rt(), bool(sp.get_meta("rear", false)))
+	if amb_on and v2_rt():
+		RoadTrainMods.rt_mods(amb, true)
+	for m in rt_units:
+		RoadTrainMods.rt_mods(m, v2_rt())
+
+
 func _refresh_mods() -> void:
+	if v2 and v2_shell != null:
+		DeckerMods.attach(v2_shell, floors, tier == "bus")
+		_refresh_rt_mods()
 	for ch in _mods_root.get_children():
 		_mods_root.remove_child(ch)
 		ch.queue_free()
