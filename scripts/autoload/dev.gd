@@ -2268,6 +2268,12 @@ func enc_art_v2(on: bool) -> void:
 	act("encounter art v2 " + ("on" if on else "off"))
 
 
+## MV-750: new 2x-density landmark art for the 13 expedition sites (switch landmarks_v2); arrive at a site to see it
+func landmarks_v2(on: bool) -> void:
+	feature_set("landmarks_v2", on)
+	act("landmarks v2 " + ("on" if on else "off"))
+
+
 # ---- strangers
 func stranger_clear() -> void:
 	Inspection.queue().clear()

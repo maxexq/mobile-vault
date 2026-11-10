@@ -1,0 +1,71 @@
+{
+ "_doc": "MV-750 landmarks v2: 2x-density sprites drawn at scale 0.5; door = doorway centre x in image px (walkers enter there); bottom row = ground",
+ "scale": 0.5,
+ "sites": {
+  "lm_chem": {
+   "door": 146,
+   "w": 427,
+   "h": 308
+  },
+  "lm_depot": {
+   "door": 116,
+   "w": 345,
+   "h": 191
+  },
+  "lm_dish": {
+   "door": 119,
+   "w": 357,
+   "h": 287
+  },
+  "lm_gas": {
+   "door": 151,
+   "w": 398,
+   "h": 178
+  },
+  "lm_hospital": {
+   "door": 67,
+   "w": 304,
+   "h": 246
+  },
+  "lm_lab": {
+   "door": 95,
+   "w": 346,
+   "h": 269
+  },
+  "lm_mall": {
+   "door": 56,
+   "w": 367,
+   "h": 257
+  },
+  "lm_market": {
+   "door": 66,
+   "w": 345,
+   "h": 231
+  },
+  "lm_mine": {
+   "door": 129,
+   "w": 349,
+   "h": 222
+  },
+  "lm_polar": {
+   "door": 73,
+   "w": 345,
+   "h": 194
+  },
+  "lm_spire": {
+   "door": 128,
+   "w": 359,
+   "h": 439
+  },
+  "lm_stilt": {
+   "door": 73,
+   "w": 289,
+   "h": 245
+  },
+  "lm_tower": {
+   "door": 95,
+   "w": 359,
+   "h": 336
+  }
+ }
+}

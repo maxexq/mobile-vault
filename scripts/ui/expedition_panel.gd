@@ -81,8 +81,11 @@ func _build_planner() -> void:
 	var card := UIKit.panel(UIKit.C_BG2, UIKit.C_GOLD)
 	var h := UIKit.hbox(6)
 	card.add_child(h)
-	if def.sprite != "" and Atlas.has(def.sprite):
-		h.add_child(UIKit.tex_rect(Atlas.tex(def.sprite), Vector2(64, 64)))
+	if def.sprite != "" and (Atlas.has(def.sprite) or LandmarkArt.on(def.sprite)):
+		var thumb := UIKit.tex_rect(LandmarkArt.thumb(def.sprite), Vector2(64, 64))
+		if LandmarkArt.on(def.sprite):
+			thumb.stretch_mode = TextureRect.STRETCH_SCALE     # MV-750: 128 px crop of the 2x art at 64 px
+		h.add_child(thumb)
 	var v := UIKit.vbox(1)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(UIKit.wrap_label(Loc.t("ภารกิจ: ") + def.goal, UIKit.FS_SMALL, UIKit.C_TEXT))
