@@ -64,6 +64,6 @@ if __name__ == "__main__":
     for n in (2, 3):
         meta["floors"][str(n)] = f = one(n)
         print(n, f["size"], "head", f["head"], "solar px", len(f["solar_px"]))
-    json.dump(meta, open(os.path.join(DIR, "anim.json"), "w"), indent=1)
+    json.dump(meta, open(os.path.join(DIR, "anim.json"), "w"), separators=(",", ":"))   # solar_px is long: one line
     spin_strip()
     print("wrote anim.json + wheel_spin.png")

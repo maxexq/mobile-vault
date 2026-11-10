@@ -30,3 +30,5 @@ Related: [[vehicles-flat-2d]], [[road-train-approved-set]], [[ambulance-v3-ingam
 - 2026-11-10 Bastion round 2 (Parames: stray pixels, roof rail + roof items cut): seam of the two 512 inpaint windows at x 499.
   tools/art/bastion/cleanup.py (0 gens) after shell.py: rail to rear ladder + 2 posts + bent end, tarp/crate outlined, pockets + strays.
   Before/after: /mnt/project-files/designs/vehicle-2floor/bastion-cleanup/.
+- 2026-11-10 Bastion round 3 (Parames: room frames, pinholes, solar cell on the front of deck 2, micro anims): cleanup.py holes/frame/solar/lamps,
+  anim.py -> anim.json + wheel_spin.png, AmbulanceMotion.BS_DIR, Dev.bastion_anim + GOD ขับ+ไฟ/เบรก. 0 gens; solar drawn in code (PixelLab redraw offered).
