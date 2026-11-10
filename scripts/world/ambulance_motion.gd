@@ -15,9 +15,16 @@ extends RefCounted
 ## MV-739: the same class drives the Decker bus (dir DK_DIR, anchors from tools/art/decker/anim.py): no flag, roof
 ## bar, lantern or mast there; instead the "9 DEPOT" destination sign (glyphs lit with the engine, an old display that
 ## flickers and drops a glyph now and then, brighter at night), the rear amber indicator and a headlight beam at night.
+## MV-740: and the road train (dir RT_DIR, anchors from tools/art/road_train/anim.py): one instance per unit (unit ""
+## = tractor + lead trailer, "trailer" = each container trailer), plus landing legs that crank up when driving and down
+## once fully stopped, roof clearance lamps, a searchlight and a blinking mast tip on the trailers.
 
 const DIR := "res://assets/vehicles/ambulance_v3/"
 const DK_DIR := "res://assets/vehicles/decker_v3/"
+const RT_DIR := "res://assets/vehicles/road_train_v3/"
+const LEG_LIFT := 6.0              # shell px the landing legs crank up while driving
+const LEG_DOWN_AFTER := 0.8        # s fully stopped before the legs crank down
+const LEG_CRANK := 1.2             # s for a full crank (up or down)
 const ROAD_PX := 90.0              # world px/s at speed factor 1 (= Background.ROAD_PX_PER_SEC)
 const BLINK := 0.36                # s per indicator half-cycle
 const SIGNAL_SEC := 2.9            # indicator time after pulling out / before stopping
@@ -37,6 +44,7 @@ static var _flag_frames: Dictionary = {}   # dir + floors -> Array[ImageTexture]
 static var _swing_frames: Dictionary = {}  # dir + floors -> Array (per swing rect) of Array[ImageTexture]
 const SWING_STEPS := 9                     # frames from -2 to +2 px at the cable's lowest point
 static var _spin: Dictionary = {}          # dir -> Array[AtlasTexture]
+static var _legs: Dictionary = {}          # dir + unit + floors -> Array[ImageTexture] (landing legs cut from the shell)
 static var _glow_tex: GradientTexture2D
 static var _lamp_src: Dictionary = {}      # dir + floors -> Image of the lantern cut out of the shell (MV-741)
 static var _clips: Dictionary = {}         # dir + floors -> {clip: {"at": Vector2i, "frames": Array[AtlasTexture]}} (MV-741)
@@ -45,8 +53,14 @@ static var _driver: Dictionary = {}        # state -> Array[AtlasTexture] (MV-74
 static var _puff_tex: Array[ImageTexture] = []
 
 var vehicle: Node2D
-var dir := DIR                     # shell set: DIR (ambulance) or DK_DIR (Decker bus)
+var dir := DIR                     # shell set: DIR (ambulance) or DK_DIR (Decker bus) or RT_DIR (road train)
+var unit := ""                     # road train: "" = tractor + lead trailer, "trailer" = a container trailer,
+                                   # "trailer_link" = a container trailer with another one behind it (B-link rear)
 var floors := 0
+var behind: Node2D                 # road train: in the v2 root under every shell (landing legs slide up behind them)
+var legs: Array[Sprite2D] = []
+var leg_down := 1.0                # 1 = feet on the road, 0 = cranked up
+var _stopped_t := 0.0
 var under: Node2D                  # behind the body, scale V2_K
 var wells: Node2D
 var over: Node2D                   # in the v2 root, over the shell
@@ -105,27 +119,34 @@ static func meta(d := DIR) -> Dictionary:
 	return _meta.get(d, {})
 
 
-static func spot(n: int, d := DIR) -> Dictionary:
-	return (meta(d).get("floors", {}) as Dictionary).get(str(n), {})
+static func spot(n: int, d := DIR, u := "") -> Dictionary:
+	return (meta(d).get(u if u != "" else "floors", {}) as Dictionary).get(str(n), {})
 
 
-## the anchors are there and match the shell size (rerun tools/ambulance_anim.py / tools/art/decker/anim.py after a
-## shell rebuild)
-static func ok(n: int, d := DIR) -> bool:
-	var f := spot(n, d)
-	if f.is_empty() or not ResourceLoader.exists(d + "wheel_spin.png") or not ResourceLoader.exists(d + "shell_f%d.png" % n):
+## the shell texture of a unit: shell_f<n> (ambulance, Decker), body_f<n> / trailer_f<n> (road train)
+static func shell_file(n: int, d := DIR, u := "") -> String:
+	if d == RT_DIR:
+		return d + ("%s_f%d.png" % [u, n] if u != "" else "body_f%d.png" % n)
+	return d + "shell_f%d.png" % n
+
+
+## the anchors are there and match the shell size (rerun tools/ambulance_anim.py / tools/art/decker/anim.py /
+## tools/art/road_train/anim.py after a shell rebuild)
+static func ok(n: int, d := DIR, u := "") -> bool:
+	var f := spot(n, d, u)
+	if f.is_empty() or not ResourceLoader.exists(d + "wheel_spin.png") or not ResourceLoader.exists(shell_file(n, d, u)):
 		return false
-	var tex: Texture2D = load(d + "shell_f%d.png" % n)
+	var tex: Texture2D = load(shell_file(n, d, u))
 	return tex.get_size() == Vector2(f.size[0], f.size[1])
 
 
-## the shell with the tyres and the flag cloth cut out (they are drawn by this class)
-static func cut_shell(n: int, d := DIR) -> Texture2D:
-	var key := d + str(n)
+## the shell with the tyres, the flag cloth and the landing legs cut out (they are drawn by this class)
+static func cut_shell(n: int, d := DIR, u := "") -> Texture2D:
+	var key := d + u + str(n)
 	if _shells.has(key):
 		return _shells[key]
-	var f := spot(n, d)
-	var img: Image = (load(d + "shell_f%d.png" % n) as Texture2D).get_image()
+	var f := spot(n, d, u)
+	var img: Image = (load(shell_file(n, d, u)) as Texture2D).get_image()
 	img.decompress()
 	var r: float = f.wheel_r
 	for w in f.wheels:
@@ -158,6 +179,11 @@ static func cut_shell(n: int, d := DIR) -> Texture2D:
 		var cloth := img.get_region(Rect2i(fr[0], fr[1], fr[2], fr[3]))
 		img.fill_rect(Rect2i(fr[0], fr[1], fr[2], fr[3]), Color(0, 0, 0, 0))
 		_flag_frames[key] = _wave_frames(cloth)
+	_legs[key] = []
+	for lr in f.get("legs", []):
+		var r2 := Rect2i(int(lr[0]), int(lr[1]), int(lr[2]), int(lr[3]))
+		_legs[key].append(ImageTexture.create_from_image(img.get_region(r2)))
+		img.fill_rect(r2, Color(0, 0, 0, 0))
 	_shells[key] = ImageTexture.create_from_image(img)
 	return _shells[key]
 
@@ -333,11 +359,12 @@ static func glow_tex() -> GradientTexture2D:
 
 ## (re)build for a shell of n floors whose top-left is `origin` (shell px). `under_parent` is behind the body,
 ## `over_parent` is the v2 root (over the shell).
-func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k: float, d := DIR) -> void:
+func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k: float, d := DIR, u := "") -> void:
 	clear()
 	dir = d
+	unit = u
 	floors = n
-	var f := spot(n, dir)
+	var f := spot(n, dir, unit)
 	under = Node2D.new()
 	under.name = "AmbulanceWheels"
 	under.scale = Vector2.ONE * k
@@ -368,7 +395,8 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 	over = Node2D.new()
 	over.name = "AmbulanceLights"
 	over_parent.add_child(over)
-	cut_shell(n, dir)
+	cut_shell(n, dir, unit)
+	var key := dir + unit + str(n)
 	flag = null
 	if f.has("flag"):
 		var fr: Array = f.flag
@@ -376,9 +404,32 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 		flag.centered = false
 		flag.position = origin + Vector2(fr[0], fr[1] - (0 if (f.get("clips", {}) as Dictionary).has("flag") else 2))
 		over.add_child(flag)
-		flag.texture = (_flag_frames[dir + str(n)] as Array)[0]
-	_glow("head", origin + _v(f.head), 9.0, Color(1.0, 0.86, 0.55))
-	_glow("marker", origin + _v(f.marker), 7.0, Color(1.0, 0.6, 0.15))
+		flag.texture = (_flag_frames[key] as Array)[0]
+	if not (_legs.get(key, []) as Array).is_empty():
+		behind = Node2D.new()
+		behind.name = "RoadTrainLegs"
+		over_parent.add_child(behind)
+		over_parent.move_child(behind, 0)
+		var li := 0
+		for lr in f.legs:
+			var leg := Sprite2D.new()
+			leg.centered = false
+			leg.texture = _legs[key][li]
+			leg.position = origin + Vector2(lr[0], lr[1])
+			leg.set_meta("y0", leg.position.y)
+			behind.add_child(leg)
+			legs.append(leg)
+			li += 1
+	if f.has("head"):
+		_glow("head", origin + _v(f.head), 9.0, Color(1.0, 0.86, 0.55))
+	if f.has("marker"):
+		_glow("marker", origin + _v(f.marker), 7.0, Color(1.0, 0.6, 0.15))
+	var roof_i := 0
+	for p in f.get("roof_lamps", []):
+		_glow("roof%d" % roof_i, origin + _v(p), 5.0, Color(1.0, 0.25, 0.12))
+		roof_i += 1
+	if f.has("search"):
+		_glow("lantern", origin + _v(f.search), 10.0, Color(1.0, 0.92, 0.65))
 	for id in ["bar_l", "bar_r"]:
 		if f.has(id):
 			_glow(id, origin + _v(f[id]), 11.0, Color(1.0, 0.12, 0.1))
@@ -393,13 +444,14 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 		var sp := Sprite2D.new()
 		sp.centered = false
 		sp.position = origin + Vector2(float(q[0]) - 3.0, float(q[1]))
-		sp.texture = (_swing_frames[dir + str(n)][ri] as Array)[SWING_STEPS / 2]
+		sp.texture = (_swing_frames[dir + unit + str(n)][ri] as Array)[SWING_STEPS / 2]
 		sp.set_meta("i", ri)
 		over.add_child(sp)
 		swings.append(sp)
 		ri += 1
-	if f.has("sign"):
-		_build_sign(f, origin)
+	if f.has("sign") or dir == RT_DIR and f.has("head"):
+		if f.has("sign"):
+			_build_sign(f, origin)
 		var beam := _glow("beam", origin + _v(f.head) + Vector2(-26, 2), 1.0, Color(1.0, 0.88, 0.6))
 		beam.scale = Vector2(56.0, 14.0) / 32.0       # a flat cone of light on the road ahead after dark
 	var i := 0
@@ -414,22 +466,22 @@ func _build_roof(f: Dictionary, origin: Vector2) -> void:
 	_clip_t.clear()
 	glint_frame = -1
 	puffs.clear()
-	for c in (_clips.get(dir + str(floors), {}) as Dictionary):
+	for c in (_clips.get(dir + unit + str(floors), {}) as Dictionary):
 		var cs := Sprite2D.new()
 		cs.name = "Roof_" + str(c)
 		cs.centered = false
-		cs.position = origin + Vector2(_clips[dir + str(floors)][c].at)
-		cs.texture = (_clips[dir + str(floors)][c].frames as Array)[0]
+		cs.position = origin + Vector2(_clips[dir + unit + str(floors)][c].at)
+		cs.texture = (_clips[dir + unit + str(floors)][c].frames as Array)[0]
 		over.add_child(cs)
 		over.move_child(cs, 0)
 		clips[c] = cs
 		clip_i[c] = 0
 		_clip_t[c] = randf_range(0.0, 0.3)
-	if _glints.has(dir + str(floors)):
+	if _glints.has(dir + unit + str(floors)):
 		glint = Sprite2D.new()
 		glint.name = "SolarGlint"
 		glint.centered = false
-		glint.position = origin + Vector2(_glints[dir + str(floors)].at)
+		glint.position = origin + Vector2(_glints[dir + unit + str(floors)].at)
 		glint.visible = false
 		var m := CanvasItemMaterial.new()
 		m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -452,7 +504,7 @@ func _build_roof(f: Dictionary, origin: Vector2) -> void:
 func _tick_roof(delta: float, speed_px: float, engine_on: bool, accel: float, dark: float) -> void:
 	var sp := clampf(speed_px / ROAD_PX, 0.0, 1.5)
 	for c in clips:                            # MV-741 PixelLab clips: pots sway (faster in the headwind), the sparrow pops out now and then
-		var fs: Array = _clips[dir + str(floors)][c].frames
+		var fs: Array = _clips[dir + unit + str(floors)][c].frames
 		_clip_t[c] = float(_clip_t[c]) - delta
 		if float(_clip_t[c]) > 0.0:
 			continue
@@ -484,7 +536,7 @@ func _tick_roof(delta: float, speed_px: float, engine_on: bool, accel: float, da
 				_glint_wait = randf_range(4.0, 8.0)
 			else:
 				glint_frame = i
-				glint.texture = (_glints[dir + str(floors)].frames as Array)[i]
+				glint.texture = (_glints[dir + unit + str(floors)].frames as Array)[i]
 				glint.modulate.a = day
 				glint.visible = true
 	if pipe_at != Vector2.ZERO:                # puffs while the engine runs, faster when pulling away
@@ -542,10 +594,10 @@ func _build_flame(f: Dictionary, origin: Vector2) -> void:
 		return
 	var at := Vector2i.ZERO
 	var base: Image
-	if f.has("lantern_still") and _lamp_src.has(dir + str(floors)):
+	if f.has("lantern_still") and _lamp_src.has(dir + unit + str(floors)):
 		var lr: Array = f.lantern_still
 		at = Vector2i(int(lr[0]), int(lr[1]))
-		base = _lamp_src[dir + str(floors)]
+		base = _lamp_src[dir + unit + str(floors)]
 	else:
 		var lo := Vector2i(100000, 100000)
 		var hi := Vector2i(-1, -1)
@@ -647,11 +699,13 @@ func _glow(id: String, at: Vector2, radius: float, col: Color) -> Sprite2D:
 
 
 func clear() -> void:
-	for n in [under, over]:
+	for n in [under, over, behind]:
 		if is_instance_valid(n):
 			n.queue_free()
 	under = null
 	over = null
+	behind = null
+	legs.clear()
 	tyres.clear()
 	swings.clear()
 	sign_lit = null
@@ -674,7 +728,7 @@ func clear() -> void:
 
 
 func set_visible(on: bool) -> void:
-	for n in [under, over]:
+	for n in [under, over, behind]:
 		if is_instance_valid(n):
 			n.visible = on
 
@@ -686,14 +740,15 @@ func _lamp(id: String, a: float) -> void:
 		g.visible = a > 0.01
 
 
-## a road bump under the front axle now: the tyres hop over it one after another at the road speed
-func bump(speed_px: float) -> void:
+## a road bump under the front axle now: the tyres hop over it one after another at the road speed (`lead` = world px
+## from the convoy's front axle to this unit's first tyre: a trailer takes the bump later)
+func bump(speed_px: float, lead := 0.0) -> void:
 	if tyres.is_empty() or speed_px < 1.0:
 		return
 	_swing_kick = 1.4
 	var x0 := tyres[0].position.x
 	for i in tyres.size():
-		var d := (tyres[i].position.x - x0) * under.scale.x            # world px behind the front axle
+		var d := (tyres[i].position.x - x0) * under.scale.x + lead     # world px behind the front axle
 		hops[i] = d / speed_px
 		hop_left[i] = 0.0
 	_lamp_vel += (0.9 if randf() < 0.5 else -0.9)     # MV-741: a bump rocks the lantern
@@ -706,7 +761,7 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_t += delta
 	var moving := speed_px > 1.0
 	# tyres roll: angle = distance / radius (in shell px: the strip is drawn at shell scale)
-	var r: float = spot(floors, dir).get("wheel_r", 22.5)
+	var r: float = spot(floors, dir, unit).get("wheel_r", 22.5)
 	spin_angle = fposmod(spin_angle + speed_px / under.scale.x / r * delta, TAU)
 	var frames := spin_frames(dir)
 	var n := frames.size()
@@ -766,8 +821,13 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_lamp("lantern", (0.15 + 0.7 * dark) * _lantern if not flame_frames.is_empty() else dark * 0.8 * _lantern)
 	_lamp("mast", 0.9 if fmod(_t, 1.6) < 0.22 else 0.0)
 	_lamp("beam", dark * 0.5 if engine_on else 0.0)
-	_tick_swing(delta, speed_px, engine_on)
+	for i in 8:
+		if not glows.has("roof%d" % i):
+			break
+		_lamp("roof%d" % i, dark * 0.7 if engine_on or force_brake else 0.0)
 	_tick_sign(delta, engine_on, dark, hazard)
+	_tick_legs(delta, moving)
+	_tick_swing(delta, speed_px, engine_on)
 	_tick_roof(delta, speed_px, engine_on, accel, dark)
 	# flag: a slow breeze parked, snapping in the headwind when driving
 	if flag == null:
@@ -775,8 +835,8 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_flag_t -= delta
 	if _flag_t <= 0.0:
 		_flag_t = 1.0 / (4.0 + 10.0 * clampf(speed_px / ROAD_PX, 0.0, 1.2))
-		_flag_i = (_flag_i + 1) % (_flag_frames[dir + str(floors)] as Array).size()
-		flag.texture = (_flag_frames[dir + str(floors)] as Array)[_flag_i]
+		_flag_i = (_flag_i + 1) % (_flag_frames[dir + unit + str(floors)] as Array).size()
+		flag.texture = (_flag_frames[dir + unit + str(floors)] as Array)[_flag_i]
 
 
 ## Decker destination sign: on with the engine (brighter after dark), an old display that flickers now and then and
@@ -819,13 +879,13 @@ func _tick_swing(delta: float, speed_px: float, engine_on: bool) -> void:
 	var sv := clampf(amp * sin(_swing_ph), -2.0, 2.0)
 	var fi := clampi(int(round((sv + 2.0) / 4.0 * float(SWING_STEPS - 1))), 0, SWING_STEPS - 1)
 	for s in swings:
-		s.texture = (_swing_frames[dir + str(floors)][int(s.get_meta("i"))] as Array)[fi]
+		s.texture = (_swing_frames[dir + unit + str(floors)][int(s.get_meta("i"))] as Array)[fi]
 
 
 func swing_frame() -> int:
 	if swings.is_empty():
 		return -1
-	return (_swing_frames[dir + str(floors)][0] as Array).find(swings[0].texture)
+	return (_swing_frames[dir + unit + str(floors)][0] as Array).find(swings[0].texture)
 
 
 func sign_alpha() -> float:
@@ -843,3 +903,20 @@ func flag_frame() -> int:
 
 func spin_frame() -> int:
 	return int(spin_angle / TAU * float(spin_frames(dir).size())) % spin_frames(dir).size()
+
+
+## road train landing legs: crank up as soon as the rig rolls, crank back down once it has stood still a moment;
+## whole pixels only, a crank handle turns in steps
+func _tick_legs(delta: float, moving: bool) -> void:
+	if legs.is_empty():
+		return
+	_stopped_t = 0.0 if moving else _stopped_t + delta
+	var want := 1.0 if _stopped_t >= LEG_DOWN_AFTER else 0.0
+	leg_down = move_toward(leg_down, want, delta / LEG_CRANK)
+	for leg in legs:
+		leg.position.y = float(leg.get_meta("y0")) - roundf(LEG_LIFT * (1.0 - leg_down))
+
+
+func legs_down() -> float:
+	return leg_down if not legs.is_empty() else -1.0
+

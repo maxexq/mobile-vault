@@ -1156,7 +1156,7 @@ func world_v2_preview(n: int) -> int:
 	return Game.floors()
 
 
-## MV-737: the ambulance with `n` pups (1-2) behind it on the road (world v2, switch ambulance_pup on); `interior` also
+## MV-737: the ambulance with `n` pups (up to Data.MAX_TRAILERS) behind it on the road (world v2, switch ambulance_pup on); `interior` also
 ## opens the v3 interior. Returns how many trailers it has now.
 func ambulance_pup_preview(n: int, interior: bool = false) -> int:
 	feature_set("ambulance_v3", true)
@@ -1238,6 +1238,17 @@ func road_train_world(n: int) -> int:
 	act("road train world", {"floors": Game.floors()})
 	_vehicle_changed()
 	return Game.floors()
+
+
+## MV-740: the road train on the road (its decks now, else 2) with its micro animations; mode as vehicle_anim
+## ("drive", "fast", "brake" = stop: the landing legs crank down, "park", "bump", "beacon")
+func road_train_anim(mode := "drive") -> bool:
+	feature_set("vehicle_anim", true)
+	road_train_world(Game.floors() if Game.tier() == "rig" else 2)
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or not v.amb_on or not v.v2_rt():
+		return false
+	return vehicle_anim(mode)
 
 
 ## MV-736: switch decker on and drive the Decker double-decker bus with n decks (2 or 3); on_road = world v2 too.

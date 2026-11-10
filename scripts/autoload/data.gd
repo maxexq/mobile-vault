@@ -10,10 +10,12 @@ const ENGINE_SLOT := 0
 const CAB_SLOT := 99
 const CAB_WORKERS := 2
 const SLOT_COUNT := 12            # rig body, kept for tools / tests
-const MAX_TRAILERS := 2
+## Parames 2026-11-10: the first patch ships ONE trailer (each trailer must be its own design, the 2nd is not drawn yet);
+## older saves with 2 trailers are folded into 1 by Game.fit_trailers()
+const MAX_TRAILERS := 1
 const TRAILER_FLOORS := 2
 const TRAILER_SLOTS := 6
-const MAX_SLOTS := 27             # 5-floor body + 2 trailers
+const MAX_SLOTS := 21             # 5-floor body + 1 trailer
 ## MV-563 (switch five_floors): the body grows with the Mobile Vault level, from the vehicle's START_FLOORS by one
 ## floor at each FLOOR_GAIN_LEVELS level (tune vault.floor_gain_1..3) up to BODY_FLOORS
 const BODY_FLOORS := 5
