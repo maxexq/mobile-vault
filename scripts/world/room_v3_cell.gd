@@ -6,6 +6,7 @@ extends Node2D
 ## emergency lamp at (6,6): dull while powered, pulsing with a red glow in a power-out while the room goes dark.
 ## Empty cells / building sites use the 3 empty-cell stages (site progress picks the stage). A room type without a
 ## v3 set shows its old 64x52 art on the finished empty shell. Locked cells are a dark sealed panel.
+## MV-757: a level with a "window" rect (grow room) shows the biome outside through it (RoomWindowView).
 ## MV-733: adopted pets (PetsV3, switch pets_v3) wander in whichever room PetsV3 put them in (PetV3Actor).
 
 const DARK := Color(0.32, 0.29, 0.42)
@@ -21,6 +22,7 @@ var data: Dictionary = {}         # V3Art.level() / empty_stage() of what is sho
 var dark := false
 var selected_id := ""             # hotspot id outlined by a tap
 var bg: Sprite2D
+var window_view: RoomWindowView     # MV-757: the biome outside, behind the window cut out of the room art
 var old_art: Sprite2D
 var idle: Sprite2D
 var actors_root: Node2D
@@ -35,6 +37,9 @@ var _drawn := ""                  # what _top last drew (kind/dark/selection): a
 
 
 func _ready() -> void:
+	window_view = RoomWindowView.new()
+	window_view.visible = false
+	add_child(window_view)
 	bg = Sprite2D.new()
 	bg.centered = false
 	add_child(bg)
@@ -86,6 +91,10 @@ func refresh() -> void:
 			old_art.texture = Atlas.tex(Data.room_art(key))
 			old_art.position = ((V3Art.CELL - old_art.texture.get_size()) * Vector2(0.5, 1.0) - Vector2(0, 8)).floor()
 			old_art.visible = true
+	if kind == "v3" and data.has("window"):
+		window_view.set_window(data.window)
+	else:
+		window_view.visible = false
 	var ov: Dictionary = data.get("idle", {})
 	idle.visible = not ov.is_empty() and kind == "v3"
 	if idle.visible:

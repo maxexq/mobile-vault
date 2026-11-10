@@ -369,6 +369,9 @@ func _tab_vehicle() -> void:
 	_row([_b("ห้อง v3: " + ("เปิด" if Features.on("rooms_v3") else "ปิด"), func(): Dev.feature_set("rooms_v3", not Features.on("rooms_v3")),
 		"green" if Features.on("rooms_v3") else "red"), _b("ห้องรอตรวจ: " + ("ใช้" if Features.on("rooms_v3_review") else "ไม่ใช้"),
 		func(): Dev.feature_set("rooms_v3_review", not Features.on("rooms_v3_review")), "green" if Features.on("rooms_v3_review") else "red")], "สวิตช์")
+	_row([_b("หน้าต่าง: อุตสาหกรรม", func(): Dev.room_window_preview(0, 1)), _b("หน้าต่าง L3 biome 2", func(): Dev.room_window_preview(1, 3)),
+		_b("วิวนอก: " + ("เปิด" if Features.on("room_window_bg") else "ปิด"), func(): Dev.room_window_bg(not Features.on("room_window_bg")),
+		"green" if Features.on("room_window_bg") else "red")], "หน้าต่างห้องปลูก")
 	_note("เงาใต้เท้าลูกเรือ x%.2f (tune crew_v3.shadow) · กลางเงาทึบ %d%% · ย้อมสีลูกเรือ %.2f (tune crew_v3.grade)" % [CrewV3Actor.shadow_k(),
 		roundi(CrewV3Actor.shadow_alpha() * 100.0), CrewV3Actor.grade_k()])
 	_row([_b("เงาเข้ม x1.5", func(): Dev.crew_v3_shadow(1.5)), _b("เงาอ่อน x0.5", func(): Dev.crew_v3_shadow(0.5)),
@@ -412,6 +415,11 @@ func _tab_vehicle() -> void:
 		_b("พ่วงติดรถ: " + ("เปิด" if Features.on("rt_start_trailer") else "ปิด"),
 		func(): Dev.rt_start_trailer(not Features.on("rt_start_trailer")),
 		"green" if Features.on("rt_start_trailer") else "red")], "โร้ดเทรน")
+	_row([_b("ไม่มี", func(): Dev.road_train_mods(0)), _b("L1", func(): Dev.road_train_mods(1)), _b("L2", func(): Dev.road_train_mods(2)),
+		_b("L3", func(): Dev.road_train_mods(3), "green"),
+		_b("อัปเกรดโร้ดเทรน: " + ("เปิด" if Features.on("road_train_mods") else "ปิด"),
+		func(): Dev.feature_set("road_train_mods", not Features.on("road_train_mods")), "green" if Features.on("road_train_mods") else "red")],
+		"อัปเกรดภายนอกโร้ดเทรน")
 	_row([_b("ขับ Decker 2 ชั้น", func(): Dev.decker_preview(2)), _b("3 ชั้น", func(): Dev.decker_preview(3)),
 		_b("ภายใน", func(): Dev.decker_interior()),
 		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),
@@ -753,6 +761,8 @@ func _tab_world() -> void:
 		_row([_b("ล้างประวัติจุดพิเศษ", func(): Dev.encounter_recent_clear())])
 	_row([_b("ภาพจุดพิเศษ v2: " + ("เปิด" if Features.on("enc_art_v2") else "ปิด"), func(): Dev.enc_art_v2(not Features.on("enc_art_v2")),
 		"green" if Features.on("enc_art_v2") else "red")])
+	_row([_b("สถานที่ v2: " + ("เปิด" if Features.on("landmarks_v2") else "ปิด"), func(): Dev.landmarks_v2(not Features.on("landmarks_v2")),
+		"green" if Features.on("landmarks_v2") else "red")])
 	_row([_b("ฉากสำรวจ v2: " + ("เปิด" if Features.on("exp_scene_v2") else "ปิด"), func(): Dev.exp_scene_v2(not Features.on("exp_scene_v2")),
 		"green" if Features.on("exp_scene_v2") else "red")])
 	if not Expedition.active():

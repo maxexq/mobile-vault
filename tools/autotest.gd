@@ -651,6 +651,11 @@ func _run() -> void:
 		await _event_art_v2_test()
 		_finish()
 		return
+	if "--only=landmarks_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _landmarks_v2_test()
+		_finish()
+		return
 	if "--only=exp_scene_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _exp_scene_v2_test()
@@ -1529,6 +1534,7 @@ func _run() -> void:
 	Expedition.skip_site()
 	await _encounter_test()
 	await _enc_art_v2_test()
+	await _landmarks_v2_test()
 	await _exp_scene_v2_test()
 	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
 	# the prestige ladder: van -> bus -> rig -> train, with a story screen
@@ -3094,6 +3100,71 @@ func _encounter_test() -> void:
 	Game.s.exp.enc.at = Time.get_unix_time_from_system() + 99999999.0
 	var r4 := await _enc_finish()
 	_check("encounter: scheduled-but-unreached is dropped", not r4.has("enc") and not Expedition.active())
+
+
+## MV-750: landmarks v2 (switch landmarks_v2): 13 sites at 2x density, wider, ground fades out at both ends,
+## per-site door; the site beside the convoy uses it and the switch swaps back to the old 100 px sprite
+func _landmarks_v2_test() -> void:
+	Features.set_override("features", "landmarks_v2", true)
+	for id in Expedition.SITES:
+		var key := str(Expedition.SITES[id].sprite)
+		var ok := LandmarkArt.on(key)
+		_fold("landmarks v2: every site has v2 art", ok, key)
+		if not ok:
+			continue
+		var im: Image = LandmarkArt.texture(key).get_image()
+		var w := im.get_width()
+		var h := im.get_height()
+		_fold("landmarks v2: 2x density and wider than the old 100 px (>= 140 art px)", LandmarkArt.scale(key) == 0.5 and LandmarkArt.size(key).x >= 140.0, key)
+		var used := im.get_used_rect()
+		_fold("landmarks v2: trimmed, bottom row is the ground", used == Rect2i(0, 0, w, h), key)
+		# never cut by a frame: the outer columns hold only a low sliver of ground, not a straight cut wall
+		var edge := 0
+		for x in [0, w - 1]:
+			var n := 0
+			for y in h:
+				if im.get_pixel(x, y).a > 0.5:
+					n += 1
+			edge = maxi(edge, n)
+		_fold("landmarks v2: both ends fade out (outer columns < 15% opaque)", edge < int(h * 0.15), key)
+		var door := LandmarkArt.door(key)
+		_fold("landmarks v2: door inside the left 60% of the site", door > 4.0 and door < LandmarkArt.size(key).x * 0.6, key)
+		var g := false
+		var dx := int(door / LandmarkArt.scale(key))
+		for y in range(h - int(h * 0.2), h):
+			for x in range(maxi(0, dx - 12), mini(w, dx + 12)):
+				if im.get_pixel(x, y).a > 0.5:
+					g = true
+		_fold("landmarks v2: the door stands in the bottom 20% of the site", g, key)
+	_fold_flush()
+	if Expedition.active():
+		Dev.finish_expedition()
+		await wait(0.4)
+	Expedition.skip_site()
+	await wait(0.2)
+	Dev.arrive("hospital")
+	await wait(2.6)
+	var view: ExpeditionView = main.expedition_view
+	_check("landmarks v2: site beside the convoy uses the v2 art at scale 0.5",
+		view.site_spr.visible and view.site_spr.scale == Vector2(0.5, 0.5) and view.site_spr.texture.get_width() == int(LandmarkArt.cfg().sites.lm_hospital.w))
+	_check("landmarks v2: site stands on the road shoulder", is_equal_approx(view.site_spr.position.y + LandmarkArt.size("lm_hospital").y, ExpeditionView.GROUND_Y + 2.0))
+	_check("landmarks v2: team walks to the drawn door", is_equal_approx(view.door_x(), view.site_x() + LandmarkArt.door("lm_hospital")))
+	_check("landmarks v2: panel thumbnail is a 128 px crop of the v2 art", LandmarkArt.thumb("lm_hospital").get_size() == Vector2(128, 128))
+	for p in main.hud.panels.values():
+		if p.is_open:
+			p.close()
+	Tutorial.skip()
+	await wait(0.4)
+	await shot("landmarks_v2_hospital")
+	Dev.landmarks_v2(false)
+	await wait(0.3)
+	_check("landmarks v2: switch off -> old 100 px sprite, door x=30",
+		view.site_spr.scale == Vector2.ONE and view.site_spr.texture.get_width() == 100 and is_equal_approx(view.door_x(), view.site_x() + 30.0))
+	Dev.landmarks_v2(true)
+	await wait(0.3)
+	_check("landmarks v2: GOD toggle turns it back on", Features.on("landmarks_v2") and view.site_spr.scale == Vector2(0.5, 0.5))
+	Expedition.skip_site()
+	await wait(0.3)
 
 
 ## MV-758: the new expedition scene (switch exp_scene_v2): approved interiors + ambience + v3 crew expedition clips
@@ -4849,7 +4920,7 @@ func _features_test() -> void:
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
 	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
 	# (MV-546) rides on the world map, so it ships off with it
-	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers"]  # strangers: door screening paused (MV-719)
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764)
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
 	pin.erase("road_train")         # the run's MV-721 test pin is not what ships
@@ -6276,7 +6347,7 @@ func _scene_art_test() -> void:
 		var ground := used.end.y - 1
 		var door := false
 		for y in range(ground - 5, ground + 1):
-			door = door or im.get_pixel(int(ExpeditionView.DOOR_OFF), y).a > 0.5
+			door = door or im.get_pixel(int(LandmarkArt.OLD_DOOR), y).a > 0.5
 		var binary := true
 		for y in range(0, im.get_height(), 2):
 			for x in im.get_width():
@@ -6614,6 +6685,26 @@ func _rooms_v3_test() -> void:
 				hot_ok = hot_ok and r.size() == 4 and Rect2(Vector2.ZERO, V3Art.CELL).encloses(Rect2(r[0], r[1], r[2], r[3]))
 	_check("rooms v3: every level image is 144x96 and its idle sheet loads", files_ok)
 	_check("rooms v3: hotspot rects stay inside the cell", hot_ok)
+	# MV-757: quarters got an idle micro-animation; the grow room's centre window is cut out and has a rect
+	var q_idle := true
+	var win_ok := true
+	for lv in [1, 2, 3]:
+		q_idle = q_idle and V3Art.level("quarters", lv).has("idle")
+		var gd := V3Art.level("hydroponics", lv)
+		var wr: Array = gd.get("window", [])
+		win_ok = win_ok and wr.size() == 4 and Rect2(Vector2.ZERO, V3Art.CELL).encloses(Rect2(wr[0], wr[1], wr[2], wr[3]))
+		if win_ok:
+			var img := V3Art.room_tex("hydroponics", str(gd.file)).get_image()
+			var cut := 0
+			for yy in int(wr[3]):
+				for xx in int(wr[2]):
+					cut += 1 if img.get_pixel(int(wr[0]) + xx, int(wr[1]) + yy).a < 0.5 else 0
+			win_ok = win_ok and cut >= 20
+	_check("rooms v3: quarters has an idle animation on every level", q_idle)
+	_check("rooms v3: grow room window rect + see-through window pixels on L1-L3", win_ok)
+	var wb := RoomWindowView.load_biome("industrial")
+	_check("rooms v3: window view loads the biome sky + far + mid strips", wb.tex.size() == 2 + ParallaxV2Backdrop.SKY_NAMES.size() and wb.tex.far != null)
+	_check("rooms v3: window sky follows the hour (night 0 / day 2)", int(RoomWindowView.sky_for(1.0)[0]) == 0 and int(RoomWindowView.sky_for(12.0)[0]) == 2 and float(RoomWindowView.sky_for(1.0)[1]) == 1.0)
 	var crew_ok := true
 	for cid in V3Art.crew_ids():
 		var sf := V3Art.crew_frames(cid)
@@ -6648,6 +6739,15 @@ func _rooms_v3_test() -> void:
 		for a in (panel.cells[slot] as RoomV3Cell).actors.values():
 			moved = moved or (a as CrewV3Actor).clip() in ["walk", "work", "carrywalk", "talk", "eat", "drink", "idle", "construct"]
 	_check("rooms v3: crew play their clips", moved)
+	var wslot := Dev.room_window_preview(0, 1)
+	await wait(0.5)
+	var wcell: RoomV3Cell = panel.cells.get(wslot)
+	_check("rooms v3: GOD window preview = grow room cell with the biome behind its window",
+		wcell != null and wcell.kind == "v3" and wcell.window_view.visible and wcell.window_view.biome == RoomWindowView.biome_now() and wcell.window_view.rect.size.x > 10)
+	await shot("rooms_v3_window")
+	Dev.room_window_bg(false)
+	_check("rooms v3: room_window_bg off = flat window light", not RoomWindowView.on())
+	Dev.room_window_bg(true)
 	await shot("rooms_v3_interior")
 	# MV-724: crisp room-toned pixel shadow (same width), lighter crew grade, GOD buttons drive both tunes
 	var old_a := 1.0 - (1.0 - 0.43) * (1.0 - 0.25)   # the MV-711 draw_circle shadow
@@ -13657,6 +13757,48 @@ func _road_train_test() -> void:
 	var hoses_ok := cp != null and cp.visible and cp.caps.is_empty() and cp.hoses.size() == 4 * (Data.MAX_TRAILERS - 1)
 	_check("road train: air lines run unbroken from the lead trailer into the trailer (no shock absorbers on the tyres)", hoses_ok
 		and not "shocks" in v.amb)
+	# MV-762: the approved road train exterior mods (switch road_train_mods): parts on the body + trailer shells through
+	# ShellMods, heavy suspension behind the tyres and the off-road tyre strips through AmbulanceMotion
+	var rtm_none := Dev.road_train_mods(0)
+	await wait(0.2)
+	var rtm_max := Dev.road_train_mods(3)
+	await wait(0.4)
+	var gun3 := 0 if Combat.room_mode() else 1         # MV-727: no outside gun while the squad fights from the gunner room
+	var broot := v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	var tsh: Sprite2D = null if v.v2_tshells.is_empty() else v.v2_tshells[0] as Sprite2D
+	var troot: Node2D = null if tsh == null else tsh.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("road train mods: none = bare rig, all max = %d parts on body + trailer (%d / %d)" % [8 + gun3, rtm_none, rtm_max],
+		rtm_none == 0 and rtm_max == 8 + gun3 and broot != null and broot.visible and troot != null and troot.visible
+		and (broot.get_node("heater") as Sprite2D).texture.resource_path.ends_with("heater_L2.png")
+		and (broot.get_node("armor_rail") as Sprite2D).texture.resource_path.ends_with("armor_rail_L3.png")
+		and (broot.get_node("spike_ram") as Sprite2D).texture.resource_path.ends_with("spike_ram_L3.png")
+		and troot.has_node("solar_covers_t") and troot.has_node("roof_turret") == (gun3 == 1))
+	var clr: Array = ShellMods.meta(RoadTrainMods.DIR).get("_clear_turret", [0, 0, 1, 1])
+	var timg: Image = Image.create_empty(1, 1, false, Image.FORMAT_RGBA8) if tsh == null else tsh.texture.get_image()
+	_check("road train mods: the rear turret replaces the trailer's roof tyres + cans (cleared), on the last trailer only",
+		gun3 == 0 or (timg.get_width() > int(clr[0]) + 40 and timg.get_pixel(int(clr[0]) + 40, int(clr[1]) + 40).a == 0.0))
+	var und_ok := v.amb.wheel_lv == 3 and v.amb.under_part != null and v.amb.under_part.get_parent() == v.amb.wells \
+		and v.amb.under_part.texture.resource_path.ends_with("suspension_L3.png") and v.amb.wells.get_index() < v.amb.tyres[0].get_index() \
+		and (v.amb.tyres[0].texture as AtlasTexture).atlas.resource_path.ends_with("offroad_wheels_spin_L3.png")
+	for m in v.rt_units:
+		und_ok = und_ok and m.wheel_lv == 3 and m.under_part != null and m.under_part.texture.resource_path.ends_with("suspension_t_L3.png")
+	_check("road train mods: heavy suspension behind every tyre group (body + trailer) and off-road tyres roll at L3", und_ok)
+	await shot("road_train_mods_max")
+	var rd := RoadTrainMods.DIR
+	_check("road train mods: cab / chassis parts move a deck with the body (1/2/3 decks), roof parts stay on the roof",
+		ShellMods.pos(rd, "spike_ram", 1, 3).y - ShellMods.pos(rd, "spike_ram", 1, 2).y == 112.0
+		and ShellMods.pos(rd, "spike_ram", 1, 2).y - ShellMods.pos(rd, "spike_ram", 1, 1).y == 112.0
+		and ShellMods.pos(rd, "heater", 2, 3) == ShellMods.pos(rd, "heater", 2, 2)
+		and ShellMods.pos(rd, "roof_turret", 3, 3) == ShellMods.pos(rd, "roof_turret", 3, 2))
+	Features.set_override("features", "road_train_mods", false)
+	Features.changed.emit()
+	await wait(0.3)
+	_check("road train mods: switch off = the bare rig with stock tyres", not broot.visible and broot.get_child_count() == 0
+		and v.amb.wheel_lv == 0 and v.amb.under_part == null and (tsh == null or not tsh.has_meta(RoadTrainMods.TEX0)))
+	Features.set_override("features", "road_train_mods", true)
+	Dev.road_train_mods(0)
+	Dev.road_train_anim("drive")
+	await wait(0.8)
 	# MV-740 round 3: a trailer with another behind it ends in a B-link beam (no plate / tow hook / lit tail lamps), the last
 	# one keeps the truck rear end; the beam reaches the canvas edge on the nose beam's rows so the joint is one steel line.
 	# Parames 2026-11-10: first patch = 1 trailer (Data.MAX_TRAILERS), so the B-link shells are checked as files only
@@ -14083,6 +14225,9 @@ func _bastion_test() -> void:
 	await wait(0.3)
 	Features.set_override("features", "bastion", false)
 	_check("bastion: switch off = a Bastion save drives the Decker, ladder without it", Game.tier() == "bus" and not Game.tier_order().has("bastion"))
+	Game.s.hull = 99999.0
+	Game.clamp_parked_hull()
+	_check("bastion: parked (switch off) = a Bastion save's hull is cut to the Decker's max on load (MV-764)", is_equal_approx(float(Game.s.hull), Game.hull_max()))
 	Features.layers.dev = overrides
 	Features.changed.emit()
 	Game.s = old_state

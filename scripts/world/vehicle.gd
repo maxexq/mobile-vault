@@ -497,8 +497,13 @@ func _build_v2() -> void:
 	if amb_wanted():
 		amb_on = true
 		v2_shell.texture = AmbulanceMotion.cut_shell(floors, amb_dir())
+		amb.wheel_lv = RoadTrainMods.wheel_level() if v2_rt() else 0
 		amb.build(floors, v2_shell.position, _wheels_root, v2_root, V2_K, amb_dir())
 		_attach_shell_mods()                                   # MV-763: off-road tyres spin on the road, no still layer
+		if v2_rt():
+			RoadTrainMods.rt_mods(amb, true)                       # MV-762 suspension + off-road tyres
+	if v2_rt():          # MV-762 approved road train exterior mods (after _attach_shell_mods: the ShellMods node is shared)
+		RoadTrainMods.attach_body(v2_shell, floors, true)
 	_build_rt_couplings()
 	_pups_on_top()
 	for rv in room_views:
@@ -540,12 +545,16 @@ func _build_v2_trailers() -> void:
 		v2_root.add_child(sp)
 		v2_tshells.append(sp)
 		var tf := v2_trailer_floors()
+		sp.set_meta("rear", u == n_trailers - 1)
 		if amb_wanted() and AmbulanceMotion.ok(tf, AmbulanceMotion.RT_DIR, kind):
 			sp.texture = AmbulanceMotion.cut_shell(tf, AmbulanceMotion.RT_DIR, kind)
 			var m := AmbulanceMotion.new()
+			m.wheel_lv = RoadTrainMods.wheel_level()
 			m.build(tf, sp.position, _wheels_root, v2_root, V2_K, AmbulanceMotion.RT_DIR, kind)
+			RoadTrainMods.rt_mods(m, true)
 			m.set_meta("lead", (unit_x(u) - V2_X) + 0.0)
 			rt_units.append(m)
+		RoadTrainMods.attach_trailer(sp, tf, true, u == n_trailers - 1)   # MV-762 (after the wheel cut: the turret clears a copy)
 
 
 ## MV-740: air lines between the container trailers (and coupler heads on the lead trailer when nothing is behind it),
@@ -952,9 +961,22 @@ func _attach_shell_mods() -> void:
 	amb.set_driver_hidden(amb_body and AmbulanceMods.driver_hidden())
 
 
+## MV-762: redraw the road train's exterior parts, suspension and tyres after an upgrade or a switch change
+func _refresh_rt_mods() -> void:
+	if v2_rt():                  # _attach_shell_mods (just before) owns the shared ShellMods node on other vehicles
+		RoadTrainMods.attach_body(v2_shell, floors, true)
+	for sp in v2_tshells:
+		RoadTrainMods.attach_trailer(sp, v2_trailer_floors(), v2_rt(), bool(sp.get_meta("rear", false)))
+	if amb_on and v2_rt():
+		RoadTrainMods.rt_mods(amb, true)
+	for m in rt_units:
+		RoadTrainMods.rt_mods(m, v2_rt())
+
+
 func _refresh_mods() -> void:
 	if v2 and v2_shell != null:
 		_attach_shell_mods()
+		_refresh_rt_mods()
 	for ch in _mods_root.get_children():
 		_mods_root.remove_child(ch)
 		ch.queue_free()
