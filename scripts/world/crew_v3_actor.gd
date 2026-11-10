@@ -22,7 +22,9 @@ const SHADOW_CORE := [[0, 11], [1, 11], [2, 7]]
 ## Default 0 = the sprites own colours, like the v2 crew in the world view (Parames 2026-11-08: "ทำให้สีคล้ายๆ v2")
 const GRADE := 0.0
 ## MV-724: brighten / saturate the crew toward the v2 crew colours (tune crew_v3.lift, 1 = off)
-const LIFT := 1.5
+const LIFT := 1.75                  # MV-745: 1.5 -> 1.75 (Parames 2026-11-10: crew a bit lighter)
+## MV-745: how far the near-black outline is softened toward a warm dark brown (tune crew_v3.outline, 0 = off)
+const OUTLINE := 0.35
 const BLEND := preload("res://shaders/crew_v3_blend.gdshader")
 
 var did := -1
@@ -86,6 +88,7 @@ func _tunes_changed() -> void:
 	_apply_size()
 	_mat.set_shader_parameter("grade", grade_k())
 	_mat.set_shader_parameter("lift", lift_k())
+	_mat.set_shader_parameter("soft_outline", outline_k())
 	queue_redraw()
 
 
@@ -213,6 +216,11 @@ static func _sw(w: int, k: float) -> int:
 ## contact shadow strength: tune crew_v3.shadow (MV-724), 1.0 = the pixel shadow's own alphas
 static func shadow_k() -> float:
 	return Features.num("crew_v3.shadow", SHADOW)
+
+
+## crew brightness lift toward the v2 crew colours: tune crew_v3.lift (MV-724), 1.0 = off
+static func outline_k() -> float:
+	return Features.num("crew_v3.outline", OUTLINE)
 
 
 ## crew brightness lift toward the v2 crew colours: tune crew_v3.lift (MV-724), 1.0 = off

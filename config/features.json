@@ -99,6 +99,8 @@
     "road_train": true,
     "rt_start_trailer": true,
     "decker": true,
+    "decker_sign": true,
+    "decker_horn": true,
     "bastion": true,
     "ambulance_v3": true,
     "ambulance_pup": true,

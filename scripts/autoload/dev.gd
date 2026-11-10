@@ -160,6 +160,12 @@ func crew_v3_lift(k: float) -> void:
 	Features.set_override("tune", "crew_v3.lift", null if k < 0.0 else k)
 
 
+## v3 crew outline softening (MV-745): sets the crew_v3.outline override, < 0 = back to the build's value
+func crew_v3_outline(k: float) -> void:
+	Trace.rec("god", "crew v3 outline %.2f" % k)
+	Features.set_override("tune", "crew_v3.outline", null if k < 0.0 else k)
+
+
 ## v3 crew room grade strength (MV-724): sets the crew_v3.grade override, < 0 = back to the build's value
 func crew_v3_grade(k: float) -> void:
 	Trace.rec("god", "crew v3 grade %.2f" % k)
@@ -1291,6 +1297,24 @@ func decker_anim(mode := "drive") -> bool:
 	if v == null or not v.amb_on or not v.v2_dk():
 		return false
 	return vehicle_anim(mode)
+
+
+## MV-744: drive the Decker and put a line on its status sign (kind raid / warn / cheer); "" = a random cheerful line
+func decker_sign(text: String = "", kind: String = "cheer") -> bool:
+	feature_set("decker_sign", true)
+	if not decker_anim("drive"):
+		return false
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v.amb.tick_text == null:
+		return false
+	v.amb.sign_say(text if text != "" else DeckerSign.CHEERS[randi() % DeckerSign.CHEERS.size()], kind)
+	act("decker sign", {"text": text, "kind": kind})
+	return true
+
+
+## MV-744: play the Decker's air horn or raid siren (a preview: changes nothing in the run)
+func decker_horn(id: String = "air_horn") -> void:
+	sound_preview("sound", id)
 
 
 ## MV-736: the Decker (its decks now, else 2) in the v3 interior
