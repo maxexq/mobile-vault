@@ -21,6 +21,9 @@ extends RefCounted
 
 const DIR := "res://assets/vehicles/ambulance_v3/"
 const DK_DIR := "res://assets/vehicles/decker_v3/"
+## MV-738 round 3: Bastion 42-B (anchors from tools/art/bastion/anim.py): 4 tyres, headlamp + beam, rear marker + tail,
+## sun glint over the fold-out solar array, the air lines at the rear hitch swing
+const BS_DIR := "res://assets/vehicles/bastion_v3/"
 const RT_DIR := "res://assets/vehicles/road_train_v3/"
 const LEG_LIFT := 6.0              # shell px the landing legs crank up while driving
 const LEG_DOWN_AFTER := 0.8        # s fully stopped before the legs crank down
@@ -462,7 +465,7 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 		over.add_child(sp)
 		swings.append(sp)
 		ri += 1
-	if f.has("sign") or dir == RT_DIR and f.has("head"):
+	if f.has("sign") or (dir == RT_DIR or dir == BS_DIR) and f.has("head"):
 		if f.has("sign"):
 			_build_sign(f, origin)
 		var beam := _glow("beam", origin + _v(f.head) + Vector2(-26, 2), 1.0, Color(1.0, 0.88, 0.6))
