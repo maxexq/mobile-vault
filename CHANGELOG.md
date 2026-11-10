@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- The road train shows its upgrades: spiked ram, cab armour and side-rail plates, spare fuel tanks under the trailer beam, solar shutters, lead on the cab, a heater flue, a rear-facing turret on the trailer roof, heavy suspension behind the wheels and chunky off-road tyres, each changing look with its level (MV-762)
 - The Decker bus shows its upgrades: spiked ram, spare fuel tanks, side armour, a gun on the rear wall, lead plates over the front of both decks, a heater flue and solar panels on the roof, each changing look with its level (MV-760)
 - The road train now comes with its container trailer already hitched: 6 more rooms from the start, no need to buy it (MV-753)
 - The crew look a little lighter on the vehicle: brighter colours and softer dark-brown outlines instead of heavy black ones (MV-745)

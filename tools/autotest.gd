@@ -13447,6 +13447,48 @@ func _road_train_test() -> void:
 	var hoses_ok := cp != null and cp.visible and cp.caps.is_empty() and cp.hoses.size() == 4 * (Data.MAX_TRAILERS - 1)
 	_check("road train: air lines run unbroken from the lead trailer into the trailer (no shock absorbers on the tyres)", hoses_ok
 		and not "shocks" in v.amb)
+	# MV-762: the approved road train exterior mods (switch road_train_mods): parts on the body + trailer shells through
+	# ShellMods, heavy suspension behind the tyres and the off-road tyre strips through AmbulanceMotion
+	var rtm_none := Dev.road_train_mods(0)
+	await wait(0.2)
+	var rtm_max := Dev.road_train_mods(3)
+	await wait(0.4)
+	var gun3 := 0 if Combat.room_mode() else 1         # MV-727: no outside gun while the squad fights from the gunner room
+	var broot := v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	var tsh: Sprite2D = null if v.v2_tshells.is_empty() else v.v2_tshells[0] as Sprite2D
+	var troot: Node2D = null if tsh == null else tsh.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("road train mods: none = bare rig, all max = %d parts on body + trailer (%d / %d)" % [8 + gun3, rtm_none, rtm_max],
+		rtm_none == 0 and rtm_max == 8 + gun3 and broot != null and broot.visible and troot != null and troot.visible
+		and (broot.get_node("heater") as Sprite2D).texture.resource_path.ends_with("heater_L2.png")
+		and (broot.get_node("armor_rail") as Sprite2D).texture.resource_path.ends_with("armor_rail_L3.png")
+		and (broot.get_node("spike_ram") as Sprite2D).texture.resource_path.ends_with("spike_ram_L3.png")
+		and troot.has_node("solar_covers_t") and troot.has_node("roof_turret") == (gun3 == 1))
+	var clr: Array = ShellMods.meta(RoadTrainMods.DIR).get("_clear_turret", [0, 0, 1, 1])
+	var timg: Image = Image.create_empty(1, 1, false, Image.FORMAT_RGBA8) if tsh == null else tsh.texture.get_image()
+	_check("road train mods: the rear turret replaces the trailer's roof tyres + cans (cleared), on the last trailer only",
+		gun3 == 0 or (timg.get_width() > int(clr[0]) + 40 and timg.get_pixel(int(clr[0]) + 40, int(clr[1]) + 40).a == 0.0))
+	var und_ok := v.amb.wheel_lv == 3 and v.amb.under_part != null and v.amb.under_part.get_parent() == v.amb.wells \
+		and v.amb.under_part.texture.resource_path.ends_with("suspension_L3.png") and v.amb.wells.get_index() < v.amb.tyres[0].get_index() \
+		and (v.amb.tyres[0].texture as AtlasTexture).atlas.resource_path.ends_with("offroad_wheels_spin_L3.png")
+	for m in v.rt_units:
+		und_ok = und_ok and m.wheel_lv == 3 and m.under_part != null and m.under_part.texture.resource_path.ends_with("suspension_t_L3.png")
+	_check("road train mods: heavy suspension behind every tyre group (body + trailer) and off-road tyres roll at L3", und_ok)
+	await shot("road_train_mods_max")
+	var rd := RoadTrainMods.DIR
+	_check("road train mods: cab / chassis parts move a deck with the body (1/2/3 decks), roof parts stay on the roof",
+		ShellMods.pos(rd, "spike_ram", 1, 3).y - ShellMods.pos(rd, "spike_ram", 1, 2).y == 112.0
+		and ShellMods.pos(rd, "spike_ram", 1, 2).y - ShellMods.pos(rd, "spike_ram", 1, 1).y == 112.0
+		and ShellMods.pos(rd, "heater", 2, 3) == ShellMods.pos(rd, "heater", 2, 2)
+		and ShellMods.pos(rd, "roof_turret", 3, 3) == ShellMods.pos(rd, "roof_turret", 3, 2))
+	Features.set_override("features", "road_train_mods", false)
+	Features.changed.emit()
+	await wait(0.3)
+	_check("road train mods: switch off = the bare rig with stock tyres", not broot.visible and broot.get_child_count() == 0
+		and v.amb.wheel_lv == 0 and v.amb.under_part == null and (tsh == null or not tsh.has_meta(RoadTrainMods.TEX0)))
+	Features.set_override("features", "road_train_mods", true)
+	Dev.road_train_mods(0)
+	Dev.road_train_anim("drive")
+	await wait(0.8)
 	# MV-740 round 3: a trailer with another behind it ends in a B-link beam (no plate / tow hook / lit tail lamps), the last
 	# one keeps the truck rear end; the beam reaches the canvas edge on the nose beam's rows so the joint is one steel line.
 	# Parames 2026-11-10: first patch = 1 trailer (Data.MAX_TRAILERS), so the B-link shells are checked as files only
