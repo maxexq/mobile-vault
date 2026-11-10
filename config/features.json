@@ -109,6 +109,7 @@
     "world_v2": true,
     "vehicle_anim": true,
     "rooms_v3_review": true,
+    "room_window_bg": true,
     "enc_art_v2": true,
     "landmarks_v2": true,
     "exp_scene_v2": true,

@@ -1462,6 +1462,30 @@ func rooms_v3_showcase(lv: int) -> int:
 	return n
 
 
+## MV-757: the grow room's centre window looks out on biome `biome_i` (switch room_window_bg on): the first unlocked
+## room cell becomes a grow room at level `lv`, then the v3 interior opens on it; returns the slot (-1 = none)
+func room_window_preview(biome_i: int, lv: int = 1) -> int:
+	feature_set("room_window_bg", true)
+	feature_set("rooms_v3_review", true)
+	goto_biome(biome_i)
+	var at := -1
+	for slot in Game.s.rooms.size():
+		if Game.is_slot_unlocked(slot) and not Game.is_annex(slot) and slot != Data.ENGINE_SLOT and slot != Data.CAB_SLOT:
+			Game.s.rooms[slot] = {"type": "hydroponics", "level": clampi(lv, 1, 3), "job": {}}
+			at = slot
+			break
+	act("room window preview", {"biome": biome_i, "level": lv, "slot": at})
+	Game.rooms_changed.emit()
+	rooms_v3_open(at)
+	return at
+
+
+## MV-757: switch room_window_bg on/off (off = the flat window light the art had)
+func room_window_bg(on: bool) -> void:
+	feature_set("room_window_bg", on)
+	Game.rooms_changed.emit()
+
+
 # ------------------------------------------------------------------ MV-722 crew portraits v3
 ## switch crew_portraits_v3 on/off; panels open after this rebuild their portraits
 func crew_portraits_v3(on: bool) -> void:
