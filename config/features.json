@@ -117,6 +117,7 @@
     "rooms_v3_review": true,
     "room_window_bg": true,
     "enc_art_v2": true,
+    "engine_art_v2": true,
     "landmarks_v2": true,
     "exp_scene_v2": true,
     "event_art_v2": true,
