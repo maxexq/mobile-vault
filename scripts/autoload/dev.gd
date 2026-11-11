@@ -1913,7 +1913,16 @@ func warlord_preview(enabled: bool) -> void:
 
 func roaming_boss_preview(enabled: bool) -> void:
 	feature_set("roaming_boss_balance", enabled)
-	spawn_boss("bloat_king")
+	spawn_boss(Combat.pick_wave_boss(10) if Combat.new_bosses_only() else "bloat_king")
+
+
+## MV-772: boss waves with only the 6 new bosses (switch bosses_v2_only) or the old roaming mutant rotation,
+## then the next boss wave's boss walks in
+func new_bosses_only(enabled: bool) -> void:
+	if enabled:
+		feature_set("bosses_v2", true)
+	feature_set("bosses_v2_only", enabled)
+	spawn_boss(Combat.pick_wave_boss(int(Combat.cs().get("wave", 1)) / 10 * 10 + 10))
 
 
 func spawn_mob(id: String, n: int) -> void:

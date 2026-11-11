@@ -1409,8 +1409,10 @@ func _run() -> void:
 	Game.s.biome = 3
 	_check("mutation chance grows with distance", Combat.mutation_chance() > 0.15)
 	var bosses := {}
+	Features.set_override("features", "bosses_v2_only", false)     # the old roaming mutant rotation (MV-772 off)
 	for w in [10, 20, 30, 40, 50, 60]:
 		bosses[Combat.pick_wave_boss(w)] = true
+	Features.set_override("features", "bosses_v2_only", null)
 	_check("boss waves rotate through different bosses", bosses.size() >= 4)
 	Game.s.biome = 0
 	Game.s.tod = 0.4
@@ -14579,6 +14581,50 @@ func _bosses_v2_test() -> void:
 			var n = cv.enemy_nodes.get(int(e.id))
 			old_ok = n != null and not n.boss_v2 and str(e.boss_v2) == ""
 	_check("bosses v2: switch off = old boss sprite", old_ok)
+	Features.set_override("features", "bosses_v2", null)
+	Dev.kill_enemies()
+	await wait(0.4)
+	await _bosses_v2_only_part()
+
+
+## MV-772: boss waves bring only the 6 new biome bosses; switch off = the old roaming mutant rotation
+func _bosses_v2_only_part() -> void:
+	var cv: CombatView = main.combat_view
+	var b0: int = int(Game.s.biome)
+	var l0: int = int(Game.s.get("lap", 0))
+	var only_ok := true
+	var old_seen := {}
+	for b in Data.BIOMES.size():
+		Game.s.biome = b
+		Game.s.lap = 1     # deep enough that every old mutant would be unlocked
+		for w in range(10, 210, 10):
+			Features.set_override("features", "bosses_v2_only", true)
+			var id := Combat.pick_wave_boss(w)
+			var d := Combat.boss_def(id)
+			_fold("new bosses only: boss wave brings this biome's new boss", id == Combat.biome_id() and not Combat.WAVE_BOSSES.has(id) and str(d.get("v2", "")) == id, "biome %d wave %d -> %s" % [b, w, id])
+			Features.set_override("features", "bosses_v2_only", false)
+			var old := Combat.pick_wave_boss(w)
+			if Combat.WAVE_BOSSES.has(old):
+				old_seen[old] = true
+	_fold_flush()
+	_check("new bosses only: switch off = old mutant bosses rotate in again", old_seen.size() >= 4)
+	Features.set_override("features", "bosses_v2", false)
+	Features.set_override("features", "bosses_v2_only", true)
+	_check("new bosses only: needs bosses_v2 (old art off = old rotation)", not Combat.new_bosses_only())
+	Features.set_override("features", "bosses_v2", null)
+	Features.set_override("features", "bosses_v2_only", null)
+	_check("new bosses only: on by default", Combat.new_bosses_only())
+	Game.s.biome = b0
+	Game.s.lap = l0
+	# GOD button: the next boss wave's boss walks in with the HD art
+	Dev.new_bosses_only(true)
+	await _wait_for(func(): return not Combat.enemies.is_empty() and cv.enemy_nodes.has(int(Combat.enemies[0].id)), 5.0)
+	var god_ok := false
+	for e in Combat.enemies:
+		if bool(e.boss):
+			god_ok = str(e.boss_v2) == Combat.biome_id() and not bool(e.warlord)
+	_check("new bosses only: GOD button spawns this biome's new boss as a wave boss", god_ok)
+	Features.set_override("features", "bosses_v2_only", null)
 	Features.set_override("features", "bosses_v2", null)
 	Dev.kill_enemies()
 	await wait(0.4)

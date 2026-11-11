@@ -85,6 +85,7 @@
     "vehicle_detail": true,
     "vehicle_ambience": true,
     "bosses_v2": true,
+    "bosses_v2_only": true,
     "enemies_v2": true,
     "enemy_size": true,
     "cozy_roof": true,

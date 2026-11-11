@@ -666,10 +666,12 @@ func _tab_fight() -> void:
 	var wave_balance := Features.on("roaming_boss_balance")
 	_note("สมดุลบอสเวฟ (MV-544) %s · HP ×%.1f / ดาเมจ ×%.1f · %s" % ["เปิด" if wave_balance else "ปิด", Features.num("boss.wave_hp", 8.0) if wave_balance else 12.0, Features.num("boss.wave_damage", 1.6) if wave_balance else 2.4, ("ความเสียหายรถต่อครั้ง ≤%d%% หลังคิดเกราะ" % int(round(Features.num("boss.hull_hit_cap", 0.12) * 100.0))) if wave_balance else "ความเสียหายพิเศษแบบเดิม"])
 	var bb := [_b("บอสด่าน: " + str(Combat.boss_def(Combat.biome_id()).th), func(): Dev.spawn_boss("warlord"), "red", true)]
-	for id in Combat.WAVE_BOSSES:
+	for id in ([] if Combat.new_bosses_only() else Combat.WAVE_BOSSES.keys()):    # MV-772: old mutants hidden while retired
 		var bid: String = id
 		bb.append(_b(str(Combat.WAVE_BOSSES[id].th), func(): Dev.spawn_boss(bid), "gray", true))
 	_row(bb)
+	_row([_b("บอสใหม่เท่านั้น", func(): Dev.new_bosses_only(true), "yellow", true), _b("บอสเวฟเดิม", func(): Dev.new_bosses_only(false), "gray", true)],
+		"บอสเวฟ (MV-772): %s" % ("บอสใหม่ของ biome นี้ทุก 10 เวฟ" if Combat.new_bosses_only() else "สุ่มวนบอสกลายพันธุ์ชุดเดิม 8 ตัว"))
 	_row([_b("วอร์ลอร์ด", func(): Dev.entrance_preview("warlord"), "red", true), _b("บอส", func(): Dev.entrance_preview("boss"), "yellow", true),
 		_b("อีลิท", func(): Dev.entrance_preview("elite"), "gray", true), _b("เรียกอีลิท ×3", func(): Dev.spawn_elites(3), "gray", true)],
 		"เปิดตัวบอส (MV-387)%s" % ("" if Features.on("boss_intro") else " · ปิดอยู่"))
