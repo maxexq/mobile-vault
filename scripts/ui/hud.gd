@@ -668,7 +668,12 @@ func _sync_v5() -> void:
 	_log_btn.visible = v5
 	if _log_badge != null:
 		UIKit.style_button(_log_btn, "yellow" if _log_badge.visible else "gray")
+	var pager_was := pager.visible
 	pager.visible = bars and v5 and Features.on("rooms_v3") and V3Art.ok()
+	# the HUD shows itself (game start) or leaves a close-up without a layout pass: make room for the pager now, or
+	# it stays parked under the dock and the road view keeps the whole height
+	if pager.visible != pager_was:
+		_apply_layout.call_deferred()
 	# a hidden pager keeps no room animating (its cells process on their own otherwise)
 	pager.process_mode = Node.PROCESS_MODE_INHERIT if pager.visible else Node.PROCESS_MODE_DISABLED
 	ModalPanel.sheet_bottom = DOCK_H if v5 and _hud_shown else 0.0

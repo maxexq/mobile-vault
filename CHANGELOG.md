@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Calmer item frame: a plain steel plate with the rarity shown by four quiet corner brackets, no lights or motion; set pieces keep their set-colour diamond on the corner rivet (MV-773)
 - The engine menu shows each engine on its own in new, larger art that runs while the vehicle drives: fans and belts spin, flames and lights flicker, exhaust smokes; parked engines stand still (MV-766)
 - Gear sets: 5 sets of 4 pieces (Tinker Crew, Raider Hunter, Titan Breaker, Rust Bulwark, Scavenger) with 2 / 3 / 4-piece bonuses, each dropping from its own source with a pity counter; salvaged set pieces become set parts that craft a missing piece (MV-767)
 - New item frame: a detailed steel vault hatch whose lamps, lights and locks show the rarity, a red +N badge on the corner and a set-colour emblem (MV-767)
