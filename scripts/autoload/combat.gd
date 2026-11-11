@@ -758,13 +758,21 @@ func warlord_due() -> bool:
 
 
 ## every boss wave brings a different boss: biome champion + the roaming mutants unlocked by distance
+## MV-772 (switch bosses_v2_only, with bosses_v2): the 8 old roaming mutants are retired, every boss wave
+## brings this biome's new HD boss (its art is lit for its own biome, so no mixing across biomes)
 func pick_wave_boss(w: int) -> String:
+	if new_bosses_only():
+		return biome_id()
 	var pool := [biome_id()]
 	var depth := int(Game.s.biome) + 3 * int(Game.s.get("lap", 0))
 	for id in WAVE_BOSSES:
 		if depth >= int(WAVE_BOSSES[id].from):
 			pool.append(id)
 	return pool[(w / 10 + int(Game.s.biome) * 3) % pool.size()]
+
+
+func new_bosses_only() -> bool:
+	return Features.on("bosses_v2") and Features.on("bosses_v2_only")
 
 
 func boss_def(id: String) -> Dictionary:
