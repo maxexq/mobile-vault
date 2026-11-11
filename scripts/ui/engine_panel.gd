@@ -60,8 +60,10 @@ func refresh() -> void:
 # ------------------------------------------------------------------ status
 func _build_status() -> void:
 	var top := UIKit.hbox(6)
-	_art = UIKit.tex_rect(Atlas.tex("eng_" + EngineBay.type_id()), Vector2(112, 80))
+	_art = UIKit.tex_rect(EngineArt.anim_texture(EngineBay.type_id()), Vector2(112, 80))   # MV-766: v2 loop while driving
+	_art.name = "EngineArt"
 	top.add_child(_art)
+	EngineArt.animate(_art)
 	var v := UIKit.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_info = UIKit.wrap_label("", UIKit.FS_SMALL, UIKit.C_TEXT)
@@ -150,7 +152,9 @@ func _engine_card(item: Dictionary, id: String, installed: bool) -> Control:
 	var p := UIKit.panel(UIKit.C_BG2, UIKit.C_GOLD if installed else UIKit.C_LINE_DARK)
 	var h := UIKit.hbox(4)
 	p.add_child(h)
-	var art := UIKit.tex_rect(Atlas.tex("eng_" + id), Vector2(56, 40))
+	var art := UIKit.tex_rect(EngineArt.still(id), Vector2(56, 40))
+	if EngineArt.on(id):
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED   # MV-766: the 112x80 still at half size
 	if not fits:
 		art.modulate = Color(0.4, 0.4, 0.4)
 	h.add_child(art)
