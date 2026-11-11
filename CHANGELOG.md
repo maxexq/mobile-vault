@@ -9,6 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Calmer item frame: a plain steel plate with the rarity shown by four quiet corner brackets, no lights or motion; set pieces keep their set-colour diamond on the corner rivet (MV-773)
 - New weather: slender rain that leans with the vehicle speed, lightning behind the skyline, rolling fog banks, dust walls and flying junk in sandstorms, many snowflake patterns with big crystals drifting past, tumbling ash with smouldering scraps, and overcast skies with sun rays and cloud shadows (MV-770)
 - The engine menu shows each engine on its own in new, larger art that runs while the vehicle drives: fans and belts spin, flames and lights flicker, exhaust smokes; parked engines stand still (MV-766)
 - Gear sets: 5 sets of 4 pieces (Tinker Crew, Raider Hunter, Titan Breaker, Rust Bulwark, Scavenger) with 2 / 3 / 4-piece bonuses, each dropping from its own source with a pity counter; salvaged set pieces become set parts that craft a missing piece (MV-767)
@@ -57,6 +58,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 - World map (test builds): random blueprint caches appear on the map one at a time; drive there to get a blueprint you don't own yet (a supply crate once you have them all), also while you are away (MV-546)
 
 ### Changed
+- Vehicle mods that are not drawn on the new ambulance, Decker or road train yet (roof rest deck, snow tracks, rain catcher, and per vehicle solar shutters / heavy suspension / off-road wheels) are hidden from the garage for now; levels already built keep working (MV-774)
 - Boss waves now bring only the new biome bosses: the 8 old roaming mutant bosses (Acid Matron, Bloat King ...) are retired and every 10th-wave boss is this biome's new boss (MV-772)
 - Stranger screening at the door is paused: rare and very rare survivors now board straight away with no inspection, and nobody flags the vehicle down (switch `strangers` off by default, MV-719)
 - New 2.5D crew in the v3 interior: a crisp pixel floor shadow in the room's own dark tone (same width as before, no longer a black blob), and brighter, livelier crew colours closer to the v2 crew instead of the dark room tint (MV-724)

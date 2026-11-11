@@ -154,6 +154,8 @@ func _gear_sets_preview() -> void:
 	_head("GEAR SETS + FRAME 64", "เซ็ตอุปกรณ์ + กรอบ Vault hatch 64 px (MV-767) · gear_sets %s · gear_frame64 %s" % [
 		"เปิด" if Features.on("gear_sets") else "ปิด", "เปิด" if f64 else "ปิด"])
 	_row([_b("กรอบ 64 ใหม่", func(): Dev.gear_frame64(true), "yellow" if f64 else "gray"), _b("กรอบเดิม", func(): Dev.gear_frame64(false), "gray" if f64 else "yellow")])
+	var fs := Features.on("gear_frame_simple")
+	_row([_b("กรอบเรียบ (B)", func(): Dev.gear_frame_simple(true), "yellow" if fs else "gray"), _b("กรอบ Vault hatch", func(): Dev.gear_frame_simple(false), "gray" if fs else "yellow")])
 	var grid := GridContainer.new()
 	grid.name = "GearSetGrid"
 	grid.columns = 4
@@ -482,6 +484,9 @@ func _tab_vehicle() -> void:
 		_b("อัปเกรด Decker: " + ("เปิด" if Features.on("decker_mods") else "ปิด"),
 		func(): Dev.feature_set("decker_mods", not Features.on("decker_mods")), "green" if Features.on("decker_mods") else "red")],
 		"อัปเกรดภายนอก Decker")
+	_row([_b("มอดไม่มีภาพ v3: " + ("ซ่อน" if Features.on("mods_v3_only") else "แสดง"),
+		func(): Dev.mods_v3_only(not Features.on("mods_v3_only")), "green" if Features.on("mods_v3_only") else "red")],
+		"มอดที่ยังไม่มีภาพ v3")
 	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
 		_b("ภายใน", func(): Dev.bastion_interior()),
 		_b("ขับ+ไฟ", func(): Dev.bastion_anim("drive"), "green"), _b("เบรก", func(): Dev.bastion_anim("brake")),

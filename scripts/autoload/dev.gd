@@ -882,6 +882,13 @@ func gear_frame64(on: bool) -> void:
 	Features.changed.emit()
 
 
+## MV-773: the simple option B frame / the Vault hatch for this session (switch gear_frame_simple)
+func gear_frame_simple(on: bool) -> void:
+	act("gear frame simple %s" % ("on" if on else "off"))
+	Features.set_override("features", "gear_frame_simple", on)
+	Features.changed.emit()
+
+
 ## put the 4 pieces of a set (rarity rar) in the stash
 func gear_set_give(set_id: String, rar: int = 2) -> Array:
 	act("gear set give %s" % set_id)
@@ -1424,6 +1431,18 @@ func decker_mods(lv: int) -> int:
 		return 0
 	var root := v.v2_shell.get_node_or_null(ShellMods.NODE)
 	return root.get_child_count() if root != null and root.visible else 0
+
+
+## MV-774: switch mods_v3_only on/off; returns the exterior mods the garage hides on the vehicle driven now
+func mods_v3_only(on: bool) -> Array:
+	feature_set("mods_v3_only", on)
+	var hidden := []
+	for id in Mods.MODS:
+		if str(Mods.MODS[id].side) == "ext" and not Mods.has_v3_art(id):
+			hidden.append(id)
+	act("mods v3 only " + ("on" if on else "off"), {"hidden": hidden})
+	Mods.mods_changed.emit()
+	return hidden
 
 
 ## MV-763: drive Dr. Ren's ambulance (van, world v2) at `n` floors (-1 = its floors now, at least 1) with every approved
