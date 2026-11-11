@@ -6708,6 +6708,13 @@ func _ui_v5_test() -> void:
 	_check("ui v5: room pages show every room as a v3 cell at 2x, above the travel bar",
 		pg.visible and pg.slots.size() >= 1 and pg.cells.size() == pg.slots.size() and pg.world.scale == Vector2(2, 2)
 		and pg.position.y + pg.size.y <= hud._bottom.position.y + 1.0)
+	# MV-768 fix: the HUD hidden and shown again (game start, leaving a close-up) without a layout pass of its own
+	hud._set_hud_visible(false)
+	await wait(0.1)
+	hud._set_hud_visible(true)
+	await wait(0.2)
+	_check("ui v5: the room pages take their place when the HUD shows again (game start)",
+		pg.visible and pg.position.y + pg.size.y <= hud._bottom.position.y + 1.0 and hud.world_rect().end.y <= pg.position.y)
 	var wr := hud.world_rect()
 	_check("ui v5: the road view keeps the space above the room pages", wr.end.y <= pg.position.y and wr.size.y >= 100.0)
 	pg.go(0, false)
