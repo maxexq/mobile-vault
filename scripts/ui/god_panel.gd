@@ -154,6 +154,8 @@ func _gear_sets_preview() -> void:
 	_head("GEAR SETS + FRAME 64", "เซ็ตอุปกรณ์ + กรอบ Vault hatch 64 px (MV-767) · gear_sets %s · gear_frame64 %s" % [
 		"เปิด" if Features.on("gear_sets") else "ปิด", "เปิด" if f64 else "ปิด"])
 	_row([_b("กรอบ 64 ใหม่", func(): Dev.gear_frame64(true), "yellow" if f64 else "gray"), _b("กรอบเดิม", func(): Dev.gear_frame64(false), "gray" if f64 else "yellow")])
+	var fs := Features.on("gear_frame_simple")
+	_row([_b("กรอบเรียบ (B)", func(): Dev.gear_frame_simple(true), "yellow" if fs else "gray"), _b("กรอบ Vault hatch", func(): Dev.gear_frame_simple(false), "gray" if fs else "yellow")])
 	var grid := GridContainer.new()
 	grid.name = "GearSetGrid"
 	grid.columns = 4
