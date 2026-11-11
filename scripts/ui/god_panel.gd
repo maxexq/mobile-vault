@@ -388,6 +388,8 @@ func _tab_vehicle() -> void:
 		_b("น้ำฝนไหล", func(): Dev.exterior_mod_preview("rain"), "gray", true)], "เอฟเฟกต์มอด (น้ำไหลเฉพาะฝน/พายุ)")
 	_row([_b("ระบบห้องเครื่อง: " + ("เปิด" if EngineBay.on() else "ปิด (ดีเซลเดิม)"), func(): Dev.engine_bay_switch(not EngineBay.on()),
 		"green" if EngineBay.on() else "red", true)], "สวิตช์")
+	_row([_b("ภาพเครื่องยนต์ v2: " + ("เปิด" if Features.on("engine_art_v2") else "ปิด"), func(): Dev.engine_art_v2(not Features.on("engine_art_v2")),
+		"green" if Features.on("engine_art_v2") else "red", true)], "MV-766 เมนูห้องเครื่อง")
 	_row([_b("ห้องเครื่องมีชีวิต: " + ("เปิด" if Features.on("vehicle_ambience") else "ปิด"), func(): Dev.vehicle_ambience_switch(not Features.on("vehicle_ambience")),
 		"green" if Features.on("vehicle_ambience") else "red"), _b("ไอร้อนพุ่ง 1 ครั้ง", func(): Dev.vent_preview(), "gray", true)],
 		"MV-388 พัดลม/ท่อ/ไอร้อน (ไอร้อนแบบใหม่ขึ้นเฉพาะ 115°C)")

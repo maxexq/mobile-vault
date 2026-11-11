@@ -540,6 +540,12 @@ func hull_warning_preview(stage: int) -> void:
 
 # ------------------------------------------------------------------ engine bay (v4.6)
 ## the engine_bay Features switch for this tester (MV-40): off = stock diesel, no heat / wear / rests / jobs
+## MV-766: new engine art in the engine menu (switch engine_art_v2); open the engine room to see it
+func engine_art_v2(on: bool) -> void:
+	feature_set("engine_art_v2", on)
+	EngineBay._changed()
+
+
 func engine_bay_switch(v: bool) -> void:
 	feature_set("engine_bay", v)
 	EngineBay._changed()

@@ -807,6 +807,11 @@ func _run() -> void:
 		await _engine_bay_test()
 		_finish()
 		return
+	if "--only=engine_art_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _engine_art_v2_test()
+		_finish()
+		return
 	if "--only=engine_rest" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _engine_rest_test()
@@ -1733,6 +1738,7 @@ func _run() -> void:
 	main.hud.panels.map.close()
 	await wait(0.4)
 	await _engine_bay_test()
+	await _engine_art_v2_test()
 	await _touch_test()
 	await _event_layout_test()
 	await _event_art_v2_test()
@@ -3282,6 +3288,62 @@ func _exp_scene_v2_test() -> void:
 	_check("exp scene v2: GOD toggle turns it back on", Features.on("exp_scene_v2"))
 	Game.s.exp.site = "scav"
 	await _enc_finish()
+
+
+## MV-766: engine menu art v2 (switch engine_art_v2): 112x80 still + 8-frame running loop per engine type
+func _engine_art_v2_test() -> void:
+	Features.set_override("features", "engine_art_v2", true)
+	for id in EngineBay.TYPES:
+		var st := EngineArt.still(id)
+		var sh: Texture2D = load(EngineArt.DIR + "eng_" + id + "_run.png")
+		_fold("engine art v2: every engine has a 112x80 still + 8-frame 896x80 loop",
+			st != null and st.get_size() == Vector2(112, 80) and sh != null and sh.get_size() == Vector2(896, 80), id)
+	_fold_flush()
+	_check("engine art v2: frame cells", EngineArt.frame_rect(3) == Rect2(336, 0, 112, 80) and EngineArt.frame_rect(9) == Rect2(112, 0, 112, 80))
+	var ep = main.hud.panels.engine
+	ep.tab = "status"
+	main.hud.open_panel("engine")
+	await wait(0.5)
+	var art: TextureRect = ep.find_child("EngineArt", true, false)
+	_check("engine art v2: status shows the 112x80 loop", art != null and art.texture is AtlasTexture and art.texture.get_size() == Vector2(112, 80))
+	if art != null and art.texture is AtlasTexture:
+		var r0: Rect2 = (art.texture as AtlasTexture).region
+		await wait(0.5)
+		var r1: Rect2 = (art.texture as AtlasTexture).region
+		if EngineArt.running():
+			_check("engine art v2: the loop plays while driving", r1 != r0)
+		else:
+			_check("engine art v2: parked = still frame held", r1 == EngineArt.frame_rect(0))
+	await shot("engine_art_v2_status")
+	ep.tab = "engines"
+	ep.refresh()
+	await wait(0.4)
+	var halves := 0
+	for n in ep.find_children("*", "TextureRect", true, false):
+		var tr := n as TextureRect
+		if tr.custom_minimum_size == Vector2(56, 40) and tr.texture != null and tr.texture.get_size() == Vector2(112, 80) \
+				and tr.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED:
+			halves += 1
+	_check("engine art v2: swap list shows the stills at half size", halves >= 1)
+	await shot("engine_art_v2_engines")
+	ep.tab = "status"
+	ep.close()
+	Dev.engine_art_v2(false)
+	_check("engine art v2: switch off -> old 56x40 art", not Features.on("engine_art_v2") and EngineArt.anim_texture("diesel4").get_size() == Vector2(56, 40))
+	main.hud.open_panel("engine")
+	await wait(0.4)
+	var art_off: TextureRect = ep.find_child("EngineArt", true, false)
+	_check("engine art v2: menu falls back to the old art", art_off != null and art_off.texture.get_size() == Vector2(56, 40) and Atlas.tex("eng_diesel4").get_size() == Vector2(56, 40))
+	ep.close()
+	Dev.engine_art_v2(true)
+	_check("engine art v2: GOD toggle turns it back on", Features.on("engine_art_v2"))
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "veh"
+	main.hud.panels.god.refresh()
+	await wait(0.3)
+	_check("engine art v2: GOD row", _find_text(main.hud.panels.god, "MV-766 เมนูห้องเครื่อง"))
+	main.hud.panels.god.close()
+	await wait(0.2)
 
 
 ## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2)
