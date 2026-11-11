@@ -76,6 +76,7 @@
     "resume_on_reload": true,
     "anticheat": true,
     "icons_v2": true,
+    "icons_room16": false,
     "crew_roster_20": true,
     "announce": true,
     "raw_food": true,

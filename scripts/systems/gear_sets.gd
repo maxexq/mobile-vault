@@ -289,6 +289,10 @@ static func craft_missing(set_id: String) -> Dictionary:
 # ------------------------------------------------------------------ art
 ## the 32 px icon of a set piece as an IconTex (reports 16x16 like icons v2, draws all 32 px)
 static func icon(piece: String) -> Texture2D:
+	if Features.on("icons_room16"):
+		var t16 := Atlas.icon16("set_" + piece)       # MV-775 icons B
+		if t16 != null:
+			return t16
 	if _icon_cache.has(piece):
 		return _icon_cache[piece]
 	var i := ICON_ORDER.find(piece)

@@ -22,6 +22,13 @@ var _cache: Dictionary = {}
 var _v2_cache: Dictionary = {}
 const V2_ONLY := {"neutral": "happy", "stressed": "sad", "broken": "sad"}
 var _frames_cache: Dictionary = {}
+## MV-775 icons B (switch icons_room16): native 16 px icons at the pixel size of the v3 room objects
+const ICONS16_PNG := "res://assets/icons16/icons16.png"
+const ICONS16_JSON := "res://assets/icons16/icons16.json"
+var _i16_sheet: Texture2D
+var _i16_index: Dictionary = {}
+var _i16_cols := 16
+var _i16_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -51,6 +58,10 @@ func tex(region_name: String) -> AtlasTexture:
 ## MV-694: icons_v2 on -> the 32 px PixelLab icon `ic2_<name>` wrapped in an IconTex that still reports 16x16,
 ## so layouts never change. Mood icons "stressed" / "broken" exist only in v2 (old set falls back to "sad").
 func icon(icon_name: String) -> Texture2D:
+	if Features.on("icons_room16"):
+		var t16 := icon16(icon_name)
+		if t16 != null:
+			return t16
 	if Features.on("icons_v2") and regions.has("ic2_" + icon_name):
 		var key := "ic2_" + icon_name
 		if not _v2_cache.has(key):
@@ -59,6 +70,29 @@ func icon(icon_name: String) -> Texture2D:
 	if not regions.has("ic_" + icon_name) and V2_ONLY.has(icon_name):
 		return tex("ic_" + str(V2_ONLY[icon_name]))
 	return tex("ic_" + icon_name)
+
+
+## MV-775: the 16 px room-style icon `name` ("medkit", or "set_<piece>" for a gear set piece), null if there is none
+func icon16(icon_name: String) -> Texture2D:
+	if _i16_cache.has(icon_name):
+		return _i16_cache[icon_name]
+	if _i16_sheet == null:
+		var f := FileAccess.open(ICONS16_JSON, FileAccess.READ)
+		if f == null:
+			return null
+		var j: Dictionary = JSON.parse_string(f.get_as_text())
+		_i16_index = j.get("icons", {})
+		_i16_cols = int(j.get("cols", 16))
+		_i16_sheet = load(ICONS16_PNG)
+	if not _i16_index.has(icon_name):
+		return null
+	var i := int(_i16_index[icon_name])
+	var at := AtlasTexture.new()
+	at.atlas = _i16_sheet
+	at.region = Rect2(16 * (i % _i16_cols), 16 * (i / _i16_cols), 16, 16)
+	at.filter_clip = true
+	_i16_cache[icon_name] = at
+	return at
 
 
 ## the old 16 px icon even while icons_v2 is on (GOD before/after preview)

@@ -862,6 +862,11 @@ func _run() -> void:
 		await _gear_sets_test()
 		_finish()
 		return
+	if "--only=icons_room16" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _icons_room16_test()
+		_finish()
+		return
 	if "--only=icons_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _icons_v2_test()
@@ -4938,7 +4943,7 @@ func _features_test() -> void:
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
 	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
 	# (MV-546) rides on the world map, so it ships off with it
-	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion", "ui_v5"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764); ui_v5: phase 1 of the MV-768 redesign
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion", "ui_v5", "icons_room16"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764); ui_v5: phase 1 of the MV-768 redesign; icons_room16: until the icons the code turns to mush are redrawn (MV-775)
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
 	for k in ["road_train", "gear_sets", "gear_frame64"]:
@@ -13212,6 +13217,8 @@ func _nextgen_crew_test() -> void:
 ## MV-694 icons v2: every ic_* has a 32 px ic2_*, IconTex keeps 16x16 layout, mood icons, switch off = old set, GOD toggle
 func _icons_v2_test() -> void:
 	var was := Features.on("icons_v2")
+	var was16 := Features.on("icons_room16")
+	Dev.icons_room16(false)
 	Dev.icons_v2(true)
 	var ids: Array[String] = []
 	for key in Atlas.regions:
@@ -13238,6 +13245,36 @@ func _icons_v2_test() -> void:
 	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
 	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
 	Dev.icons_v2(was)
+	await _icons_room16_test()
+	Dev.icons_room16(was16)
+
+
+## MV-775 icons B (switch icons_room16): every ic2_* and every gear set piece has a native 16 px room-style icon
+func _icons_room16_test() -> void:
+	Dev.icons_room16(true)
+	var miss := []
+	var ok16 := true
+	for key in Atlas.regions:
+		if str(key).begins_with("ic2_"):
+			var id := str(key).trim_prefix("ic2_")
+			var t := Atlas.icon(id)
+			if t == null or t is IconTex:
+				miss.append(id)
+			else:
+				ok16 = ok16 and t.get_width() == 16 and t.get_height() == 16
+	_check("icons B: every ic2_* icon has a 16 px room-style icon (missing %s)" % str(miss), miss.is_empty())
+	_check("icons B: they are native 16x16 (no IconTex)", ok16)
+	var sets_ok := true
+	for p in GearSets.ICON_ORDER:
+		var st := GearSets.icon(p)
+		sets_ok = sets_ok and st != null and not (st is IconTex) and st.get_width() == 16
+	_check("icons B: every gear set piece has its 16 px icon", sets_ok)
+	var b := UIKit.button("x", "green", "food")
+	_check("icons B: a button icon keeps the 16 px slot", b.icon != null and b.icon.get_width() == 16 and not (b.icon is IconTex))
+	b.free()
+	_check("icons B: GOD toggle sets the switch", Features.on("icons_room16"))
+	Dev.icons_room16(false)
+	_check("icons B: switch off = icons v2 again", (Atlas.icon("food") is IconTex) == Features.on("icons_v2"))
 
 
 ## MV-767: gear sets v1 (switch gear_sets) + the 64 px Vault hatch item frame (switch gear_frame64)
