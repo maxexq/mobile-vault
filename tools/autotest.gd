@@ -13248,7 +13248,7 @@ func _gear_sets_test() -> void:
 	Game.set_process(false)
 	Combat.set_process(false)
 	Game.s = saved_state.duplicate(true)
-	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true}, "tune": {}}
+	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true, "gear_frame_simple": true}, "tune": {}}
 	Features.layers.remote = {}
 	Features.layers.mode = {}
 	# --- data: 5 sets x 4 pieces, bases + icons
@@ -13372,6 +13372,19 @@ func _gear_sets_test() -> void:
 	var plain_tile := UIKit.gear_tile(Loot.roll_item("armor", 5, 0, "leather_jacket"), "armor", 28)
 	_check("frame64: a plain item has no set emblem", (plain_tile.find_child("GearFrame64", false, false) as GearFrame64).set_col.a == 0.0)
 	plain_tile.free()
+	# MV-773: the simple option B frame (switch gear_frame_simple, on by default) = one still cell per row, no clock
+	var ss := GearFrame64.simple_sheet()
+	_check("frame simple: frames_simple.png = 96 x 96 by 7 rows (rarity 0-5 + empty) loads", ss != null and ss.get_size() == Vector2(96, 96 * 7))
+	var st := UIKit.gear_tile(it, "weapon", 32)
+	var sfr: GearFrame64 = st.find_child("GearFrame64", false, false)
+	_check("frame simple: switch on = simple sheet, still (no _process), set emblem kept", sfr != null and sfr.simple and not sfr.is_processing() and sfr.rank == 4 and sfr.set_col == GearSets.color("hunter"))
+	st.free()
+	Features.layers.dev.features.gear_frame_simple = false
+	var vt := UIKit.gear_tile(it, "weapon", 32)
+	var vfr: GearFrame64 = vt.find_child("GearFrame64", false, false)
+	_check("frame simple: switch off = the animated Vault hatch sheet", vfr != null and not vfr.simple and vfr.is_processing())
+	vt.free()
+	Features.layers.dev.features.gear_frame_simple = true
 	Features.layers.dev.features.gear_frame64 = false
 	var old := UIKit.gear_tile(it, "weapon", 32)
 	_check("frame64: switch off = the old tile (no GearFrame64), set icon still shown", old.find_child("GearFrame64", false, false) == null)

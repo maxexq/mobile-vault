@@ -870,6 +870,13 @@ func gear_frame64(on: bool) -> void:
 	Features.changed.emit()
 
 
+## MV-773: the simple option B frame / the Vault hatch for this session (switch gear_frame_simple)
+func gear_frame_simple(on: bool) -> void:
+	act("gear frame simple %s" % ("on" if on else "off"))
+	Features.set_override("features", "gear_frame_simple", on)
+	Features.changed.emit()
+
+
 ## put the 4 pieces of a set (rarity rar) in the stash
 func gear_set_give(set_id: String, rar: int = 2) -> Array:
 	act("gear set give %s" % set_id)
