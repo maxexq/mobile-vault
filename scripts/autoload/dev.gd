@@ -368,6 +368,12 @@ func weather(w: String) -> void:
 	act("weather " + w)
 
 
+## MV-770: Weather v2 preview: switch weather_v2 on (or off to compare with the old particles) and force a weather
+func weather_v2_preview(w: String, on: bool = true) -> void:
+	feature_set("weather_v2", on)
+	weather(w)
+
+
 func res_set(k: String, v: float) -> void:
 	if Game.s.res.has(k):
 		Game.s.res[k] = clampf(v, 0.0, Game.cap(k))

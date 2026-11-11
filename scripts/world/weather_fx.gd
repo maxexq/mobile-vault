@@ -14,6 +14,8 @@ var fog: Node2D
 var leaves: Node2D
 var motes: Node2D
 var flash: ColorRect
+var background: Background
+var v2: WeatherV2           # MV-770 Weather v2 (switch weather_v2)
 var haze: ColorRect
 var fx_alpha := 1.0          # faded to 0 while a room close-up is open
 var _lightning_t := 4.0
@@ -71,6 +73,11 @@ func _ready() -> void:
 	haze.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(haze)
 	move_child(haze, 0)
+	v2 = WeatherV2.new()
+	v2.name = "WeatherV2"
+	add_child(v2)
+	add_child(v2.under)
+	move_child(v2.under, 0)        # under the haze; v2 itself (hero flakes / scraps) draws above it
 	flash = ColorRect.new()
 	flash.color = Color(0.9, 0.95, 1.0, 0.0)
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -79,6 +86,7 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout)
 	Game.weather_changed.connect(_set_weather)
 	Game.biome_changed.connect(func(_i, _inst): _set_weather(Game.s.weather))
+	Features.changed.connect(func(): _set_weather(_weather))
 	_layout()
 
 
@@ -100,15 +108,19 @@ func _layout() -> void:
 
 func _set_weather(w: String) -> void:
 	_weather = w
+	var on_v2 := Features.on("weather_v2")
+	v2.visible = on_v2
+	v2.under.visible = on_v2
+	v2.set_weather(w if on_v2 else "clear")
 	var biome: String = Data.biome(Game.s.biome).id if not Game.s.is_empty() else "industrial"
-	rain.emitting = w in ["rain", "storm"]
-	acid.emitting = w == "acid_rain"
-	ash.emitting = w == "ashfall"
+	rain.emitting = w in ["rain", "storm"] and not on_v2
+	acid.emitting = w == "acid_rain" and not on_v2
+	ash.emitting = w == "ashfall" and not on_v2
 	if rain is GPUParticles2D:
 		(rain as GPUParticles2D).amount_ratio = 1.0 if w == "storm" else 0.55
-	snow.emitting = w == "snow"
-	sand.emitting = w == "sandstorm"
-	fog.emitting = w == "fog"
+	snow.emitting = w == "snow" and not on_v2
+	sand.emitting = w == "sandstorm" and not on_v2
+	fog.emitting = w == "fog" and not on_v2
 	leaves.emitting = biome == "forest" and w != "snow"
 	motes.emitting = biome in ["desert", "industrial", "metro", "swamp"] and w in ["clear", "overcast"]
 
@@ -142,6 +154,8 @@ func _process(delta: float) -> void:
 	pm.a = fx_alpha
 	for p in [rain, acid, snow, ash, sand, fog, leaves, motes]:
 		p.modulate = pm
+	if v2.visible:
+		v2.step(delta, background.current_speed_px() if background else 90.0, _vp, pm, night)
 	# full-screen haze for low-visibility weather
 	var hz: Color = HAZE.get(_weather, Color(0, 0, 0, 0))
 	hz.a *= fx_alpha
@@ -160,4 +174,6 @@ func _do_lightning() -> void:
 	tw.tween_property(flash, "color:a", 0.1, 0.08)
 	tw.tween_property(flash, "color:a", 0.55, 0.04)
 	tw.tween_property(flash, "color:a", 0.0, 0.35)
+	if v2.visible:
+		v2.strike()
 	lightning.emit()

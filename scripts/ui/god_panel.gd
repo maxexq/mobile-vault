@@ -217,6 +217,8 @@ func _tab_main() -> void:
 		var wid: String = w
 		wb.append(_b(str(Data.WEATHER[w].get("th", w)), func(): Dev.weather(wid), "yellow" if Game.s.weather == wid else "gray"))
 	_row(wb)
+	var v2_on := Features.on("weather_v2")
+	_row([_b("อากาศ v2: " + ("เปิด" if v2_on else "ปิด"), func(): Dev.weather_v2_preview(str(Game.s.weather), not v2_on), "green" if v2_on else "red")])
 	_head("SCREEN", "ขนาดจอ")
 	_note(Dev.view_info())
 	if not OS.has_feature("web"):

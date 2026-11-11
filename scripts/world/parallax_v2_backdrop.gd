@@ -50,6 +50,7 @@ var _air_lit: Node2D
 var _decal_tex: Array[Texture2D] = []
 var _tick := -1
 var _unshaded: ShaderMaterial
+var wx_slots: Dictionary = {}   # MV-770 Weather v2 layers between the strips: sky, far, mid, ground, rays
 
 
 func _init(id: String = "industrial") -> void:
@@ -102,6 +103,7 @@ func _ready() -> void:
 	for i in 9:
 		_clouds.append({"i": i % maxi(1, _cloud_tex.size()), "x": _rng(i + 1) * CLOUD_WRAP, "y": -140.0 + _rng(i + 9) * 150.0, "w": 2.0 + _rng(i + 5) * 5.0})
 	var spots: Dictionary = cfg.get("spots", {})
+	_wx_slot("sky")
 	for c in CONFIG:
 		var key: String = c[0]
 		var d: int = c[4]
@@ -124,6 +126,8 @@ func _ready() -> void:
 				px.add_child(fx)
 				entry["lights" if lit else "fx"] = fx
 		layers[key] = entry
+		if key in ["far", "mid"]:
+			_wx_slot(key)
 		if key == "near":
 			_scatter(px, _textures("props"), tex.get_width() / d, 6, 0.45, 11, func(t: Texture2D, _i: int): return 288.0 - t.get_height() / 2.0)
 		if key == "road":
@@ -144,7 +148,18 @@ func _ready() -> void:
 	_air_lit.material = _unshaded
 	_air_lit.draw.connect(_draw_air.bind(true))
 	add_child(_air_lit)
+	_wx_slot("ground")
+	_wx_slot("rays")
 	update_clock()
+
+
+## an empty node in the layer order that Weather v2 draws into (camera-relative, world space)
+func _wx_slot(key: String) -> void:
+	var n := Node2D.new()
+	n.name = "Weather" + key.capitalize()
+	n.draw.connect(func(): WeatherV2.draw_slot(n, key))
+	add_child(n)
+	wx_slots[key] = n
 
 
 func _textures(sub: String) -> Array[Texture2D]:
@@ -205,6 +220,9 @@ func _process(delta: float) -> void:
 		var speed := Features.num("parallax_v2." + str(key) + "_speed", float(entry.speed))
 		entry.offset = fposmod(float(entry.offset) + road_speed * speed * delta, px.repeat_size.x)
 		px.scroll_offset = Vector2(roundf(float(entry.offset)), 0)
+	if WeatherV2.active():
+		for k in wx_slots:
+			(wx_slots[k] as Node2D).queue_redraw()
 	var wind := Features.num("parallax_v2.cloud_wind", 1.0)
 	for c in _clouds:
 		c.x = fposmod(float(c.x) + (float(c.w) * wind + road_speed * 0.03) * delta, CLOUD_WRAP)
