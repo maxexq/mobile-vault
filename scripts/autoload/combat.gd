@@ -182,6 +182,7 @@ func _ready() -> void:
 	(func(): Mods.mods_changed.connect(rebuild_heroes)).call_deferred()
 	Game.gear_changed.connect(rebuild_heroes)
 	Game.dwellers_changed.connect(rebuild_heroes)
+	boss_event.connect(_set_slayer)
 	Game.game_started.connect(func():
 		_clear_enemies()
 		_end_subs(false)
@@ -376,6 +377,7 @@ func hero_stats(d: Dictionary, role_idx: int) -> Dictionary:
 	st.aspd *= 1.0 + Loot.base_stat(bt, "aspd_pct") / 100.0
 	st.scrap = Loot.sum_key(items, "scrap")
 	st.xp = Loot.sum_key(items, "xp")
+	GearSets.apply_hero(st, d)      # MV-767 2/3/4-piece set bonuses (switch gear_sets)
 	st.heal = (6.0 + float(d.int) * 2.2 + lvl) * (1.0 + 0.04 * float(d.int)) if role.id == "medic" else 0.0
 	# --- traits & skill tree
 	var brawl: bool = Crew.has(d, "brawler") and role.id == "bruiser"
@@ -509,11 +511,12 @@ func _tick_room_squad(dt: float) -> void:
 		if h.is_empty() or not sh.has(i):
 			continue
 		var g: Dictionary = sh[i]
+		_tick_set_buffs(h, dt)
 		h.atk_t = float(h.atk_t) - dt
 		if h.atk_t <= 0.0:
 			var tt := _gun_targets(g, int(g.splash))
 			if not tt.is_empty():
-				h.atk_t = 1.0 / maxf(0.2, float(g.aspd))
+				h.atk_t = 1.0 / maxf(0.2, float(g.aspd) * _set_aspd(h))
 				for e in tt:
 					_gun_hit(g, e, 1.0, i)
 		if i == 1:
@@ -566,8 +569,11 @@ func _gun_targets(g: Dictionary, n: int) -> Array:
 func _gun_hit(g: Dictionary, e: Dictionary, mult: float, slot: int = 0) -> void:
 	if float(e.hp) <= 0.0:
 		return
-	var crit := rng.randf() * 100.0 < float(g.crit)
-	var dmg := float(g.dmg) * mult * (float(g.critd) / 100.0 if crit else 1.0) * (2.0 if bool(g.aa) and e.kind == "air" else 1.0)
+	var h: Dictionary = heroes[slot] if slot >= 0 and slot < heroes.size() else {}
+	var hst: Dictionary = h.get("st", {})
+	var mark := _set_mark(h)      # counted on every attack, so it runs before the random roll
+	var crit := rng.randf() * 100.0 < float(g.crit) or mark
+	var dmg := float(g.dmg) * mult * (float(g.critd) / 100.0 if crit else 1.0) * (2.0 if bool(g.aa) and e.kind == "air" else 1.0) * _set_hit_mult(hst, e)
 	shot.emit("room_gun", RearGunner.post(), "enemy", int(e.id), "bullet")
 	_damage_enemy(e, dmg, crit, slot, true)
 
@@ -711,6 +717,10 @@ func _clear_enemies() -> void:
 
 func _start_wave() -> void:
 	var w := wave()
+	for h in heroes:
+		if h is Dictionary and not h.is_empty():
+			h.erase("ls_used")
+			h.erase("shield")
 	var mobs: Array = biome_mobs()
 	spawn_queue.clear()
 	wave_is_warlord = false
@@ -944,6 +954,7 @@ func tick(dt: float) -> void:
 			continue
 		var st: Dictionary = h.st
 		h.hp = minf(float(h.max), float(h.hp) + float(st.regen) * dt)
+		_tick_set_buffs(h, dt)
 		h.atk_t = float(h.atk_t) - dt
 		if h.atk_t <= 0.0:
 			var targets := _targets_in_range(i, float(st.range), int(st.splash))
@@ -953,7 +964,7 @@ func tick(dt: float) -> void:
 				targets = _targets_from(DECK_X, BRUISER_THROW, 1, false)
 				mult = 0.5
 			if not targets.is_empty():
-				h.atk_t = 1.0 / maxf(0.2, float(st.aspd))
+				h.atk_t = 1.0 / maxf(0.2, float(st.aspd) * _set_aspd(h))
 				for e in targets:
 					_hero_hit(i, e, mult)
 		# skills
@@ -1143,6 +1154,9 @@ func _damage_van(e: Dictionary, raw: float, special: bool = false, defense: floa
 
 
 func _enemy_target(e: Dictionary, bruiser_alive: bool) -> int:
+	var taunt := _set_taunt()
+	if taunt >= 0 and (e.kind != "melee" or taunt == 1):
+		return taunt
 	if e.kind == "melee":
 		return 1 if bruiser_alive else -1
 	var pool := []
@@ -1185,8 +1199,9 @@ func _targets_from(x0: float, rng_px: float, n: int, _any: bool) -> Array:
 
 func _hero_hit(slot: int, e: Dictionary, mult: float) -> void:
 	var st: Dictionary = heroes[slot].st
-	var crit := rng.randf() * 100.0 < float(st.crit)
-	var dmg := float(st.dmg) * mult * (float(st.critd) / 100.0 if crit else 1.0)
+	var mark := _set_mark(heroes[slot])
+	var crit := rng.randf() * 100.0 < float(st.crit) or mark
+	var dmg := float(st.dmg) * mult * (float(st.critd) / 100.0 if crit else 1.0) * _set_hit_mult(st, e)
 	shot.emit("hero", slot, "enemy", int(e.id), "melee" if ROLES[slot].id == "bruiser" else "bullet")
 	_damage_enemy(e, dmg, crit, slot, true)
 	if float(st.lifesteal) > 0.0:
@@ -1203,6 +1218,8 @@ func _damage_enemy(e: Dictionary, dmg: float, crit: bool, _slot: int, show: bool
 		if float(e.hp) - dmg <= float(e.max) * 0.6:
 			boss_event.emit("armor_break", e)
 	e.hp = float(e.hp) - dmg
+	if _slot >= 0:
+		e["hit_by"] = _slot      # MV-767: who landed the last blow (hunter set kill buff)
 	_dmg_window.append([_clock, dmg])
 	if show:
 		hit.emit("enemy", int(e.id), dmg, crit)
@@ -1222,6 +1239,7 @@ func _damage_hero(slot: int, raw: float, source: Dictionary = {}) -> void:
 	var dmg := raw * (1.0 - red)
 	if warlord_balanced(source):
 		dmg = minf(dmg, float(h.max) * Features.num("warlord.hero_hit_cap", 0.02))
+	dmg = _set_on_hurt(slot, h, dmg, source)
 	h.hp = float(h.hp) - dmg
 	hit.emit("hero", slot, dmg, false)
 	if float(h.hp) <= 0.0:
@@ -1287,9 +1305,95 @@ func _cast_skill(slot: int) -> bool:
 	return false
 
 
+# =================================================================== MV-767 gear set specials
+## hunter 4: every 5th attack of the wearer is a crit
+func _set_mark(h: Dictionary) -> bool:
+	if h.is_empty() or not h.get("st", {}).get("set_mark", false):
+		return false
+	h["shots"] = int(h.get("shots", 0)) + 1
+	return int(h.shots) % 5 == 0
+
+
+## titan 2: +15 % to bosses / elites; titan 3: each hit on a boss strips 1 % armour (15 stacks, any hitter benefits)
+func _set_hit_mult(st: Dictionary, e: Dictionary) -> float:
+	var m := 1.0
+	var big := bool(e.get("boss", false)) or bool(e.get("warlord", false))
+	if (big or bool(e.get("elite", false))) and st.has("set_boss_dmg"):
+		m += float(st.set_boss_dmg)
+	if big:
+		if st.get("set_armor_break", false):
+			e["armor_break"] = mini(15, int(e.get("armor_break", 0)) + 1)
+		m *= 1.0 + 0.01 * float(e.get("armor_break", 0))
+	return m
+
+
+## attack speed buffs: hunter 4 kills (+5 % x up to 3, 5 s), titan 4 Giant slayer (+25 %, 8 s)
+func _set_aspd(h: Dictionary) -> float:
+	var m := 1.0
+	if float(h.get("mark_t", 0.0)) > 0.0:
+		m += 0.05 * float(h.get("mark_n", 0))
+	if float(h.get("slayer_t", 0.0)) > 0.0:
+		m += 0.25
+	return m
+
+
+func _tick_set_buffs(h: Dictionary, dt: float) -> void:
+	if h.has("mark_t"):
+		h.mark_t = float(h.mark_t) - dt
+		if float(h.mark_t) <= 0.0:
+			h.erase("mark_t")
+			h.erase("mark_n")
+	if h.has("slayer_t"):
+		h.slayer_t = float(h.slayer_t) - dt
+		if float(h.slayer_t) <= 0.0:
+			h.erase("slayer_t")
+
+
+## titan 4: a boss move (enrage / acid / summon / erupt ...) gives the wearers +25 % attack speed for 8 s
+func _set_slayer(kind: String, e: Dictionary) -> void:
+	if not (bool(e.get("boss", false)) or bool(e.get("warlord", false))) or kind == "armor_break":
+		return
+	for h in heroes:
+		if h is Dictionary and not h.is_empty() and h.alive and h.st.get("set_slayer", false):
+			h["slayer_t"] = 8.0
+
+
+## damage a hero takes after defence: Giant slayer -30 % from bosses, Last stand shield, melee reflect
+func _set_on_hurt(slot: int, h: Dictionary, dmg: float, source: Dictionary) -> float:
+	var st: Dictionary = h.st
+	var taken := dmg
+	var from_boss := bool(source.get("boss", false)) or bool(source.get("warlord", false))
+	if from_boss and float(h.get("slayer_t", 0.0)) > 0.0:
+		dmg *= 0.7
+	if st.get("set_last_stand", false):
+		if not h.get("ls_used", false) and float(h.hp) - dmg < float(h.max) * 0.3:
+			h["ls_used"] = true
+			h["shield"] = float(h.max) * 0.25
+			hit.emit("heal", slot, float(h.shield), false)
+		if float(h.get("shield", 0.0)) > 0.0:
+			var take := minf(dmg, float(h.shield))
+			h.shield = float(h.shield) - take
+			dmg -= take
+	if float(st.get("set_reflect", 0.0)) > 0.0 and not source.is_empty() and str(source.get("kind", "")) == "melee" and source.has("hp"):
+		_damage_enemy(source, taken * float(st.set_reflect), false, slot, false)
+	return dmg
+
+
+## Last stand: while a wearer's shield holds, enemies aim at them first
+func _set_taunt() -> int:
+	for i in heroes.size():
+		if _alive(i) and float(heroes[i].get("shield", 0.0)) > 0.0:
+			return i
+	return -1
+
+
 # =================================================================== rewards
 func _on_kill(e: Dictionary) -> void:
 	enemies.erase(e)
+	var kb := int(e.get("hit_by", -1))
+	if kb >= 0 and kb < heroes.size() and not heroes[kb].is_empty() and heroes[kb].st.get("set_mark", false):
+		heroes[kb]["mark_n"] = mini(3, int(heroes[kb].get("mark_n", 0)) + 1)
+		heroes[kb]["mark_t"] = 5.0
 	if (e.get("mech", []) as Array).has("explode"):
 		_explode(e)
 	var L := float(e.lvl)
@@ -1354,7 +1458,9 @@ func _on_kill(e: Dictionary) -> void:
 			drops = 1
 			min_rar = 1 if e.elite else 0
 	for k in drops:
-		var item := Loot.roll_random(int(L), luck, min_rar)
+		var item := GearSets.roll("boss" if e.boss or e.warlord else "kill", int(L), min_rar, luck)    # MV-767
+		if item.is_empty():
+			item = Loot.roll_random(int(L), luck, min_rar)
 		var kept := Loot.add_to_stash(item)
 		loot_dropped.emit(item, at)
 		if kept and int(item.rar) >= 3:

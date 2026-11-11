@@ -862,6 +862,87 @@ func gear_sample(r: int, slot: String, plus: int = 0, lock: bool = false) -> Dic
 	return {"uid": -1, "base": base, "slot": slot, "rar": r, "ilvl": 5 + r * 4, "plus": plus, "aff": [], "lock": lock}
 
 
+# ------------------------------------------------------------------ MV-767 gear sets + 64 px frame
+## the 64 px Vault hatch frame on / off for this session (switch gear_frame64)
+func gear_frame64(on: bool) -> void:
+	act("gear frame64 %s" % ("on" if on else "off"))
+	Features.set_override("features", "gear_frame64", on)
+	Features.changed.emit()
+
+
+## put the 4 pieces of a set (rarity rar) in the stash
+func gear_set_give(set_id: String, rar: int = 2) -> Array:
+	act("gear set give %s" % set_id)
+	var out := []
+	if not GearSets.SETS.has(set_id):
+		return out
+	for slot in GearSets.SETS[set_id].slots:
+		var it := Loot.roll_item(slot, maxi(1, Combat.enemy_level()), clampi(rar, 0, 5), GearSets.base_id(set_id, slot))
+		Loot.stash().append(it)
+		out.append(it)
+	Game.gear_changed.emit()
+	return out
+
+
+## dress the squad lead (or the first crew member) in n pieces of a set, so its 2/3/4-piece bonuses show
+func gear_set_wear(set_id: String, n: int = 4) -> Dictionary:
+	act("gear set wear %s %d" % [set_id, n])
+	var d := squad_lead()
+	if d.is_empty() or not GearSets.SETS.has(set_id):
+		return d
+	var slots: Array = GearSets.SETS[set_id].slots
+	for i in mini(n, slots.size()):
+		var it := Loot.roll_item(slots[i], maxi(1, Combat.enemy_level()), 2, GearSets.base_id(set_id, slots[i]))
+		Loot.stash().append(it)
+		Loot.equip_from_stash(int(it.uid), d)
+	Game.gear_changed.emit()
+	return d
+
+
+## +craft cost set parts of a set
+func gear_set_parts(set_id: String) -> void:
+	act("gear set parts %s" % set_id)
+	GearSets.parts()[set_id] = GearSets.parts_of(set_id) + GearSets.craft_cost()
+	Game.resources_changed.emit()
+
+
+## the next drop of every source is a set piece (pity full)
+func gear_set_pity() -> void:
+	act("gear set pity")
+	for sid in GearSets.ORDER:
+		GearSets.pity()[sid] = int(Features.num("sets.pity", GearSets.PITY))
+
+
+func squad_lead() -> Dictionary:
+	for did in Game.s.get("squad", []):
+		if int(did) >= 0 and not Game.dweller_by_id(int(did)).is_empty():
+			return Game.dweller_by_id(int(did))
+	return Game.s.dwellers[0] if not Game.s.get("dwellers", []).is_empty() else {}
+
+
+## Raider Hunter 4 + Tinker 2 on the squad lead, then open the item detail of a worn hunter piece (set panel)
+func gear_set_demo() -> void:
+	act("gear set demo")
+	var d := gear_set_wear("hunter", 4)
+	if d.is_empty():
+		return
+	var tk: Array = GearSets.SETS.tinker.slots
+	for slot in ["armor", "backpack"]:
+		if tk.has(slot):
+			var it := Loot.roll_item(slot, maxi(1, Combat.enemy_level()), 3, GearSets.base_id("tinker", slot))
+			Loot.stash().append(it)
+			Loot.equip_from_stash(int(it.uid), d)
+	Game.gear_changed.emit()
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud == null:
+		return
+	for k in hud.panels:
+		if k != "inventory" and hud.panels[k].is_open:
+			hud.panels[k].close()
+	var inv: LootPanel = hud.panels.inventory
+	inv.open_equipped(Loot.equipped_on(d, "weapon"), int(d.id))
+
+
 # ------------------------------------------------------------------ MV-554 multi-salvage
 ## put 8 low-rarity items (one locked) in the stash and open the loot window in select mode with three ticked
 func multi_salvage_demo() -> void:
@@ -1310,6 +1391,71 @@ func decker_sign(text: String = "", kind: String = "cheer") -> bool:
 	v.amb.sign_say(text if text != "" else DeckerSign.CHEERS[randi() % DeckerSign.CHEERS.size()], kind)
 	act("decker sign", {"text": text, "kind": kind})
 	return true
+
+
+## MV-760: drive the Decker (its decks now, else 2) with every exterior mod at art level lv (0 = none, 1-3; a mod with fewer
+## levels shows its top one). Solar panels: L1 bare, L2 + shutters, L3 + 4 panels. Returns the parts drawn on the road view.
+func decker_mods(lv: int) -> int:
+	feature_set("decker_mods", true)
+	decker_preview(Game.floors() if Game.tier() == "bus" else 2)
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "fuel_tanks", "armor_plates", "roof_turret", "rad_shield", "heater"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	Game.s.mods["solar_covers"] = 1 if lv >= 2 else 0
+	Game.s.solar.panels = 4 if lv >= 3 else maxi(1, mini(int(Game.s.solar.panels), 3))
+	act("decker mods", {"level": lv})
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or v.v2_shell == null:
+		return 0
+	var root := v.v2_shell.get_node_or_null(ShellMods.NODE)
+	return root.get_child_count() if root != null and root.visible else 0
+
+
+## MV-763: drive Dr. Ren's ambulance (van, world v2) at `n` floors (-1 = its floors now, at least 1) with every approved
+## exterior mod at level lv (0 = none, 1-3; rad shield tops out at 2): ram, roof gun, fuel tanks (+ rack), armor, lead,
+## heavy suspension, off-road tyres. `interior` also opens the v3 interior. Returns the parts drawn on the road view.
+func ambulance_mods(lv: int, n: int = -1, interior: bool = false) -> int:
+	feature_set("ambulance_mods", true)
+	feature_set("ambulance_v3", true)
+	feature_set("world_v2", true)
+	if Game.tier() != "van":
+		set_tier("van")
+	_van_floors(n if n > 0 else maxi(Game.floors(), 1))
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "roof_turret", "fuel_tanks", "armor_plates", "rad_shield", "suspension", "offroad_wheels"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	act("ambulance mods", {"level": lv, "floors": Game.floors()})
+	_vehicle_changed()
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	if interior:
+		rooms_v3_open()
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	if v == null or v.v2_shell == null:
+		return 0
+	var root := v.v2_shell.get_node_or_null(ShellMods.NODE)
+	return root.get_child_count() if root != null and root.visible else 0
+## MV-762: the road train on the road (its decks now, else 2) with its trailer and every exterior mod at art level lv
+## (0 = none, 1-3; a mod with fewer levels shows its top one): ram, cab armour (+ side rail from L2), fuel tanks, solar
+## shutters (from L1), lead, heater flue, rear roof turret, heavy suspension, off-road wheels. Returns the parts drawn on the
+## shells (suspension and wheels are counted by the autotest on AmbulanceMotion).
+func road_train_mods(lv: int) -> int:
+	feature_set("road_train_mods", true)
+	road_train_world(Game.floors() if Game.tier() == "rig" and Game.floors() >= 2 else 2)
+	Game.ensure_min_trailers()
+	if not Game.s.has("mods"):
+		Game.s["mods"] = {}
+	for id in ["spike_ram", "fuel_tanks", "armor_plates", "roof_turret", "rad_shield", "heater", "solar_covers",
+			"suspension", "offroad_wheels"]:
+		Game.s.mods[id] = mini(lv, int(Mods.MODS[id].max))
+	act("road train mods", {"level": lv})
+	Mods.mods_changed.emit()
+	Game.resources_changed.emit()
+	return RoadTrainMods.count(get_tree().get_first_node_in_group("vehicle_fx"))
 
 
 ## MV-744: play the Decker's air horn or raid siren (a preview: changes nothing in the run)

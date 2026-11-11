@@ -262,6 +262,8 @@ func _end_raid() -> void:
 			Game.gear_changed.emit()
 			txt += " · %s" % Loot.item_name(item)
 	Game.toast.emit(txt, "good")
+	if _raid_kills > 0:
+		GearSets.give(GearSets.roll("raid", Combat.enemy_level()))     # MV-767 bulwark set source
 	Trace.rec("threat", "salvage", {"kills": _raid_kills, "scrap": int(scrap)})
 	_set_phase("salvage")
 

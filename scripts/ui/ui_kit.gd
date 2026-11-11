@@ -693,6 +693,8 @@ static func pop(c: Control) -> void:
 
 ## square gear slot / stash tile: rarity-tinted frame, icon, +N, item level
 static func gear_tile(item: Dictionary, slot: String, px: int = 32) -> Button:
+	if Features.on("gear_frame64"):
+		return gear_tile64(item, slot, px)
 	var b := Button.new()
 	px = maxi(px, 28)
 	var empty := item.is_empty()
@@ -725,6 +727,8 @@ static func gear_tile(item: Dictionary, slot: String, px: int = 32) -> Button:
 			b.add_theme_stylebox_override(st, sb)
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	var ic := icon_rect(Loot.item_icon(item) if not empty else Loot.SLOT_ICON.get(slot, "gear"), 16)
+	if not empty and GearSets.set_of(item) != "":
+		ic.texture = item_icon_tex(item)      # MV-767 set piece art in the old frame too
 	ic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if empty:
 		if steel:
@@ -752,6 +756,122 @@ static func gear_tile(item: Dictionary, slot: String, px: int = 32) -> Button:
 	return b
 
 
+## MV-767 (switch gear_frame64): the approved 64 px Vault hatch frame (GearFrame64) drawn into the px box, the item's
+## icon at full 32 px detail in the porthole (set pieces: their PixelLab icon), +N as a red pill on the top-right corner,
+## no item level, the set emblem on the bottom-right bolt, lock on the bottom-left corner
+static func gear_tile64(item: Dictionary, slot: String, px: int = 32) -> Button:
+	var b := Button.new()
+	px = maxi(px, 28)
+	var empty := item.is_empty()
+	b.custom_minimum_size = Vector2(px, px)
+	b.focus_mode = Control.FOCUS_NONE
+	for st in ["normal", "hover", "pressed", "disabled", "hover_pressed", "focus"]:
+		b.add_theme_stylebox_override(st, StyleBoxEmpty.new())
+	var sid := GearSets.set_of(item)
+	var fr := GearFrame64.new()
+	fr.name = "GearFrame64"
+	b.add_child(fr)
+	fr.setup(-1 if empty else int(item.get("rar", 0)), px, GearSets.color(sid) if sid != "" else Color(0, 0, 0, 0))
+	var ic := TextureRect.new()
+	ic.name = "Icon"
+	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ic.stretch_mode = TextureRect.STRETCH_SCALE
+	ic.position = Vector2(px, px) * 0.25
+	ic.size = Vector2(px, px) * 0.5
+	ic.texture = item_icon_tex(item) if not empty else Atlas.icon(Loot.SLOT_ICON.get(slot, "gear"))
+	if empty:
+		ic.material = _empty_slot_material()
+	b.add_child(ic)
+	if not empty:
+		if int(item.plus) > 0:
+			b.add_child(plus_badge(int(item.plus), px))
+		if item.get("lock", false):
+			var lk := TextureRect.new()
+			lk.texture = Atlas.icon("lock")
+			lk.position = Vector2(-3, px - 13)
+			lk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(lk)
+	b.pressed.connect(func():
+		pop(b)
+		ic.position.y = px * 0.25 + 1.0      # tap: the item dips into the porthole and settles
+		var tw := ic.create_tween()
+		tw.tween_property(ic, "position:y", px * 0.25, 0.15))
+	return b
+
+
+## the icon texture of an item: set pieces have their own 32 px art (GearSets.icon), the rest the atlas icon
+static func item_icon_tex(item: Dictionary) -> Texture2D:
+	var nm := Loot.item_icon(item)
+	if nm.begins_with("set_"):
+		var t := GearSets.icon(nm.substr(4))
+		if t != null:
+			return t
+	return Atlas.icon(nm)
+
+
+## MV-767 set bonus block: set name in its colour with N/4 lamps, then the 2 / 3 / 4-piece lines (lit = active).
+## compact (crew cards): only the active lines and the next one.
+static func set_bonus_box(set_id: String, worn_n: int, compact: bool = false) -> VBoxContainer:
+	var s: Dictionary = GearSets.SETS[set_id]
+	var v := vbox(0)
+	v.name = "SetBonus_" + set_id
+	var h := hbox(3)
+	for i in 4:
+		var lamp := ColorRect.new()
+		lamp.custom_minimum_size = Vector2(4, 4)
+		lamp.color = s.col if i < worn_n else Color(0.16, 0.14, 0.12)
+		lamp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lamp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(lamp)
+	h.add_child(label("%s %d/4" % [s.en, worn_n], FP, s.col, true))
+	v.add_child(h)
+	var shown_next := false
+	for row in GearSets.bonus_rows(set_id, worn_n):
+		if compact and not row[2]:
+			if shown_next:
+				continue
+			shown_next = true
+		var l := wrap_label("(%d) %s" % [row[0], row[1]], FS_SMALL, C_GREEN if row[2] else C_DIM)
+		v.add_child(l)
+	return v
+
+
+## every set the crew member wears at least 2 pieces of (compact), or an empty box
+static func set_bonus_lines(d: Dictionary) -> VBoxContainer:
+	var v := vbox(2)
+	v.name = "SetBonusLines"
+	if not GearSets.on():
+		return v
+	var c := GearSets.counts(d)
+	for sid in GearSets.ORDER:
+		if int(c.get(sid, 0)) >= 2:
+			v.add_child(set_bonus_box(sid, int(c[sid]), true))
+	return v
+
+
+## approved +N badge: red pill overlapping the tile's top-right corner
+static func plus_badge(plus: int, px: int) -> Label:
+	var l := label("+%d" % plus, FP, Color(1.0, 0.96, 0.9), true)
+	l.name = "PlusBadge"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color8(170, 34, 40)
+	sb.border_color = Color8(12, 8, 8)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(3)
+	sb.content_margin_left = 2
+	sb.content_margin_right = 2
+	sb.content_margin_top = 0
+	sb.content_margin_bottom = 0
+	l.add_theme_stylebox_override("normal", sb)
+	l.add_theme_constant_override("outline_size", 0)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.reset_size()
+	l.position = Vector2(px - l.get_minimum_size().x + 3, -4)
+	return l
+
+
 static var _empty_mat: ShaderMaterial
 const GEAR_AURA := 6      # MV-473: how far an aura may paint outside its slot
 
@@ -759,6 +879,8 @@ const GEAR_AURA := 6      # MV-473: how far an aura may paint outside its slot
 ## spacing next to equipment tiles: at least GEAR_AURA when auras can show, so one slot's light never covers another
 ## slot, a label or a scroll edge; the old spacing otherwise
 static func gear_gap(old: int) -> int:
+	if Features.on("gear_frame64"):
+		return maxi(old, 4)      # MV-767: the 64 px frame's outer light reaches ~3 px past a 32 px tile
 	return maxi(old, GEAR_AURA) if Features.on("gear_slot_style") and GearFx.presentation() == "aura" else old
 
 

@@ -493,6 +493,10 @@ func _run() -> void:
 	if not bl.has("features"):
 		bl["features"] = {}
 	bl.features["road_train"] = false
+	# MV-767: the older gear / loot checks were written for the MV-473 tile and drops without set pieces; pin both new
+	# switches off under the dev layer, _gear_sets_test turns them on for itself
+	bl.features["gear_sets"] = false
+	bl.features["gear_frame64"] = false
 	if "--only=legal" not in OS.get_cmdline_user_args():
 		_legal_test_fixture()
 	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
@@ -724,6 +728,11 @@ func _run() -> void:
 		await _vehicle_anim_test()
 		_finish()
 		return
+	if "--only=ambulance_mods" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _ambulance_mods_test()
+		_finish()
+		return
 	if "--only=ambulance_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _ambulance_v3_test()
@@ -846,6 +855,11 @@ func _run() -> void:
 	if "--only=responsive" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _responsive_test()
+		_finish()
+		return
+	if "--only=gear_sets" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _gear_sets_test()
 		_finish()
 		return
 	if "--only=icons_v2" in OS.get_cmdline_user_args():
@@ -1741,6 +1755,7 @@ func _run() -> void:
 	await _engine_shake_test()
 	await _icon_art_test()
 	await _icons_v2_test()
+	await _gear_sets_test()
 	await _crew_roster_test()
 	await _announce_test()
 	await _scene_art_test()
@@ -1754,6 +1769,7 @@ func _run() -> void:
 
 
 	await _ambulance_v3_test()
+	await _ambulance_mods_test()
 	await _world_v2_test()
 	await _road_train_test()
 	await _decker_test()
@@ -4923,10 +4939,12 @@ func _features_test() -> void:
 	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion", "ui_v5"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764); ui_v5: phase 1 of the MV-768 redesign
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
-	pin.erase("road_train")         # the run's MV-721 test pin is not what ships
+	for k in ["road_train", "gear_sets", "gear_frame64"]:
+		pin.erase(k)                # the run's MV-721 / MV-767 test pins are not what ships
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
-	pin["road_train"] = false
+	for k in ["road_train", "gear_sets", "gear_frame64"]:
+		pin[k] = false
 	_check("features: every switch on by default (except %s, off)" % ", ".join(ships_off), all_on)
 	_check("features: tune falls back to the code constant", Features.num("threat.rate_scale", Threat.RATE_SCALE) == Threat.RATE_SCALE)
 	var base: Array = Data.biome(0).events
@@ -13220,6 +13238,169 @@ func _icons_v2_test() -> void:
 	Dev.icons_v2(was)
 
 
+## MV-767: gear sets v1 (switch gear_sets) + the 64 px Vault hatch item frame (switch gear_frame64)
+func _gear_sets_test() -> void:
+	var saved_state := Game.s
+	var saved_layers := Features.layers.duplicate(true)
+	var saved_processing := [Game.is_processing(), Combat.is_processing()]
+	Game.set_process(false)
+	Combat.set_process(false)
+	Game.s = saved_state.duplicate(true)
+	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true}, "tune": {}}
+	Features.layers.remote = {}
+	Features.layers.mode = {}
+	# --- data: 5 sets x 4 pieces, bases + icons
+	for sid in GearSets.ORDER:
+		var slots: Array = GearSets.SETS[sid].slots
+		_fold("gear sets: every set has 4 pieces in 4 different hero slots", slots.size() == 4 and slots.all(func(x): return Loot.HERO_SLOTS.has(x)) and slots.duplicate().filter(func(x): return slots.count(x) == 1).size() == 4, sid)
+		_fold("gear sets: every set has 3 bonus lines (2 / 3 / 4 pieces)", (GearSets.SETS[sid].bonus as Array).size() == 3, sid)
+		for slot in slots:
+			var bid := GearSets.base_id(sid, slot)
+			var b: Dictionary = Loot.BASES.get(bid, {})
+			_fold("gear sets: every piece is a Loot base of its slot and set", str(b.get("slot", "")) == slot and str(b.get("set", "")) == sid, bid)
+			var t := GearSets.icon(sid + "_" + slot)
+			_fold("gear sets: every piece has its 32 px icon (IconTex 16 slot)", t is IconTex and t.get_width() == 16 and (t as IconTex).inner.get_width() == 32, bid)
+	_fold_flush()
+	var icons_png: Texture2D = load(GearSets.ICONS_PNG)
+	var frames_png: Texture2D = load(GearFrame64.FRAMES_PNG)
+	_check("gear sets: icons.png 20 x 32 px and frames.png 16 x 96 by 7 rows load", icons_png != null and icons_png.get_size() == Vector2(640, 32) and frames_png != null and frames_png.get_size() == Vector2(GearFrame64.CELL * GearFrame64.N, GearFrame64.CELL * 7))
+	var pool_ok := true
+	for i in 300:
+		pool_ok = pool_ok and GearSets.set_of(Loot.roll_item(Loot.HERO_SLOTS[i % 6], 1 + i % 30, i % 6)) == ""
+	_check("gear sets: set pieces never come from the normal random pool", pool_ok)
+	# --- bonuses
+	var d: Dictionary = Game.s.dwellers[0]
+	d.gear = {}
+	var plain := Combat.hero_stats(d, 0)
+	for slot in GearSets.SETS.hunter.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("hunter", slot))
+	_check("gear sets: counts / worn see 4 hunter pieces", GearSets.counts(d).get("hunter", 0) == 4 and GearSets.worn(d, "hunter") == 4 and GearSets.has(d, "hunter", 4))
+	var hst := Combat.hero_stats(d, 0)
+	var hunter_base := Combat.hero_stats(d, 0)
+	Features.layers.dev.features.gear_sets = false
+	var off := Combat.hero_stats(d, 0)
+	_check("gear sets: switch off = no set bonus (worn 0, no flags)", GearSets.worn(d, "hunter") == 0 and not off.has("set_mark"))
+	Features.layers.dev.features.gear_sets = true
+	_check("gear sets: hunter 2 = +10 % damage", absf(float(hst.dmg) / float(off.dmg) - 1.10) < 0.001)
+	_check("gear sets: hunter 3 = +6 crit, +20 crit damage", absf(float(hst.crit) - float(off.crit) - 6.0) < 0.01 and absf(float(hst.critd) - float(off.critd) - 20.0) < 0.01)
+	_check("gear sets: hunter 4 = Mark flag", hst.get("set_mark", false) and hunter_base.get("set_mark", false))
+	var h := {"st": hst, "shots": 0}
+	var marks := 0
+	for i in 10:
+		marks += 1 if Combat._set_mark(h) else 0
+	_check("gear sets: Mark makes every 5th attack a crit", marks == 2)
+	d.gear = {}
+	for slot in GearSets.SETS.bulwark.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("bulwark", slot))
+	var bst := Combat.hero_stats(d, 0)
+	Features.layers.dev.features.gear_sets = false
+	var boff := Combat.hero_stats(d, 0)
+	Features.layers.dev.features.gear_sets = true
+	_check("gear sets: bulwark 2 = +15 % HP, 3 = +8 DEF + reflect, 4 = Last stand", absf(float(bst.hp) / float(boff.hp) - 1.15) < 0.001 and float(bst.def) > float(boff.def) + 7.0 and float(bst.get("set_reflect", 0.0)) > 0.0 and bst.get("set_last_stand", false))
+	var hero := {"st": bst, "hp": 100.0, "max": 100.0, "alive": true}
+	var taken := Combat._set_on_hurt(0, hero, 80.0, {})
+	_check("gear sets: Last stand shield (25 % max HP) soaks the blow that drops under 30 %, once a wave", hero.get("ls_used", false) and absf(taken - 55.0) < 0.01 and float(hero.shield) == 0.0)
+	d.gear = {}
+	for slot in GearSets.SETS.titan.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("titan", slot))
+	var tst := Combat.hero_stats(d, 0)
+	var boss := {"boss": true, "hp": 1000.0}
+	var m1 := Combat._set_hit_mult(tst, boss)
+	for i in 30:
+		Combat._set_hit_mult(tst, boss)
+	_check("gear sets: titan +15 % on bosses, Armor break stacks to 15", absf(m1 - 1.15 * 1.01) < 0.001 and int(boss.armor_break) == 15 and absf(Combat._set_hit_mult({}, {"boss": true, "armor_break": 15}) - 1.15) < 0.001)
+	_check("gear sets: titan off a boss = no bonus", Combat._set_hit_mult(tst, {"hp": 10.0}) == 1.0 and tst.get("set_slayer", false))
+	d.gear = {}
+	for slot in GearSets.SETS.tinker.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("tinker", slot))
+	d.erase("set_ot")
+	_check("gear sets: tinker room +10 % / +3 room stat / craft x1.15", absf(GearSets.room_mult([d]) - 1.10) < 0.001 and GearSets.room_stat_bonus(d) == 3.0 and GearSets.craft_mult([d]) == 1.15)
+	_check("gear sets: Overtime pays 1 minute of output per 5 minutes worked", GearSets.overtime_minutes([d], 299.0) == 0.0 and GearSets.overtime_minutes([d], 2.0) == 1.0 and GearSets.overtime_minutes([d], 600.0) == 2.0)
+	d.gear = {}
+	for slot in GearSets.SETS.scav.slots:
+		d.gear[slot] = Loot.roll_item(slot, 5, 0, GearSets.base_id("scav", slot))
+	_check("gear sets: scav 4 = Lucky haul team", GearSets.team_lucky([d]) and not GearSets.team_lucky([Game.s.dwellers[1] if Game.s.dwellers.size() > 1 else {}]))
+	# --- drops, pity, parts, craft
+	d.gear = {}
+	Game.s.erase("set_pity")
+	Features.layers.dev.tune = {"sets.drop_pct": 0.0, "sets.pity": 3.0}
+	var r1 := GearSets.roll("kill", 5)
+	var r2 := GearSets.roll("kill", 5)
+	var r3 := GearSets.roll("boss", 5, 2)
+	_check("gear sets: below the pity a 0 % roll gives nothing and counts", r1.is_empty() and r2.is_empty() and int(GearSets.pity().get("hunter", 0)) == 2)
+	var r4 := GearSets.roll("kill", 5)
+	_check("gear sets: the pity drop is a hunter piece and resets the counter", GearSets.set_of(r4) == "hunter" and int(GearSets.pity().hunter) == 0)
+	_check("gear sets: boss drops are titan pieces, min rarity kept", r3.is_empty() or (GearSets.set_of(r3) == "titan" and int(r3.rar) >= 2))
+	Features.layers.dev.tune = {"sets.drop_pct": 100.0}
+	var src_ok := true
+	for src in GearSets.SOURCE:
+		src_ok = src_ok and GearSets.set_of(GearSets.roll(src, 5)) == GearSets.SOURCE[src]
+	_check("gear sets: each source drops its own set", src_ok)
+	Features.layers.dev.features.gear_sets = false
+	_check("gear sets: switch off = no set drops", GearSets.roll("kill", 5).is_empty())
+	Features.layers.dev.features.gear_sets = true
+	Features.layers.dev.tune = {}
+	Game.s.gear = [r4]
+	Game.s.erase("set_parts")
+	r4.lock = false
+	Loot.salvage(int(r4.uid))
+	_check("gear sets: salvaging a set piece gives set parts", GearSets.parts_of("hunter") == GearSets.salvage_parts(r4) and GearSets.salvage_parts(r4) >= 3)
+	_check("gear sets: not enough parts = no craft", not GearSets.can_craft("hunter") and GearSets.craft_missing("hunter").is_empty())
+	GearSets.parts()["hunter"] = GearSets.craft_cost()
+	for dd in Game.s.dwellers:
+		dd.gear = {}
+	Game.s.gear = [Loot.roll_item("weapon", 3, 0, GearSets.base_id("hunter", "weapon"))]
+	var crafted := GearSets.craft_missing("hunter")
+	_check("gear sets: craft spends the parts on a missing piece", GearSets.set_of(crafted) == "hunter" and str(crafted.slot) != "weapon" and GearSets.parts_of("hunter") == 0 and Game.s.gear.size() == 2 and int(crafted.rar) >= 1)
+	# --- 64 px frame tile
+	var it := Loot.roll_item("weapon", 5, 4, GearSets.base_id("hunter", "weapon"))
+	it.plus = 7
+	it.lock = true
+	var t := UIKit.gear_tile(it, "weapon", 32)
+	var fr: GearFrame64 = t.find_child("GearFrame64", false, false)
+	var badge: Label = t.find_child("PlusBadge", false, false)
+	var ic: TextureRect = t.find_child("Icon", false, false)
+	_check("frame64: tile = frame (rarity row) + 32 px icon in the porthole + red +N, no item level", fr != null and fr.rank == 4 and badge != null and badge.text == "+7" and ic != null and ic.texture is IconTex and ic.size == Vector2(16, 16) and not _has_label_text(t, str(int(it.ilvl))))
+	_check("frame64: set piece carries its set colour emblem", fr != null and fr.set_col == GearSets.color("hunter"))
+	t.free()
+	var e := UIKit.gear_tile({}, "boots", 30)
+	var efr: GearFrame64 = e.find_child("GearFrame64", false, false)
+	_check("frame64: empty slot = lamps-off row, grey silhouette", efr != null and efr.rank == -1 and (e.find_child("Icon", false, false) as TextureRect).material != null)
+	e.free()
+	var plain_tile := UIKit.gear_tile(Loot.roll_item("armor", 5, 0, "leather_jacket"), "armor", 28)
+	_check("frame64: a plain item has no set emblem", (plain_tile.find_child("GearFrame64", false, false) as GearFrame64).set_col.a == 0.0)
+	plain_tile.free()
+	Features.layers.dev.features.gear_frame64 = false
+	var old := UIKit.gear_tile(it, "weapon", 32)
+	_check("frame64: switch off = the old tile (no GearFrame64), set icon still shown", old.find_child("GearFrame64", false, false) == null)
+	old.free()
+	Features.layers.dev.features.gear_frame64 = true
+	# --- UI: crew card + item detail set panel
+	var lead := Dev.gear_set_wear("hunter", 4)
+	var lines := UIKit.set_bonus_lines(lead)
+	_check("gear sets: crew card shows the worn set with its active lines", lines.get_child_count() >= 1 and lines.find_child("SetBonus_hunter", false, false) != null)
+	lines.free()
+	var loot: LootPanel = main.hud.panels.inventory
+	main.hud.open_panel("inventory")
+	loot.open_equipped(Loot.equipped_on(lead, "weapon"), int(lead.id))
+	await wait(0.25)
+	_check("gear sets: item detail of a set piece shows the set panel + craft button", loot.find_child("SetPanel", true, false) != null and loot.find_child("SetCraftButton", true, false) != null)
+	await shot("gear_sets_detail")
+	loot.close()
+	Game.s = saved_state
+	Features.layers = saved_layers
+	Game.set_process(saved_processing[0])
+	Combat.set_process(saved_processing[1])
+	Game.gear_changed.emit()
+
+
+func _has_label_text(n: Node, text: String) -> bool:
+	for c in n.get_children():
+		if c is Label and (c as Label).text == text:
+			return true
+	return false
+
+
 ## MV-715: the van's main body in the v3 interior is Dr. Ren's ambulance shell (switch ambulance_v3)
 func _ambulance_v3_test() -> void:
 	var old_window := get_window().size
@@ -13290,6 +13471,111 @@ func _ambulance_v3_test() -> void:
 	Game.s = old_state
 	Game.rooms_changed.emit()
 	get_window().size = old_window
+	await wait(0.3)
+
+
+## MV-763: the approved ambulance exterior mods (switch ambulance_mods) on the world v2 ambulance and in the v3 interior
+func _ambulance_mods_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var D := AmbulanceMods.DIR
+	# RULE (Parames): no part covers a wheel at any floor count (suspension + off-road tyres are the wheel parts)
+	var spot: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(D + "anim.json")).floors
+	for n in range(1, 6):
+		var f: Dictionary = spot[str(n)]
+		var r := float(f.wheel_r) + 1.0
+		for id in ShellMods.ids(D):
+			if id in ["suspension", "offroad_wheels"]:
+				continue
+			for lv in range(1, ShellMods.max_art(D, id) + 1):
+				if id == "fuel_tanks" and lv > int(AmbulanceMods.FUEL_FIT[n]) or not (ShellMods.meta(D)[id] as Dictionary).has(str(lv)):
+					continue                  # those tanks hang on the rear rack instead / the L3-only roof band
+				var file := ShellMods.file(D, id, lv, n)
+				var ok := ResourceLoader.exists(file)
+				if ok:
+					var img: Image = (load(file) as Texture2D).get_image()
+					img.decompress()
+					var p := ShellMods.pos(D, id, lv, n)
+					for w in f.wheels:
+						var c := Vector2(w[0], w[1]) - p
+						for y in range(maxi(0, int(c.y - r)), mini(img.get_height(), int(c.y + r) + 1)):
+							for x in range(maxi(0, int(c.x - r)), mini(img.get_width(), int(c.x + r) + 1)):
+								if img.get_pixel(x, y).a > 0.1 and Vector2(x + 0.5, y + 0.5).distance_to(c) <= r:
+									ok = false
+				_fold("ambulance mods: no part covers a tyre at any floor count", ok, "%s L%d f%d" % [id, lv, n])
+	_fold_flush()
+	# Parames: no missing pixels: no see-through pinhole inside a part, no lone floating pixel, in every mod layer
+	for fn in DirAccess.get_files_at(D + "mods"):
+		if not fn.ends_with(".png") or fn.contains("_spin"):
+			continue
+		var img: Image = (load(D + "mods/" + fn) as Texture2D).get_image()
+		img.decompress()
+		var bad := 0
+		for y in range(1, img.get_height() - 1):
+			for x in range(1, img.get_width() - 1):
+				var op := img.get_pixel(x, y).a > 0.1
+				var n4 := int(img.get_pixel(x - 1, y).a > 0.1) + int(img.get_pixel(x + 1, y).a > 0.1) \
+					+ int(img.get_pixel(x, y - 1).a > 0.1) + int(img.get_pixel(x, y + 1).a > 0.1)
+				var n8 := n4 + int(img.get_pixel(x - 1, y - 1).a > 0.1) + int(img.get_pixel(x + 1, y - 1).a > 0.1) \
+					+ int(img.get_pixel(x - 1, y + 1).a > 0.1) + int(img.get_pixel(x + 1, y + 1).a > 0.1)
+				if (not op and n4 == 4) or (op and n8 == 0):
+					bad += 1
+		_fold("ambulance mods: no pinholes or lone pixels in any mod layer", bad == 0, "%s (%d px)" % [fn, bad])
+	_fold_flush()
+	Dev.feature_set("vehicle_anim", true)             # the spinning off-road tyres need it (an earlier run may have left it off)
+	var gun := 0 if Combat.room_mode() else 1          # MV-727: no outside gun while the squad fights from the gunner room
+	var none := Dev.ambulance_mods(0, 1)
+	await wait(0.3)
+	var v: Vehicle = get_tree().get_first_node_in_group("vehicle_fx")
+	var drawn := Dev.ambulance_mods(3, 1)
+	await wait(0.4)
+	var root := v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	# ram, armor, armor roof band, lead, suspension, 3 fuel tanks (+ gun); the off-road tyres spin as AmbulanceMotion sprites
+	_check("ambulance mods: none = bare ambulance, all max at 1 floor = %d parts (%d / %d)" % [6 + gun, none, drawn],
+		none == 0 and drawn == 6 + gun and root != null and root.visible and root.get_node_or_null("offroad_wheels") == null
+		and (root.get_node("fuel_tanks") as Sprite2D).texture.resource_path.ends_with("fuel_tanks_L3.png")
+		and root.get_node_or_null("fuel_rack") == null
+		and (root.get_node("rad_shield") as Sprite2D).texture.resource_path.ends_with("rad_shield_L2.png"))
+	var lift := AmbulanceMods.wheel_r(3) - AmbulanceMods.STOCK_R
+	var spin := AmbulanceMods.spin_frames(3)
+	_check("ambulance mods: off-road L3 tyres spin on the road, the body rides %.1f px higher, Dr. Ren hides behind the lead" % lift,
+		v.amb_on and spin.size() == 48 and not v.amb.tyres.is_empty() and v.amb.tyres[0].texture in spin
+		and is_equal_approx(v.amb.lift, lift) and is_equal_approx(v.v2_root.position.y, -lift * Vehicle.V2_K)
+		and (v.amb.driver == null or not v.amb.driver.visible))
+	await shot("ambulance_mods_f1_L3")
+	drawn = Dev.ambulance_mods(3, 3)
+	await wait(0.4)
+	root = v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("ambulance mods: 3 floors = 1 tank under the body, 2 on the rear rack; body parts drop 2 floors, the gun stays on the roof",
+		root != null and (root.get_node("fuel_tanks") as Sprite2D).texture.resource_path.ends_with("fuel_tanks_L1.png")
+		and (root.get_node("fuel_rack") as Sprite2D).texture.resource_path.ends_with("fuel_rack_L2.png")
+		and AmbulanceMods.pos("spike_ram", 3, 3).y - AmbulanceMods.pos("spike_ram", 3, 1).y == 224.0
+		and AmbulanceMods.pos("roof_turret", 3, 3) == AmbulanceMods.pos("roof_turret", 3, 1)
+		and (root.get_node("armor_plates") as Node2D).position == AmbulanceMods.pos("armor_plates", 3, 3))
+	await shot("ambulance_mods_f3_L3")
+	Dev.ambulance_mods(1, 2, true)
+	await wait(0.5)
+	var panel: InteriorV3Panel = main.hud.panels.interior
+	var proot := panel.amb_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("ambulance mods: the v3 interior draws the parts too, with still off-road tyres (no wheel animation there)",
+		panel.is_open and proot != null and proot.visible and proot.get_node_or_null("offroad_wheels") != null
+		and proot.get_node_or_null("spike_ram") != null)
+	await shot("ambulance_mods_interior_f2_L1")
+	panel.close()
+	Dev.ambulance_mods(3, 2)
+	Features.set_override("features", "ambulance_mods", false)
+	Features.changed.emit()
+	Mods.mods_changed.emit()
+	await wait(0.3)
+	root = v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("ambulance mods: switch off = the bare ambulance on stock tyres at road height",
+		(root == null or (not root.visible and root.get_child_count() == 0)) and v.amb.lift == 0.0
+		and v.v2_root.position.y == 0.0 and (v.amb.driver == null or v.amb.driver.visible))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Mods.mods_changed.emit()
 	await wait(0.3)
 
 
@@ -13750,6 +14036,48 @@ func _road_train_test() -> void:
 	var hoses_ok := cp != null and cp.visible and cp.caps.is_empty() and cp.hoses.size() == 4 * (Data.MAX_TRAILERS - 1)
 	_check("road train: air lines run unbroken from the lead trailer into the trailer (no shock absorbers on the tyres)", hoses_ok
 		and not "shocks" in v.amb)
+	# MV-762: the approved road train exterior mods (switch road_train_mods): parts on the body + trailer shells through
+	# ShellMods, heavy suspension behind the tyres and the off-road tyre strips through AmbulanceMotion
+	var rtm_none := Dev.road_train_mods(0)
+	await wait(0.2)
+	var rtm_max := Dev.road_train_mods(3)
+	await wait(0.4)
+	var gun3 := 0 if Combat.room_mode() else 1         # MV-727: no outside gun while the squad fights from the gunner room
+	var broot := v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	var tsh: Sprite2D = null if v.v2_tshells.is_empty() else v.v2_tshells[0] as Sprite2D
+	var troot: Node2D = null if tsh == null else tsh.get_node_or_null(ShellMods.NODE) as Node2D
+	_check("road train mods: none = bare rig, all max = %d parts on body + trailer (%d / %d)" % [8 + gun3, rtm_none, rtm_max],
+		rtm_none == 0 and rtm_max == 8 + gun3 and broot != null and broot.visible and troot != null and troot.visible
+		and (broot.get_node("heater") as Sprite2D).texture.resource_path.ends_with("heater_L2.png")
+		and (broot.get_node("armor_rail") as Sprite2D).texture.resource_path.ends_with("armor_rail_L3.png")
+		and (broot.get_node("spike_ram") as Sprite2D).texture.resource_path.ends_with("spike_ram_L3.png")
+		and troot.has_node("solar_covers_t") and troot.has_node("roof_turret") == (gun3 == 1))
+	var clr: Array = ShellMods.meta(RoadTrainMods.DIR).get("_clear_turret", [0, 0, 1, 1])
+	var timg: Image = Image.create_empty(1, 1, false, Image.FORMAT_RGBA8) if tsh == null else tsh.texture.get_image()
+	_check("road train mods: the rear turret replaces the trailer's roof tyres + cans (cleared), on the last trailer only",
+		gun3 == 0 or (timg.get_width() > int(clr[0]) + 40 and timg.get_pixel(int(clr[0]) + 40, int(clr[1]) + 40).a == 0.0))
+	var und_ok := v.amb.wheel_lv == 3 and v.amb.under_part != null and v.amb.under_part.get_parent() == v.amb.wells \
+		and v.amb.under_part.texture.resource_path.ends_with("suspension_L3.png") and v.amb.wells.get_index() < v.amb.tyres[0].get_index() \
+		and (v.amb.tyres[0].texture as AtlasTexture).atlas.resource_path.ends_with("offroad_wheels_spin_L3.png")
+	for m in v.rt_units:
+		und_ok = und_ok and m.wheel_lv == 3 and m.under_part != null and m.under_part.texture.resource_path.ends_with("suspension_t_L3.png")
+	_check("road train mods: heavy suspension behind every tyre group (body + trailer) and off-road tyres roll at L3", und_ok)
+	await shot("road_train_mods_max")
+	var rd := RoadTrainMods.DIR
+	_check("road train mods: cab / chassis parts move a deck with the body (1/2/3 decks), roof parts stay on the roof",
+		ShellMods.pos(rd, "spike_ram", 1, 3).y - ShellMods.pos(rd, "spike_ram", 1, 2).y == 112.0
+		and ShellMods.pos(rd, "spike_ram", 1, 2).y - ShellMods.pos(rd, "spike_ram", 1, 1).y == 112.0
+		and ShellMods.pos(rd, "heater", 2, 3) == ShellMods.pos(rd, "heater", 2, 2)
+		and ShellMods.pos(rd, "roof_turret", 3, 3) == ShellMods.pos(rd, "roof_turret", 3, 2))
+	Features.set_override("features", "road_train_mods", false)
+	Features.changed.emit()
+	await wait(0.3)
+	_check("road train mods: switch off = the bare rig with stock tyres", not broot.visible and broot.get_child_count() == 0
+		and v.amb.wheel_lv == 0 and v.amb.under_part == null and (tsh == null or not tsh.has_meta(RoadTrainMods.TEX0)))
+	Features.set_override("features", "road_train_mods", true)
+	Dev.road_train_mods(0)
+	Dev.road_train_anim("drive")
+	await wait(0.8)
 	# MV-740 round 3: a trailer with another behind it ends in a B-link beam (no plate / tow hook / lit tail lamps), the last
 	# one keeps the truck rear end; the beam reaches the canvas edge on the nose beam's rows so the joint is one steel line.
 	# Parames 2026-11-10: first patch = 1 trailer (Data.MAX_TRAILERS), so the B-link shells are checked as files only
@@ -14019,6 +14347,29 @@ func _decker_test() -> void:
 	_check("decker horn: air horn + raid siren are in the sound set, on for the Decker",
 		"air_horn" in Sound.SFX and "bus_siren" in Sound.SFX and ResourceLoader.exists(Sound.SFX_DIR + "air_horn.wav")
 		and ResourceLoader.exists(Sound.SFX_DIR + "bus_siren.wav") and Sound.decker_horn_on())
+	# MV-760: the approved exterior mods drawn on the Decker (switch decker_mods), children of the shell sprite
+	var mods_none := Dev.decker_mods(0)
+	await wait(0.2)
+	var mods_max := Dev.decker_mods(3)
+	await wait(0.3)
+	var mroot := v.v2_shell.get_node_or_null(ShellMods.NODE) as Node2D
+	var gun := 0 if Combat.room_mode() else 1          # MV-727: no outside gun while the squad fights from the gunner room
+	_check("decker mods: none = only the roof solar panels, all max = %d parts (%d / %d)" % [6 + gun, mods_none, mods_max],
+		mods_none == 1 and mods_max == 6 + gun and mroot != null and mroot.visible
+		and (mroot.get_node("heater") as Sprite2D).texture.resource_path.ends_with("heater_L2.png")
+		and (mroot.get_node("solar") as Sprite2D).texture.resource_path.ends_with("solar_L3.png")
+		and (mroot.get_node("rad_shield") as Sprite2D).texture.resource_path.ends_with("rad_shield_L2.png"))
+	await shot("decker_mods_max")
+	_check("decker mods: body parts move down one deck on 3 decks, roof parts stay on the roof, parts sit at their spot",
+		DeckerMods.pos("spike_ram", 1, 3).y - DeckerMods.pos("spike_ram", 1, 2).y == 112.0
+		and DeckerMods.pos("heater", 1, 3) == DeckerMods.pos("heater", 1, 2)
+		and (mroot.get_node("spike_ram") as Node2D).position == DeckerMods.pos("spike_ram", 3, Game.floors()))
+	Features.set_override("features", "decker_mods", false)
+	Features.changed.emit()
+	await wait(0.2)
+	_check("decker mods: switch off = the bare bus", not mroot.visible and mroot.get_child_count() == 0)
+	Features.set_override("features", "decker_mods", true)
+	Dev.decker_mods(0)
 	Dev.decker_anim("brake")
 	await wait(1.6)
 	_check("decker: braking to a stop lights the brake lamp", v.amb.lamp_alpha("tail0") > 0.7)

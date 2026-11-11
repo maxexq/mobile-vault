@@ -302,6 +302,7 @@ func _build_detail(item: Dictionary, equipped: bool) -> void:
 		_stats_table(item, cur)
 	else:
 		_stats_legacy(item, cur)
+	_set_section(item, owner_did if equipped else pick_did)
 	# actions
 	var acts := UIKit.flow(3)
 	if equipped:
@@ -369,6 +370,47 @@ func _build_detail(item: Dictionary, equipped: bool) -> void:
 		sal.pressed.connect(func(): _request_salvage(item))
 		acts2.add_child(sal)
 	_list.add_child(acts2)
+
+
+## MV-767: a set piece shows its set: the 4 pieces (owned ones lit), the bonus lines lit for what the crew member wears
+## (with this piece on), where the set drops, and the set parts with the craft-a-missing-piece button
+func _set_section(item: Dictionary, did: int) -> void:
+	var sid := GearSets.set_of(item)
+	if sid == "" or not GearSets.on():
+		return
+	var s: Dictionary = GearSets.SETS[sid]
+	var p := UIKit.panel(UIKit.C_BG2, s.col.darkened(0.35))
+	p.name = "SetPanel"
+	var v := UIKit.vbox(3)
+	p.add_child(v)
+	var d := Game.dweller_by_id(did) if did >= 0 else {}
+	var n := GearSets.worn(d, sid) if not d.is_empty() else 0
+	if not d.is_empty() and GearSets.set_of(Loot.equipped_on(d, item.slot)) != sid:
+		n += 1      # what it would be with this piece on
+	v.add_child(UIKit.label("%s · %s" % [s.th, Loc.t(s.role)], UIKit.FS_SMALL, s.col))
+	var have := GearSets.owned(sid)
+	var row := UIKit.hbox(3)
+	for slot in s.slots:
+		var t := UIKit.gear_tile({} if not have.has(slot) else {"base": GearSets.base_id(sid, slot), "slot": slot, "rar": 0, "plus": 0, "ilvl": 1, "aff": [], "lock": false}, slot, 28)
+		t.disabled = true
+		t.tooltip_text = Loot.BASES[GearSets.base_id(sid, slot)].th
+		row.add_child(t)
+	v.add_child(UIKit.gear_pad(row))
+	v.add_child(UIKit.set_bonus_box(sid, n))
+	v.add_child(UIKit.wrap_label(Loc.t("ดรอปจาก: ") + Loc.t(s.src), UIKit.FS_SMALL, UIKit.C_DIM))
+	var ch := UIKit.hbox(4)
+	ch.add_child(UIKit.label(Loc.t("ชิ้นส่วนเซ็ต %d/%d") % [GearSets.parts_of(sid), GearSets.craft_cost()], UIKit.FS_SMALL, UIKit.C_TEXT))
+	var cb := UIKit.button(Loc.t("แลกชิ้นที่ขาด"), "yellow", "wrench")
+	cb.name = "SetCraftButton"
+	cb.disabled = not GearSets.can_craft(sid)
+	cb.pressed.connect(func():
+		var it := GearSets.craft_missing(sid)
+		if not it.is_empty():
+			Game.toast.emit(Loc.t("ได้ชิ้นเซ็ต %s: %s") % [s.en, Loot.item_name(it)], "good")
+		refresh())
+	ch.add_child(cb)
+	v.add_child(ch)
+	_list.add_child(p)
 
 
 func _after_equip() -> void:

@@ -1,0 +1,28 @@
+{
+ "cell": 96,
+ "pad": 16,
+ "frames": 16,
+ "fps": 8,
+ "icons": [
+  "tinker_armor",
+  "tinker_helmet",
+  "tinker_gadget",
+  "tinker_backpack",
+  "hunter_weapon",
+  "hunter_helmet",
+  "hunter_gadget",
+  "hunter_boots",
+  "titan_weapon",
+  "titan_armor",
+  "titan_helmet",
+  "titan_gadget",
+  "bulwark_armor",
+  "bulwark_helmet",
+  "bulwark_boots",
+  "bulwark_backpack",
+  "scav_weapon",
+  "scav_gadget",
+  "scav_boots",
+  "scav_backpack"
+ ]
+}

@@ -140,11 +140,46 @@ func _gear_slots_preview() -> void:
 		grid.add_child(t)
 	_list.add_child(UIKit.gear_pad(grid))
 	_note("แถว: ทั่วไป · ดี · หายาก (ล็อก) · มหากาพย์ · ตำนาน · ปฐมกาล · ล่างสุด: ช่องว่าง 3 ขนาด + ปุ่มกดไม่ได้ · คอลัมน์ 28 / 30 / 32 / 36 / 40 px")
+	_gear_sets_preview()
 	_head("MULTI SALVAGE", "แยกหลายชิ้นพร้อมกัน (MV-554) · multi_salvage %s" % ("เปิด" if Features.on("multi_salvage") else "ปิด"))
 	var ms := _b("ใส่ของ 8 ชิ้นแล้วเปิดโหมดเลือกแยก", func(): Dev.multi_salvage_demo(), "green", true)
 	ms.name = "MultiSalvageDemo"
 	_row([ms])
 	_gear_detail_preview()
+
+
+## MV-767: the 64 px Vault hatch frame (every rarity, empty, +N, lock, set emblem) and the gear set tools
+func _gear_sets_preview() -> void:
+	var f64 := Features.on("gear_frame64")
+	_head("GEAR SETS + FRAME 64", "เซ็ตอุปกรณ์ + กรอบ Vault hatch 64 px (MV-767) · gear_sets %s · gear_frame64 %s" % [
+		"เปิด" if Features.on("gear_sets") else "ปิด", "เปิด" if f64 else "ปิด"])
+	_row([_b("กรอบ 64 ใหม่", func(): Dev.gear_frame64(true), "yellow" if f64 else "gray"), _b("กรอบเดิม", func(): Dev.gear_frame64(false), "gray" if f64 else "yellow")])
+	var grid := GridContainer.new()
+	grid.name = "GearSetGrid"
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", UIKit.gear_gap(6))
+	grid.add_theme_constant_override("v_separation", UIKit.gear_gap(6))
+	var i := 0
+	for sid in GearSets.ORDER:
+		for slot in GearSets.SETS[sid].slots:
+			var it := {"uid": -1, "base": GearSets.base_id(sid, slot), "slot": slot, "rar": i % 6, "ilvl": 1, "plus": (i * 3) % 13, "aff": [], "lock": i == 5}
+			grid.add_child(UIKit.gear_tile(it, slot, 36))
+			i += 1
+	_list.add_child(UIKit.gear_pad(grid))
+	_note("5 เซ็ต x 4 ชิ้น (ไอคอน PixelLab take A) ความหายากวน 0-5 · +N แดงมุมขวาบน · ตราสีเซ็ตมุมขวาล่าง")
+	var setb := []
+	for sid in GearSets.ORDER:
+		var s2: String = sid
+		setb.append(_b(GearSets.SETS[sid].en, func(): Dev.gear_set_give(s2), "green"))
+	_row(setb, "ใส่คลัง 4 ชิ้น")
+	var wear := []
+	for sid in GearSets.ORDER:
+		var s3: String = sid
+		wear.append(_b(GearSets.SETS[sid].en, func(): Dev.gear_set_wear(s3, 4), "blue"))
+	_row(wear, "หัวหน้าทีมสวมครบเซ็ต")
+	var demo := _b("ตัวอย่าง: Hunter 4 + Tinker 2 แล้วเปิดหน้าไอเทม", func(): Dev.gear_set_demo(), "green", true)
+	demo.name = "GearSetDemo"
+	_row([demo, _b("ดรอปเซ็ตครั้งถัดไปแน่นอน", func(): Dev.gear_set_pity(), "gray"), _b("+ชิ้นส่วน Hunter", func(): Dev.gear_set_parts("hunter"), "gray")])
 
 
 ## MV-552: open a weapon next to the equipped one to check the item detail's stat table
@@ -398,6 +433,12 @@ func _tab_vehicle() -> void:
 		_b("3 ชั้น", func(): Dev.ambulance_v3_preview(3)), _b("4 ชั้น", func(): Dev.ambulance_v3_preview(4)),
 		_b("รถพยาบาล: " + ("เปิด" if Features.on("ambulance_v3") else "ปิด"), func(): Dev.feature_set("ambulance_v3", not Features.on("ambulance_v3")),
 		"green" if Features.on("ambulance_v3") else "red")], "รถพยาบาล v3")
+	_row([_b("ไม่มี", func(): Dev.ambulance_mods(0)), _b("L1", func(): Dev.ambulance_mods(1)), _b("L2", func(): Dev.ambulance_mods(2)),
+		_b("L3", func(): Dev.ambulance_mods(3), "green"), _b("L3 1 ชั้น", func(): Dev.ambulance_mods(3, 1)),
+		_b("L3 3 ชั้น", func(): Dev.ambulance_mods(3, 3)), _b("ดูภายใน", func(): Dev.ambulance_mods(maxi(1, Mods.level("spike_ram")), -1, true)),
+		_b("อัปเกรดรถพยาบาล: " + ("เปิด" if Features.on("ambulance_mods") else "ปิด"),
+		func(): Dev.feature_set("ambulance_mods", not Features.on("ambulance_mods")), "green" if Features.on("ambulance_mods") else "red")],
+		"อัปเกรดภายนอกรถพยาบาล")
 	_row([_b("พ่วง pup 1 คัน", func(): Dev.ambulance_pup_preview(1)),
 		_b("ดูภายใน", func(): Dev.ambulance_pup_preview(maxi(Game.trailers(), 1), true)),
 		_b("พ่วง pup: " + ("เปิด" if Features.on("ambulance_pup") else "ปิด"), func(): Dev.feature_set("ambulance_pup", not Features.on("ambulance_pup")),
@@ -414,6 +455,11 @@ func _tab_vehicle() -> void:
 		_b("พ่วงติดรถ: " + ("เปิด" if Features.on("rt_start_trailer") else "ปิด"),
 		func(): Dev.rt_start_trailer(not Features.on("rt_start_trailer")),
 		"green" if Features.on("rt_start_trailer") else "red")], "โร้ดเทรน")
+	_row([_b("ไม่มี", func(): Dev.road_train_mods(0)), _b("L1", func(): Dev.road_train_mods(1)), _b("L2", func(): Dev.road_train_mods(2)),
+		_b("L3", func(): Dev.road_train_mods(3), "green"),
+		_b("อัปเกรดโร้ดเทรน: " + ("เปิด" if Features.on("road_train_mods") else "ปิด"),
+		func(): Dev.feature_set("road_train_mods", not Features.on("road_train_mods")), "green" if Features.on("road_train_mods") else "red")],
+		"อัปเกรดภายนอกโร้ดเทรน")
 	_row([_b("ขับ Decker 2 ชั้น", func(): Dev.decker_preview(2)), _b("3 ชั้น", func(): Dev.decker_preview(3)),
 		_b("ภายใน", func(): Dev.decker_interior()),
 		_b("ขับ+ไฟ", func(): Dev.decker_anim("drive"), "green"), _b("เบรก", func(): Dev.decker_anim("brake")),
@@ -427,6 +473,11 @@ func _tab_vehicle() -> void:
 		_b("แตร: " + ("เปิด" if Features.on("decker_horn") else "ปิด"),
 		func(): Dev.feature_set("decker_horn", not Features.on("decker_horn")), "green" if Features.on("decker_horn") else "red")],
 		"ป้าย+แตร Decker")
+	_row([_b("ไม่มี", func(): Dev.decker_mods(0)), _b("L1", func(): Dev.decker_mods(1)), _b("L2", func(): Dev.decker_mods(2)),
+		_b("L3", func(): Dev.decker_mods(3), "green"),
+		_b("อัปเกรด Decker: " + ("เปิด" if Features.on("decker_mods") else "ปิด"),
+		func(): Dev.feature_set("decker_mods", not Features.on("decker_mods")), "green" if Features.on("decker_mods") else "red")],
+		"อัปเกรดภายนอก Decker")
 	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
 		_b("ภายใน", func(): Dev.bastion_interior()),
 		_b("ขับ+ไฟ", func(): Dev.bastion_anim("drive"), "green"), _b("เบรก", func(): Dev.bastion_anim("brake")),

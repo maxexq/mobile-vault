@@ -65,6 +65,9 @@ var legs: Array[Sprite2D] = []
 var leg_down := 1.0                # 1 = feet on the road, 0 = cranked up
 var _stopped_t := 0.0
 var under: Node2D                  # behind the body, scale V2_K
+var wheel_lv := 0                  # MV-762: off-road wheel art level (0 = stock tyre strip)
+var under_part: Sprite2D           # MV-762: heavy suspension, behind the tyres (road train)
+var _origin := Vector2.ZERO        # the shell's top-left in `under` (shell px)
 var wells: Node2D
 var over: Node2D                   # in the v2 root, over the shell
 var tyres: Array[Sprite2D] = []
@@ -124,6 +127,10 @@ var driver: Sprite2D               # MV-741 Dr. Ren at the wheel: drive / chill 
 var driver_state := ""
 var _driver_i := 0
 var _driver_t := 0.0
+var tyre_frames: Array = []        # MV-763 off-road tyre spin frames (AmbulanceMods), empty = the stock strip
+var tyre_r := 0.0                  # MV-763 their radius in shell px (0 = stock)
+var lift := 0.0                    # MV-763 shell px the body rides higher on off-road tyres (the caller lifts the body)
+var driver_hidden := false         # MV-763 Dr. Ren behind the L2 lead plate
 ## GOD MODE / autotest overrides
 var force_beacon := false
 var force_brake := false
@@ -342,18 +349,22 @@ static func _wave_frames(cloth: Image) -> Array:
 	return out
 
 
-static func spin_frames(d := DIR) -> Array:
-	if not _spin.has(d):
+## the tyre strip's frames; lv > 0 = the off-road wheel strip of that level (MV-762, <d>mods/offroad_wheels_spin_L<lv>.png)
+static func spin_frames(d := DIR, lv := 0) -> Array:
+	var f := d + "mods/offroad_wheels_spin_L%d.png" % lv
+	if lv <= 0 or not ResourceLoader.exists(f):
+		f = d + "wheel_spin.png"
+	if not _spin.has(f):
 		var arr: Array = []
-		var strip: Texture2D = load(d + "wheel_spin.png")
+		var strip: Texture2D = load(f)
 		var s: int = int(meta(d).get("wheel_size", 47))
 		for i in int(meta(d).get("spin_frames", 24)):
 			var a := AtlasTexture.new()
 			a.atlas = strip
 			a.region = Rect2(s * i, 0, s, s)
 			arr.append(a)
-		_spin[d] = arr
-	return _spin[d]
+		_spin[f] = arr
+	return _spin[f]
 
 
 ## soft round glow in 4 hard steps (pixel-art bloom), white: tinted per lamp with modulate
@@ -380,6 +391,7 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 	dir = d
 	unit = u
 	floors = n
+	_origin = origin
 	var f := spot(n, dir, unit)
 	under = Node2D.new()
 	under.name = "AmbulanceWheels"
@@ -401,9 +413,10 @@ func build(n: int, origin: Vector2, under_parent: Node2D, over_parent: Node2D, k
 		wells.add_child(well)
 		var t := Sprite2D.new()
 		t.centered = false
-		t.texture = spin_frames(dir)[0]
+		t.texture = spin_frames(dir, wheel_lv)[0]
 		t.position = c - Vector2(s, s) * 0.5
 		t.set_meta("y0", t.position.y)
+		t.set_meta("c", c)
 		under.add_child(t)
 		tyres.append(t)
 		hops.append(-1.0)
@@ -512,6 +525,7 @@ func _build_roof(f: Dictionary, origin: Vector2) -> void:
 		driver.centered = false
 		driver.position = origin + Vector2(DRIVER_AT.x, float(f.size[1]) - DRIVER_AT.y)
 		driver.texture = (d.still as Array)[0]
+		driver.visible = not driver_hidden
 		driver_state = "still"
 		over.add_child(driver)
 		over.move_child(driver, 0)
@@ -749,7 +763,30 @@ func _glow(id: String, at: Vector2, radius: float, col: Color) -> Sprite2D:
 	return g
 
 
+## MV-762: off-road tyre strip level for every tyre of this unit (0 = stock)
+func set_wheel_level(lv: int) -> void:
+	wheel_lv = lv
+	for t in tyres:
+		t.texture = spin_frames(dir, wheel_lv)[spin_frame()]
+
+
+## MV-762: one part drawn behind the tyres (heavy suspension) at shell pixel p; null removes it
+func set_under_part(tex: Texture2D, p: Vector2) -> void:
+	if is_instance_valid(under_part):
+		under_part.queue_free()
+	under_part = null
+	if tex == null or wells == null:
+		return
+	under_part = Sprite2D.new()
+	under_part.name = "UnderPart"
+	under_part.centered = false
+	under_part.texture = tex
+	under_part.position = _origin + p
+	wells.add_child(under_part)          # rides with the body like the wells, drawn under every tyre
+
+
 func clear() -> void:
+	under_part = null
 	for n in [under, over, behind]:
 		if is_instance_valid(n):
 			n.queue_free()
@@ -779,6 +816,31 @@ func clear() -> void:
 	hop_left.clear()
 	glows.clear()
 	floors = 0
+
+
+## MV-763: off-road tyres (frames = AmbulanceMods.spin_frames, r = their radius) or the stock ones (empty frames).
+## The tyres stay on the road (hub R - stock r higher in shell px); `lift` tells the caller how far to raise the body.
+func set_tyres(frames: Array, r: float) -> void:
+	tyre_frames = frames
+	var r0: float = float(spot(floors, dir, unit).get("wheel_r", 22.5)) if floors > 0 else 22.5
+	tyre_r = r if not frames.is_empty() else 0.0
+	lift = maxf(0.0, tyre_r - r0) if not frames.is_empty() else 0.0
+	# empty frames: back to this unit's strip (MV-762 road train off-road level included), placed at the stock size like build()
+	var fr: Array = frames if not frames.is_empty() else (spin_frames(dir, wheel_lv) if floors > 0 else [])
+	if fr.is_empty():
+		return
+	var s: float = (fr[0] as Texture2D).get_width() if not frames.is_empty() else float(meta(dir).get("wheel_size", 47))
+	for t in tyres:
+		var c: Vector2 = t.get_meta("c", t.position)
+		t.texture = fr[0]
+		t.position = c - Vector2(s, s) * 0.5 - Vector2(0.0, lift)
+		t.set_meta("y0", t.position.y)
+
+
+func set_driver_hidden(h: bool) -> void:
+	driver_hidden = h
+	if driver:
+		driver.visible = not h
 
 
 func set_visible(on: bool) -> void:
@@ -815,9 +877,9 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_t += delta
 	var moving := speed_px > 1.0
 	# tyres roll: angle = distance / radius (in shell px: the strip is drawn at shell scale)
-	var r: float = spot(floors, dir, unit).get("wheel_r", 22.5)
+	var r: float = tyre_r if tyre_r > 0.0 else float(spot(floors, dir, unit).get("wheel_r", 22.5))
 	spin_angle = fposmod(spin_angle + speed_px / under.scale.x / r * delta, TAU)
-	var frames := spin_frames(dir)
+	var frames: Array = tyre_frames if not tyre_frames.is_empty() else spin_frames(dir, wheel_lv)
 	var n := frames.size()
 	var fi := int(spin_angle / TAU * float(n)) % n
 	for i in tyres.size():
@@ -842,7 +904,7 @@ func tick(delta: float, speed_px: float, accel: float, engine_on: bool, night: f
 	_tick_lamp(delta, speed_px, accel)
 	var lx := roundf(lurch)
 	(over.get_parent() as Node2D).position.x = lx * under.scale.x
-	wells.position = Vector2(lx, body_y / under.scale.y)
+	wells.position = Vector2(lx, body_y / under.scale.y - lift)
 	# lights
 	var dark := clampf(night, 0.0, 1.0)
 	var braking := force_brake or (engine_on and (accel < -0.02 or not moving))

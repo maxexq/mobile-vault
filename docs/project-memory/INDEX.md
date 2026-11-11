@@ -117,6 +117,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [bg-parallax-5layer-plan](bg-parallax-5layer-plan.md): MV-684 5-layer parallax road bg, ~600-720 gens/biome, Industrial approved, concept A/B pick pending
 - [item-frame-redesign](item-frame-redesign.md): RULE MV-687 item frame = Vault hatch APPROVED (approved/README.md): tier ladder beyond colour, +N red badge top-right, no item level; game impl not started
 - [gear-sets-design](gear-sets-design.md): MV-689 gear sets v1, 5 sets x 4 pieces 2/3/4 bonuses + PixelLab icons (32 px, style = one icon), artifact Gear Sets v1, awaiting picks
+- [gear-sets-ingame](gear-sets-ingame.md): MV-767 gear sets + F5 64 px item frame in game (gear_sets, gear_frame64), icons = take A, PR into staging
 - [biome-parallax-ref](biome-parallax-ref.md): RULE Industrial parallax bg APPROVED ref for all biomes (approved/README.md); desert/forest/swamp/tundra Done (MV-690/693/696/699), metro MV-701 concept pick pending, per-biome car grade CARL, preview page designs/bg-parallax-page/
 - [christmas-living-v3](christmas-living-v3.md): MV-691 Christmas festival living room v3 L1-L3 (Claude picks), anims crew 2/3 + hotspots, APPROVED + saved christmas/approved/, Done
 - [icons-v2](icons-v2.md): MV-694 all ic_* icons redrawn 32 px + moods neutral/stressed/broken, APPROVED + saved, PR #191 MERGED to staging 2026-11-04 (switch icons_v2, IconTex), web export pending
@@ -165,6 +166,8 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [ambulance-pup](ambulance-pup.md): MV-737 ambulance + pup B with code coupling APPROVED (12_ambulance_pup), in game as the ambulance trailers (switch ambulance_pup, pup_f2.png 3x2 grid)
 - [vehicle-anim](vehicle-anim.md): MV-726 ambulance on the road: rolling tyres, suspension hops, lights, flag (switch vehicle_anim, code only); rerun tools/ambulance_anim.py after shell rebuilds
 - [road-train-fix-anim](road-train-fix-anim.md): MV-740 road train shell cleanup (pinholes, cab glass, rear cage, room frames) + tyres, landing legs, lamps, code air lines between units; rerun shell.py -> tools/art/road_train/cleanup.py -> anim.py
+- [road-train-mods](road-train-mods.md): MV-748/762 road train exterior mods: 9 approved sets in game via ShellMods + RoadTrainMods (switch road_train_mods), suspension behind tyres, off-road tyre strips
 - [ambulance-fix](ambulance-fix.md): MV-741 Dr. Ren ambulance clean-up (code only): cab holes refilled, strays removed, room windows framed (tools/art/ambulance/cleanup.py)
+- [ambulance-mods-ingame](ambulance-mods-ingame.md): MV-763 approved ambulance exterior mods in game via ShellMods (switch ambulance_mods), wheel-clipped per floor, off-road tyres lift the body
 - [landmarks-v2](landmarks-v2.md): RULE MV-750 lm_* sites at 2x density, never frame-cut, door per site; all 13 APPROVED (designs/landmarks-v2/approved/), in game behind landmarks_v2
 - [ui-redesign-v5](ui-redesign-v5.md): MV-768 UI v5 option A picked; P1 (dock, 2-row HUD, bottom sheets, room pager) behind switch ui_v5
