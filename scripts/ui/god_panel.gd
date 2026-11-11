@@ -135,11 +135,46 @@ func _gear_slots_preview() -> void:
 		grid.add_child(t)
 	_list.add_child(UIKit.gear_pad(grid))
 	_note("แถว: ทั่วไป · ดี · หายาก (ล็อก) · มหากาพย์ · ตำนาน · ปฐมกาล · ล่างสุด: ช่องว่าง 3 ขนาด + ปุ่มกดไม่ได้ · คอลัมน์ 28 / 30 / 32 / 36 / 40 px")
+	_gear_sets_preview()
 	_head("MULTI SALVAGE", "แยกหลายชิ้นพร้อมกัน (MV-554) · multi_salvage %s" % ("เปิด" if Features.on("multi_salvage") else "ปิด"))
 	var ms := _b("ใส่ของ 8 ชิ้นแล้วเปิดโหมดเลือกแยก", func(): Dev.multi_salvage_demo(), "green", true)
 	ms.name = "MultiSalvageDemo"
 	_row([ms])
 	_gear_detail_preview()
+
+
+## MV-767: the 64 px Vault hatch frame (every rarity, empty, +N, lock, set emblem) and the gear set tools
+func _gear_sets_preview() -> void:
+	var f64 := Features.on("gear_frame64")
+	_head("GEAR SETS + FRAME 64", "เซ็ตอุปกรณ์ + กรอบ Vault hatch 64 px (MV-767) · gear_sets %s · gear_frame64 %s" % [
+		"เปิด" if Features.on("gear_sets") else "ปิด", "เปิด" if f64 else "ปิด"])
+	_row([_b("กรอบ 64 ใหม่", func(): Dev.gear_frame64(true), "yellow" if f64 else "gray"), _b("กรอบเดิม", func(): Dev.gear_frame64(false), "gray" if f64 else "yellow")])
+	var grid := GridContainer.new()
+	grid.name = "GearSetGrid"
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", UIKit.gear_gap(6))
+	grid.add_theme_constant_override("v_separation", UIKit.gear_gap(6))
+	var i := 0
+	for sid in GearSets.ORDER:
+		for slot in GearSets.SETS[sid].slots:
+			var it := {"uid": -1, "base": GearSets.base_id(sid, slot), "slot": slot, "rar": i % 6, "ilvl": 1, "plus": (i * 3) % 13, "aff": [], "lock": i == 5}
+			grid.add_child(UIKit.gear_tile(it, slot, 36))
+			i += 1
+	_list.add_child(UIKit.gear_pad(grid))
+	_note("5 เซ็ต x 4 ชิ้น (ไอคอน PixelLab take A) ความหายากวน 0-5 · +N แดงมุมขวาบน · ตราสีเซ็ตมุมขวาล่าง")
+	var setb := []
+	for sid in GearSets.ORDER:
+		var s2: String = sid
+		setb.append(_b(GearSets.SETS[sid].en, func(): Dev.gear_set_give(s2), "green"))
+	_row(setb, "ใส่คลัง 4 ชิ้น")
+	var wear := []
+	for sid in GearSets.ORDER:
+		var s3: String = sid
+		wear.append(_b(GearSets.SETS[sid].en, func(): Dev.gear_set_wear(s3, 4), "blue"))
+	_row(wear, "หัวหน้าทีมสวมครบเซ็ต")
+	var demo := _b("ตัวอย่าง: Hunter 4 + Tinker 2 แล้วเปิดหน้าไอเทม", func(): Dev.gear_set_demo(), "green", true)
+	demo.name = "GearSetDemo"
+	_row([demo, _b("ดรอปเซ็ตครั้งถัดไปแน่นอน", func(): Dev.gear_set_pity(), "gray"), _b("+ชิ้นส่วน Hunter", func(): Dev.gear_set_parts("hunter"), "gray")])
 
 
 ## MV-552: open a weapon next to the equipped one to check the item detail's stat table

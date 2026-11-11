@@ -217,6 +217,11 @@ func start(id: String, ids: Array, sup: Dictionary) -> bool:
 	if not cost.is_empty() and not Game.pay(cost):
 		return false
 	var dur := duration_sec(id)
+	var team_d := []
+	for did in ids:
+		team_d.append(Game.dweller_by_id(int(did)))
+	if GearSets.team_lucky(team_d):
+		dur *= 0.8      # MV-767 scav 4-piece Lucky haul: back 20 % sooner
 	var now := Time.get_unix_time_from_system()
 	var freed := []
 	for did in ids:
@@ -320,8 +325,12 @@ func finish(offline: bool) -> Dictionary:
 			rew[k] = n
 	var got := Game.give_rewards(rew)
 	var gear_n := int(loot.get("gear", 0)) if ok else 0
+	if ok and GearSets.team_lucky(members):
+		gear_n += 1     # MV-767 scav 4-piece Lucky haul: one more item
 	for i in gear_n:
-		var it := Loot.roll_random(Combat.enemy_level(), 20.0, int(loot.get("rare", 0)))
+		var it := GearSets.roll("expedition", Combat.enemy_level(), int(loot.get("rare", 0)), 20.0)    # MV-767 scav source
+		if it.is_empty():
+			it = Loot.roll_random(Combat.enemy_level(), 20.0, int(loot.get("rare", 0)))
 		Loot.add_to_stash(it)
 		got += ", %s [%s]" % [Loot.item_name(it), Loot.rarity(int(it.rar)).th]
 	if gear_n > 0:

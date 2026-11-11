@@ -862,6 +862,87 @@ func gear_sample(r: int, slot: String, plus: int = 0, lock: bool = false) -> Dic
 	return {"uid": -1, "base": base, "slot": slot, "rar": r, "ilvl": 5 + r * 4, "plus": plus, "aff": [], "lock": lock}
 
 
+# ------------------------------------------------------------------ MV-767 gear sets + 64 px frame
+## the 64 px Vault hatch frame on / off for this session (switch gear_frame64)
+func gear_frame64(on: bool) -> void:
+	act("gear frame64 %s" % ("on" if on else "off"))
+	Features.set_override("features", "gear_frame64", on)
+	Features.changed.emit()
+
+
+## put the 4 pieces of a set (rarity rar) in the stash
+func gear_set_give(set_id: String, rar: int = 2) -> Array:
+	act("gear set give %s" % set_id)
+	var out := []
+	if not GearSets.SETS.has(set_id):
+		return out
+	for slot in GearSets.SETS[set_id].slots:
+		var it := Loot.roll_item(slot, maxi(1, Combat.enemy_level()), clampi(rar, 0, 5), GearSets.base_id(set_id, slot))
+		Loot.stash().append(it)
+		out.append(it)
+	Game.gear_changed.emit()
+	return out
+
+
+## dress the squad lead (or the first crew member) in n pieces of a set, so its 2/3/4-piece bonuses show
+func gear_set_wear(set_id: String, n: int = 4) -> Dictionary:
+	act("gear set wear %s %d" % [set_id, n])
+	var d := squad_lead()
+	if d.is_empty() or not GearSets.SETS.has(set_id):
+		return d
+	var slots: Array = GearSets.SETS[set_id].slots
+	for i in mini(n, slots.size()):
+		var it := Loot.roll_item(slots[i], maxi(1, Combat.enemy_level()), 2, GearSets.base_id(set_id, slots[i]))
+		Loot.stash().append(it)
+		Loot.equip_from_stash(int(it.uid), d)
+	Game.gear_changed.emit()
+	return d
+
+
+## +craft cost set parts of a set
+func gear_set_parts(set_id: String) -> void:
+	act("gear set parts %s" % set_id)
+	GearSets.parts()[set_id] = GearSets.parts_of(set_id) + GearSets.craft_cost()
+	Game.resources_changed.emit()
+
+
+## the next drop of every source is a set piece (pity full)
+func gear_set_pity() -> void:
+	act("gear set pity")
+	for sid in GearSets.ORDER:
+		GearSets.pity()[sid] = int(Features.num("sets.pity", GearSets.PITY))
+
+
+func squad_lead() -> Dictionary:
+	for did in Game.s.get("squad", []):
+		if int(did) >= 0 and not Game.dweller_by_id(int(did)).is_empty():
+			return Game.dweller_by_id(int(did))
+	return Game.s.dwellers[0] if not Game.s.get("dwellers", []).is_empty() else {}
+
+
+## Raider Hunter 4 + Tinker 2 on the squad lead, then open the item detail of a worn hunter piece (set panel)
+func gear_set_demo() -> void:
+	act("gear set demo")
+	var d := gear_set_wear("hunter", 4)
+	if d.is_empty():
+		return
+	var tk: Array = GearSets.SETS.tinker.slots
+	for slot in ["armor", "backpack"]:
+		if tk.has(slot):
+			var it := Loot.roll_item(slot, maxi(1, Combat.enemy_level()), 3, GearSets.base_id("tinker", slot))
+			Loot.stash().append(it)
+			Loot.equip_from_stash(int(it.uid), d)
+	Game.gear_changed.emit()
+	var hud = get_tree().current_scene.get("hud") if get_tree().current_scene else null
+	if hud == null:
+		return
+	for k in hud.panels:
+		if k != "inventory" and hud.panels[k].is_open:
+			hud.panels[k].close()
+	var inv: LootPanel = hud.panels.inventory
+	inv.open_equipped(Loot.equipped_on(d, "weapon"), int(d.id))
+
+
 # ------------------------------------------------------------------ MV-554 multi-salvage
 ## put 8 low-rarity items (one locked) in the stash and open the loot window in select mode with three ticked
 func multi_salvage_demo() -> void:

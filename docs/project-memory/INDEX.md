@@ -117,6 +117,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [bg-parallax-5layer-plan](bg-parallax-5layer-plan.md): MV-684 5-layer parallax road bg, ~600-720 gens/biome, Industrial approved, concept A/B pick pending
 - [item-frame-redesign](item-frame-redesign.md): RULE MV-687 item frame = Vault hatch APPROVED (approved/README.md): tier ladder beyond colour, +N red badge top-right, no item level; game impl not started
 - [gear-sets-design](gear-sets-design.md): MV-689 gear sets v1, 5 sets x 4 pieces 2/3/4 bonuses + PixelLab icons (32 px, style = one icon), artifact Gear Sets v1, awaiting picks
+- [gear-sets-ingame](gear-sets-ingame.md): MV-767 gear sets + F5 64 px item frame in game (gear_sets, gear_frame64), icons = take A, PR into staging
 - [biome-parallax-ref](biome-parallax-ref.md): RULE Industrial parallax bg APPROVED ref for all biomes (approved/README.md); desert/forest/swamp/tundra Done (MV-690/693/696/699), metro MV-701 concept pick pending, per-biome car grade CARL, preview page designs/bg-parallax-page/
 - [christmas-living-v3](christmas-living-v3.md): MV-691 Christmas festival living room v3 L1-L3 (Claude picks), anims crew 2/3 + hotspots, APPROVED + saved christmas/approved/, Done
 - [icons-v2](icons-v2.md): MV-694 all ic_* icons redrawn 32 px + moods neutral/stressed/broken, APPROVED + saved, PR #191 MERGED to staging 2026-11-04 (switch icons_v2, IconTex), web export pending

@@ -56,6 +56,27 @@ const BASES := {
 	"targeting_chip": {"slot": "gadget", "th": "ชิปเล็งเป้า", "en": "Targeting Chip", "icon": "chip", "crit": 6.0, "min_ilvl": 1},
 	"stim_injector": {"slot": "gadget", "th": "เข็มกระตุ้น", "en": "Stim Injector", "icon": "stimpack", "aspd_pct": 12.0, "min_ilvl": 2},
 	"lucky_charm": {"slot": "gadget", "th": "เครื่องรางนำโชค", "en": "Lucky Charm", "icon": "charm", "loot": 10.0, "min_ilvl": 4},
+	# --- MV-767 gear sets (GearSets, switch gear_sets): never in the random pool, each set drops from its own source
+	"set_tinker_armor": {"slot": "armor", "set": "tinker", "th": "เอี๊ยมช่างคราบน้ำมัน", "en": "Grease Overalls", "icon": "set_tinker_armor", "hp": 32.0, "def": 3.0, "min_ilvl": 1},
+	"set_tinker_helmet": {"slot": "helmet", "set": "tinker", "th": "หน้ากากเชื่อมติดไฟฉาย", "en": "Lamp Welder Mask", "icon": "set_tinker_helmet", "hp": 12.0, "def": 2.0, "min_ilvl": 1},
+	"set_tinker_gadget": {"slot": "gadget", "set": "tinker", "th": "มัลติมิเตอร์พกพา", "en": "Pocket Multimeter", "icon": "set_tinker_gadget", "regen": 1.0, "crit": 2.0, "min_ilvl": 1},
+	"set_tinker_backpack": {"slot": "backpack", "set": "tinker", "th": "กล่องเครื่องมือสะพายหลัง", "en": "Toolbox Pack", "icon": "set_tinker_backpack", "loot": 5.0, "supply": 8.0, "min_ilvl": 1},
+	"set_hunter_weapon": {"slot": "weapon", "set": "hunter", "th": "ไรเฟิลซุ่มผ้าแดง", "en": "Red-Rag Marksman", "icon": "set_hunter_weapon", "dmg": 14.0, "aspd": 0.65, "range": 290, "crit": 6.0, "min_ilvl": 1},
+	"set_hunter_helmet": {"slot": "helmet", "set": "hunter", "th": "แว่นกันฝุ่นผ้าปิดหน้า", "en": "Dust Goggles", "icon": "set_hunter_helmet", "hp": 10.0, "def": 1.0, "crit": 3.0, "min_ilvl": 1},
+	"set_hunter_gadget": {"slot": "gadget", "set": "hunter", "th": "สายกระสุนคาดอก", "en": "Bandolier", "icon": "set_hunter_gadget", "aspd_pct": 10.0, "min_ilvl": 1},
+	"set_hunter_boots": {"slot": "boots", "set": "hunter", "th": "รองเท้าพันแข้งนักย่อง", "en": "Stalker Wraps", "icon": "set_hunter_boots", "dodge": 5.0, "aspd_pct": 3.0, "min_ilvl": 1},
+	"set_titan_weapon": {"slot": "weapon", "set": "titan", "th": "ค้อนหัวตะปูรางรถไฟ", "en": "Rail-Spike Maul", "icon": "set_titan_weapon", "dmg": 18.0, "aspd": 0.55, "range": 40, "melee": true, "splash": 2, "min_ilvl": 1},
+	"set_titan_armor": {"slot": "armor", "set": "titan", "th": "เกราะอกงาสัตว์", "en": "Tusk Plate", "icon": "set_titan_armor", "hp": 45.0, "def": 5.0, "min_ilvl": 1},
+	"set_titan_helmet": {"slot": "helmet", "set": "titan", "th": "หมวกกะโหลกเขาโค้ง", "en": "Skull Helm", "icon": "set_titan_helmet", "hp": 18.0, "def": 3.0, "min_ilvl": 1},
+	"set_titan_gadget": {"slot": "gadget", "set": "titan", "th": "ระเบิดเจาะเกราะ", "en": "Breach Charge", "icon": "set_titan_gadget", "crit": 5.0, "aspd_pct": 5.0, "min_ilvl": 1},
+	"set_bulwark_armor": {"slot": "armor", "set": "bulwark", "th": "เสื้อเกราะหมุดย้ำ", "en": "Riveted Vest", "icon": "set_bulwark_armor", "hp": 48.0, "def": 6.0, "min_ilvl": 1},
+	"set_bulwark_helmet": {"slot": "helmet", "set": "bulwark", "th": "หมวกถังเหล็กช่องตา", "en": "Bucket Helm", "icon": "set_bulwark_helmet", "hp": 20.0, "def": 4.0, "min_ilvl": 1},
+	"set_bulwark_boots": {"slot": "boots", "set": "bulwark", "th": "รองเท้าหัวเหล็กสนับท่อ", "en": "Pipe Greaves", "icon": "set_bulwark_boots", "hp": 12.0, "def": 3.0, "dodge": 1.0, "min_ilvl": 1},
+	"set_bulwark_backpack": {"slot": "backpack", "set": "bulwark", "th": "โล่ป้ายถนนสะพายหลัง", "en": "Road-Sign Shield", "icon": "set_bulwark_backpack", "hp": 22.0, "loot": 3.0, "supply": 4.0, "min_ilvl": 1},
+	"set_scav_weapon": {"slot": "weapon", "set": "scav", "th": "ชะแลงพันเทป", "en": "Taped Crowbar", "icon": "set_scav_weapon", "dmg": 9.0, "aspd": 1.1, "range": 40, "melee": true, "min_ilvl": 1},
+	"set_scav_gadget": {"slot": "gadget", "set": "scav", "th": "ไกเกอร์พกพา", "en": "Pocket Geiger", "icon": "set_scav_gadget", "loot": 10.0, "regen": 0.5, "min_ilvl": 1},
+	"set_scav_boots": {"slot": "boots", "set": "scav", "th": "รองเท้าหัวเข็มขัด", "en": "Buckle Boots", "icon": "set_scav_boots", "hp": 6.0, "dodge": 4.0, "min_ilvl": 1},
+	"set_scav_backpack": {"slot": "backpack", "set": "scav", "th": "เป้โครงแบกเต็ม", "en": "Overloaded Frame", "icon": "set_scav_backpack", "loot": 8.0, "supply": 14.0, "min_ilvl": 1},
 	# --- vault: turret
 	"mg_turret": {"slot": "turret", "th": "ป้อมปืนกล", "en": "MG Turret", "icon": "turret", "sprite": "mg", "dmg": 4.0, "aspd": 2.0, "range": 220, "min_ilvl": 1},
 	"harpoon_gun": {"slot": "turret", "th": "ปืนฉมวก", "en": "Harpoon Gun", "icon": "harpoon", "sprite": "harpoon", "dmg": 15.0, "aspd": 0.5, "range": 260, "min_ilvl": 5},
@@ -188,11 +209,11 @@ func roll_item(slot: String, ilvl: int, rar: int, base_id: String = "") -> Dicti
 	if base_id == "":
 		var pool := []
 		for k in BASES:
-			if BASES[k].slot == slot and int(BASES[k].min_ilvl) <= ilvl:
+			if BASES[k].slot == slot and int(BASES[k].min_ilvl) <= ilvl and not BASES[k].has("set"):
 				pool.append(k)
 		if pool.is_empty():
 			for k in BASES:
-				if BASES[k].slot == slot:
+				if BASES[k].slot == slot and not BASES[k].has("set"):
 					pool.append(k)
 		base_id = pool[rng.randi() % pool.size()]
 	var item := {"uid": _next_uid(), "base": base_id, "slot": BASES[base_id].slot, "rar": rar, "ilvl": ilvl, "plus": 0, "aff": [], "lock": false}
@@ -204,7 +225,7 @@ func roll_item(slot: String, ilvl: int, rar: int, base_id: String = "") -> Dicti
 	allowed.shuffle()
 	for i in mini(count, allowed.size()):
 		item.aff.append({"k": allowed[i], "v": _roll_affix(allowed[i], ilvl, rar)})
-	if rar >= 4 and rng.randf() < 0.5:
+	if rar >= 4 and rng.randf() < 0.5 and not BASES[base_id].has("set"):
 		var names: Array = LEGEND_NAMES.get(item.slot, [])
 		if not names.is_empty():
 			item["name"] = names[rng.randi() % names.size()]
@@ -383,6 +404,7 @@ func salvage_value(item: Dictionary) -> Dictionary:
 
 func _give_salvage(item: Dictionary) -> void:
 	Activity.loot_received(item, true)
+	GearSets.on_salvage(item)
 	var v := salvage_value(item)
 	Game.add_item("components", int(v.components))
 	Game._add_res("scrap", float(v.scrap))

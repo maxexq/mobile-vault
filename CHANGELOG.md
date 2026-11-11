@@ -9,6 +9,8 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
+- Gear sets: 5 sets of 4 pieces (Tinker Crew, Raider Hunter, Titan Breaker, Rust Bulwark, Scavenger) with 2 / 3 / 4-piece bonuses, each dropping from its own source with a pity counter; salvaged set pieces become set parts that craft a missing piece (MV-767)
+- New item frame: a detailed steel vault hatch whose lamps, lights and locks show the rarity, a red +N badge on the corner and a set-colour emblem (MV-767)
 - Dr. Ren's ambulance shows its upgrades: spiked ram, a gun on the roof, armour plates, lead plates on the cab, heavy suspension, spare fuel tanks (extra ones on a rack on the rear wall) and bigger off-road tyres that lift the body, each changing look with its level (MV-763)
 - The road train shows its upgrades: spiked ram, cab armour and side-rail plates, spare fuel tanks under the trailer beam, solar shutters, lead on the cab, a heater flue, a rear-facing turret on the trailer roof, heavy suspension behind the wheels and chunky off-road tyres, each changing look with its level (MV-762)
 - The Decker bus shows its upgrades: spiked ram, spare fuel tanks, side armour, a gun on the rear wall, lead plates over the front of both decks, a heater flue and solar panels on the roof, each changing look with its level (MV-760)
