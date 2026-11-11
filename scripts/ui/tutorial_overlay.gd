@@ -165,7 +165,7 @@ func _update_target() -> void:
 	elif t == "travel":
 		c = hud._travel
 	elif t.begins_with("tool:"):
-		c = hud._tool_buttons.get(t.substr(5))
+		c = hud.tool_button(t.substr(5))
 	elif t.begins_with("panel:"):
 		var p: ModalPanel = hud.panels.get(t.substr(6))
 		if p != null and p.is_open:

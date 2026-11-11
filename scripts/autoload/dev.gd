@@ -1505,6 +1505,30 @@ func bastion_interior() -> bool:
 	return rooms_v3_open()
 
 
+## MV-768 UI v5 (switch ui_v5): true / false, null = back to the build's value. Lays the HUD out again at once;
+## returns whether the v5 layout (dock + room pages + sheets) is up now (it needs a portrait screen)
+func ui_v5(v: Variant) -> bool:
+	act("ui v5", {"on": v})
+	Features.set_override("features", "ui_v5", v)
+	var m = get_tree().current_scene
+	if m == null or m.get("hud") == null:
+		return false
+	m.hud._apply_layout()
+	return m.hud.v5_active()
+
+
+## MV-768: turn the v5 room pages by d (+1 = next room); returns the slot on screen, -1 without the pages
+func ui_v5_page(d: int) -> int:
+	var m = get_tree().current_scene
+	if m == null or m.get("hud") == null or m.hud.pager == null or not m.hud.pager.visible:
+		return -1
+	var p: RoomPager = m.hud.pager
+	p.refresh()
+	p.go(p.idx + d, false)
+	act("ui v5 page", {"step": d, "slot": p.current_slot()})
+	return p.current_slot()
+
+
 ## showcase: every unlocked empty cell gets the next room type that has a v3 set, all rooms at level `lv`, then
 ## the v3 interior opens; returns how many rooms have v3 art now
 func rooms_v3_showcase(lv: int) -> int:

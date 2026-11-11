@@ -97,6 +97,11 @@ func _note(text: String) -> void:
 ## gallery (92 icons x 1/2/3) was removed in MV-720: icons v2 is approved and in game, so it only cost build time.
 func _tab_icons() -> void:
 	var v2on := Features.on("icons_v2")
+	var v5on := Features.on("ui_v5")
+	_head("UI V5", "หน้าจอแบบ A (MV-768)")
+	_row([_b("UI v5 แบบ A", func(): Dev.ui_v5(true), "yellow" if v5on else "gray"), _b("HUD เดิม", func(): Dev.ui_v5(false), "gray" if v5on else "yellow"),
+		_b("ค่าเริ่มต้น", func(): Dev.ui_v5(null), "gray")])
+	_row([_b("< ห้องก่อนหน้า", func(): Dev.ui_v5_page(-1), "gray"), _b("ห้องถัดไป >", func(): Dev.ui_v5_page(1), "gray")], "ห้อง v3 ใต้ถนน")
 	_head("ICONS", "ชุดไอคอน (MV-694)")
 	_row([_b("ไอคอนใหม่ v2", func(): Dev.icons_v2(true), "yellow" if v2on else "gray"), _b("ไอคอนเดิม 16 px", func(): Dev.icons_v2(false), "gray" if v2on else "yellow")])
 	var moods: Array = [UIKit.label(Loc.t("อารมณ์:"), 9, UIKit.C_DIM)]

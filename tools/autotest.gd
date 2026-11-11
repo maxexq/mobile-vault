@@ -670,6 +670,11 @@ func _run() -> void:
 		await _enc_art_v2_test()
 		_finish()
 		return
+	if "--only=ui_v5" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _ui_v5_test()
+		_finish()
+		return
 	if "--only=rooms_v3" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _rooms_v3_test()
@@ -1756,6 +1761,7 @@ func _run() -> void:
 	await _scene_art_test()
 	await _parallax_v2_test()
 	await _rooms_v3_test()
+	await _ui_v5_test()
 	await _crew_portraits_v3_test()
 	await _crew_portrait_moods_test()
 	await _pets_v3_test()
@@ -4930,7 +4936,7 @@ func _features_test() -> void:
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
 	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
 	# (MV-546) rides on the world map, so it ships off with it
-	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764)
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion", "ui_v5"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764); ui_v5: phase 1 of the MV-768 redesign
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
 	for k in ["road_train", "gear_sets", "gear_frame64"]:
@@ -6670,6 +6676,103 @@ func _pets_v3_test() -> void:
 	PetsV3.reset()
 	Game.rooms_changed.emit()
 	Game.pets_changed.emit()
+	get_window().size = old_window
+	await wait(0.3)
+
+
+## MV-768 UI v5 (switch ui_v5, portrait): a dock replaces the tool row, the top is two rows, v3 room pages sit under
+## the road view, the dock windows open as bottom sheets that leave the dock tappable; landscape and the switch off
+## keep the classic HUD
+func _ui_v5_test() -> void:
+	var hud: HUD = main.hud
+	var old_window := get_window().size
+	get_window().size = Vector2i(405, 720)
+	await wait(0.3)
+	Features.set_override("features", "rooms_v3", true)
+	var on := Dev.ui_v5(true)
+	await wait(0.4)
+	_check("ui v5: switch on lays out the v5 HUD in portrait", on and hud.v5_active())
+	_check("ui v5: dock shows 6 buttons, the old tool row hides", hud._dock.visible and hud._dock_buttons.size() == HUD.DOCK.size() and not hud._tools.visible)
+	_check("ui v5: two top rows (info row hidden, crew chip in the resource row, vault chip in the route row)",
+		not hud._info_row.visible and hud._pop_chip.get_parent() == hud._res_row and hud._vault_chip.get_parent() == hud._route_row)
+	_check("ui v5: Log moves to the view bar", hud._log_btn.visible and hud._log_btn.is_visible_in_tree())
+	var vp := hud.size
+	var dock_r := Rect2(hud._dock.position, hud._dock.size)
+	_check("ui v5: the dock spans the bottom of the screen", absf(dock_r.end.y - vp.y) <= 1.0 and absf(dock_r.size.x - vp.x) <= 1.0 and dock_r.size.y >= 48.0)
+	_check("ui v5: tutorial points at the dock buttons", hud.tool_button("build") == hud._dock_buttons.build)
+	var pg: RoomPager = hud.pager
+	pg.refresh()
+	await wait(0.3)
+	_check("ui v5: room pages show every room as a v3 cell at 2x, above the travel bar",
+		pg.visible and pg.slots.size() >= 1 and pg.cells.size() == pg.slots.size() and pg.world.scale == Vector2(2, 2)
+		and pg.position.y + pg.size.y <= hud._bottom.position.y + 1.0)
+	var wr := hud.world_rect()
+	_check("ui v5: the road view keeps the space above the room pages", wr.end.y <= pg.position.y and wr.size.y >= 100.0)
+	pg.go(0, false)
+	var s1 := Dev.ui_v5_page(1)
+	_check("ui v5: GOD page turn shows the next room", pg.slots.size() < 2 or (pg.idx == 1 and s1 == int(pg.slots[1])))
+	var s0 := Dev.ui_v5_page(-1)
+	_check("ui v5: and back", pg.idx == 0 and s0 == int(pg.slots[0]))
+	if pg.slots.size() >= 2:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = true
+		e.position = Vector2(240, 90)
+		pg._on_input(e)
+		var mm := InputEventMouseMotion.new()
+		mm.position = Vector2(120, 90)
+		mm.button_mask = MOUSE_BUTTON_MASK_LEFT
+		pg._on_input(mm)
+		var r := InputEventMouseButton.new()
+		r.button_index = MOUSE_BUTTON_LEFT
+		r.pressed = false
+		r.position = Vector2(120, 90)
+		pg._on_input(r)
+		await wait(0.3)
+		_check("ui v5: a swipe to the left turns to the next room", pg.idx == 1 and is_equal_approx(pg.world.position.x, pg._target_x()))
+	var on_cells := 0
+	for i in pg.cells:
+		if (pg.cells[i] as Node).process_mode != Node.PROCESS_MODE_DISABLED:
+			on_cells += 1
+	_check("ui v5: only the room on screen and its neighbours animate", on_cells <= 3 and on_cells >= 1)
+	await shot("ui_v5_main")
+	hud.open_panel("build")
+	await wait(0.5)
+	var bp: ModalPanel = hud.panels.build
+	var br := Rect2(bp.box.position, bp.box.size)
+	_check("ui v5: Build opens as a full-width bottom sheet standing on the dock",
+		bp.is_sheet() and absf(br.end.y - (vp.y - HUD.DOCK_H)) <= 1.0 and absf(br.size.x - vp.x) <= 1.0 and br.position.y >= ModalPanel.sheet_top - 1.0)
+	_check("ui v5: the dock stays tappable under a sheet", bp.size.y <= vp.y - HUD.DOCK_H + 1.0)
+	_check("ui v5: the open window's dock button is lit", hud._dock_buttons.build.get_theme_stylebox("normal") == hud._dock_style_on)
+	await shot("ui_v5_sheet_build")
+	hud._on_dock("map")
+	await wait(0.5)
+	_check("ui v5: another dock button swaps the sheet", hud.panels.map.is_open and not bp.is_open)
+	hud._on_dock("map")
+	await wait(0.4)
+	_check("ui v5: the same dock button closes its sheet", not hud.panels.map.is_open and hud._dock_buttons.map.get_theme_stylebox("normal") == hud._dock_style_off)
+	hud.open_panel("dwellers")
+	await wait(0.5)
+	await shot("ui_v5_sheet_crew")
+	hud.panels.dwellers.close()
+	await wait(0.3)
+	get_window().size = Vector2i(720, 405)
+	await wait(0.5)
+	_check("ui v5: landscape keeps the classic tool column", not hud.v5_active() and hud._tools.visible and not hud._dock.visible
+		and not hud.pager.visible and ModalPanel.sheet_bottom == 0.0)
+	get_window().size = Vector2i(405, 720)
+	await wait(0.4)
+	Dev.ui_v5(false)
+	await wait(0.3)
+	_check("ui v5: switch off brings the classic HUD back", not hud.v5_active() and hud._tools.visible and hud._info_row.visible
+		and hud._pop_chip.get_parent() == hud._info_row and hud._vault_chip.get_parent() == hud._info_row and not hud.pager.visible
+		and not hud._log_btn.visible and ModalPanel.sheet_bottom == 0.0)
+	hud.open_panel("build")
+	await wait(0.4)
+	_check("ui v5: with the switch off windows are centred again", not bp.is_sheet() and bp.offset_bottom == 0.0)
+	bp.close()
+	Dev.ui_v5(null)
+	Features.set_override("features", "rooms_v3", null)
 	get_window().size = old_window
 	await wait(0.3)
 

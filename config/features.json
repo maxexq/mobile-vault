@@ -98,6 +98,7 @@
     "parallax_v2": true,
     "world_2x": true,
     "rooms_v3": true,
+    "ui_v5": false,
     "road_train": true,
     "rt_start_trailer": true,
     "decker": true,
