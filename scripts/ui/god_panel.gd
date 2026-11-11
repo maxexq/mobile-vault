@@ -482,6 +482,9 @@ func _tab_vehicle() -> void:
 		_b("อัปเกรด Decker: " + ("เปิด" if Features.on("decker_mods") else "ปิด"),
 		func(): Dev.feature_set("decker_mods", not Features.on("decker_mods")), "green" if Features.on("decker_mods") else "red")],
 		"อัปเกรดภายนอก Decker")
+	_row([_b("มอดไม่มีภาพ v3: " + ("ซ่อน" if Features.on("mods_v3_only") else "แสดง"),
+		func(): Dev.mods_v3_only(not Features.on("mods_v3_only")), "green" if Features.on("mods_v3_only") else "red")],
+		"มอดที่ยังไม่มีภาพ v3")
 	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
 		_b("ภายใน", func(): Dev.bastion_interior()),
 		_b("ขับ+ไฟ", func(): Dev.bastion_anim("drive"), "green"), _b("เบรก", func(): Dev.bastion_anim("brake")),

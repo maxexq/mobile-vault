@@ -1427,6 +1427,18 @@ func decker_mods(lv: int) -> int:
 	return root.get_child_count() if root != null and root.visible else 0
 
 
+## MV-774: switch mods_v3_only on/off; returns the exterior mods the garage hides on the vehicle driven now
+func mods_v3_only(on: bool) -> Array:
+	feature_set("mods_v3_only", on)
+	var hidden := []
+	for id in Mods.MODS:
+		if str(Mods.MODS[id].side) == "ext" and not Mods.has_v3_art(id):
+			hidden.append(id)
+	act("mods v3 only " + ("on" if on else "off"), {"hidden": hidden})
+	Mods.mods_changed.emit()
+	return hidden
+
+
 ## MV-763: drive Dr. Ren's ambulance (van, world v2) at `n` floors (-1 = its floors now, at least 1) with every approved
 ## exterior mod at level lv (0 = none, 1-3; rad shield tops out at 2): ram, roof gun, fuel tanks (+ rack), armor, lead,
 ## heavy suspension, off-road tyres. `interior` also opens the v3 interior. Returns the parts drawn on the road view.

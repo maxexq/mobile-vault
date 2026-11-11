@@ -172,3 +172,4 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [ambulance-mods-ingame](ambulance-mods-ingame.md): MV-763 approved ambulance exterior mods in game via ShellMods (switch ambulance_mods), wheel-clipped per floor, off-road tyres lift the body
 - [landmarks-v2](landmarks-v2.md): RULE MV-750 lm_* sites at 2x density, never frame-cut, door per site; all 13 APPROVED (designs/landmarks-v2/approved/), in game behind landmarks_v2
 - [ui-redesign-v5](ui-redesign-v5.md): MV-768 UI v5 option A picked; P1 (dock, 2-row HUD, bottom sheets, room pager) behind switch ui_v5
+- [mods-v3-only](mods-v3-only.md): MV-774 garage hides exterior mods with no v3 art on the current vehicle (switch mods_v3_only, Mods.V3_ART)

@@ -728,6 +728,11 @@ func _run() -> void:
 		await _vehicle_anim_test()
 		_finish()
 		return
+	if "--only=mods_v3_only" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _mods_v3_only_test()
+		_finish()
+		return
 	if "--only=ambulance_mods" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _ambulance_mods_test()
@@ -1357,6 +1362,7 @@ func _run() -> void:
 	for bp in ["bp_roof_turret", "bp_tracks", "bp_solar_covers", "bp_rad_shield", "bp_heater", "bp_engine_tune"]:
 		Meta.add_blueprint(bp)
 	var ok_all := true
+	Features.set_override("features", "mods_v3_only", false)   # MV-774: every mod, whatever the vehicle art (own test)
 	for id in ["spike_ram", "spike_ram", "spike_ram", "roof_turret", "roof_turret", "fuel_tanks", "fuel_tanks",
 			"tracks", "armor_plates", "armor_plates", "solar_covers", "rad_shield", "rain_catcher", "heater",
 			"suspension", "suspension", "offroad_wheels", "engine_tune"]:
@@ -1364,6 +1370,7 @@ func _run() -> void:
 			ok_all = Mods.install(id) and ok_all
 	Mods.mods_changed.emit()
 	_check("install exterior mods", ok_all and Mods.level("spike_ram") == 3 and Mods.level("tracks") == 1)
+	Features.set_override("features", "mods_v3_only", null)
 	_check("fuel cap grows with tanks", Env.fuel_cap() > 60.0)
 	var sk: Dictionary = Game.s.dwellers[0]
 	sk.lvl = 8
@@ -1778,6 +1785,7 @@ func _run() -> void:
 
 	await _ambulance_v3_test()
 	await _ambulance_mods_test()
+	await _mods_v3_only_test()
 	await _world_v2_test()
 	await _road_train_test()
 	await _decker_test()
@@ -13559,6 +13567,50 @@ func _ambulance_v3_test() -> void:
 
 
 ## MV-763: the approved ambulance exterior mods (switch ambulance_mods) on the world v2 ambulance and in the v3 interior
+## MV-774: exterior mods with no v3 art on the vehicle drawn now are hidden from the garage (switch mods_v3_only)
+func _mods_v3_only_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	# every mod listed as drawn really has art on that body
+	var art := {"van": ShellMods.ids(AmbulanceMods.DIR), "bus": ShellMods.ids(DeckerMods.DIR) + ["solar_covers"],
+		"rig": ShellMods.ids(RoadTrainMods.DIR) + ["suspension", "offroad_wheels"]}
+	for t in ["van", "bus", "rig"]:
+		for id in Mods.V3_ART[t]:
+			_fold("mods_v3_only: every listed mod has v3 art on its vehicle", (art[t] as Array).has(id), "%s %s" % [t, id])
+	_fold_flush()
+	Dev.feature_set("ambulance_v3", true)
+	var want := {"van": ["roof_deck", "tracks", "solar_covers", "rain_catcher"],
+		"bus": ["roof_deck", "tracks", "rain_catcher", "suspension", "offroad_wheels"],
+		"rig": ["roof_deck", "tracks", "rain_catcher"]}
+	for t in ["van", "bus", "rig"]:
+		match t:
+			"van":
+				Dev.world_v2_preview(1)
+			"bus":
+				Dev.feature_set("decker", true)
+				Dev.decker_preview(2)
+			"rig":
+				Dev.road_train_world(2)
+		await wait(0.2)
+		var hidden := Dev.mods_v3_only(true)
+		hidden.sort()
+		var exp: Array = want[t].duplicate()
+		exp.sort()
+		_check("mods_v3_only: %s hides exactly the mods without v3 art" % t, Game.tier() == t and Vehicle.v2_wanted() and hidden == exp)
+		var blocked := true
+		for id in exp:
+			blocked = blocked and not Mods.enabled(id) and not Mods.can_install(id)
+		_check("mods_v3_only: %s hidden mods can't be installed" % t, blocked and Mods.enabled("spike_ram"))
+		_check("mods_v3_only: %s switch off shows every mod again" % t, Dev.mods_v3_only(false).is_empty() and Mods.enabled("tracks"))
+	_check("mods_v3_only: internal mods never hidden", Dev.mods_v3_only(true) is Array and Mods.has_v3_art("heater") and Mods.has_v3_art("engine_tune"))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Mods.mods_changed.emit()
+	await wait(0.3)
+
+
 func _ambulance_mods_test() -> void:
 	var old_state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)

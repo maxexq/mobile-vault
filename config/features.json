@@ -103,6 +103,7 @@
     "ui_v5": false,
     "road_train": true,
     "rt_start_trailer": true,
+    "mods_v3_only": true,
     "decker": true,
     "decker_sign": true,
     "decker_horn": true,
