@@ -127,7 +127,8 @@
     "ren_guide": true,
     "ren_guide_point": true,
     "crew_world_full": true,
-    "pets_v3": true
+    "pets_v3": true,
+    "weather_v2": true
   },
   "events": {},
   "tune": {
@@ -135,6 +136,7 @@
     "perf.idle_after": 2.0,
     "blur.refresh": 1.0,
     "squad_auto_pick.min_hp": 0.25,
-    "world_map.props": 0.7
+    "world_map.props": 0.7,
+    "weather_v2.density": 1.0
   }
 }

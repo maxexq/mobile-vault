@@ -645,6 +645,11 @@ func _run() -> void:
 		await _parallax_v2_test()
 		_finish()
 		return
+	if "--only=weather_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _weather_v2_test()
+		_finish()
+		return
 	if "--only=parallax_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _parallax_v2_test()
@@ -1775,6 +1780,7 @@ func _run() -> void:
 	await _announce_test()
 	await _scene_art_test()
 	await _parallax_v2_test()
+	await _weather_v2_test()
 	await _rooms_v3_test()
 	await _ui_v5_test()
 	await _crew_portraits_v3_test()
@@ -7146,6 +7152,89 @@ func _parallax_v2_test() -> void:
 	Game.s = old_state
 	Game.force_weather(str(old_state.get("weather", "clear")))
 	bg._on_biome_changed(int(Game.s.biome), true)
+	get_window().size = old_window
+	await wait(0.3)
+
+
+## MV-770 Weather v2: picked art loads, every weather draws through WeatherV2 (screen layers + backdrop slots),
+## old particles stay off, rain slant follows the road speed, lightning / debris / hero ash spawn, switch off = old
+func _weather_v2_test() -> void:
+	var old_window := get_window().size
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "parallax_v2", true)
+	Features.set_override("features", "weather_v2", true)
+	get_window().size = Vector2i(405, 720)
+	Dev.set_tod(0.5)
+	var fx: WeatherFX = main.weather
+	var v2: WeatherV2 = fx.v2
+	var groups := ["lightning", "fog_banks", "fog_float", "snow_drifts", "ash_banks", "sand_walls", "sand_debris", "flakes",
+		"hero_snow", "ash", "char", "oc_wisp", "oc_lo", "rays", "shadows"]
+	for gname in groups:
+		_fold("weather v2: every art sheet loads with its pieces", WeatherV2.sheet_count(gname) > 0, gname)
+	_fold_flush()
+	_check("weather v2: flakes come in 4 size classes, fog banks split for the wave shader",
+		(WeatherV2._sheets.flakes.classes as Array).size() == 4 and (WeatherV2._fog_tex.banks as Array).size() == WeatherV2.sheet_count("fog_banks"))
+	var bg: Background = main.background
+	var back: ParallaxV2Backdrop = bg.groups[Data.BIOMES[int(Game.s.biome)].id].v2
+	_check("weather v2: the backdrop has the 5 weather slots between its strips", back.wx_slots.size() == 5
+		and back.wx_slots.sky.get_index() < back.layers.far.node.get_index() and back.wx_slots.far.get_index() < back.layers.mid.node.get_index()
+		and back.wx_slots.mid.get_index() < back.layers.near.node.get_index() and back.wx_slots.ground.get_index() > back.layers.road.node.get_index())
+	_check("weather v2: under layer sits below the haze, hero layer above it", v2.under.get_index() < fx.haze.get_index() and v2.get_index() > fx.haze.get_index())
+	for w in Data.WEATHER:
+		Game.force_weather(w)
+		await wait(0.5)
+		var old_off: bool = not (fx.rain.emitting or fx.acid.emitting or fx.snow.emitting or fx.ash.emitting or fx.sand.emitting or fx.fog.emitting)
+		_fold("weather v2: each weather switches WeatherV2 and keeps the old particles off", v2.weather == w and v2.visible and old_off, w)
+		await shot("weather_v2_" + w)
+	_fold_flush()
+	Game.force_weather("storm")
+	await wait(0.1)
+	for i in 40:
+		v2.step(0.1, 0.0, v2.vw * Vector2.RIGHT + v2.vh * Vector2.DOWN, Color.WHITE, 0.0)
+	var parked := v2.slant
+	for i in 40:
+		v2.step(0.1, 180.0, v2.vw * Vector2.RIGHT + v2.vh * Vector2.DOWN, Color.WHITE, 0.0)
+	_check("weather v2: rain leans further when the vehicle drives faster", v2.slant > parked + 0.3)
+	v2.strike()
+	_check("weather v2: a storm strike picks a PixelLab bolt", not v2.bolt.is_empty())
+	Game.force_weather("sandstorm")
+	await wait(0.1)
+	v2._deb_next = 0.0
+	v2._step_debris(0.016)
+	_check("weather v2: sandstorm sends flying debris now and then (max 2)", v2._deb_live.size() == 1)
+	for i in 30:
+		v2._deb_next = 0.0
+		v2._step_debris(0.001)
+	_check("weather v2: never more than 2 debris pieces at once", v2._deb_live.size() == 2)
+	Game.force_weather("ashfall")
+	await wait(0.1)
+	v2._hch_next = 0.0
+	v2._step_hero_ash(0.016)
+	_check("weather v2: ashfall sends a burning scrap past the camera", v2._hch_live.size() == 1)
+	Game.force_weather("rain")
+	Features.set_override("features", "weather_v2", false)
+	await wait(0.3)
+	_check("weather v2: switch off brings the old particles back", fx.rain.emitting and not v2.visible and not WeatherV2.active())
+	Dev.weather_v2_preview("snow")
+	await wait(0.3)
+	_check("weather v2: GOD preview turns the switch on with the asked weather", Features.on("weather_v2") and str(Game.s.weather) == "snow" and v2.weather == "snow")
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "main"
+	god.refresh()
+	await wait(0.2)
+	var found := false
+	for row in god._list.get_children():
+		for control in row.get_children():
+			if control is Button and control.text == "อากาศ v2: เปิด":
+				found = true
+	_check("weather v2: GOD main tab has the on/off button", found)
+	god.close()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.force_weather(str(old_state.get("weather", "clear")))
 	get_window().size = old_window
 	await wait(0.3)
 
