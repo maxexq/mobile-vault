@@ -9,7 +9,7 @@ and dates the section. Each `v<version>` tag gets a GitHub Release with this sec
 ## [Unreleased]
 
 ### Added
-- No more random survivors: every crew member is a story character with their own name, role, stats, traits and bio. You start with Fah, Tham, Bit, Auntie Wan and Clara, and new people join in story order (Grandma Ploy, Noi, Mali, PIM-3, Captain Sorn, Lin, Krai); existing crews are renamed into the cast once (MV-778)
+- No more random survivors: every crew member is a story character with their own name, role, stats, traits and bio. You start with Dr. Ren at the wheel plus Fah, Tham, Bit, Auntie Wan and Clara, and new people join in story order (Grandma Ploy, Noi, Mali, PIM-3, Captain Sorn, Lin, Krai); existing crews are renamed into the cast once (MV-778)
 - The Vault upgrade card's "see new vehicle" button now shows your vehicle as it will look after the upgrade, with the new floor's empty rooms glowing, instead of a see-through floor (MV-777)
 - Calmer item frame: a plain steel plate with the rarity shown by four quiet corner brackets, no lights or motion; set pieces keep their set-colour diamond on the corner rivet (MV-773)
 - New weather: slender rain that leans with the vehicle speed, lightning behind the skyline, rolling fog banks, dust walls and flying junk in sandstorms, many snowflake patterns with big crystals drifting past, tumbling ash with smouldering scraps, and overcast skies with sun rays and cloud shadows (MV-770)

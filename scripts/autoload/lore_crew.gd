@@ -7,8 +7,8 @@ extends RefCounted
 ## crew is fixed and every recruit is the next character in lore order who is not on board yet. Someone who died
 ## only comes back when everybody else is already aboard (the cast is small). A full cast = no recruit (offer_recruit
 ## returns {} and Game.recruit_fail says why). Old saves: the crew are renamed into the cast once (migrate).
-## Dr. Ren: tune lore_crew.ren_start (0 = the guide/story voice, not a crew body; 1 = a 6th crew member in the cab at
-## the start; 2 = takes Clara's starting slot and Clara joins first).
+## Dr. Ren: tune lore_crew.ren_start (1 = default, Parames 2026-11-12: a 6th crew member in the cab at the start;
+## 0 = the guide/story voice only, not a crew body; 2 = takes Clara's starting slot and Clara joins first).
 
 ## id -> character. stats as they board (level 1 + lap like any recruit); act = when the lore brings them in
 const CAST := {
@@ -32,7 +32,7 @@ const ORDER := ["ren", "clara", "bit", "ploy", "wan", "tham", "fah", "noi", "mal
 const START := {"loader": "fah", "gunner": "tham", "cab": "bit", "kitchen": "wan", "water": "clara"}
 ## old lore crew (and the MV-170 roster's best-stat fallback) -> who they become when an old save is migrated
 const OLD_TO_NEW := {"mark": "fah", "leo": "tham", "ton": "bit", "bob": "wan", "clara": "clara", "bruno": "krai"}
-const REN_START := 0     # tune lore_crew.ren_start
+const REN_START := 1     # tune lore_crew.ren_start (Parames 2026-11-12: Ren aboard as the 6th)
 
 
 static func on() -> bool:
@@ -118,7 +118,7 @@ static func start_crew(water_slot: int) -> Dictionary:
 	spawn(ids.kitchen, {"room": 1, "lvl": 2})
 	spawn(ids.water, {"room": water_slot, "lvl": 2})
 	if ren_start() == 1:
-		spawn("ren", {"room": -1, "lvl": 2})
+		spawn("ren", {"room": Data.CAB_SLOT, "lvl": 2})     # his own ambulance: he drives (cab seats 2, with Bit)
 	return {"loader": loader, "gunner": gunner}
 
 

@@ -1788,8 +1788,8 @@ func _run() -> void:
 	await _icon_art_test()
 	await _icons_v2_test()
 	await _gear_sets_test()
+	await _lore_crew_test()     # before the roster test: that one leaves the rig / max Vault state later tests use
 	await _crew_roster_test()
-	await _lore_crew_test()
 	await _announce_test()
 	await _scene_art_test()
 	await _parallax_v2_test()
@@ -5920,9 +5920,12 @@ func _lore_crew_test() -> void:
 	var want := []
 	for k in ["loader", "gunner", "cab", "kitchen", "water"]:
 		want.append(LoreCrew.name_of(LoreCrew.START[k]))
-	_check("lore crew: new game = Fah, Tham, Bit, Auntie Wan, Clara %s" % str(names), names == want)
+	want.append(LoreCrew.name_of("ren"))      # lore_crew.ren_start 1 (default): Ren is the 6th, in the cab
+	_check("lore crew: new game = Fah, Tham, Bit, Auntie Wan, Clara + Dr. Ren %s" % str(names), names == want)
 	var bit: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "bit")[0]
 	_check("lore crew: Bit is the builder in the cab", Crew.is_builder(bit) and int(bit.room) == Data.CAB_SLOT)
+	var ren: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "ren")[0]
+	_check("lore crew: Dr. Ren drives his ambulance (cab)", int(ren.room) == Data.CAB_SLOT)
 	var fah: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "fah")[0]
 	var tham: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "tham")[0]
 	_check("lore crew: Fah + Tham are the starting squad", (Game.s.squad as Array).has(int(fah.id)) and (Game.s.squad as Array).has(int(tham.id)))
@@ -5931,7 +5934,7 @@ func _lore_crew_test() -> void:
 		var k := str(d.lore)
 		_fold("lore crew: start crew have their lore traits + face", d.traits == Crew.FIXED[k] and V3Art.crew_for(d) == k, k)
 	_fold_flush()
-	# recruits: the rest of the cast in story order, never twice, never Ren (guide), then nobody
+	# recruits: the rest of the cast in story order, never twice, then nobody
 	var got := []
 	for i in 20:
 		var d := Game.recruit_random()
@@ -5940,7 +5943,7 @@ func _lore_crew_test() -> void:
 		got.append(str(d.lore))
 	var order := []
 	for id in LoreCrew.ORDER:
-		if id != "ren" and not LoreCrew.START.values().has(id):
+		if not LoreCrew.START.values().has(id) and id != "ren":
 			order.append(id)
 	_check("lore crew: recruits come in story order %s" % str(got), got == order)
 	_check("lore crew: a full cast = no recruit (cast)", Game.offer_recruit("radio", 1000.0).is_empty() and Game.recruit_fail == "cast"
@@ -5949,7 +5952,7 @@ func _lore_crew_test() -> void:
 	var ids := {}
 	for d in Game.s.dwellers:
 		ids[str(d.lore)] = int(ids.get(str(d.lore), 0)) + 1
-	_check("lore crew: every character once (%d aboard)" % Game.s.dwellers.size(), ids.size() == Game.s.dwellers.size() and not ids.has("ren"))
+	_check("lore crew: every character once (%d aboard)" % Game.s.dwellers.size(), ids.size() == Game.s.dwellers.size() and ids.size() == LoreCrew.CAST.size())
 	for id in LoreCrew.CAST:
 		var d := {"id": 1, "name": LoreCrew.name_of(id), "lore": id, "variant": LoreCrew.CAST[id].variant}
 		_fold("lore crew: every character has a bio, lines, traits, v3 sheet + portrait", Lore.bio(d).role != "" and str(Lore.bio(d).text).length() > 40
@@ -5964,7 +5967,11 @@ func _lore_crew_test() -> void:
 	_check("lore crew: the living go first, the fallen last", LoreCrew.next_id() == "krai")
 	Game.s.dwellers.append(krai)
 	_check("lore crew: a fallen character returns when nobody else is left", LoreCrew.next_id() == "sorn")
-	# Ren at the start: 1 = sixth crew member, 2 = in Clara's slot (Clara joins first)
+	# Ren at the start: 0 = guide only, 1 = sixth crew member, 2 = in Clara's slot (Clara joins first)
+	Dev.lore_ren_start(0)
+	Game.setup_default_state()
+	_check("lore crew: ren_start 0 = Ren is the guide, never a crew body", Game.s.dwellers.size() == 5 and not LoreCrew.aboard().has("ren")
+		and not LoreCrew.ORDER.filter(func(i): return LoreCrew.is_cast(i)).has("ren"))
 	Dev.lore_ren_start(1)
 	Game.setup_default_state()
 	_check("lore crew: ren_start 1 = Ren aboard as the 6th", Game.s.dwellers.size() == 6 and str(Game.s.dwellers[-1].lore) == "ren")
