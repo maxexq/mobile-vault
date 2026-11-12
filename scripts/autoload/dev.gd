@@ -368,6 +368,12 @@ func weather(w: String) -> void:
 	act("weather " + w)
 
 
+## MV-770: Weather v2 preview: switch weather_v2 on (or off to compare with the old particles) and force a weather
+func weather_v2_preview(w: String, on: bool = true) -> void:
+	feature_set("weather_v2", on)
+	weather(w)
+
+
 func res_set(k: String, v: float) -> void:
 	if Game.s.res.has(k):
 		Game.s.res[k] = clampf(v, 0.0, Game.cap(k))
@@ -498,6 +504,12 @@ func floor_preview(sec: float = 5.0) -> bool:
 	return m.vehicle.preview_next_floor(sec)
 
 
+## MV-777: session override of the vault_preview_v3 switch (next Vault level previewed as the new v3 vehicle)
+func vault_preview_v3(on: bool) -> void:
+	Features.set_override("features", "vault_preview_v3", on)
+	act("vault preview v3 %s" % ("on" if on else "off"))
+
+
 ## MV-545: session override of the vault_upgrade_v2 switch
 func vault_upgrade_v2(on: bool) -> void:
 	Features.set_override("features", "vault_upgrade_v2", on)
@@ -540,6 +552,12 @@ func hull_warning_preview(stage: int) -> void:
 
 # ------------------------------------------------------------------ engine bay (v4.6)
 ## the engine_bay Features switch for this tester (MV-40): off = stock diesel, no heat / wear / rests / jobs
+## MV-766: new engine art in the engine menu (switch engine_art_v2); open the engine room to see it
+func engine_art_v2(on: bool) -> void:
+	feature_set("engine_art_v2", on)
+	EngineBay._changed()
+
+
 func engine_bay_switch(v: bool) -> void:
 	feature_set("engine_bay", v)
 	EngineBay._changed()
@@ -867,6 +885,13 @@ func gear_sample(r: int, slot: String, plus: int = 0, lock: bool = false) -> Dic
 func gear_frame64(on: bool) -> void:
 	act("gear frame64 %s" % ("on" if on else "off"))
 	Features.set_override("features", "gear_frame64", on)
+	Features.changed.emit()
+
+
+## MV-773: the simple option B frame / the Vault hatch for this session (switch gear_frame_simple)
+func gear_frame_simple(on: bool) -> void:
+	act("gear frame simple %s" % ("on" if on else "off"))
+	Features.set_override("features", "gear_frame_simple", on)
 	Features.changed.emit()
 
 
@@ -1414,6 +1439,18 @@ func decker_mods(lv: int) -> int:
 	return root.get_child_count() if root != null and root.visible else 0
 
 
+## MV-774: switch mods_v3_only on/off; returns the exterior mods the garage hides on the vehicle driven now
+func mods_v3_only(on: bool) -> Array:
+	feature_set("mods_v3_only", on)
+	var hidden := []
+	for id in Mods.MODS:
+		if str(Mods.MODS[id].side) == "ext" and not Mods.has_v3_art(id):
+			hidden.append(id)
+	act("mods v3 only " + ("on" if on else "off"), {"hidden": hidden})
+	Mods.mods_changed.emit()
+	return hidden
+
+
 ## MV-763: drive Dr. Ren's ambulance (van, world v2) at `n` floors (-1 = its floors now, at least 1) with every approved
 ## exterior mod at level lv (0 = none, 1-3; rad shield tops out at 2): ram, roof gun, fuel tanks (+ rack), armor, lead,
 ## heavy suspension, off-road tyres. `interior` also opens the v3 interior. Returns the parts drawn on the road view.
@@ -1715,6 +1752,36 @@ func spawn_roster_all() -> void:
 			on_board = on_board or str(d.variant) == "dw_crew_" + str(id)
 		if not on_board:
 			spawn_roster(str(id))
+
+
+## MV-778: board one lore character directly (any of LoreCrew.CAST, even with the switch off or already aboard)
+func spawn_lore(id: String) -> Dictionary:
+	if not LoreCrew.CAST.has(id):
+		return {}
+	var d := LoreCrew.spawn(id, {"lvl": 1 + int(Game.s.get("lap", 0))})
+	act("spawn lore " + id)
+	Game.dwellers_changed.emit()
+	return d
+
+
+## MV-778: the next lore character joins the normal way (story order); {} when the cast is complete
+func recruit_lore_next() -> Dictionary:
+	var d := Game.recruit_random()
+	act("recruit lore next: " + (str(d.name) if not d.is_empty() else "cast complete"))
+	return d
+
+
+## MV-778: rename the current crew into the cast again (as an old save gets on load)
+func lore_migrate() -> int:
+	var n := LoreCrew.migrate(true)
+	act("lore migrate: %d renamed" % n)
+	return n
+
+
+## MV-778: Dr. Ren at the start (tune lore_crew.ren_start: 0 guide, 1 sixth crew, 2 replaces Clara; -1 = default)
+func lore_ren_start(k: int) -> void:
+	Trace.rec("god", "lore ren_start %d" % k)
+	Features.set_override("tune", "lore_crew.ren_start", null if k < 0 else k)
 
 
 ## tester override of crew.roster_chance (-1 = back to the default)

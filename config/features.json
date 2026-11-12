@@ -40,6 +40,7 @@
     "drive_help": true,
     "hull_repair_v2": true,
     "five_floors": true,
+    "vault_preview_v3": true,
     "vault_upgrade_v2": true,
     "build_room_effects": true,
     "morale_v2": true,
@@ -55,6 +56,7 @@
     "gear_slot_vfx": true,
     "gear_sets": true,
     "gear_frame64": true,
+    "gear_frame_simple": true,
     "trait_card_style": true,
     "trait_card_vfx": true,
     "trait_tiers": true,
@@ -78,6 +80,7 @@
     "icons_v2": true,
     "icons_room16": false,
     "crew_roster_20": true,
+    "lore_crew": true,
     "announce": true,
     "raw_food": true,
     "loot_pity": true,
@@ -103,6 +106,7 @@
     "ui_v5": false,
     "road_train": true,
     "rt_start_trailer": true,
+    "mods_v3_only": true,
     "decker": true,
     "decker_sign": true,
     "decker_horn": true,
@@ -117,6 +121,7 @@
     "rooms_v3_review": true,
     "room_window_bg": true,
     "enc_art_v2": true,
+    "engine_art_v2": true,
     "landmarks_v2": true,
     "exp_scene_v2": true,
     "event_art_v2": true,
@@ -125,7 +130,8 @@
     "ren_guide": true,
     "ren_guide_point": true,
     "crew_world_full": true,
-    "pets_v3": true
+    "pets_v3": true,
+    "weather_v2": true
   },
   "events": {},
   "tune": {
@@ -133,6 +139,7 @@
     "perf.idle_after": 2.0,
     "blur.refresh": 1.0,
     "squad_auto_pick.min_hp": 0.25,
-    "world_map.props": 0.7
+    "world_map.props": 0.7,
+    "weather_v2.density": 1.0
   }
 }

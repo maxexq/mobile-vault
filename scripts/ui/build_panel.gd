@@ -104,6 +104,7 @@ func refresh() -> void:
 		_frame_info.text = Loc.t("โครงรถบ้านเลเวลสูงสุดแล้ว!") + (vault_bonus_line() if Features.on("vault_upgrade_v2") else "")
 		_frame_btn.text = "MAX"
 	_floor_btn.visible = Game.vault_adds_floor(lv)
+	_floor_btn.text = Loc.t("ดูรถคันใหม่") if Features.on("vault_preview_v3") and Features.on("world_v2") else Loc.t("ดูชั้นใหม่")
 	_frame_title.text = Loc.t("อัปเกรดโครงรถ") if Features.on("vault_upgrade_v2") else Loc.t("อัปเกรดโครงรถ / เปิดชั้นใหม่")
 	_update_affordable()
 

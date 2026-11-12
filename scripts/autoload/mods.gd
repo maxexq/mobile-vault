@@ -129,10 +129,35 @@ func next_cost(id: String) -> Dictionary:
 	return arr[lv] if lv < arr.size() else {}
 
 
-## a mod whose feature is switched off (Features) can't be installed or upgraded
+## MV-774 (switch mods_v3_only): exterior mods with approved v3 art drawn on each world v2 body. The world v2 body hides
+## the old mod overlays, so a mod missing here would buy nothing you can see: it is hidden from the garage for now.
+## van = Dr. Ren's ambulance (AmbulanceMods), bus = Decker (DeckerMods), rig = road train (RoadTrainMods); Bastion 42-B
+## (parked) has no mod art yet. Already-installed levels keep their effect.
+const V3_ART := {
+	"van": ["spike_ram", "roof_turret", "fuel_tanks", "armor_plates", "rad_shield", "suspension", "offroad_wheels"],
+	"bus": ["spike_ram", "roof_turret", "fuel_tanks", "armor_plates", "rad_shield", "solar_covers"],
+	"rig": ["spike_ram", "roof_turret", "fuel_tanks", "armor_plates", "rad_shield", "solar_covers", "suspension",
+		"offroad_wheels"],
+	"bastion": [],
+}
+
+
+## does this exterior mod have v3 art on the vehicle drawn right now? (always true off world v2 / for internal mods)
+func has_v3_art(id: String) -> bool:
+	if not Features.on("mods_v3_only") or str(MODS.get(id, {}).get("side", "")) != "ext":
+		return true
+	if Game.s.is_empty() or not Vehicle.v2_wanted():
+		return true       # old vehicle art: the old mod overlays still draw every mod
+	return (V3_ART.get(Game.tier(), []) as Array).has(id)
+
+
+## a mod whose feature is switched off (Features), or with no v3 art on the current vehicle (MV-774), can't be
+## installed or upgraded and is not listed in the garage
 func enabled(id: String) -> bool:
 	if id == "roof_turret" and RearGunner.squad_on():
 		return false      # MV-727: the squad fights from the rear gunner room, no roof gun
+	if not has_v3_art(id):
+		return false
 	return Features.on(id) if Features.FEATURES.has(id) else true
 
 

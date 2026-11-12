@@ -46,7 +46,12 @@ const CAMEO_WEIGHT := 0.5
 const MECHANIC_BUILD := 0.15
 ## named crew have fixed traits (fits their bios)
 const FIXED := {"mark": ["brawler", "tough"], "leo": ["sharpshooter", "scavenger"], "ton": ["mechanic", "night_owl"],
-	"bob": ["cook", "glutton"], "clara": ["healer", "cheerful"], "bruno": ["brawler", "light_eater"]}
+	"bob": ["cook", "glutton"], "clara": ["healer", "cheerful"], "bruno": ["brawler", "light_eater"],
+	# MV-778 lore cast (LoreCrew.CAST): traits follow each character's lore
+	"ren": ["healer", "genius"], "bit": ["mechanic", "quick_hands"], "wan": ["cook", "light_eater"],
+	"tham": ["sharpshooter", "cold_blooded"], "fah": ["brawler", "tough"], "ploy": ["scavenger", "lucky"],
+	"noi": ["quick_hands", "night_owl"], "mali": ["green_thumb", "cheerful"], "pim": ["healer", "light_eater"],
+	"sorn": ["engineer", "grumpy"], "lin": ["genius", "cheerful"], "krai": ["tough", "rad_proof"]}
 ## MV-516: with trait_roll_weights on, a recruit's traits are drawn by MV-497 tier (common .. legendary) instead of
 ## evenly; every trade-off has one flat weight, which keeps the share of recruits with a downside as before (~23 %).
 ## Tune crew.trait_weight.<tier> / crew.trait_weight.trade_off
@@ -683,7 +688,7 @@ func kill(d: Dictionary, cause: String) -> void:
 	if not Game.s.has("memorial"):
 		Game.s["memorial"] = []
 	Game.s.memorial.append({"name": d.name, "lvl": d.lvl, "cause": cause, "km": snappedf(float(Game.s.stats.km_total), 0.1),
-		"gen": Meta.generation(), "variant": d.variant})
+		"gen": Meta.generation(), "variant": d.variant, "lore": str(d.get("lore", ""))})
 	Game.s.dwellers.erase(d)
 	Game.dwellers_changed.emit()
 	Game.squad_changed.emit()

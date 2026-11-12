@@ -497,6 +497,8 @@ func _run() -> void:
 	# switches off under the dev layer, _gear_sets_test turns them on for itself
 	bl.features["gear_sets"] = false
 	bl.features["gear_frame64"] = false
+	# MV-778: the older crew / recruit checks were written for random recruits; _lore_crew_test turns the cast on itself
+	bl.features["lore_crew"] = false
 	if "--only=legal" not in OS.get_cmdline_user_args():
 		_legal_test_fixture()
 	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
@@ -645,6 +647,11 @@ func _run() -> void:
 		await _parallax_v2_test()
 		_finish()
 		return
+	if "--only=weather_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _weather_v2_test()
+		_finish()
+		return
 	if "--only=parallax_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _parallax_v2_test()
@@ -698,6 +705,11 @@ func _run() -> void:
 
 
 
+	if "--only=vault_preview_v3" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _vault_preview_v3_test()
+		_finish()
+		return
 	if "--only=world_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _world_v2_test()
@@ -726,6 +738,11 @@ func _run() -> void:
 	if "--only=vehicle_anim" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _vehicle_anim_test()
+		_finish()
+		return
+	if "--only=mods_v3_only" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _mods_v3_only_test()
 		_finish()
 		return
 	if "--only=ambulance_mods" in OS.get_cmdline_user_args():
@@ -800,6 +817,11 @@ func _run() -> void:
 	if "--only=engine_bay" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _engine_bay_test()
+		_finish()
+		return
+	if "--only=engine_art_v2" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _engine_art_v2_test()
 		_finish()
 		return
 	if "--only=engine_rest" in OS.get_cmdline_user_args():
@@ -1088,6 +1110,11 @@ func _run() -> void:
 		await _crew_roster_test()
 		_finish()
 		return
+	if "--only=lore_crew" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _lore_crew_test()
+		_finish()
+		return
 	if "--only=shake" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _shake_test()
@@ -1357,6 +1384,7 @@ func _run() -> void:
 	for bp in ["bp_roof_turret", "bp_tracks", "bp_solar_covers", "bp_rad_shield", "bp_heater", "bp_engine_tune"]:
 		Meta.add_blueprint(bp)
 	var ok_all := true
+	Features.set_override("features", "mods_v3_only", false)   # MV-774: every mod, whatever the vehicle art (own test)
 	for id in ["spike_ram", "spike_ram", "spike_ram", "roof_turret", "roof_turret", "fuel_tanks", "fuel_tanks",
 			"tracks", "armor_plates", "armor_plates", "solar_covers", "rad_shield", "rain_catcher", "heater",
 			"suspension", "suspension", "offroad_wheels", "engine_tune"]:
@@ -1364,6 +1392,7 @@ func _run() -> void:
 			ok_all = Mods.install(id) and ok_all
 	Mods.mods_changed.emit()
 	_check("install exterior mods", ok_all and Mods.level("spike_ram") == 3 and Mods.level("tracks") == 1)
+	Features.set_override("features", "mods_v3_only", null)
 	_check("fuel cap grows with tanks", Env.fuel_cap() > 60.0)
 	var sk: Dictionary = Game.s.dwellers[0]
 	sk.lvl = 8
@@ -1731,6 +1760,7 @@ func _run() -> void:
 	main.hud.panels.map.close()
 	await wait(0.4)
 	await _engine_bay_test()
+	await _engine_art_v2_test()
 	await _touch_test()
 	await _event_layout_test()
 	await _event_art_v2_test()
@@ -1763,10 +1793,12 @@ func _run() -> void:
 	await _icon_art_test()
 	await _icons_v2_test()
 	await _gear_sets_test()
+	await _lore_crew_test()     # before the roster test: that one leaves the rig / max Vault state later tests use
 	await _crew_roster_test()
 	await _announce_test()
 	await _scene_art_test()
 	await _parallax_v2_test()
+	await _weather_v2_test()
 	await _rooms_v3_test()
 	await _ui_v5_test()
 	await _crew_portraits_v3_test()
@@ -1777,7 +1809,9 @@ func _run() -> void:
 
 	await _ambulance_v3_test()
 	await _ambulance_mods_test()
+	await _mods_v3_only_test()
 	await _world_v2_test()
+	await _vault_preview_v3_test()
 	await _road_train_test()
 	await _decker_test()
 	await _bastion_test()
@@ -3279,6 +3313,62 @@ func _exp_scene_v2_test() -> void:
 	_check("exp scene v2: GOD toggle turns it back on", Features.on("exp_scene_v2"))
 	Game.s.exp.site = "scav"
 	await _enc_finish()
+
+
+## MV-766: engine menu art v2 (switch engine_art_v2): 112x80 still + 8-frame running loop per engine type
+func _engine_art_v2_test() -> void:
+	Features.set_override("features", "engine_art_v2", true)
+	for id in EngineBay.TYPES:
+		var st := EngineArt.still(id)
+		var sh: Texture2D = load(EngineArt.DIR + "eng_" + id + "_run.png")
+		_fold("engine art v2: every engine has a 112x80 still + 8-frame 896x80 loop",
+			st != null and st.get_size() == Vector2(112, 80) and sh != null and sh.get_size() == Vector2(896, 80), id)
+	_fold_flush()
+	_check("engine art v2: frame cells", EngineArt.frame_rect(3) == Rect2(336, 0, 112, 80) and EngineArt.frame_rect(9) == Rect2(112, 0, 112, 80))
+	var ep = main.hud.panels.engine
+	ep.tab = "status"
+	main.hud.open_panel("engine")
+	await wait(0.5)
+	var art: TextureRect = ep.find_child("EngineArt", true, false)
+	_check("engine art v2: status shows the 112x80 loop", art != null and art.texture is AtlasTexture and art.texture.get_size() == Vector2(112, 80))
+	if art != null and art.texture is AtlasTexture:
+		var r0: Rect2 = (art.texture as AtlasTexture).region
+		await wait(0.5)
+		var r1: Rect2 = (art.texture as AtlasTexture).region
+		if EngineArt.running():
+			_check("engine art v2: the loop plays while driving", r1 != r0)
+		else:
+			_check("engine art v2: parked = still frame held", r1 == EngineArt.frame_rect(0))
+	await shot("engine_art_v2_status")
+	ep.tab = "engines"
+	ep.refresh()
+	await wait(0.4)
+	var halves := 0
+	for n in ep.find_children("*", "TextureRect", true, false):
+		var tr := n as TextureRect
+		if tr.custom_minimum_size == Vector2(56, 40) and tr.texture != null and tr.texture.get_size() == Vector2(112, 80) \
+				and tr.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED:
+			halves += 1
+	_check("engine art v2: swap list shows the stills at half size", halves >= 1)
+	await shot("engine_art_v2_engines")
+	ep.tab = "status"
+	ep.close()
+	Dev.engine_art_v2(false)
+	_check("engine art v2: switch off -> old 56x40 art", not Features.on("engine_art_v2") and EngineArt.anim_texture("diesel4").get_size() == Vector2(56, 40))
+	main.hud.open_panel("engine")
+	await wait(0.4)
+	var art_off: TextureRect = ep.find_child("EngineArt", true, false)
+	_check("engine art v2: menu falls back to the old art", art_off != null and art_off.texture.get_size() == Vector2(56, 40) and Atlas.tex("eng_diesel4").get_size() == Vector2(56, 40))
+	ep.close()
+	Dev.engine_art_v2(true)
+	_check("engine art v2: GOD toggle turns it back on", Features.on("engine_art_v2"))
+	main.hud.open_panel("god")
+	main.hud.panels.god.tab = "veh"
+	main.hud.panels.god.refresh()
+	await wait(0.3)
+	_check("engine art v2: GOD row", _find_text(main.hud.panels.god, "MV-766 เมนูห้องเครื่อง"))
+	main.hud.panels.god.close()
+	await wait(0.2)
 
 
 ## MV-717: new 320x160 encounter art with the code flashlight (switch enc_art_v2)
@@ -4946,11 +5036,11 @@ func _features_test() -> void:
 	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion", "ui_v5", "icons_room16"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764); ui_v5: phase 1 of the MV-768 redesign; icons_room16: until the icons the code turns to mush are redrawn (MV-775)
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
-	for k in ["road_train", "gear_sets", "gear_frame64"]:
+	for k in ["road_train", "gear_sets", "gear_frame64", "lore_crew"]:
 		pin.erase(k)                # the run's MV-721 / MV-767 test pins are not what ships
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
-	for k in ["road_train", "gear_sets", "gear_frame64"]:
+	for k in ["road_train", "gear_sets", "gear_frame64", "lore_crew"]:
 		pin[k] = false
 	_check("features: every switch on by default (except %s, off)" % ", ".join(ships_off), all_on)
 	_check("features: tune falls back to the code constant", Features.num("threat.rate_scale", Threat.RATE_SCALE) == Threat.RATE_SCALE)
@@ -5821,6 +5911,106 @@ func _icon_art_test() -> void:
 	await shot("icons_inventory")
 	main.hud.panels.inventory.close()
 	await shot("icons_hud")
+
+
+## MV-778: every crew member is a fixed lore character (switch lore_crew)
+func _lore_crew_test() -> void:
+	Features.set_override("features", "lore_crew", true)
+	Dev.lore_ren_start(-1)
+	Game.setup_default_state()
+	_no_events()
+	var names := []
+	for d in Game.s.dwellers:
+		names.append(str(d.name))
+	var want := []
+	for k in ["loader", "gunner", "cab", "kitchen", "water"]:
+		want.append(LoreCrew.name_of(LoreCrew.START[k]))
+	want.append(LoreCrew.name_of("ren"))      # lore_crew.ren_start 1 (default): Ren is the 6th, in the cab
+	_check("lore crew: new game = Fah, Tham, Bit, Auntie Wan, Clara + Dr. Ren %s" % str(names), names == want)
+	var bit: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "bit")[0]
+	_check("lore crew: Bit is the builder in the cab", Crew.is_builder(bit) and int(bit.room) == Data.CAB_SLOT)
+	var ren: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "ren")[0]
+	_check("lore crew: Dr. Ren drives his ambulance (cab)", int(ren.room) == Data.CAB_SLOT)
+	var fah: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "fah")[0]
+	var tham: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "tham")[0]
+	_check("lore crew: Fah + Tham are the starting squad", (Game.s.squad as Array).has(int(fah.id)) and (Game.s.squad as Array).has(int(tham.id)))
+	_check("lore crew: starting stats = the old five slots (Fah STR 7 lvl 3)", int(fah.str) == 7 and int(fah.lvl) == 3)
+	for d in Game.s.dwellers:
+		var k := str(d.lore)
+		_fold("lore crew: start crew have their lore traits + face", d.traits == Crew.FIXED[k] and V3Art.crew_for(d) == k, k)
+	_fold_flush()
+	# recruits: the rest of the cast in story order, never twice, then nobody
+	var got := []
+	for i in 20:
+		var d := Game.recruit_random()
+		if d.is_empty():
+			break
+		got.append(str(d.lore))
+	var order := []
+	for id in LoreCrew.ORDER:
+		if not LoreCrew.START.values().has(id) and id != "ren":
+			order.append(id)
+	_check("lore crew: recruits come in story order %s" % str(got), got == order)
+	_check("lore crew: a full cast = no recruit (cast)", Game.offer_recruit("radio", 1000.0).is_empty() and Game.recruit_fail == "cast"
+		and Game.recruit_fail_text().contains("ครบ"))
+	_check("lore crew: nobody waits at the door with the cast on", Inspection.queue().is_empty())
+	var ids := {}
+	for d in Game.s.dwellers:
+		ids[str(d.lore)] = int(ids.get(str(d.lore), 0)) + 1
+	_check("lore crew: every character once (%d aboard)" % Game.s.dwellers.size(), ids.size() == Game.s.dwellers.size() and ids.size() == LoreCrew.CAST.size())
+	for id in LoreCrew.CAST:
+		var d := {"id": 1, "name": LoreCrew.name_of(id), "lore": id, "variant": LoreCrew.CAST[id].variant}
+		_fold("lore crew: every character has a bio, lines, traits, v3 sheet + portrait", Lore.bio(d).role != "" and str(Lore.bio(d).text).length() > 40
+			and (Lore.LINES_PERSONAL.has(id) or id == "clara") and Crew.FIXED.has(id) and V3Art.crew_for(d) == id
+			and V3Art.crew_ids().has(id) and V3Art.portrait_tex(id) != null and Atlas.has(str(LoreCrew.CAST[id].variant)), id)
+	_fold_flush()
+	# the fallen come back only when everybody else is aboard
+	var sorn: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "sorn")[0]
+	var krai: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "krai")[0]
+	Crew.kill(sorn, "ทดสอบระบบ")
+	Game.s.dwellers.erase(krai)
+	_check("lore crew: the living go first, the fallen last", LoreCrew.next_id() == "krai")
+	Game.s.dwellers.append(krai)
+	_check("lore crew: a fallen character returns when nobody else is left", LoreCrew.next_id() == "sorn")
+	# Ren at the start: 0 = guide only, 1 = sixth crew member, 2 = in Clara's slot (Clara joins first)
+	Dev.lore_ren_start(0)
+	Game.setup_default_state()
+	_check("lore crew: ren_start 0 = Ren is the guide, never a crew body", Game.s.dwellers.size() == 5 and not LoreCrew.aboard().has("ren")
+		and not LoreCrew.ORDER.filter(func(i): return LoreCrew.is_cast(i)).has("ren"))
+	Dev.lore_ren_start(1)
+	Game.setup_default_state()
+	_check("lore crew: ren_start 1 = Ren aboard as the 6th", Game.s.dwellers.size() == 6 and str(Game.s.dwellers[-1].lore) == "ren")
+	Dev.lore_ren_start(2)
+	Game.setup_default_state()
+	var water: Array = Game.s.dwellers.filter(func(d): return str(d.lore) == "ren")
+	_check("lore crew: ren_start 2 = Ren in Clara's slot, Clara joins first", Game.s.dwellers.size() == 5 and water.size() == 1
+		and int(water[0].room) == Game._water_slot() and LoreCrew.next_id() == "clara")
+	Dev.lore_ren_start(-1)
+	# old saves: the old crew + random recruits become the cast once; stats, level and gear stay theirs
+	Features.set_override("features", "lore_crew", false)
+	Game.setup_default_state()
+	_no_events()
+	for i in 4:
+		Game.recruit_random()
+	var mark: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "mark")[0]
+	var mark_gear: Dictionary = (mark.gear as Dictionary).duplicate()
+	_check("lore crew: switch off = the old crew and random recruits", str(mark.name) == "จ่ามาร์ค" and LoreCrew.aboard().size() == 1)
+	Features.set_override("features", "lore_crew", true)
+	Game.s.erase("lore_crew")
+	var n := LoreCrew.migrate()
+	_check("lore crew: migrate renames the crew (%d)" % n, n == 8 and str(mark.name) == LoreCrew.name_of("fah") and int(mark.str) == 7
+		and (mark.gear as Dictionary).size() == mark_gear.size() and V3Art.crew_for(mark) == "fah")
+	_check("lore crew: migrate keeps one character per person", LoreCrew.aboard().size() == Game.s.dwellers.size())
+	_check("lore crew: migrate runs once per save", LoreCrew.migrate() == 0 and int(Game.s.lore_crew) == 1)
+	# GOD
+	var before: int = Game.s.dwellers.size()
+	var k := Dev.spawn_lore("pim")
+	_check("lore crew: GOD boards a character directly", Game.s.dwellers.size() == before + 1 and str(k.name) == LoreCrew.name_of("pim"))
+	_check("lore crew: GOD rename runs again", Dev.lore_migrate() >= 0)
+	Features.set_override("features", "lore_crew", null)
+	Game.setup_default_state()
+	_no_events()
+
 
 
 func _crew_roster_test() -> void:
@@ -6713,6 +6903,13 @@ func _ui_v5_test() -> void:
 	_check("ui v5: room pages show every room as a v3 cell at 2x, above the travel bar",
 		pg.visible and pg.slots.size() >= 1 and pg.cells.size() == pg.slots.size() and pg.world.scale == Vector2(2, 2)
 		and pg.position.y + pg.size.y <= hud._bottom.position.y + 1.0)
+	# MV-768 fix: the HUD hidden and shown again (game start, leaving a close-up) without a layout pass of its own
+	hud._set_hud_visible(false)
+	await wait(0.1)
+	hud._set_hud_visible(true)
+	await wait(0.2)
+	_check("ui v5: the room pages take their place when the HUD shows again (game start)",
+		pg.visible and pg.position.y + pg.size.y <= hud._bottom.position.y + 1.0 and hud.world_rect().end.y <= pg.position.y)
 	var wr := hud.world_rect()
 	_check("ui v5: the road view keeps the space above the room pages", wr.end.y <= pg.position.y and wr.size.y >= 100.0)
 	pg.go(0, false)
@@ -6792,7 +6989,7 @@ func _rooms_v3_test() -> void:
 	Features.set_override("features", "rooms_v3", true)
 	Features.set_override("features", "rooms_v3_review", true)
 	get_window().size = Vector2i(405, 720)
-	_check("rooms v3: manifests load (10 game rooms + empty cell, 11 crew)", V3Art.ok() and V3Art.room_types().size() >= 10 and V3Art.crew_ids().size() == 11)
+	_check("rooms v3: manifests load (10 game rooms + empty cell, 13 crew)", V3Art.ok() and V3Art.room_types().size() >= 10 and V3Art.crew_ids().size() == 13)
 	var files_ok := true
 	var hot_ok := true
 	for t in V3Art.room_types():
@@ -7074,6 +7271,89 @@ func _parallax_v2_test() -> void:
 	Game.s = old_state
 	Game.force_weather(str(old_state.get("weather", "clear")))
 	bg._on_biome_changed(int(Game.s.biome), true)
+	get_window().size = old_window
+	await wait(0.3)
+
+
+## MV-770 Weather v2: picked art loads, every weather draws through WeatherV2 (screen layers + backdrop slots),
+## old particles stay off, rain slant follows the road speed, lightning / debris / hero ash spawn, switch off = old
+func _weather_v2_test() -> void:
+	var old_window := get_window().size
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	Features.set_override("features", "parallax_v2", true)
+	Features.set_override("features", "weather_v2", true)
+	get_window().size = Vector2i(405, 720)
+	Dev.set_tod(0.5)
+	var fx: WeatherFX = main.weather
+	var v2: WeatherV2 = fx.v2
+	var groups := ["lightning", "fog_banks", "fog_float", "snow_drifts", "ash_banks", "sand_walls", "sand_debris", "flakes",
+		"hero_snow", "ash", "char", "oc_wisp", "oc_lo", "rays", "shadows"]
+	for gname in groups:
+		_fold("weather v2: every art sheet loads with its pieces", WeatherV2.sheet_count(gname) > 0, gname)
+	_fold_flush()
+	_check("weather v2: flakes come in 4 size classes, fog banks split for the wave shader",
+		(WeatherV2._sheets.flakes.classes as Array).size() == 4 and (WeatherV2._fog_tex.banks as Array).size() == WeatherV2.sheet_count("fog_banks"))
+	var bg: Background = main.background
+	var back: ParallaxV2Backdrop = bg.groups[Data.BIOMES[int(Game.s.biome)].id].v2
+	_check("weather v2: the backdrop has the 5 weather slots between its strips", back.wx_slots.size() == 5
+		and back.wx_slots.sky.get_index() < back.layers.far.node.get_index() and back.wx_slots.far.get_index() < back.layers.mid.node.get_index()
+		and back.wx_slots.mid.get_index() < back.layers.near.node.get_index() and back.wx_slots.ground.get_index() > back.layers.road.node.get_index())
+	_check("weather v2: under layer sits below the haze, hero layer above it", v2.under.get_index() < fx.haze.get_index() and v2.get_index() > fx.haze.get_index())
+	for w in Data.WEATHER:
+		Game.force_weather(w)
+		await wait(0.5)
+		var old_off: bool = not (fx.rain.emitting or fx.acid.emitting or fx.snow.emitting or fx.ash.emitting or fx.sand.emitting or fx.fog.emitting)
+		_fold("weather v2: each weather switches WeatherV2 and keeps the old particles off", v2.weather == w and v2.visible and old_off, w)
+		await shot("weather_v2_" + w)
+	_fold_flush()
+	Game.force_weather("storm")
+	await wait(0.1)
+	for i in 40:
+		v2.step(0.1, 0.0, v2.vw * Vector2.RIGHT + v2.vh * Vector2.DOWN, Color.WHITE, 0.0)
+	var parked := v2.slant
+	for i in 40:
+		v2.step(0.1, 180.0, v2.vw * Vector2.RIGHT + v2.vh * Vector2.DOWN, Color.WHITE, 0.0)
+	_check("weather v2: rain leans further when the vehicle drives faster", v2.slant > parked + 0.3)
+	v2.strike()
+	_check("weather v2: a storm strike picks a PixelLab bolt", not v2.bolt.is_empty())
+	Game.force_weather("sandstorm")
+	await wait(0.1)
+	v2._deb_next = 0.0
+	v2._step_debris(0.016)
+	_check("weather v2: sandstorm sends flying debris now and then (max 2)", v2._deb_live.size() == 1)
+	for i in 30:
+		v2._deb_next = 0.0
+		v2._step_debris(0.001)
+	_check("weather v2: never more than 2 debris pieces at once", v2._deb_live.size() == 2)
+	Game.force_weather("ashfall")
+	await wait(0.1)
+	v2._hch_next = 0.0
+	v2._step_hero_ash(0.016)
+	_check("weather v2: ashfall sends a burning scrap past the camera", v2._hch_live.size() == 1)
+	Game.force_weather("rain")
+	Features.set_override("features", "weather_v2", false)
+	await wait(0.3)
+	_check("weather v2: switch off brings the old particles back", fx.rain.emitting and not v2.visible and not WeatherV2.active())
+	Dev.weather_v2_preview("snow")
+	await wait(0.3)
+	_check("weather v2: GOD preview turns the switch on with the asked weather", Features.on("weather_v2") and str(Game.s.weather) == "snow" and v2.weather == "snow")
+	main.hud.open_panel("god")
+	var god = main.hud.panels.god
+	god.tab = "main"
+	god.refresh()
+	await wait(0.2)
+	var found := false
+	for row in god._list.get_children():
+		for control in row.get_children():
+			if control is Button and control.text == "อากาศ v2: เปิด":
+				found = true
+	_check("weather v2: GOD main tab has the on/off button", found)
+	god.close()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.force_weather(str(old_state.get("weather", "clear")))
 	get_window().size = old_window
 	await wait(0.3)
 
@@ -9571,6 +9851,7 @@ func _hull_repair_test() -> void:
 ## opacity on the vehicle; the trailer rooms move with the body when it grows; switch off = as before
 func _five_floors_test() -> void:
 	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
+	Features.set_override("features", "vault_preview_v3", false)   # MV-777: this test covers the half-opacity floor ghost
 	_no_events()
 	var keep_state: Dictionary = Game.s.duplicate(true)
 	var v: Vehicle = main.vehicle
@@ -9668,6 +9949,7 @@ func _five_floors_test() -> void:
 	Dev._vehicle_changed()
 	await wait(0.3)
 	Features.set_override("features", "road_train", null)
+	Features.set_override("features", "vault_preview_v3", null)
 
 
 ## MV-545: the Vault upgrade never promises a room the vehicle has no space for, names the bigger vehicle, and every
@@ -13285,7 +13567,7 @@ func _gear_sets_test() -> void:
 	Game.set_process(false)
 	Combat.set_process(false)
 	Game.s = saved_state.duplicate(true)
-	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true}, "tune": {}}
+	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true, "gear_frame_simple": true}, "tune": {}}
 	Features.layers.remote = {}
 	Features.layers.mode = {}
 	# --- data: 5 sets x 4 pieces, bases + icons
@@ -13409,6 +13691,19 @@ func _gear_sets_test() -> void:
 	var plain_tile := UIKit.gear_tile(Loot.roll_item("armor", 5, 0, "leather_jacket"), "armor", 28)
 	_check("frame64: a plain item has no set emblem", (plain_tile.find_child("GearFrame64", false, false) as GearFrame64).set_col.a == 0.0)
 	plain_tile.free()
+	# MV-773: the simple option B frame (switch gear_frame_simple, on by default) = one still cell per row, no clock
+	var ss := GearFrame64.simple_sheet()
+	_check("frame simple: frames_simple.png = 96 x 96 by 7 rows (rarity 0-5 + empty) loads", ss != null and ss.get_size() == Vector2(96, 96 * 7))
+	var st := UIKit.gear_tile(it, "weapon", 32)
+	var sfr: GearFrame64 = st.find_child("GearFrame64", false, false)
+	_check("frame simple: switch on = simple sheet, still (no _process), set emblem kept", sfr != null and sfr.simple and not sfr.is_processing() and sfr.rank == 4 and sfr.set_col == GearSets.color("hunter"))
+	st.free()
+	Features.layers.dev.features.gear_frame_simple = false
+	var vt := UIKit.gear_tile(it, "weapon", 32)
+	var vfr: GearFrame64 = vt.find_child("GearFrame64", false, false)
+	_check("frame simple: switch off = the animated Vault hatch sheet", vfr != null and not vfr.simple and vfr.is_processing())
+	vt.free()
+	Features.layers.dev.features.gear_frame_simple = true
 	Features.layers.dev.features.gear_frame64 = false
 	var old := UIKit.gear_tile(it, "weapon", 32)
 	_check("frame64: switch off = the old tile (no GearFrame64), set icon still shown", old.find_child("GearFrame64", false, false) == null)
@@ -13514,6 +13809,50 @@ func _ambulance_v3_test() -> void:
 
 
 ## MV-763: the approved ambulance exterior mods (switch ambulance_mods) on the world v2 ambulance and in the v3 interior
+## MV-774: exterior mods with no v3 art on the vehicle drawn now are hidden from the garage (switch mods_v3_only)
+func _mods_v3_only_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	# every mod listed as drawn really has art on that body
+	var art := {"van": ShellMods.ids(AmbulanceMods.DIR), "bus": ShellMods.ids(DeckerMods.DIR) + ["solar_covers"],
+		"rig": ShellMods.ids(RoadTrainMods.DIR) + ["suspension", "offroad_wheels"]}
+	for t in ["van", "bus", "rig"]:
+		for id in Mods.V3_ART[t]:
+			_fold("mods_v3_only: every listed mod has v3 art on its vehicle", (art[t] as Array).has(id), "%s %s" % [t, id])
+	_fold_flush()
+	Dev.feature_set("ambulance_v3", true)
+	var want := {"van": ["roof_deck", "tracks", "solar_covers", "rain_catcher"],
+		"bus": ["roof_deck", "tracks", "rain_catcher", "suspension", "offroad_wheels"],
+		"rig": ["roof_deck", "tracks", "rain_catcher"]}
+	for t in ["van", "bus", "rig"]:
+		match t:
+			"van":
+				Dev.world_v2_preview(1)
+			"bus":
+				Dev.feature_set("decker", true)
+				Dev.decker_preview(2)
+			"rig":
+				Dev.road_train_world(2)
+		await wait(0.2)
+		var hidden := Dev.mods_v3_only(true)
+		hidden.sort()
+		var exp: Array = want[t].duplicate()
+		exp.sort()
+		_check("mods_v3_only: %s hides exactly the mods without v3 art" % t, Game.tier() == t and Vehicle.v2_wanted() and hidden == exp)
+		var blocked := true
+		for id in exp:
+			blocked = blocked and not Mods.enabled(id) and not Mods.can_install(id)
+		_check("mods_v3_only: %s hidden mods can't be installed" % t, blocked and Mods.enabled("spike_ram"))
+		_check("mods_v3_only: %s switch off shows every mod again" % t, Dev.mods_v3_only(false).is_empty() and Mods.enabled("tracks"))
+	_check("mods_v3_only: internal mods never hidden", Dev.mods_v3_only(true) is Array and Mods.has_v3_art("heater") and Mods.has_v3_art("engine_tune"))
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.s = old_state
+	Game.rooms_changed.emit()
+	Mods.mods_changed.emit()
+	await wait(0.3)
+
+
 func _ambulance_mods_test() -> void:
 	var old_state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
@@ -13866,6 +14205,85 @@ func _world_v2_test() -> void:
 	Game.s = old_state
 	Dev._vehicle_changed()
 	await wait(0.3)
+## MV-777 (switch vault_preview_v3): "see new floor" on the world v2 ambulance shows the next Vault level's vehicle
+## (its v3 shell for one more floor, the rooms in place, the new floor's empty cells pulsing), not a half-opacity floor
+func _vault_preview_v3_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var v: Vehicle = main.vehicle
+	Game.test_van_floors = 0
+	Dev.set_tier("van")
+	Features.set_override("features", "five_floors", true)
+	Features.set_override("features", "ambulance_v3", true)
+	Features.set_override("features", "vault_preview_v3", null)
+	Dev.world_v2_preview(1)
+	Dev.set_vault(1)
+	Dev._vehicle_changed()
+	await wait(0.4)
+	_check("vault preview v3: switch on by default", Features.on("vault_preview_v3"))
+	var cell_y := {}
+	for slot in v.v2_cells:
+		cell_y[slot] = (v.v2_cells[slot] as Node2D).position
+	var top0 := v.top_y()
+	var start_ok := v.v2 and Game.floors() == 1 and v.v2_shell.texture.get_size().y == 240.0
+	var cells0 := v.v2_cells.values().duplicate()
+	var shown := v.preview_next_floor(30.0)
+	await wait(0.3)
+	var prev := v.v2_shell.get_node_or_null("NextFloorPreview")
+	var same := v.v2_cells.size() == cell_y.size() and v.v2_cells.values() == cells0
+	for slot in v.v2_cells:
+		same = same and cell_y.has(slot) and (v.v2_cells[slot] as Node2D).position.is_equal_approx(cell_y[slot])
+	var new_shell: Sprite2D = prev.get_node_or_null("NewShell") if prev != null else null
+	_check("vault preview v3: Vault 1 -> 2 shows the 2-floor ambulance's roof + new floor, no half-opacity old-art ghost", start_ok and shown
+		and v.v2_preview_n == 2 and v.floors == 1 and v.floor_ghost() == null and new_shell != null and new_shell.texture.get_size().y == 352.0)
+	_check("vault preview v3: see-through (alpha %.2f) and the real shell's roof cropped away" % (prev.modulate.a if prev else -1.0),
+		prev is CanvasGroup and prev.modulate.a > 0.3 and prev.modulate.a < 0.9 and v.v2_shell.region_enabled and v.v2_shell.region_rect.position.y == v.v2_roof_cut())
+	_check("vault preview v3: rooms are not rebuilt (same cells, same place: no blink)", same)
+	_check("vault preview v3: the new floor = 3 empty v3 cells, the camera fits the taller vehicle",
+		prev.get_node("NewCells").get_child_count() == Data.ROOMS_PER_FLOOR and v.top_y() < top0 - 50.0)
+	await shot("vault_preview_v3_f1_to_f2")
+	v._clear_floor_ghost()
+	await wait(0.2)
+	_check("vault preview v3: the preview ends back on the 1-floor ambulance, rooms untouched", v.v2_preview_n == 0 and v.floors == 1
+		and not v.v2_shell.region_enabled and v.v2_shell.offset == Vector2.ZERO and v.v2_cells.values() == cells0
+		and (v.v2_shell.get_node_or_null("NextFloorPreview") == null or v.v2_shell.get_node("NextFloorPreview").is_queued_for_deletion()) and is_equal_approx(v.top_y(), top0))
+	# the Vault card's button says "see new vehicle" and opens the preview
+	main.hud.open_panel("build")
+	await wait(0.5)
+	var bp = main.hud.panels.build
+	var label_ok: bool = bp._floor_btn.visible and bp._floor_btn.text == Loc.t("ดูรถคันใหม่")
+	bp._floor_btn.pressed.emit()
+	await wait(0.4)
+	_check("vault preview v3: Vault card button 'see new vehicle' closes the window and shows the new vehicle", label_ok and not bp.is_open and v.v2_preview_n == 2)
+	# a rebuild mid-preview (upgrade bought, switch flipped) drops it cleanly
+	Dev.set_vault(2)
+	Dev._vehicle_changed()
+	await wait(0.3)
+	_check("vault preview v3: buying the level mid-preview leaves the real 2-floor ambulance", v.v2_preview_n == 0 and Game.floors() == 2
+		and v.floors == 2 and not v.v2_shell.region_enabled)
+	Dev.set_vault(3)        # Vault 3 -> 4 adds the 3rd floor (Vault 2 -> 3 adds none)
+	Dev._vehicle_changed()
+	await wait(0.3)
+	shown = v.preview_next_floor(30.0)
+	await wait(0.3)
+	_check("vault preview v3: Vault 3 -> 4 at 2 floors previews the 3-floor shell", shown and v.v2_preview_n == 3
+		and (v.v2_shell.get_node("NextFloorPreview/NewShell") as Sprite2D).texture.get_size().y == 464.0)
+	await shot("vault_preview_v3_f2_to_f3")
+	v._clear_floor_ghost()
+	# GOD switch off: the old half-opacity floor
+	Dev.vault_preview_v3(false)
+	await wait(0.2)
+	shown = v.preview_next_floor(30.0)
+	_check("vault preview v3: GOD switch off = old half-opacity floor ghost", shown and v.v2_preview_n == 0 and v.floor_ghost() != null)
+	v._clear_floor_ghost()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.test_van_floors = 2
+	Game.s = old_state
+	Dev._vehicle_changed()
+	await wait(0.3)
+
+
 ## MV-737 (switch ambulance_pup): the ambulance's trailers are the approved pup shell, in the v3 interior and on the
 ## road (world v2): every trailer cell in its own window, shells on the road line, tow plates riding on the unit in front
 func _ambulance_pup_test() -> void:

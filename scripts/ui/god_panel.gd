@@ -171,6 +171,8 @@ func _gear_sets_preview() -> void:
 	_head("GEAR SETS + FRAME 64", "เซ็ตอุปกรณ์ + กรอบ Vault hatch 64 px (MV-767) · gear_sets %s · gear_frame64 %s" % [
 		"เปิด" if Features.on("gear_sets") else "ปิด", "เปิด" if f64 else "ปิด"])
 	_row([_b("กรอบ 64 ใหม่", func(): Dev.gear_frame64(true), "yellow" if f64 else "gray"), _b("กรอบเดิม", func(): Dev.gear_frame64(false), "gray" if f64 else "yellow")])
+	var fs := Features.on("gear_frame_simple")
+	_row([_b("กรอบเรียบ (B)", func(): Dev.gear_frame_simple(true), "yellow" if fs else "gray"), _b("กรอบ Vault hatch", func(): Dev.gear_frame_simple(false), "gray" if fs else "yellow")])
 	var grid := GridContainer.new()
 	grid.name = "GearSetGrid"
 	grid.columns = 4
@@ -234,6 +236,8 @@ func _tab_main() -> void:
 		var wid: String = w
 		wb.append(_b(str(Data.WEATHER[w].get("th", w)), func(): Dev.weather(wid), "yellow" if Game.s.weather == wid else "gray"))
 	_row(wb)
+	var v2_on := Features.on("weather_v2")
+	_row([_b("อากาศ v2: " + ("เปิด" if v2_on else "ปิด"), func(): Dev.weather_v2_preview(str(Game.s.weather), not v2_on), "green" if v2_on else "red")])
 	_head("SCREEN", "ขนาดจอ")
 	_note(Dev.view_info())
 	if not OS.has_feature("web"):
@@ -360,6 +364,9 @@ func _tab_vehicle() -> void:
 	_note("รถสูงขึ้นตาม Vault (MV-563) %s · ตอนนี้ %d ชั้น · ชั้นต่อ Vault Lv1-6 %s" % ["เปิด" if ff else "ปิด", Game.floors(), gains])
 	_row([_b("ปิด" if ff else "เปิด", func(): Dev.five_floors(not ff), "yellow" if ff else "gray"),
 		_b("ดูชั้นใหม่", func(): Dev.floor_preview(), "green" if Game.vault_adds_floor(int(Game.s.vault_level)) else "gray")], "รถสูงขึ้น")
+	var vp3 := Features.on("vault_preview_v3")
+	_row([_b("ดูรถคันใหม่", func(): Dev.floor_preview(), "green" if Game.vault_adds_floor(int(Game.s.vault_level)) else "gray"),
+		_b("ปิด" if vp3 else "เปิด", func(): Dev.vault_preview_v3(not vp3), "yellow" if vp3 else "gray")], "ดูรถหลังอัปเกรด v3 (MV-777) %s" % ("เปิด" if vp3 else "ปิด"))
 	var vv2 := Features.on("vault_upgrade_v2")
 	_note("โครงรถ (MV-545) %s · ห้อง %d/%d (รถ %s %d ชั้น) · ห้องที่รอรถคันใหญ่ %d · ตัวถัง +%d · การผลิต ×%.2f" % ["แบบใหม่" if vv2 else "แบบเดิม",
 		Game.vault_rooms_at(int(Game.s.vault_level)), Game.main_slots() - 1, Game.tier(), Game.floors(), Game.vault_banked_rooms(),
@@ -405,6 +412,8 @@ func _tab_vehicle() -> void:
 		_b("น้ำฝนไหล", func(): Dev.exterior_mod_preview("rain"), "gray", true)], "เอฟเฟกต์มอด (น้ำไหลเฉพาะฝน/พายุ)")
 	_row([_b("ระบบห้องเครื่อง: " + ("เปิด" if EngineBay.on() else "ปิด (ดีเซลเดิม)"), func(): Dev.engine_bay_switch(not EngineBay.on()),
 		"green" if EngineBay.on() else "red", true)], "สวิตช์")
+	_row([_b("ภาพเครื่องยนต์ v2: " + ("เปิด" if Features.on("engine_art_v2") else "ปิด"), func(): Dev.engine_art_v2(not Features.on("engine_art_v2")),
+		"green" if Features.on("engine_art_v2") else "red", true)], "MV-766 เมนูห้องเครื่อง")
 	_row([_b("ห้องเครื่องมีชีวิต: " + ("เปิด" if Features.on("vehicle_ambience") else "ปิด"), func(): Dev.vehicle_ambience_switch(not Features.on("vehicle_ambience")),
 		"green" if Features.on("vehicle_ambience") else "red"), _b("ไอร้อนพุ่ง 1 ครั้ง", func(): Dev.vent_preview(), "gray", true)],
 		"MV-388 พัดลม/ท่อ/ไอร้อน (ไอร้อนแบบใหม่ขึ้นเฉพาะ 115°C)")
@@ -495,6 +504,9 @@ func _tab_vehicle() -> void:
 		_b("อัปเกรด Decker: " + ("เปิด" if Features.on("decker_mods") else "ปิด"),
 		func(): Dev.feature_set("decker_mods", not Features.on("decker_mods")), "green" if Features.on("decker_mods") else "red")],
 		"อัปเกรดภายนอก Decker")
+	_row([_b("มอดไม่มีภาพ v3: " + ("ซ่อน" if Features.on("mods_v3_only") else "แสดง"),
+		func(): Dev.mods_v3_only(not Features.on("mods_v3_only")), "green" if Features.on("mods_v3_only") else "red")],
+		"มอดที่ยังไม่มีภาพ v3")
 	_row([_b("ขับ Bastion 2 ชั้น", func(): Dev.bastion_preview(2)), _b("3 ชั้น", func(): Dev.bastion_preview(3)),
 		_b("ภายใน", func(): Dev.bastion_interior()),
 		_b("ขับ+ไฟ", func(): Dev.bastion_anim("drive"), "green"), _b("เบรก", func(): Dev.bastion_anim("brake")),
@@ -550,6 +562,7 @@ func _tab_crew() -> void:
 	_row(bb)
 	_trait_odds()
 	_trait_tiers_row()
+	_lore_crew()
 	_crew_roster()
 	_crew_portraits_v3()
 	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
@@ -614,6 +627,25 @@ func _trait_odds() -> void:
 		parts.append("ข้อเสีย %.1f%%" % float(r.bad))
 		_note("สุ่ม %d คน มีนิสัยระดับนั้นอย่างน้อย 1: %s" % [int(r.n), " · ".join(parts)])
 	_row([_b("สุ่มทดสอบ 1000 คน", func(): Dev.trait_roll_test(1000), "green")], "ไม่เพิ่มคนจริง")
+
+
+## MV-778: the lore cast: who is aboard, who joins next, board anyone, rename the crew again, Ren at the start
+func _lore_crew() -> void:
+	var on := LoreCrew.on()
+	var nxt := LoreCrew.next_id()
+	_head("LORE CREW", "ลูกเรือตามเนื้อเรื่อง · สวิตช์ %s · คนต่อไป: %s · หมอเร็นตอนเริ่ม: %s" % ["เปิด" if on else "ปิด",
+		LoreCrew.name_of(nxt) if nxt != "" else "ครบแล้ว", ["ผู้นำทาง", "ลูกเรือคนที่ 6", "แทนคลารา"][LoreCrew.ren_start()]])
+	_row([_b("ลูกเรือ Lore: " + ("เปิด" if on else "ปิด"), func(): Dev.feature_set("lore_crew", not on), "green" if on else "red"),
+		_b("คนต่อไปขึ้นรถ", func(): Dev.recruit_lore_next(), "green"), _b("เปลี่ยนชื่อลูกเรือตาม Lore", func(): Dev.lore_migrate())])
+	_row([_b("เร็น: ผู้นำทาง", func(): Dev.lore_ren_start(0)), _b("เร็น: คนที่ 6", func(): Dev.lore_ren_start(1)),
+		_b("เร็น: แทนคลารา", func(): Dev.lore_ren_start(2))], "เริ่มเกมใหม่")
+	var on_board := LoreCrew.aboard()
+	var lb := []
+	for id in LoreCrew.ORDER:
+		var lid: String = id
+		lb.append(_b(("✓ " if on_board.has(lid) else "") + LoreCrew.name_of(lid), func(): Dev.spawn_lore(lid), "yellow" if on_board.has(lid) else "gray"))
+	var row := _row(lb, "ขึ้นรถ")
+	row.name = "LoreButtons"
 
 
 ## MV-170: board any named crew member. The animated 20-sprite preview grid was removed in MV-720 (approved art,

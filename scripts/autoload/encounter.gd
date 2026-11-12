@@ -353,7 +353,9 @@ func apply(rep: Dictionary, survivors: int) -> String:
 			break
 		var nd := Game.offer_recruit("exp_special", 1.0)
 		if nd.is_empty():
-			got += ", คนแปลกหน้าฝีมือดีรอตรวจที่ประตู"
+			got += ", " + Game.recruit_fail_text()
+			if Game.recruit_fail == "cast":
+				break
 			continue
 		if float(enc.get("recruit_infect", 0.0)) > 0.0:
 			Crew.infect(nd, float(enc.recruit_infect))

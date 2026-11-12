@@ -1193,6 +1193,220 @@
     "stressed": "portraits/noi_stressed.png",
     "injured": "portraits/noi_injured.png"
    }
+  },
+  "mali": {
+   "file": "mali.png",
+   "still": "mali_still.png",
+   "clips": {
+    "idle": {
+     "row": 0,
+     "n": 15,
+     "fps": 6
+    },
+    "walk": {
+     "row": 1,
+     "n": 7,
+     "fps": 10
+    },
+    "work": {
+     "row": 2,
+     "n": 11,
+     "fps": 8
+    },
+    "construct": {
+     "row": 3,
+     "n": 11,
+     "fps": 8
+    },
+    "eat": {
+     "row": 4,
+     "n": 11,
+     "fps": 6
+    },
+    "drink": {
+     "row": 5,
+     "n": 11,
+     "fps": 6
+    },
+    "talk": {
+     "row": 6,
+     "n": 11,
+     "fps": 6
+    },
+    "carrywalk": {
+     "row": 7,
+     "n": 7,
+     "fps": 10
+    },
+    "shoot": {
+     "row": 8,
+     "n": 7,
+     "fps": 10
+    },
+    "gunwalk": {
+     "row": 9,
+     "n": 7,
+     "fps": 10
+    },
+    "torchwalk": {
+     "row": 10,
+     "n": 7,
+     "fps": 10,
+     "lens": [
+      [
+       55,
+       26
+      ],
+      [
+       54,
+       27
+      ],
+      [
+       52,
+       28
+      ],
+      [
+       50,
+       29
+      ],
+      [
+       52,
+       29
+      ],
+      [
+       54,
+       28
+      ],
+      [
+       55,
+       26
+      ]
+     ]
+    },
+    "search": {
+     "row": 11,
+     "n": 11,
+     "fps": 8
+    },
+    "wall": {
+     "row": 12,
+     "n": 11,
+     "fps": 8
+    }
+   },
+   "portrait": "portraits/mali.png",
+   "portrait_moods": {
+    "happy": "portraits/mali_happy.png",
+    "stressed": "portraits/mali_stressed.png",
+    "injured": "portraits/mali_injured.png"
+   }
+  },
+  "pim": {
+   "file": "pim.png",
+   "still": "pim_still.png",
+   "clips": {
+    "idle": {
+     "row": 0,
+     "n": 15,
+     "fps": 6
+    },
+    "walk": {
+     "row": 1,
+     "n": 7,
+     "fps": 10
+    },
+    "work": {
+     "row": 2,
+     "n": 11,
+     "fps": 8
+    },
+    "construct": {
+     "row": 3,
+     "n": 11,
+     "fps": 8
+    },
+    "eat": {
+     "row": 4,
+     "n": 11,
+     "fps": 6
+    },
+    "drink": {
+     "row": 5,
+     "n": 11,
+     "fps": 6
+    },
+    "talk": {
+     "row": 6,
+     "n": 11,
+     "fps": 6
+    },
+    "carrywalk": {
+     "row": 7,
+     "n": 7,
+     "fps": 10
+    },
+    "shoot": {
+     "row": 8,
+     "n": 7,
+     "fps": 10
+    },
+    "gunwalk": {
+     "row": 9,
+     "n": 7,
+     "fps": 10
+    },
+    "torchwalk": {
+     "row": 10,
+     "n": 7,
+     "fps": 10,
+     "lens": [
+      [
+       62,
+       19
+      ],
+      [
+       61,
+       19
+      ],
+      [
+       60,
+       19
+      ],
+      [
+       60,
+       19
+      ],
+      [
+       60,
+       19
+      ],
+      [
+       61,
+       19
+      ],
+      [
+       62,
+       19
+      ]
+     ]
+    },
+    "search": {
+     "row": 11,
+     "n": 11,
+     "fps": 8
+    },
+    "wall": {
+     "row": 12,
+     "n": 11,
+     "fps": 8
+    }
+   },
+   "portrait": "portraits/pim.png",
+   "portrait_moods": {
+    "happy": "portraits/pim_happy.png",
+    "stressed": "portraits/pim_stressed.png",
+    "injured": "portraits/pim_injured.png"
+   }
   }
  }
 }

@@ -138,6 +138,7 @@ func _ready() -> void:
 	weather = WeatherFX.new()
 	weather.canvas_mod = canvas_mod
 	weather.vehicle = vehicle
+	weather.background = background
 	world_vp.add_child(weather)
 	weather.lightning.connect(func(): shake(2.0))
 

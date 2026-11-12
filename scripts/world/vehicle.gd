@@ -107,6 +107,8 @@ var _driver_seq: Array = []       # [[frame, s], ...] still to show
 var _shells: Node2D
 var _floor_ghost: Sprite2D = null       # MV-563: next Vault level's floor at half opacity
 var _ghost_tw: Tween = null
+var v2_preview_n := 0                   # MV-777: > 0 while the world v2 body shows the next Vault level's vehicle (that many floors)
+var _v2_preview: CanvasGroup = null     # MV-777: the next vehicle's upper part, see-through, during that preview
 var _seams_root: Node2D          # large-room interior strips drawn over the hull partitions (v4.4)
 var _exteriors: Node2D
 var _rooms_root: Node2D
@@ -451,6 +453,8 @@ func rebuild() -> void:
 ## MV-715: (re)build the world v2 body: v3 room cells for the main body's slots under the ambulance shell; the
 ## old room views of those slots stay (game logic, close-ups) but are hidden
 func _build_v2() -> void:
+	if v2_preview_n > 0:           # MV-777: a rebuild ends the next-vehicle preview
+		_clear_floor_ghost()
 	for c in v2_cells.values():
 		c.queue_free()
 	v2_cells.clear()
@@ -648,6 +652,8 @@ func preview_next_floor(sec: float = 5.0) -> bool:
 	if Game.s.is_empty() or not Game.vault_adds_floor(int(Game.s.vault_level)):
 		return false
 	var n := Game.floors_at(int(Game.s.vault_level) + 1)
+	if v2_preview_ok(n):
+		return _preview_v2(n, sec)
 	var region := shell_region("ext", tier, n)      # the plated exterior: the new floor reads as a whole floor
 	var full := Atlas.tex(region)
 	var top := SHELL_H - full.get_height()                  # local y of the grown shell's top
@@ -674,10 +680,102 @@ func floor_ghost() -> Sprite2D:
 	return _floor_ghost if is_instance_valid(_floor_ghost) else null
 
 
+## MV-777 (switch vault_preview_v3): the world v2 body previews the next Vault level as the new vehicle itself: its
+## v3 shell art for n floors (ambulance / Decker / road train), when that art exists
+func v2_preview_ok(n: int) -> bool:
+	return v2 and Features.on("vault_preview_v3") and n > floors and v2_preview_tex(n) != null
+
+
+func v2_preview_tex(n: int) -> Texture2D:
+	var p := (InteriorV3Panel.RT_DIR + "body_f%d.png" % n) if v2_rt() else str(InteriorV3Panel.shell_spec(tier).dir) + "shell_f%d.png" % n
+	return load(p) if ResourceLoader.exists(p) else null
+
+
+## shell px from the shell top to just above the top floor's cells (the roof + its slab)
+func v2_roof_cut() -> float:
+	return (InteriorV3Panel.RT_Y0 if v2_rt() else float(InteriorV3Panel.shell_spec(tier).y0)) - InteriorV3Panel.SLAB
+
+
+## MV-777: the n-floor vehicle's upper part (new roof + new floors, from its v3 shell) drawn see-through on top of the
+## real shell, whose own roof is cropped away (region) with the roof props / mods / lamps on it; the new floors'
+## cells = the finished empty v3 cell, pulsing. Nothing is rebuilt, so the rooms and crew never blink. sec seconds.
+func _preview_v2(n: int, sec: float) -> bool:
+	var tex := v2_preview_tex(n)
+	var cut := v2_roof_cut()
+	var dn := n - floors
+	var rise := InteriorV3Panel.AMB_FH * float(dn)
+	v2_preview_n = n
+	var w := float(v2_shell.texture.get_width())
+	var h := float(v2_shell.texture.get_height())
+	v2_shell.region_enabled = true
+	v2_shell.region_rect = Rect2(0.0, cut, w, h - cut)
+	v2_shell.offset = Vector2(0.0, cut)
+	var line := v2_shell.position.y + cut       # v2_root px: roof props above this line hide meanwhile
+	var hidden: Array = []
+	if amb_on and is_instance_valid(amb.over):
+		for ch in amb.over.get_children():
+			if ch is CanvasItem and (ch as Node2D).position.y < line:
+				hidden.append(ch)
+	var mods := v2_shell.get_node_or_null(ShellMods.NODE)
+	if mods != null:
+		for ch in mods.get_children():
+			if ch is Sprite2D and (ch as Sprite2D).texture != null and (ch as Sprite2D).position.y + (ch as Sprite2D).texture.get_height() <= cut + 2.0:
+				hidden.append(ch)
+	for ch in hidden:
+		(ch as CanvasItem).self_modulate.a = 0.0
+	_v2_preview = CanvasGroup.new()                  # one see-through layer: no double alpha where frame and cell overlap
+	_v2_preview.name = "NextFloorPreview"
+	_v2_preview.position = Vector2(0.0, -rise)
+	_v2_preview.modulate.a = Features.num("vault_preview.alpha", 0.6)
+	_v2_preview.set_meta("hidden", hidden)
+	var cells := Node2D.new()
+	cells.name = "NewCells"
+	var st := V3Art.empty_stage(3)
+	var ctex := V3Art.room_tex("empty", str(st.get("file", "")))
+	var sp0 := InteriorV3Panel.shell_spec(tier)
+	var x0 := InteriorV3Panel.RT_X0 if v2_rt() else float(sp0.x0)
+	var y0 := InteriorV3Panel.RT_Y0 if v2_rt() else float(sp0.y0)
+	for k in dn:
+		for col in Data.ROOMS_PER_FLOOR:
+			var c := Sprite2D.new()
+			c.centered = false
+			c.texture = ctex
+			c.position = Vector2(x0 + 152.0 * col, y0 + InteriorV3Panel.AMB_FH * float(k))
+			cells.add_child(c)
+	_v2_preview.add_child(cells)
+	var top := Sprite2D.new()
+	top.name = "NewShell"
+	top.centered = false
+	top.texture = tex
+	top.region_enabled = true
+	top.region_rect = Rect2(0.0, 0.0, float(tex.get_width()), cut + rise)
+	_v2_preview.add_child(top)
+	v2_shell.add_child(_v2_preview)             # rides every hop / lurch of the shell
+	v2_shell.move_child(_v2_preview, 0)
+	var pulse := cells.create_tween().set_loops()
+	pulse.tween_property(cells, "modulate", Color(1.3, 1.18, 0.75), 0.6)
+	pulse.tween_property(cells, "modulate", Color.WHITE, 0.6)
+	_ghost_tw = create_tween()
+	_ghost_tw.tween_interval(sec)
+	_ghost_tw.tween_callback(_clear_floor_ghost)
+	return true
+
+
 func _clear_floor_ghost() -> void:
 	if _ghost_tw != null:
 		_ghost_tw.kill()
 		_ghost_tw = null
+	if is_instance_valid(_v2_preview):
+		for ch in _v2_preview.get_meta("hidden", []):
+			if is_instance_valid(ch):
+				(ch as CanvasItem).self_modulate.a = 1.0
+		_v2_preview.queue_free()
+	_v2_preview = null
+	if v2_preview_n > 0:
+		v2_preview_n = 0
+		if is_instance_valid(v2_shell):
+			v2_shell.region_enabled = false
+			v2_shell.offset = Vector2.ZERO
 	var was := _floor_ghost != null
 	if is_instance_valid(_floor_ghost):
 		_floor_ghost.queue_free()
@@ -780,6 +878,8 @@ static func deck_lift() -> float:
 
 ## top of the vehicle incl. roof props (local y) – the camera keeps this on screen
 func top_y() -> float:
+	if v2_preview_n > floors:        # MV-777: the camera fits the previewed taller vehicle
+		return roof_y() - 40.0 - deck_lift() - InteriorV3Panel.AMB_FH * V2_K * float(v2_preview_n - floors)
 	return roof_y() - 40.0 - deck_lift() - (float(FLOOR_H) if floor_ghost() != null else 0.0)
 
 

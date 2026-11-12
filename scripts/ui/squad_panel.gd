@@ -67,7 +67,7 @@ func _build_squad() -> void:
 		_list.add_child(UIKit.wrap_label(Loc.t("ทีมป้องกันประจำห้องยิงท้ายรถ ทุกคนยิงออกทางช่องท้ายรถ ศัตรูโจมตีได้แค่ตัวรถ · อัปเลเวลห้องให้ยิงแรงขึ้น"), UIKit.FS_SMALL, UIKit.C_GOLD))
 	for i in Combat.ROLES.size():
 		_list.add_child(_role_card(i))
-	if not Combat.room_mode():
+	if not Combat.room_mode() and (Mods.enabled("roof_deck") or Mods.level("roof_deck") > 0):   # MV-774: no deck art yet
 		_list.add_child(_deck_card())
 	_list.add_child(UIKit.wrap_label(Loc.t("ศัตรูไล่ตามจากท้ายรถเป็นเวฟ · ทุก 10 เวฟมีบอส · ท้ายแต่ละพื้นที่มีบอสด่านตรวจ · ของดรอปเข้าคลังอัตโนมัติ · กระเป๋าดี = ศัตรูดรอปเสบียง"), UIKit.FS_SMALL))
 
