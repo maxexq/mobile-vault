@@ -14081,23 +14081,27 @@ func _vault_preview_v3_test() -> void:
 		cell_y[slot] = (v.v2_cells[slot] as Node2D).position
 	var top0 := v.top_y()
 	var start_ok := v.v2 and Game.floors() == 1 and v.v2_shell.texture.get_size().y == 240.0
+	var cells0 := v.v2_cells.values().duplicate()
 	var shown := v.preview_next_floor(30.0)
 	await wait(0.3)
-	var prev := v.v2_root.get_node_or_null("NextFloorPreview")
-	var same := v.v2_cells.size() == cell_y.size()
+	var prev := v.v2_shell.get_node_or_null("NextFloorPreview")
+	var same := v.v2_cells.size() == cell_y.size() and v.v2_cells.values() == cells0
 	for slot in v.v2_cells:
 		same = same and cell_y.has(slot) and (v.v2_cells[slot] as Node2D).position.is_equal_approx(cell_y[slot])
-	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
-	_check("vault preview v3: Vault 1 -> 2 shows the 2-floor ambulance shell, no half-opacity floor ghost", start_ok and shown
-		and v.v2_preview_n == 2 and v.floors == 2 and v.v2_shell.texture.get_size().y == 352.0 and v.floor_ghost() == null)
-	_check("vault preview v3: the shell stays on the road and the rooms keep their place", absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 and same)
-	_check("vault preview v3: the new floor = 3 empty v3 cells under the shell, the camera fits the taller vehicle",
-		prev != null and prev.get_child_count() == Data.ROOMS_PER_FLOOR and prev.get_index() < v.v2_shell.get_index() and v.top_y() < top0 - 50.0)
+	var new_shell: Sprite2D = prev.get_node_or_null("NewShell") if prev != null else null
+	_check("vault preview v3: Vault 1 -> 2 shows the 2-floor ambulance's roof + new floor, no half-opacity old-art ghost", start_ok and shown
+		and v.v2_preview_n == 2 and v.floors == 1 and v.floor_ghost() == null and new_shell != null and new_shell.texture.get_size().y == 352.0)
+	_check("vault preview v3: see-through (alpha %.2f) and the real shell's roof cropped away" % (prev.modulate.a if prev else -1.0),
+		prev is CanvasGroup and prev.modulate.a > 0.3 and prev.modulate.a < 0.9 and v.v2_shell.region_enabled and v.v2_shell.region_rect.position.y == v.v2_roof_cut())
+	_check("vault preview v3: rooms are not rebuilt (same cells, same place: no blink)", same)
+	_check("vault preview v3: the new floor = 3 empty v3 cells, the camera fits the taller vehicle",
+		prev.get_node("NewCells").get_child_count() == Data.ROOMS_PER_FLOOR and v.top_y() < top0 - 50.0)
 	await shot("vault_preview_v3_f1_to_f2")
 	v._clear_floor_ghost()
 	await wait(0.2)
-	_check("vault preview v3: the preview ends back on the 1-floor ambulance", v.v2_preview_n == 0 and v.floors == 1
-		and v.v2_shell.texture.get_size().y == 240.0 and v.v2_root.get_node_or_null("NextFloorPreview") == null and is_equal_approx(v.top_y(), top0))
+	_check("vault preview v3: the preview ends back on the 1-floor ambulance, rooms untouched", v.v2_preview_n == 0 and v.floors == 1
+		and not v.v2_shell.region_enabled and v.v2_shell.offset == Vector2.ZERO and v.v2_cells.values() == cells0
+		and (v.v2_shell.get_node_or_null("NextFloorPreview") == null or v.v2_shell.get_node("NextFloorPreview").is_queued_for_deletion()) and is_equal_approx(v.top_y(), top0))
 	# the Vault card's button says "see new vehicle" and opens the preview
 	main.hud.open_panel("build")
 	await wait(0.5)
@@ -14111,13 +14115,14 @@ func _vault_preview_v3_test() -> void:
 	Dev._vehicle_changed()
 	await wait(0.3)
 	_check("vault preview v3: buying the level mid-preview leaves the real 2-floor ambulance", v.v2_preview_n == 0 and Game.floors() == 2
-		and v.floors == 2 and v.v2_root.get_node_or_null("NextFloorPreview") == null)
+		and v.floors == 2 and not v.v2_shell.region_enabled)
 	Dev.set_vault(3)        # Vault 3 -> 4 adds the 3rd floor (Vault 2 -> 3 adds none)
 	Dev._vehicle_changed()
 	await wait(0.3)
 	shown = v.preview_next_floor(30.0)
 	await wait(0.3)
-	_check("vault preview v3: Vault 3 -> 4 at 2 floors previews the 3-floor shell", shown and v.v2_preview_n == 3 and v.v2_shell.texture.get_size().y == 464.0)
+	_check("vault preview v3: Vault 3 -> 4 at 2 floors previews the 3-floor shell", shown and v.v2_preview_n == 3
+		and (v.v2_shell.get_node("NextFloorPreview/NewShell") as Sprite2D).texture.get_size().y == 464.0)
 	await shot("vault_preview_v3_f2_to_f3")
 	v._clear_floor_ghost()
 	# GOD switch off: the old half-opacity floor
