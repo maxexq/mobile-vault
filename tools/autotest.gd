@@ -497,6 +497,8 @@ func _run() -> void:
 	# switches off under the dev layer, _gear_sets_test turns them on for itself
 	bl.features["gear_sets"] = false
 	bl.features["gear_frame64"] = false
+	# MV-778: the older crew / recruit checks were written for random recruits; _lore_crew_test turns the cast on itself
+	bl.features["lore_crew"] = false
 	if "--only=legal" not in OS.get_cmdline_user_args():
 		_legal_test_fixture()
 	# road events wait for an answer during the run (the scripted taps would otherwise start their clock and a random
@@ -1101,6 +1103,11 @@ func _run() -> void:
 	if "--only=crew" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _crew_roster_test()
+		_finish()
+		return
+	if "--only=lore_crew" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _lore_crew_test()
 		_finish()
 		return
 	if "--only=shake" in OS.get_cmdline_user_args():
@@ -1782,6 +1789,7 @@ func _run() -> void:
 	await _icons_v2_test()
 	await _gear_sets_test()
 	await _crew_roster_test()
+	await _lore_crew_test()
 	await _announce_test()
 	await _scene_art_test()
 	await _parallax_v2_test()
@@ -5898,6 +5906,99 @@ func _icon_art_test() -> void:
 	await shot("icons_inventory")
 	main.hud.panels.inventory.close()
 	await shot("icons_hud")
+
+
+## MV-778: every crew member is a fixed lore character (switch lore_crew)
+func _lore_crew_test() -> void:
+	Features.set_override("features", "lore_crew", true)
+	Dev.lore_ren_start(-1)
+	Game.setup_default_state()
+	_no_events()
+	var names := []
+	for d in Game.s.dwellers:
+		names.append(str(d.name))
+	var want := []
+	for k in ["loader", "gunner", "cab", "kitchen", "water"]:
+		want.append(LoreCrew.name_of(LoreCrew.START[k]))
+	_check("lore crew: new game = Fah, Tham, Bit, Auntie Wan, Clara %s" % str(names), names == want)
+	var bit: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "bit")[0]
+	_check("lore crew: Bit is the builder in the cab", Crew.is_builder(bit) and int(bit.room) == Data.CAB_SLOT)
+	var fah: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "fah")[0]
+	var tham: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "tham")[0]
+	_check("lore crew: Fah + Tham are the starting squad", (Game.s.squad as Array).has(int(fah.id)) and (Game.s.squad as Array).has(int(tham.id)))
+	_check("lore crew: starting stats = the old five slots (Fah STR 7 lvl 3)", int(fah.str) == 7 and int(fah.lvl) == 3)
+	for d in Game.s.dwellers:
+		var k := str(d.lore)
+		_fold("lore crew: start crew have their lore traits + face", d.traits == Crew.FIXED[k] and V3Art.crew_for(d) == k, k)
+	_fold_flush()
+	# recruits: the rest of the cast in story order, never twice, never Ren (guide), then nobody
+	var got := []
+	for i in 20:
+		var d := Game.recruit_random()
+		if d.is_empty():
+			break
+		got.append(str(d.lore))
+	var order := []
+	for id in LoreCrew.ORDER:
+		if id != "ren" and not LoreCrew.START.values().has(id):
+			order.append(id)
+	_check("lore crew: recruits come in story order %s" % str(got), got == order)
+	_check("lore crew: a full cast = no recruit (cast)", Game.offer_recruit("radio", 1000.0).is_empty() and Game.recruit_fail == "cast"
+		and Game.recruit_fail_text().contains("ครบ"))
+	_check("lore crew: nobody waits at the door with the cast on", Inspection.queue().is_empty())
+	var ids := {}
+	for d in Game.s.dwellers:
+		ids[str(d.lore)] = int(ids.get(str(d.lore), 0)) + 1
+	_check("lore crew: every character once (%d aboard)" % Game.s.dwellers.size(), ids.size() == Game.s.dwellers.size() and not ids.has("ren"))
+	for id in LoreCrew.CAST:
+		var d := {"id": 1, "name": LoreCrew.name_of(id), "lore": id, "variant": LoreCrew.CAST[id].variant}
+		_fold("lore crew: every character has a bio, lines, traits, v3 sheet + portrait", Lore.bio(d).role != "" and str(Lore.bio(d).text).length() > 40
+			and (Lore.LINES_PERSONAL.has(id) or id == "clara") and Crew.FIXED.has(id) and V3Art.crew_for(d) == id
+			and V3Art.crew_ids().has(id) and V3Art.portrait_tex(id) != null and Atlas.has(str(LoreCrew.CAST[id].variant)), id)
+	_fold_flush()
+	# the fallen come back only when everybody else is aboard
+	var sorn: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "sorn")[0]
+	var krai: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "krai")[0]
+	Crew.kill(sorn, "ทดสอบระบบ")
+	Game.s.dwellers.erase(krai)
+	_check("lore crew: the living go first, the fallen last", LoreCrew.next_id() == "krai")
+	Game.s.dwellers.append(krai)
+	_check("lore crew: a fallen character returns when nobody else is left", LoreCrew.next_id() == "sorn")
+	# Ren at the start: 1 = sixth crew member, 2 = in Clara's slot (Clara joins first)
+	Dev.lore_ren_start(1)
+	Game.setup_default_state()
+	_check("lore crew: ren_start 1 = Ren aboard as the 6th", Game.s.dwellers.size() == 6 and str(Game.s.dwellers[-1].lore) == "ren")
+	Dev.lore_ren_start(2)
+	Game.setup_default_state()
+	var water: Array = Game.s.dwellers.filter(func(d): return str(d.lore) == "ren")
+	_check("lore crew: ren_start 2 = Ren in Clara's slot, Clara joins first", Game.s.dwellers.size() == 5 and water.size() == 1
+		and int(water[0].room) == Game._water_slot() and LoreCrew.next_id() == "clara")
+	Dev.lore_ren_start(-1)
+	# old saves: the old crew + random recruits become the cast once; stats, level and gear stay theirs
+	Features.set_override("features", "lore_crew", false)
+	Game.setup_default_state()
+	_no_events()
+	for i in 4:
+		Game.recruit_random()
+	var mark: Dictionary = Game.s.dwellers.filter(func(d): return str(d.get("lore", "")) == "mark")[0]
+	var mark_gear: Dictionary = (mark.gear as Dictionary).duplicate()
+	_check("lore crew: switch off = the old crew and random recruits", str(mark.name) == "จ่ามาร์ค" and LoreCrew.aboard().size() == 1)
+	Features.set_override("features", "lore_crew", true)
+	Game.s.erase("lore_crew")
+	var n := LoreCrew.migrate()
+	_check("lore crew: migrate renames the crew (%d)" % n, n == 8 and str(mark.name) == LoreCrew.name_of("fah") and int(mark.str) == 7
+		and (mark.gear as Dictionary).size() == mark_gear.size() and V3Art.crew_for(mark) == "fah")
+	_check("lore crew: migrate keeps one character per person", LoreCrew.aboard().size() == Game.s.dwellers.size())
+	_check("lore crew: migrate runs once per save", LoreCrew.migrate() == 0 and int(Game.s.lore_crew) == 1)
+	# GOD
+	var before: int = Game.s.dwellers.size()
+	var k := Dev.spawn_lore("pim")
+	_check("lore crew: GOD boards a character directly", Game.s.dwellers.size() == before + 1 and str(k.name) == LoreCrew.name_of("pim"))
+	_check("lore crew: GOD rename runs again", Dev.lore_migrate() >= 0)
+	Features.set_override("features", "lore_crew", null)
+	Game.setup_default_state()
+	_no_events()
+
 
 
 func _crew_roster_test() -> void:

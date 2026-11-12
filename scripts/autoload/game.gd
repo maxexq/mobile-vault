@@ -132,11 +132,20 @@ func setup_default_state(keep_meta: bool = false, recruit_volunteers: bool = tru
 				s.squad = [int(s.dwellers[2].id), -1, -1]     # MV-727: the volunteer takes the gun in the gunner room
 				s.dwellers[2].room = RearGunner.DEFAULT_SLOT
 		return
-	var mark := _add_dweller({"name": "จ่ามาร์ค", "lore": "mark", "variant": "dw_army_brown", "str": 7, "int": 3, "agi": 4, "room": -1, "lvl": 3})
-	var leo := _add_dweller({"name": "ลีโอ", "lore": "leo", "variant": "dw_scav_brown", "str": 4, "int": 3, "agi": 7, "room": -1, "lvl": 2})
-	_add_dweller({"name": "ต้น", "lore": "ton", "variant": "dw_jumpsuit_black", "str": 6, "int": 4, "agi": 3, "room": Data.CAB_SLOT, "lvl": 1, "role": "builder"})
-	_add_dweller({"name": "เชฟบ็อบ", "lore": "bob", "variant": "dw_chef_gray", "str": 3, "int": 4, "agi": 7, "room": 1, "lvl": 2})
-	_add_dweller({"name": "พยาบาลคลารา", "lore": "clara", "variant": "dw_medic_red", "str": 3, "int": 7, "agi": 4, "room": _water_slot(), "lvl": 2})
+	var mark: Dictionary
+	var leo: Dictionary
+	if LoreCrew.on():
+		# MV-778: the starting crew are lore characters in the same five jobs (Fah loads, Tham shoots, Bit in the cab ...)
+		s["lore_crew"] = 1
+		var sq := LoreCrew.start_crew(_water_slot())
+		mark = sq.loader
+		leo = sq.gunner
+	else:
+		mark = _add_dweller({"name": "จ่ามาร์ค", "lore": "mark", "variant": "dw_army_brown", "str": 7, "int": 3, "agi": 4, "room": -1, "lvl": 3})
+		leo = _add_dweller({"name": "ลีโอ", "lore": "leo", "variant": "dw_scav_brown", "str": 4, "int": 3, "agi": 7, "room": -1, "lvl": 2})
+		_add_dweller({"name": "ต้น", "lore": "ton", "variant": "dw_jumpsuit_black", "str": 6, "int": 4, "agi": 3, "room": Data.CAB_SLOT, "lvl": 1, "role": "builder"})
+		_add_dweller({"name": "เชฟบ็อบ", "lore": "bob", "variant": "dw_chef_gray", "str": 3, "int": 4, "agi": 7, "room": 1, "lvl": 2})
+		_add_dweller({"name": "พยาบาลคลารา", "lore": "clara", "variant": "dw_medic_red", "str": 3, "int": 7, "agi": 4, "room": _water_slot(), "lvl": 2})
 	# starter defence squad + gear (common)
 	s.squad = [int(leo.id), int(mark.id), -1]
 	leo.gear = {"weapon": Loot.roll_item("weapon", 1, 0, "hunting_rifle"), "backpack": Loot.roll_item("backpack", 1, 0, "school_bag")}
@@ -269,6 +278,7 @@ func _migrate() -> void:
 		r.merge({"build": {}}, false)
 	_migrate_cab()
 	_fix_large_rooms()
+	LoreCrew.migrate()      # MV-778: old saves' crew become the lore cast once
 
 
 ## v4.6: the engine room moved from slot 0 into the cab (Data.CAB_SLOT / s.cab). Slot 0 becomes a free cell;
@@ -1898,14 +1908,43 @@ func _add_dweller(p: Dictionary) -> Dictionary:
 ## every stranger who wants to join comes through here: usually an ordinary refugee who boards at once
 ## (returns the dweller), rarely an exceptional one who waits at the door for inspection (returns {}).
 func offer_recruit(source: String, elite_bonus: float = 0.0) -> Dictionary:
-	var grade := Inspection.roll_grade(elite_bonus) if Features.on("strangers") else ""
+	recruit_fail = ""
+	# MV-778: with the lore cast nobody random waits at the door either
+	var grade := Inspection.roll_grade(elite_bonus) if Features.on("strangers") and not LoreCrew.on() else ""
 	if grade != "" and Inspection.queue().size() < Inspection.MAX_QUEUE:
 		Inspection.queue_candidate(source, grade)
+		recruit_fail = "door"
 		return {}
 	return recruit_random()
 
 
+## why the last offer_recruit / recruit_random returned {}: "door" = an exceptional stranger waits for inspection,
+## "cast" = every lore character is already aboard (MV-778), "" = somebody boarded
+var recruit_fail := ""
+
+
+## the player-facing line for an empty offer_recruit result (`door` = the old inspection wording of the caller)
+func recruit_fail_text(door: String = "คนแปลกหน้าฝีมือดีรอตรวจที่ประตู") -> String:
+	return "ทุกคนในเนื้อเรื่องอยู่บนรถครบแล้ว ไม่มีใครใหม่ให้รับ" if recruit_fail == "cast" else door
+
+
+## MV-778: the next lore character boards (story order, fixed name / stats / traits), {} when the cast is complete
+func _recruit_lore() -> Dictionary:
+	var id := LoreCrew.next_id()
+	if id == "":
+		recruit_fail = "cast"
+		return {}
+	var role := str(LoreCrew.CAST[id].get("job", ""))
+	var best := LoreCrew.best_stat(id)
+	var d := LoreCrew.spawn(id, {"lvl": 1 + int(s.lap)})
+	_seat_recruit(d, role, best)
+	return d
+
+
 func recruit_random() -> Dictionary:
+	recruit_fail = ""
+	if LoreCrew.on():
+		return _recruit_lore()
 	var stats := {"str": rng.randi_range(2, 6), "int": rng.randi_range(2, 6), "agi": rng.randi_range(2, 6)}
 	var best := "str"
 	for st in stats:
@@ -1927,6 +1966,11 @@ func recruit_random() -> Dictionary:
 			variant = "dw_crew_" + rid
 			nm = str(Data.CREW_ROSTER[rid].name)
 	var d := _add_dweller({"name": nm, "variant": variant, "str": stats.str, "int": stats.int, "agi": stats.agi, "lvl": 1 + int(s.lap), "role": role})
+	_seat_recruit(d, role, best)
+	return d
+
+
+func _seat_recruit(d: Dictionary, role: String, best: String) -> void:
 	# builders head straight for an open building site; everybody else to a free room matching their best stat
 	for i in s.rooms.size():
 		if role == "builder" and is_constructing(i) and is_slot_unlocked(i) and site_crew(i).size() < room_capacity(i):
@@ -1940,7 +1984,6 @@ func recruit_random() -> Dictionary:
 			d.room = i
 			break
 	dwellers_changed.emit()
-	return d
 
 
 func assign(d: Dictionary, slot: int) -> bool:
@@ -2107,7 +2150,7 @@ func give_rewards(rew: Dictionary) -> String:
 			"_recruit":
 				if s.dwellers.size() < pop_cap():
 					var d := offer_recruit("sos")
-					parts.append(d.name if not d.is_empty() else "คนแปลกหน้ารอตรวจที่ประตู")
+					parts.append(d.name if not d.is_empty() else recruit_fail_text("คนแปลกหน้ารอตรวจที่ประตู"))
 				else:
 					parts.append("(ที่พักเต็ม)")
 			_:
@@ -2935,7 +2978,7 @@ func resolve_event(id: String, choice_idx: int, defender_ids: Array) -> Dictiona
 				return {"ok": false, "text": "ที่พักเต็ม! สร้าง/อัปเกรดห้องพักก่อน"}
 			var nd := offer_recruit("event")
 			if nd.is_empty():
-				res.text = "ผู้รอดชีวิตคนนี้ดูไม่ธรรมดา... ฝีมือดีเกินกว่าจะรับขึ้นรถโดยไม่ตรวจ เขารออยู่ที่ประตู"
+				res.text = recruit_fail_text("ผู้รอดชีวิตคนนี้ดูไม่ธรรมดา... ฝีมือดีเกินกว่าจะรับขึ้นรถโดยไม่ตรวจ เขารออยู่ที่ประตู")
 			else:
 				res.text = "%s ขึ้นรถมาร่วมทางแล้ว! (STR %d / INT %d / AGI %d)" % [nd.name, nd.str, nd.int, nd.agi]
 		"gift":

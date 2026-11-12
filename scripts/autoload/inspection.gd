@@ -318,6 +318,10 @@ func admit(c: Dictionary) -> Dictionary:
 		return {}
 	queue().erase(c)
 	var d := Game.recruit_random()
+	if d.is_empty():
+		return {}
+	if LoreCrew.on():
+		return d     # MV-778: whoever was at the door, the person who boards is the next lore character
 	d.name = c.name
 	d.variant = c.variant
 	d.str = c.str
