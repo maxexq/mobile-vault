@@ -17,7 +17,7 @@ const FEET := Vector2(-32, -64)    # frame offset: 64x64 canvas, feet on the bot
 const CREW_SCALE_WORLD := 1.0
 ## which v3 character plays a recruit variant: the named crew roster keep a fixed look; everyone else gets a stable
 ## pick from their id (the 2.5D crew are 11 people, the old variants many more)
-const CREW_IDS := ["ren", "clara", "bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi"]
+const CREW_IDS := ["ren", "clara", "bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi", "mali", "pim"]
 ## old outfit word in the variant -> the v3 people who fit it (picked by id among them)
 const VARIANT_CREW := {"medic": ["ren", "clara"], "chef": ["wan", "ploy"], "army": ["fah", "sorn"], "scav": ["noi", "krai"],
 	"builder": ["bit", "tham"], "jumpsuit": ["bit", "lin"]}
@@ -97,6 +97,10 @@ static func crew_ids() -> Array:
 
 
 static func crew_for(d: Dictionary) -> String:
+	# MV-778: a lore character always looks like themselves (the name and the face match)
+	var lore := str(d.get("lore", ""))
+	if lore != "" and CREW_IDS.has(lore):
+		return lore
 	var v := str(d.get("variant", ""))
 	var id := absi(int(d.get("id", 0)))
 	for word in VARIANT_CREW:

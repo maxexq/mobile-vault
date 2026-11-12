@@ -545,6 +545,7 @@ func _tab_crew() -> void:
 	_row(bb)
 	_trait_odds()
 	_trait_tiers_row()
+	_lore_crew()
 	_crew_roster()
 	_crew_portraits_v3()
 	_head("STRANGERS", "คนแปลกหน้ารอตรวจที่ประตู (คิว %d/%d)" % [Inspection.queue().size(), Inspection.MAX_QUEUE])
@@ -609,6 +610,25 @@ func _trait_odds() -> void:
 		parts.append("ข้อเสีย %.1f%%" % float(r.bad))
 		_note("สุ่ม %d คน มีนิสัยระดับนั้นอย่างน้อย 1: %s" % [int(r.n), " · ".join(parts)])
 	_row([_b("สุ่มทดสอบ 1000 คน", func(): Dev.trait_roll_test(1000), "green")], "ไม่เพิ่มคนจริง")
+
+
+## MV-778: the lore cast: who is aboard, who joins next, board anyone, rename the crew again, Ren at the start
+func _lore_crew() -> void:
+	var on := LoreCrew.on()
+	var nxt := LoreCrew.next_id()
+	_head("LORE CREW", "ลูกเรือตามเนื้อเรื่อง · สวิตช์ %s · คนต่อไป: %s · หมอเร็นตอนเริ่ม: %s" % ["เปิด" if on else "ปิด",
+		LoreCrew.name_of(nxt) if nxt != "" else "ครบแล้ว", ["ผู้นำทาง", "ลูกเรือคนที่ 6", "แทนคลารา"][LoreCrew.ren_start()]])
+	_row([_b("ลูกเรือ Lore: " + ("เปิด" if on else "ปิด"), func(): Dev.feature_set("lore_crew", not on), "green" if on else "red"),
+		_b("คนต่อไปขึ้นรถ", func(): Dev.recruit_lore_next(), "green"), _b("เปลี่ยนชื่อลูกเรือตาม Lore", func(): Dev.lore_migrate())])
+	_row([_b("เร็น: ผู้นำทาง", func(): Dev.lore_ren_start(0)), _b("เร็น: คนที่ 6", func(): Dev.lore_ren_start(1)),
+		_b("เร็น: แทนคลารา", func(): Dev.lore_ren_start(2))], "เริ่มเกมใหม่")
+	var on_board := LoreCrew.aboard()
+	var lb := []
+	for id in LoreCrew.ORDER:
+		var lid: String = id
+		lb.append(_b(("✓ " if on_board.has(lid) else "") + LoreCrew.name_of(lid), func(): Dev.spawn_lore(lid), "yellow" if on_board.has(lid) else "gray"))
+	var row := _row(lb, "ขึ้นรถ")
+	row.name = "LoreButtons"
 
 
 ## MV-170: board any named crew member. The animated 20-sprite preview grid was removed in MV-720 (approved art,

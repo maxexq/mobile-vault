@@ -71,12 +71,15 @@ EMPTY = dict(status="review", ticket="MV-621", files=[RP + "empty3/final/empty_s
 
 # ref v3 crew (MV-669..700, all approved): id -> folder; Ren has no idle clip (his still is the idle)
 CREW = {"ren": "medic-25d-walk/approved", "clara": "clara-25d/approved"}
-for _c in ("bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi"):
+# MV-778: Mali + PIM-3 (MV-742 special crew, full anim set approved 2026-11-10) join the lore cast
+for _c in ("bit", "wan", "sorn", "lin", "tham", "fah", "krai", "ploy", "noi", "mali", "pim"):
     CREW[_c] = "lore-crew-3/approved/" + _c
 # MV-722: approved v3 portraits (MV-708, 64x64 busts, v2 portrait style) -> assets/v3/portraits/<id>.png
 PORTRAITS = "crew-portraits-v3/approved"
 # MV-735: approved mood faces <id>_<mood>.png -> assets/v3/portraits/<id>_<mood>.png, crew.json "portrait_moods"
 MOODS_DIR = "crew-portraits-v3/expr/approved"
+# MV-778: characters whose approved portrait set lives elsewhere: folder with portrait.png + portrait_<mood>.png
+PORTRAIT_DIRS = {"mali": "special-crew-3/approved/mali", "pim": "special-crew-3/approved/pim"}
 MOODS = ("happy", "stressed", "injured", "surprised", "angry", "sad", "scared", "thinking", "talking", "tired", "sick",
          "point_left", "point_right", "point_up", "finger_up")
 # shoot: MV-716 gunner post; gunwalk / torchwalk / search / wall: MV-758 expedition scene v2 (MV-686 / MV-688 / MV-692 clips)
@@ -238,7 +241,8 @@ def portraits(crew, src):
     """MV-722: copy each character's approved portrait and point crew.json at it (missing file = no portrait)"""
     os.makedirs(os.path.join(OUT, "portraits"), exist_ok=True)
     for cid, e in crew.items():
-        p = os.path.join(src, PORTRAITS, cid + ".png")
+        own = PORTRAIT_DIRS.get(cid)
+        p = os.path.join(src, own, "portrait.png") if own else os.path.join(src, PORTRAITS, cid + ".png")
         if not os.path.exists(p):
             e.pop("portrait", None)
             continue
@@ -249,7 +253,7 @@ def portraits(crew, src):
         e["portrait"] = "portraits/" + cid + ".png"
         moods = {}
         for m in MOODS:
-            mp = os.path.join(src, MOODS_DIR, "%s_%s.png" % (cid, m))
+            mp = os.path.join(src, own, "portrait_%s.png" % m) if own else os.path.join(src, MOODS_DIR, "%s_%s.png" % (cid, m))
             if not os.path.exists(mp):
                 continue
             mi = Image.open(mp).convert("RGBA")

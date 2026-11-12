@@ -1754,6 +1754,36 @@ func spawn_roster_all() -> void:
 			spawn_roster(str(id))
 
 
+## MV-778: board one lore character directly (any of LoreCrew.CAST, even with the switch off or already aboard)
+func spawn_lore(id: String) -> Dictionary:
+	if not LoreCrew.CAST.has(id):
+		return {}
+	var d := LoreCrew.spawn(id, {"lvl": 1 + int(Game.s.get("lap", 0))})
+	act("spawn lore " + id)
+	Game.dwellers_changed.emit()
+	return d
+
+
+## MV-778: the next lore character joins the normal way (story order); {} when the cast is complete
+func recruit_lore_next() -> Dictionary:
+	var d := Game.recruit_random()
+	act("recruit lore next: " + (str(d.name) if not d.is_empty() else "cast complete"))
+	return d
+
+
+## MV-778: rename the current crew into the cast again (as an old save gets on load)
+func lore_migrate() -> int:
+	var n := LoreCrew.migrate(true)
+	act("lore migrate: %d renamed" % n)
+	return n
+
+
+## MV-778: Dr. Ren at the start (tune lore_crew.ren_start: 0 guide, 1 sixth crew, 2 replaces Clara; -1 = default)
+func lore_ren_start(k: int) -> void:
+	Trace.rec("god", "lore ren_start %d" % k)
+	Features.set_override("tune", "lore_crew.ren_start", null if k < 0 else k)
+
+
 ## tester override of crew.roster_chance (-1 = back to the default)
 func roster_chance(k: float) -> void:
 	Trace.rec("god", "roster chance %.2f" % k)

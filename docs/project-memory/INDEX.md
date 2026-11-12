@@ -174,3 +174,4 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [ui-redesign-v5](ui-redesign-v5.md): MV-768 UI v5 option A picked; P1 (dock, 2-row HUD, bottom sheets, room pager) behind switch ui_v5
 - [mods-v3-only](mods-v3-only.md): MV-774 garage hides exterior mods with no v3 art on the current vehicle (switch mods_v3_only, Mods.V3_ART)
 - [weather-v2](weather-v2.md): MV-770 Weather v2 picks (A everywhere, sandstorm D) in game behind weather_v2; overcast = faint scattered clouds only
+- [lore-crew](lore-crew.md): MV-778 every crew member is a fixed lore character (switch lore_crew, 13-char LoreCrew.CAST), recruits in story order, old saves migrated once
