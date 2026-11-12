@@ -107,6 +107,8 @@ var _driver_seq: Array = []       # [[frame, s], ...] still to show
 var _shells: Node2D
 var _floor_ghost: Sprite2D = null       # MV-563: next Vault level's floor at half opacity
 var _ghost_tw: Tween = null
+var v2_preview_n := 0                   # MV-777: > 0 while the world v2 body shows the next Vault level's vehicle (that many floors)
+var _v2_preview: Node2D = null          # MV-777: the new floor's empty v3 cells (pulsing) during that preview
 var _seams_root: Node2D          # large-room interior strips drawn over the hull partitions (v4.4)
 var _exteriors: Node2D
 var _rooms_root: Node2D
@@ -387,7 +389,7 @@ func rebuild() -> void:
 		for ch in n.get_children():
 			ch.queue_free()
 	wheels.clear()
-	_clear_floor_ghost()
+	_clear_floor_ghost(false)
 	# MV-563: a body grown by the Vault draws vehf<n>_ / extf<n>_; the 5-floor ones are taller, bottom-aligned
 	var sh := _add_sprite(_shells, shell_region("veh", tier, floors), Vector2.ZERO)
 	sh.position.y = SHELL_H - sh.texture.get_height()
@@ -648,6 +650,8 @@ func preview_next_floor(sec: float = 5.0) -> bool:
 	if Game.s.is_empty() or not Game.vault_adds_floor(int(Game.s.vault_level)):
 		return false
 	var n := Game.floors_at(int(Game.s.vault_level) + 1)
+	if v2_preview_ok(n):
+		return _preview_v2(n, sec)
 	var region := shell_region("ext", tier, n)      # the plated exterior: the new floor reads as a whole floor
 	var full := Atlas.tex(region)
 	var top := SHELL_H - full.get_height()                  # local y of the grown shell's top
@@ -674,10 +678,59 @@ func floor_ghost() -> Sprite2D:
 	return _floor_ghost if is_instance_valid(_floor_ghost) else null
 
 
-func _clear_floor_ghost() -> void:
+## MV-777 (switch vault_preview_v3): the world v2 body previews the next Vault level as the new vehicle itself: its
+## v3 shell art for n floors (ambulance / Decker / road train), when that art exists
+func v2_preview_ok(n: int) -> bool:
+	if not v2 or not Features.on("vault_preview_v3") or n <= floors:
+		return false
+	var f := floors
+	floors = n
+	var ok := ResourceLoader.exists(v2_shell_path())
+	floors = f
+	return ok
+
+
+## MV-777: rebuild the world v2 body as the n-floor vehicle (the rooms keep their place: the shell is bottom-aligned)
+## and fill the new floor(s) with the finished empty v3 cell, pulsing, for sec seconds
+func _preview_v2(n: int, sec: float) -> bool:
+	var old_n := floors
+	floors = n
+	v2_preview_n = n
+	_build_v2()
+	_v2_preview = Node2D.new()
+	_v2_preview.name = "NextFloorPreview"
+	var st := V3Art.empty_stage(3)
+	var tex := V3Art.room_tex("empty", str(st.get("file", "")))
+	for fl in range(old_n, n):
+		for col in Data.ROOMS_PER_FLOOR:
+			var sp := Sprite2D.new()
+			sp.centered = false
+			sp.texture = tex
+			sp.position = v2_cell_pos(col, fl) / V2_K
+			_v2_preview.add_child(sp)
+	v2_root.add_child(_v2_preview)
+	v2_root.move_child(_v2_preview, v2_shell.get_index())     # under the shell's window frames, like the room cells
+	var pulse := _v2_preview.create_tween().set_loops()
+	pulse.tween_property(_v2_preview, "modulate", Color(1.25, 1.15, 0.8), 0.6)
+	pulse.tween_property(_v2_preview, "modulate", Color.WHITE, 0.6)
+	_ghost_tw = create_tween()
+	_ghost_tw.tween_interval(sec)
+	_ghost_tw.tween_callback(_clear_floor_ghost)
+	return true
+
+
+func _clear_floor_ghost(rebuild_v2 := true) -> void:
 	if _ghost_tw != null:
 		_ghost_tw.kill()
 		_ghost_tw = null
+	if is_instance_valid(_v2_preview):
+		_v2_preview.queue_free()
+	_v2_preview = null
+	if v2_preview_n > 0:
+		v2_preview_n = 0
+		if rebuild_v2 and not Game.s.is_empty():
+			floors = Game.floors()
+			_build_v2()
 	var was := _floor_ghost != null
 	if is_instance_valid(_floor_ghost):
 		_floor_ghost.queue_free()

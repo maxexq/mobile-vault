@@ -504,6 +504,12 @@ func floor_preview(sec: float = 5.0) -> bool:
 	return m.vehicle.preview_next_floor(sec)
 
 
+## MV-777: session override of the vault_preview_v3 switch (next Vault level previewed as the new v3 vehicle)
+func vault_preview_v3(on: bool) -> void:
+	Features.set_override("features", "vault_preview_v3", on)
+	act("vault preview v3 %s" % ("on" if on else "off"))
+
+
 ## MV-545: session override of the vault_upgrade_v2 switch
 func vault_upgrade_v2(on: bool) -> void:
 	Features.set_override("features", "vault_upgrade_v2", on)

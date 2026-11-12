@@ -703,6 +703,11 @@ func _run() -> void:
 
 
 
+	if "--only=vault_preview_v3" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _vault_preview_v3_test()
+		_finish()
+		return
 	if "--only=world_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _world_v2_test()
@@ -1793,6 +1798,7 @@ func _run() -> void:
 	await _ambulance_mods_test()
 	await _mods_v3_only_test()
 	await _world_v2_test()
+	await _vault_preview_v3_test()
 	await _road_train_test()
 	await _decker_test()
 	await _bastion_test()
@@ -9732,6 +9738,7 @@ func _hull_repair_test() -> void:
 ## opacity on the vehicle; the trailer rooms move with the body when it grows; switch off = as before
 func _five_floors_test() -> void:
 	Features.set_override("features", "road_train", false)   # MV-721: this test covers the old 4-vehicle ladder
+	Features.set_override("features", "vault_preview_v3", false)   # MV-777: this test covers the half-opacity floor ghost
 	_no_events()
 	var keep_state: Dictionary = Game.s.duplicate(true)
 	var v: Vehicle = main.vehicle
@@ -9829,6 +9836,7 @@ func _five_floors_test() -> void:
 	Dev._vehicle_changed()
 	await wait(0.3)
 	Features.set_override("features", "road_train", null)
+	Features.set_override("features", "vault_preview_v3", null)
 
 
 ## MV-545: the Vault upgrade never promises a room the vehicle has no space for, names the bigger vehicle, and every
@@ -14052,6 +14060,80 @@ func _world_v2_test() -> void:
 	Game.s = old_state
 	Dev._vehicle_changed()
 	await wait(0.3)
+## MV-777 (switch vault_preview_v3): "see new floor" on the world v2 ambulance shows the next Vault level's vehicle
+## (its v3 shell for one more floor, the rooms in place, the new floor's empty cells pulsing), not a half-opacity floor
+func _vault_preview_v3_test() -> void:
+	var old_state: Dictionary = Game.s.duplicate(true)
+	var overrides: Dictionary = Features.layers.dev.duplicate(true)
+	var v: Vehicle = main.vehicle
+	Game.test_van_floors = 0
+	Dev.set_tier("van")
+	Features.set_override("features", "five_floors", true)
+	Features.set_override("features", "ambulance_v3", true)
+	Features.set_override("features", "vault_preview_v3", null)
+	Dev.world_v2_preview(1)
+	Dev.set_vault(1)
+	Dev._vehicle_changed()
+	await wait(0.4)
+	_check("vault preview v3: switch on by default", Features.on("vault_preview_v3"))
+	var cell_y := {}
+	for slot in v.v2_cells:
+		cell_y[slot] = (v.v2_cells[slot] as Node2D).position
+	var top0 := v.top_y()
+	var start_ok := v.v2 and Game.floors() == 1 and v.v2_shell.texture.get_size().y == 240.0
+	var shown := v.preview_next_floor(30.0)
+	await wait(0.3)
+	var prev := v.v2_root.get_node_or_null("NextFloorPreview")
+	var same := v.v2_cells.size() == cell_y.size()
+	for slot in v.v2_cells:
+		same = same and cell_y.has(slot) and (v.v2_cells[slot] as Node2D).position.is_equal_approx(cell_y[slot])
+	var bottom := (v.v2_shell.position.y + v.v2_shell.texture.get_size().y) * Vehicle.V2_K
+	_check("vault preview v3: Vault 1 -> 2 shows the 2-floor ambulance shell, no half-opacity floor ghost", start_ok and shown
+		and v.v2_preview_n == 2 and v.floors == 2 and v.v2_shell.texture.get_size().y == 352.0 and v.floor_ghost() == null)
+	_check("vault preview v3: the shell stays on the road and the rooms keep their place", absf(bottom - (Vehicle.ROAD_Y + 1.0)) < 0.5 and same)
+	_check("vault preview v3: the new floor = 3 empty v3 cells under the shell, the camera fits the taller vehicle",
+		prev != null and prev.get_child_count() == Data.ROOMS_PER_FLOOR and prev.get_index() < v.v2_shell.get_index() and v.top_y() < top0 - 50.0)
+	await shot("vault_preview_v3_f1_to_f2")
+	v._clear_floor_ghost()
+	await wait(0.2)
+	_check("vault preview v3: the preview ends back on the 1-floor ambulance", v.v2_preview_n == 0 and v.floors == 1
+		and v.v2_shell.texture.get_size().y == 240.0 and v.v2_root.get_node_or_null("NextFloorPreview") == null and is_equal_approx(v.top_y(), top0))
+	# the Vault card's button says "see new vehicle" and opens the preview
+	main.hud.open_panel("build")
+	await wait(0.5)
+	var bp = main.hud.panels.build
+	var label_ok: bool = bp._floor_btn.visible and bp._floor_btn.text == Loc.t("ดูรถคันใหม่")
+	bp._floor_btn.pressed.emit()
+	await wait(0.4)
+	_check("vault preview v3: Vault card button 'see new vehicle' closes the window and shows the new vehicle", label_ok and not bp.is_open and v.v2_preview_n == 2)
+	# a rebuild mid-preview (upgrade bought, switch flipped) drops it cleanly
+	Dev.set_vault(2)
+	Dev._vehicle_changed()
+	await wait(0.3)
+	_check("vault preview v3: buying the level mid-preview leaves the real 2-floor ambulance", v.v2_preview_n == 0 and Game.floors() == 2
+		and v.floors == 2 and v.v2_root.get_node_or_null("NextFloorPreview") == null)
+	Dev.set_vault(3)        # Vault 3 -> 4 adds the 3rd floor (Vault 2 -> 3 adds none)
+	Dev._vehicle_changed()
+	await wait(0.3)
+	shown = v.preview_next_floor(30.0)
+	await wait(0.3)
+	_check("vault preview v3: Vault 3 -> 4 at 2 floors previews the 3-floor shell", shown and v.v2_preview_n == 3 and v.v2_shell.texture.get_size().y == 464.0)
+	await shot("vault_preview_v3_f2_to_f3")
+	v._clear_floor_ghost()
+	# GOD switch off: the old half-opacity floor
+	Dev.vault_preview_v3(false)
+	await wait(0.2)
+	shown = v.preview_next_floor(30.0)
+	_check("vault preview v3: GOD switch off = old half-opacity floor ghost", shown and v.v2_preview_n == 0 and v.floor_ghost() != null)
+	v._clear_floor_ghost()
+	Features.layers.dev = overrides
+	Features.changed.emit()
+	Game.test_van_floors = 2
+	Game.s = old_state
+	Dev._vehicle_changed()
+	await wait(0.3)
+
+
 ## MV-737 (switch ambulance_pup): the ambulance's trailers are the approved pup shell, in the v3 interior and on the
 ## road (world v2): every trailer cell in its own window, shells on the road line, tow plates riding on the unit in front
 func _ambulance_pup_test() -> void:
