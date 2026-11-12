@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""MV-775 icons B: every icon at the pixel size of the objects in the v3 rooms (switch icons_room16).
+"""MV-775 icons v4: every icon at the pixel size of the objects in the v3 rooms (switch icons_room16).
+
+The 115 PixelLab icons v4 in tools/art/icons16/ (16 px, see its README) are used as they are; the code
+reduction below is only the fallback for an icon that has no file there.
 
 Icons v2 (MV-694) are 32 px drawn into 16 px slots, so their pixels are twice as fine as the v3 room art next to them.
 This bakes each icon down to a native 16 px icon in the look of the furniture in the v3 rooms:
@@ -104,7 +107,9 @@ def main() -> None:
         for i, (name, im) in enumerate(src):
             x, y = 8 + (i % per) * 72, 8 + (i // per) * 150
             rv.alpha_composite(im.resize((64, 64), Image.NEAREST), (x, y))
-            rv.alpha_composite(room16(im).resize((64, 64), Image.NEAREST), (x, y + 70))
+            f = os.path.join(fixed, name + ".png")
+            ic = Image.open(f).convert("RGBA") if os.path.exists(f) else room16(im)
+            rv.alpha_composite(ic.resize((64, 64), Image.NEAREST), (x, y + 70))
         rv.save(path)
         print("review", path)
 
