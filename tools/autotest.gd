@@ -5031,11 +5031,11 @@ func _features_test() -> void:
 	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion", "ui_v5"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764); ui_v5: phase 1 of the MV-768 redesign
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
-	for k in ["road_train", "gear_sets", "gear_frame64"]:
+	for k in ["road_train", "gear_sets", "gear_frame64", "lore_crew"]:
 		pin.erase(k)                # the run's MV-721 / MV-767 test pins are not what ships
 	for k in Features.FEATURES:
 		all_on = all_on and (Features.on(k) != (k in ships_off))
-	for k in ["road_train", "gear_sets", "gear_frame64"]:
+	for k in ["road_train", "gear_sets", "gear_frame64", "lore_crew"]:
 		pin[k] = false
 	_check("features: every switch on by default (except %s, off)" % ", ".join(ships_off), all_on)
 	_check("features: tune falls back to the code constant", Features.num("threat.rate_scale", Threat.RATE_SCALE) == Threat.RATE_SCALE)
@@ -6977,7 +6977,7 @@ func _rooms_v3_test() -> void:
 	Features.set_override("features", "rooms_v3", true)
 	Features.set_override("features", "rooms_v3_review", true)
 	get_window().size = Vector2i(405, 720)
-	_check("rooms v3: manifests load (10 game rooms + empty cell, 11 crew)", V3Art.ok() and V3Art.room_types().size() >= 10 and V3Art.crew_ids().size() == 11)
+	_check("rooms v3: manifests load (10 game rooms + empty cell, 13 crew)", V3Art.ok() and V3Art.room_types().size() >= 10 and V3Art.crew_ids().size() == 13)
 	var files_ok := true
 	var hot_ok := true
 	for t in V3Art.room_types():
