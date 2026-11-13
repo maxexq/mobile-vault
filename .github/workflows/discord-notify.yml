@@ -19,13 +19,14 @@ on:
   # CI workflows to report: put each new workflow's `name:` here. Scheduled runs and Error spike
   # are reported only when they fail (Error spike runs every 15 min and posts to its own channel).
   workflow_run:
-    workflows: [Autotest, Web export, Release, Error spike, Sentry forward]
+    workflows: [Autotest, Nightly autotest, Web export, Release, Error spike, Sentry forward]
     types: [completed]
   # Actions tab > Discord notify > Run workflow: sends a test message.
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read # Nightly autotest failures name the failed branch jobs (MV-779)
 
 jobs:
   notify:
@@ -44,4 +45,5 @@ jobs:
           SKIP_PREVIEW_SUCCESS: ${{ vars.SKIP_PREVIEW_SUCCESS }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_PATH: ${{ github.event_path }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: bash .github/scripts/discord-notify.sh

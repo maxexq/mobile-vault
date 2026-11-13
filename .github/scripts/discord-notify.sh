@@ -138,6 +138,13 @@ case "$EVENT_NAME" in
     desc=$(short "$(ev .workflow_run.display_title)" 200)
     add_field "Branch" "\`$(ev .workflow_run.head_branch)\`"
     add_field "Event" "$(ev .workflow_run.event)"
+    # Nightly autotest (MV-779) tests staging, uat and main in one run: name the branches that failed
+    if [ "$name" = "Nightly autotest" ] && [ "$conclusion" != success ] && [ -n "${GITHUB_TOKEN:-}" ]; then
+      failed=$(curl -sS --fail -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+        "$(ev .workflow_run.jobs_url)?per_page=100" \
+        | jq -r '[.jobs[] | select(.conclusion != "success" and .conclusion != "skipped") | .name] | join(", ")' || true)
+      if [ -n "$failed" ]; then add_field "ไม่ผ่าน" "$failed" false; fi
+    fi
     add_field "โดย" "$(ev .workflow_run.actor.login)" ;;
 
   workflow_dispatch)
