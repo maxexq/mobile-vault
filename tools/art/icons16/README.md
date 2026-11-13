@@ -10,3 +10,7 @@ falls back to the code reduction of its icons v2 art.
 Mood faces (happy, neutral, sad, stressed, broken) are not PixelLab: `moods.py` draws them in code on one
 shared 16 px circle (black outline, flat orange, black features) so every face has the same round shape
 (Parames 2026-11-13). Run `python3 tools/art/icons16/moods.py` then `python3 tools/icons16_import.py`.
+
+Weather icons (sun, moon, fog, rain, acid, storm, snow, ash, sand) are code-drawn too: `weather.py` uses one shared
+16 px cloud (white, or grey for storm / ash) with simple precipitation under it (Parames ref 2026-11-13).
+Run `python3 tools/art/icons16/weather.py tools/art/icons16` then `python3 tools/icons16_import.py`.

@@ -55,7 +55,7 @@ rules also go into this file.
   (`shaders/crew_v3_blend.gdshader`). New or changed v3 art reaches the game only through `python3 tools/v3_import.py`.
 - **Icons v4 (Parames 2026-11-13, MV-775):** every in-game icon is native 16x16 (the pixel size of v3 room props), PixelLab
   `generate-image-v2` at 16x16 with one simple object per prompt + a closed 1 px black outline, in `tools/art/icons16/`
-  (`python3 tools/icons16_import.py`). Mood faces are code-drawn by `tools/art/icons16/moods.py` on one shared circle.
+  (`python3 tools/icons16_import.py`). Mood faces (`moods.py`, one shared circle) and weather icons (`weather.py`, one shared cloud) in `tools/art/icons16/` are code-drawn.
   Supersedes the 32 px icons v2 rule (switch `icons_room16`).
 - **Vehicles are flat 2D (Parames 2026-11-09):** every vehicle, trailer, coupling and wheel is a strict side profile
   (no 3/4 view, no top or front faces, drawbars one straight bar). Follow the approved ambulance and B-double art.
