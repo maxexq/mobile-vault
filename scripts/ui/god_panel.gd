@@ -104,6 +104,23 @@ func _tab_icons() -> void:
 	_row([_b("< ห้องก่อนหน้า", func(): Dev.ui_v5_page(-1), "gray"), _b("ห้องถัดไป >", func(): Dev.ui_v5_page(1), "gray")], "ห้อง v3 ใต้ถนน")
 	_head("ICONS", "ชุดไอคอน (MV-694)")
 	_row([_b("ไอคอนใหม่ v2", func(): Dev.icons_v2(true), "yellow" if v2on else "gray"), _b("ไอคอนเดิม 16 px", func(): Dev.icons_v2(false), "gray" if v2on else "yellow")])
+	var r16 := Features.on("icons_room16")
+	var b16 := _b("ไอคอน B สไตล์ห้อง v3", func(): Dev.icons_room16(not Features.on("icons_room16")), "yellow" if r16 else "gray")
+	b16.name = "IconsRoom16"
+	_row([b16], "MV-775 %s" % ("เปิด" if r16 else "ปิด"))
+	var cmp: Array = [UIKit.label(Loc.t("v2 / B:"), 9, UIKit.C_DIM)]
+	for ik in ["medkit", "ammo", "wrench", "rifle", "backpack", "water", "food", "people"]:
+		var a := TextureRect.new()
+		a.texture = Atlas.tex("ic2_" + ik)
+		a.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		a.custom_minimum_size = Vector2(16, 16)
+		a.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		cmp.append(a)
+		var c := TextureRect.new()
+		c.texture = Atlas.icon16(ik)
+		c.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		cmp.append(c)
+	_row(cmp)
 	var moods: Array = [UIKit.label(Loc.t("อารมณ์:"), 9, UIKit.C_DIM)]
 	for mk in ["happy", "neutral", "sad", "stressed", "broken"]:
 		moods.append(UIKit.icon_rect(mk, 32))

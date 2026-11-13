@@ -53,6 +53,10 @@ rules also go into this file.
   power-out) and the ref v3 crew (~60 px on a 64 canvas, shown at 2/3 over rooms: room x3, crew x2) are in the game in the
   v3 interior view (switch `rooms_v3`, README 4q). Every crew sprite over a v3 room gets a contact shadow + the room grade
   (`shaders/crew_v3_blend.gdshader`). New or changed v3 art reaches the game only through `python3 tools/v3_import.py`.
+- **Icons v4 (Parames 2026-11-13, MV-775):** every in-game icon is native 16x16 (the pixel size of v3 room props), PixelLab
+  `generate-image-v2` at 16x16 with one simple object per prompt + a closed 1 px black outline, in `tools/art/icons16/`
+  (`python3 tools/icons16_import.py`). Mood faces (`moods.py`, one shared circle) and weather icons (`weather.py`, one shared cloud) in `tools/art/icons16/` are code-drawn.
+  Supersedes the 32 px icons v2 rule (switch `icons_room16`).
 - **Vehicles are flat 2D (Parames 2026-11-09):** every vehicle, trailer, coupling and wheel is a strict side profile
   (no 3/4 view, no top or front faces, drawbars one straight bar). Follow the approved ambulance and B-double art.
 - **After every PixelLab use** report to Parames what it was for, which model/endpoint (e.g.

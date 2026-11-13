@@ -2715,6 +2715,13 @@ func mode_toll_test() -> void:
 	Game.travel_changed.emit()
 
 
+## MV-775: icons B, the 16 px room-style icon set (icons_room16) on / off for this tester
+func icons_room16(on: bool) -> void:
+	act("icons room16 %s" % ("on" if on else "off"))
+	Features.set_override("features", "icons_room16", on)
+	Features.changed.emit()
+
+
 ## MV-694: switch the 32 px PixelLab icon set (icons_v2) on / off for this tester
 func icons_v2(on: bool) -> void:
 	act("icons v2 %s" % ("on" if on else "off"))

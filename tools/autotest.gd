@@ -890,6 +890,11 @@ func _run() -> void:
 		await _gear_sets_test()
 		_finish()
 		return
+	if "--only=icons_room16" in OS.get_cmdline_user_args():
+		Tutorial.skip()
+		await _icons_room16_test()
+		_finish()
+		return
 	if "--only=icons_v2" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _icons_v2_test()
@@ -7797,6 +7802,11 @@ func _exterior_mods_test() -> void:
 	var state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	var saved_view := v.xray
+	# no live fight while counting transient FX: an enemy shot at the van (armor_hit) or a road zombie (ram_contact)
+	# spawned an FX mid-matrix on CI ("van t0 lv1 ... fx 1", MV-775)
+	var saved_fight := [Combat.is_processing(), main.combat_view.process_mode]
+	Combat.set_process(false)
+	main.combat_view.process_mode = Node.PROCESS_MODE_DISABLED   # its shots / tweens too
 	Features.set_override("features", "exterior_mod_ambience", true)
 	Features.set_override("features", "cozy_roof", true)
 	Features.set_override("features", "world_v2", false)   # the old van's mods (world v2 phase 1 hides them)
@@ -7815,6 +7825,7 @@ func _exterior_mods_test() -> void:
 	_check("exterior mods: 40 contracts / 110 exact-sized atlas cells", sizes_ok and contracts.size() == 40 and cells == 110)
 	_check("exterior mods: atlas stays within the five-floor staging budget", Atlas.sheet.get_width() == 2048 and Atlas.sheet.get_height() <= 2816)
 	var matrix_ok := true
+	var matrix_bad := ""
 	for tier in Data.TIER_ORDER:
 		Dev.set_tier(tier)
 		for trailers in Data.MAX_TRAILERS + 1:
@@ -7827,19 +7838,26 @@ func _exterior_mods_test() -> void:
 				var rail: bool = Data.VEHICLES[tier].rail
 				var expected_rims: int = 0 if rail or lv == 1 else int(Data.VEHICLES[tier].wheels.size()) + trailers * 2
 				if not rail and lv == 3: expected_rims -= int(Data.VEHICLES[tier].wheels.size()) - 1
-				# wait for the rebuild (frame-paced, not a fixed 0.03 s: a slow CI frame failed it now and then)
-				for _t in 20:
+				# wait for the rebuild (frame-paced, not a fixed 0.03 s: a slow CI frame failed it now and then);
+				# the armor cue sprites are rebuilt in the same pass, so wait for them too (MV-775 CI)
+				var want_tracks: bool = not rail and lv == 3
+				var want_armor := 2 if lv == 1 else 0
+				for _t in 40:
 					await wait(0.03)
-					if m.rims.size() == expected_rims and v.tracks.visible == (not rail and lv == 3):
+					if m.rims.size() == expected_rims and v.tracks.visible == want_tracks and v.sprite_regions(false).count("prop_ext_armor_lv1") == want_armor:
 						break
-				matrix_ok = matrix_ok and m.rims.size() == expected_rims and v.tracks.visible == (not rail and lv == 3)
 				var armor_cues := v.sprite_regions(false).count("prop_ext_armor_lv1")
-				matrix_ok = matrix_ok and armor_cues == (2 if lv == 1 else 0)
+				var case_ok: bool = m.rims.size() == expected_rims and v.tracks.visible == want_tracks and armor_cues == want_armor
 				for xr in [false, true]:
 					v.set_xray(xr)
-					matrix_ok = matrix_ok and m.pool.size() == 12 and m.active_fx() == 0
+					case_ok = case_ok and m.pool.size() == 12 and m.active_fx() == 0
+				if not case_ok and matrix_bad == "":
+					matrix_bad = "%s t%d lv%d: rims %d/%d tracks %s armor %d/%d pool %d fx %d" % [tier, trailers, lv, m.rims.size(), expected_rims, v.tracks.visible, armor_cues, want_armor, m.pool.size(), m.active_fx()]
+				matrix_ok = matrix_ok and case_ok
 				if trailers == 0 and lv == 2:
 					await shot("exterior_mods_" + tier)
+	if not matrix_ok:
+		print("[autotest] exterior mods matrix: first bad case ", matrix_bad)
 	_check("exterior mods: all chassis, 0-max trailers, all levels, cutaway/closed, rail/track/rim precedence", matrix_ok)
 	var floors_ok := true
 	for tier in Data.TIER_ORDER:
@@ -7940,6 +7958,8 @@ func _exterior_mods_test() -> void:
 	Features.changed.emit()
 	v.rebuild()
 	m.set_process(true)
+	Combat.set_process(saved_fight[0])
+	main.combat_view.process_mode = saved_fight[1]
 	v.set_xray(saved_view)
 	Game.weather_changed.emit(str(Game.s.weather))
 	Features.set_override("features", "road_train", null)
@@ -13506,6 +13526,8 @@ func _nextgen_crew_test() -> void:
 ## MV-694 icons v2: every ic_* has a 32 px ic2_*, IconTex keeps 16x16 layout, mood icons, switch off = old set, GOD toggle
 func _icons_v2_test() -> void:
 	var was := Features.on("icons_v2")
+	var was16 := Features.on("icons_room16")
+	Dev.icons_room16(false)
 	Dev.icons_v2(true)
 	var ids: Array[String] = []
 	for key in Atlas.regions:
@@ -13532,6 +13554,36 @@ func _icons_v2_test() -> void:
 	_check("icons v2: switch off = old 16 px AtlasTexture", Atlas.icon("food") is AtlasTexture and Atlas.icon("food").get_width() == 16)
 	_check("icons v2: switch off = neutral falls back to happy, stressed / broken to sad", Atlas.icon("neutral") == Atlas.icon("happy") and Atlas.mood_icon(60.0) == Atlas.icon("happy") and Atlas.icon("stressed") == Atlas.icon("sad") and Atlas.mood_icon(5.0) == Atlas.icon("sad"))
 	Dev.icons_v2(was)
+	await _icons_room16_test()
+	Dev.icons_room16(was16)
+
+
+## MV-775 icons B (switch icons_room16): every ic2_* and every gear set piece has a native 16 px room-style icon
+func _icons_room16_test() -> void:
+	Dev.icons_room16(true)
+	var miss := []
+	var ok16 := true
+	for key in Atlas.regions:
+		if str(key).begins_with("ic2_"):
+			var id := str(key).trim_prefix("ic2_")
+			var t := Atlas.icon(id)
+			if t == null or t is IconTex:
+				miss.append(id)
+			else:
+				ok16 = ok16 and t.get_width() == 16 and t.get_height() == 16
+	_check("icons B: every ic2_* icon has a 16 px room-style icon (missing %s)" % str(miss), miss.is_empty())
+	_check("icons B: they are native 16x16 (no IconTex)", ok16)
+	var sets_ok := true
+	for p in GearSets.ICON_ORDER:
+		var st := GearSets.icon(p)
+		sets_ok = sets_ok and st != null and not (st is IconTex) and st.get_width() == 16
+	_check("icons B: every gear set piece has its 16 px icon", sets_ok)
+	var b := UIKit.button("x", "green", "food")
+	_check("icons B: a button icon keeps the 16 px slot", b.icon != null and b.icon.get_width() == 16 and not (b.icon is IconTex))
+	b.free()
+	_check("icons B: GOD toggle sets the switch", Features.on("icons_room16"))
+	Dev.icons_room16(false)
+	_check("icons B: switch off = icons v2 again", (Atlas.icon("food") is IconTex) == Features.on("icons_v2"))
 
 
 ## MV-767: gear sets v1 (switch gear_sets) + the 64 px Vault hatch item frame (switch gear_frame64)
@@ -13542,7 +13594,8 @@ func _gear_sets_test() -> void:
 	Game.set_process(false)
 	Combat.set_process(false)
 	Game.s = saved_state.duplicate(true)
-	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true, "gear_frame_simple": true}, "tune": {}}
+	# icons_room16 off: these checks cover the 32 px set icons, the 16 px ones are in _icons_room16_test
+	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true, "gear_frame_simple": true, "icons_room16": false}, "tune": {}}
 	Features.layers.remote = {}
 	Features.layers.mode = {}
 	# --- data: 5 sets x 4 pieces, bases + icons
