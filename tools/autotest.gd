@@ -613,6 +613,8 @@ func _run() -> void:
 	if "--only=settings" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _settings_test()
+		_finish()
+		return
 	if "--only=activity" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _activity_test()
@@ -1706,6 +1708,12 @@ func _run() -> void:
 	for e in errs:
 		print("[autotest] trace error: ", Trace.fmt_entry(e))
 	print("[autotest] v3/v4 checks done: %d failed total" % _fails)
+	# MV-779: --only=core = the boot + core gameplay walk above (tutorial, combat, build, expedition, prestige,
+	# save round-trip, GOD panel) and nothing after it. CI runs it for game files no named group covers;
+	# tools/ci_select.py reads this marker line, keep the text.
+	if "--only=core" in OS.get_cmdline_user_args():
+		_finish()
+		return
 	await _roof_deck_test()
 	_share_preview_test()
 	# portrait phone

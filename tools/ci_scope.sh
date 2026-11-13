@@ -12,7 +12,8 @@ while IFS= read -r f; do
 	seen=1
 	case "$f" in
 		CHANGELOG.md|tools/release.py|tools/web_shell.html|web/boot/*|web/logo.png|web/og-image.png|\
-		.github/workflows/autotest.yml|.github/workflows/release.yml|tools/ci_autotest.sh|tools/ci_scope.sh)
+		.github/workflows/autotest.yml|.github/workflows/release.yml|tools/ci_autotest.sh|tools/ci_scope.sh|\
+		tools/ci_select.py|.github/actions/setup-godot/*)
 			godot=true ;;
 		# docs (MV-173)
 		*.md|docs/*|.claude/*|.agents/*) ;;

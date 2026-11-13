@@ -1,0 +1,50 @@
+# Which autotest groups cover which files (MV-779). Read by tools/ci_select.py.
+# One rule per line: <glob> <suite> [<suite> ...]. A suite is an --only=<group> name from tools/autotest.gd,
+# "core" (boot + core gameplay walk, --only=core) or "full" (the whole autotest).
+# Every matching rule adds its suites. On top of this file ci_select.py also picks, by itself:
+#   - groups whose name appears in the path (scripts/autoload/threat.gd -> threat),
+#   - groups whose tests mention the file (its res:// path, file name, autoload name or class_name),
+#   - for tools/autotest.gd: the groups that run the changed test functions.
+# A game file that none of that matches gets "core". Only add rules here for files those heuristics miss
+# or over-select (shared files like main.gd, ui_kit.gd). Globs use fnmatch: * also matches "/".
+
+# engine / save: anything can break
+project.godot                        full
+scripts/autoload/save_system.gd      full
+tools/cloud_fake.gd                  full
+
+# shared everywhere: the core walk plus the layout / input groups
+scenes/main.tscn                     core touch large responsive window_fit
+scripts/main.gd                      core touch large responsive window_fit
+scripts/ui/hud.gd                    core touch responsive window_fit
+scripts/ui/ui_kit.gd                 core buttons touch large responsive window_fit
+scripts/ui/modal_panel.gd            core confirm window_fit
+scripts/ui/choice_button.gd          core confirm thai
+scripts/autoload/game.gd             core
+scripts/autoload/data.gd             core
+
+# registry files every feature touches: the feature's own tests are picked from its autotest diff
+scripts/autoload/dev.gd              god_fit
+scripts/ui/god_panel.gd              god_fit
+scripts/autoload/features.gd         features
+config/features.json                 features
+config/environments.json             env
+
+# version, text, fonts, sound
+CHANGELOG.md                         version
+tools/release.py                     version
+scripts/build_info.gd                version
+export_presets.cfg                   version
+scripts/autoload/loc.gd              thai english
+i18n/*                               thai english
+assets/fonts/*                       fonts thai
+scripts/autoload/settings.gd         settings settings_privacy battery
+scripts/autoload/sound.gd            audio ambience
+
+# the test pipeline itself: a short real run proves it still works
+.github/workflows/autotest.yml       core
+.github/actions/setup-godot/*        core
+tools/ci_autotest.sh                 core
+tools/ci_scope.sh                    core
+tools/ci_select.py                   core
+tools/test_map.txt                   core
