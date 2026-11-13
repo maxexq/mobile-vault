@@ -612,6 +612,10 @@ func _run() -> void:
 		return
 	if "--only=settings" in OS.get_cmdline_user_args():
 		Tutorial.skip()
+		# MV-779: the full run reaches the settings test at 1280x640; at the boot size (405x720, UI scale 1)
+		# "defaults restored" can't tell the pixel scale apart
+		get_window().size = Vector2i(1280, 640)
+		await wait(0.6)
 		await _settings_test()
 		_finish()
 		return

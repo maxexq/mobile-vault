@@ -43,8 +43,10 @@ runs:
         godot --version
         command -v xvfb-run || (sudo apt-get update -q && sudo apt-get install -yq xvfb)
 
-    - name: Cache imported assets
-      uses: actions/cache@v4
+    # restore + save as two steps: the import is saved right after it runs, even when the tests fail later
+    - name: Restore imported assets
+      id: import-cache
+      uses: actions/cache/restore@v4
       with:
         path: .godot
         key: godot-import-${{ inputs.version }}-${{ hashFiles('project.godot', '**/*.import', 'assets/**') }}
@@ -53,3 +55,10 @@ runs:
     - name: Import assets
       shell: bash
       run: godot --headless --path . --import
+
+    - name: Save imported assets
+      if: steps.import-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: .godot
+        key: ${{ steps.import-cache.outputs.cache-primary-key }}
