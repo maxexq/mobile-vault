@@ -7802,6 +7802,11 @@ func _exterior_mods_test() -> void:
 	var state: Dictionary = Game.s.duplicate(true)
 	var overrides: Dictionary = Features.layers.dev.duplicate(true)
 	var saved_view := v.xray
+	# no live fight while counting transient FX: an enemy shot at the van (armor_hit) or a road zombie (ram_contact)
+	# spawned an FX mid-matrix on CI ("van t0 lv1 ... fx 1", MV-775)
+	var saved_fight := [Combat.is_processing(), main.combat_view.process_mode]
+	Combat.set_process(false)
+	main.combat_view.process_mode = Node.PROCESS_MODE_DISABLED   # its shots / tweens too
 	Features.set_override("features", "exterior_mod_ambience", true)
 	Features.set_override("features", "cozy_roof", true)
 	Features.set_override("features", "world_v2", false)   # the old van's mods (world v2 phase 1 hides them)
@@ -7953,6 +7958,8 @@ func _exterior_mods_test() -> void:
 	Features.changed.emit()
 	v.rebuild()
 	m.set_process(true)
+	Combat.set_process(saved_fight[0])
+	main.combat_view.process_mode = saved_fight[1]
 	v.set_xray(saved_view)
 	Game.weather_changed.emit(str(Game.s.weather))
 	Features.set_override("features", "road_train", null)
