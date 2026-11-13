@@ -39,6 +39,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [error-spike-alerts](error-spike-alerts.md): MV-171 error spike/new error -> Discord #alerts (PR #54), DISCORD_ALERTS_WEBHOOK_URL fallback to dev feed, SUPABASE_SERVICE_KEY
 - [idea-backlog-2026-10-24](idea-backlog-2026-10-24.md): 47 ideas -> Plane MV-97..158 (13 cats, P0-P4); batch 2 MV-239..274 (playtest balance/bugs, hull, lore, security); MV-114 decided Persistent + mode events
 - [ci-autotest](ci-autotest.md): Autotest workflow on every PR (PR #37, MV-110) + MV-41 flaky fixes; docs.godotengine.org blocked, use doc/classes XML on raw.githubusercontent
+- [ci-targeted-tests](ci-targeted-tests.md): RULE MV-779 PRs run only affected autotest groups (tools/ci_select.py, test_map.txt), full suite nightly 05:00 Bangkok on staging/uat/main
 - [web-boot-shell](web-boot-shell.md): loading screen = Web preset custom HTML shell tools/web_shell.html (MV-160); artifact built from same export via tools/artifact_html.py
 - [pixellab-api](pixellab-api.md): PixelLab sprite redraw tool + atlas overrides (PR #41, MV-161), Network secret api.pixellab.ai, ask before spending credits
 - [pixellab-usage-report](pixellab-usage-report.md): Parames rule: after every PixelLab ("pl") use report what for, model/API used, how many gens, how many remain (GET /v2/balance)

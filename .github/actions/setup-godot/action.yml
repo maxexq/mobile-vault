@@ -1,0 +1,64 @@
+# Godot 4.7.2-stable + imported assets, shared by the Autotest and Nightly autotest workflows (MV-779).
+# The editor zip is SHA-512 checked and cached. The asset import (.godot/, ~7 min from scratch) is cached
+# too: the key follows every asset and .import file, and a miss restores the closest older cache, so
+# Godot only re-imports what changed (it compares each source file's md5 with .godot/imported).
+name: Set up Godot
+description: Download (cached) Godot 4.7.2-stable, put it on PATH as `godot`, import the project's assets
+inputs:
+  version:
+    description: "Godot release tag (CLAUDE.md: 4.7.2-stable only)"
+    default: 4.7.2-stable
+  sha512:
+    description: SHA-512 of the linux x86_64 zip, from the release's SHA512-SUMS.txt
+    default: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+runs:
+  using: composite
+  steps:
+    - name: Cache Godot
+      id: godot-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/godot
+        key: godot-${{ inputs.version }}-linux-x86_64
+
+    - name: Download Godot ${{ inputs.version }}
+      if: steps.godot-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GODOT_VERSION: ${{ inputs.version }}
+        GODOT_SHA512: ${{ inputs.sha512 }}
+      run: |
+        zip="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+        mkdir -p ~/godot && cd ~/godot
+        curl -sSLf -o "$zip" "https://github.com/godotengine/godot/releases/download/$GODOT_VERSION/$zip"
+        echo "$GODOT_SHA512  $zip" | sha512sum -c -
+        unzip -q "$zip" && rm "$zip"
+
+    - name: Install Godot
+      shell: bash
+      env:
+        GODOT_VERSION: ${{ inputs.version }}
+      run: |
+        sudo ln -sf ~/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
+        godot --version
+        command -v xvfb-run || (sudo apt-get update -q && sudo apt-get install -yq xvfb)
+
+    # restore + save as two steps: the import is saved right after it runs, even when the tests fail later
+    - name: Restore imported assets
+      id: import-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: .godot
+        key: godot-import-${{ inputs.version }}-${{ hashFiles('project.godot', '**/*.import', 'assets/**') }}
+        restore-keys: godot-import-${{ inputs.version }}-
+
+    - name: Import assets
+      shell: bash
+      run: godot --headless --path . --import
+
+    - name: Save imported assets
+      if: steps.import-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: .godot
+        key: ${{ steps.import-cache.outputs.cache-primary-key }}

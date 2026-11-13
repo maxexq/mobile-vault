@@ -1,0 +1,99 @@
+# The whole autotest, every night at 05:00 Bangkok time (22:00 UTC), on staging, uat and main (MV-779).
+# PRs only run the --only groups that cover their files (tools/ci_select.py); this run catches what
+# those skipped. Discord notify (MV-96) lists this workflow's `name:` in workflow_run and posts
+# scheduled runs only when they fail, so keep the name "Nightly autotest".
+# Actions > Nightly autotest > Run workflow starts it by hand (pick the branches, or "all").
+name: Nightly autotest
+run-name: "Nightly autotest: full suite on ${{ inputs.branches || 'staging uat main' }}"
+
+on:
+  schedule:
+    - cron: "0 22 * * *" # 05:00 Asia/Bangkok (UTC+7); GitHub may start it a few minutes late
+  workflow_dispatch:
+    inputs:
+      branches:
+        description: "Branches to test, space separated"
+        required: false
+        default: "staging uat main"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-autotest
+  cancel-in-progress: false
+
+jobs:
+  branches:
+    runs-on: ubuntu-24.04
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - id: list
+        env:
+          BRANCHES: ${{ inputs.branches || 'staging uat main' }}
+        run: echo "list=$(jq -cn --arg b "$BRANCHES" '$b | split(" ") | map(select(. != ""))')" | tee -a "$GITHUB_OUTPUT"
+
+  full:
+    needs: branches
+    name: full autotest (${{ matrix.branch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJSON(needs.branches.outputs.list) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+          persist-credentials: false
+
+      # the setup action and ci_autotest.sh come from the tested branch; a branch older than MV-779
+      # doesn't have them yet, so take both from the branch this workflow runs from
+      - name: Test tooling from ${{ github.ref_name }}
+        env:
+          REF: ${{ github.sha }}
+        run: |
+          if [ ! -f .github/actions/setup-godot/action.yml ]; then
+            git fetch -q --no-tags --depth=1 origin "$REF"
+            git checkout -q FETCH_HEAD -- .github/actions/setup-godot tools/ci_autotest.sh
+            git reset -q   # keep them out of the index; nothing is committed
+          fi
+
+      - name: Set up Godot + import assets
+        uses: ./.github/actions/setup-godot
+
+      - name: Run the whole autotest
+        env:
+          OUT: ${{ runner.temp }}/autotest
+          TIMEOUT: "2700"
+        run: |
+          echo "### ${{ matrix.branch }} @ $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          bash tools/ci_autotest.sh
+
+      - name: Upload screenshots and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-autotest-${{ matrix.branch }}-${{ github.run_number }}
+          path: ${{ runner.temp }}/autotest
+          retention-days: 7
+
+      # same marker as a full Autotest run: a later uat / main PR on this exact tree can skip Godot
+      - name: Mark this tree as fully passed
+        id: tree
+        if: success()
+        run: |
+          tree=$(git rev-parse 'HEAD^{tree}')
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+          echo "$tree $(git rev-parse HEAD)" > "$RUNNER_TEMP/autotest-pass.txt"
+
+      - name: Upload full-run pass marker
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autotest-full-${{ steps.tree.outputs.tree }}
+          path: ${{ runner.temp }}/autotest-pass.txt
+          retention-days: 30
+          overwrite: true # two branches on the same tree write the same marker

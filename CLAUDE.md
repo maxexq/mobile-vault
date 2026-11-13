@@ -96,7 +96,17 @@ rules also go into this file.
    `bash tools/ci_autotest.sh` does exactly what CI does.
    CI skips the Godot run when no game file changed (`tools/ci_scope.sh`: docs, `api/`, `web/`,
    Python tooling...) or when the exact same tree already passed, e.g. the push after a merge
-   (MV-173, MV-549); anything else gets the full run. While working, `--only=<name>` is enough.
+   (MV-173, MV-549).
+   **Targeted tests (MV-779, Parames 2026-11-13):** a PR into `staging` runs only the autotest groups
+   that cover its files (`tools/ci_select.py`, rules in `tools/test_map.txt`); the whole autotest runs
+   every night at 05:00 Bangkok time on staging / uat / main (workflow **Nightly autotest**, failures
+   to Discord), and on PRs into uat / main. Run the same selection locally before pushing:
+   `python3 tools/ci_select.py --explain`, then each group it prints with `--only=<group>`
+   (Linux: `ONLY="$(python3 tools/ci_select.py)" bash tools/ci_autotest.sh`). So every feature needs:
+   its own `--only=<feature>` block in `_run` (Tutorial.skip, await the test, `_finish()`, `return`)
+   **and** its test in the full list, so its PRs run that group. Name the group after the feature's
+   files (switch / script name) and add a `tools/test_map.txt` rule when a shared file needs it.
+   `--only=core` = boot + core gameplay walk (ends at the marker in `_run`, keep it there).
 4. Web export: `sh tools/stamp_build.sh` then
    `godot --headless --path . --export-release "Web" web/index.html`, commit `web/`.
    `cloud_config.json` must exist first or the build ships with cloud save OFF
