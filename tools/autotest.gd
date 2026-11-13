@@ -5033,7 +5033,7 @@ func _features_test() -> void:
 	# switches that ship off on purpose: english until all three MV-151 PRs are in; seeded_world_map until the
 	# world map screen ships (MV-500 phase 3: phases 1-2 change travel without a screen to drive it); map_blueprint_caches
 	# (MV-546) rides on the world map, so it ships off with it
-	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion", "ui_v5", "icons_room16"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764); ui_v5: phase 1 of the MV-768 redesign; icons_room16: until the icons the code turns to mush are redrawn (MV-775)
+	var ships_off := ["english", "seeded_world_map", "map_blueprint_caches", "activity_cloud", "strangers", "bastion", "ui_v5"]  # strangers: door screening paused (MV-719); bastion: parked (MV-764); ui_v5: phase 1 of the MV-768 redesign
 	var all_on := true
 	var pin: Dictionary = Features.layers.build.get("features", {})
 	for k in ["road_train", "gear_sets", "gear_frame64", "lore_crew"]:
@@ -13567,7 +13567,8 @@ func _gear_sets_test() -> void:
 	Game.set_process(false)
 	Combat.set_process(false)
 	Game.s = saved_state.duplicate(true)
-	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true, "gear_frame_simple": true}, "tune": {}}
+	# icons_room16 off: these checks cover the 32 px set icons, the 16 px ones are in _icons_room16_test
+	Features.layers.dev = {"features": {"gear_sets": true, "gear_frame64": true, "gear_frame_simple": true, "icons_room16": false}, "tune": {}}
 	Features.layers.remote = {}
 	Features.layers.mode = {}
 	# --- data: 5 sets x 4 pieces, bases + icons

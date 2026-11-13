@@ -78,7 +78,7 @@
     "resume_on_reload": true,
     "anticheat": true,
     "icons_v2": true,
-    "icons_room16": false,
+    "icons_room16": true,
     "crew_roster_20": true,
     "lore_crew": true,
     "announce": true,
