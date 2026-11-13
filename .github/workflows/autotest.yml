@@ -8,6 +8,10 @@
 # e.g. the push after a merge or a promotion PR (MV-549). The job still reports success so the
 # required check never sits on "pending". Don't use paths-ignore for that: a workflow that never
 # starts leaves a required check waiting forever.
+# MV-779: PRs into staging (and pushes to staging) run only the --only=<group> runs that cover the
+# changed files (tools/ci_select.py + tools/test_map.txt). PRs into uat / main, pushes to main and
+# manual runs (unless they name groups) run everything. The whole autotest also runs every night at
+# 05:00 Bangkok time on staging, uat and main: .github/workflows/nightly-autotest.yml.
 name: Autotest
 
 on:
@@ -16,6 +20,11 @@ on:
   push:
     branches: [main, uat, staging]
   workflow_dispatch:
+    inputs:
+      groups:
+        description: "--only groups to run, space separated (empty = the whole autotest)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -26,12 +35,6 @@ concurrency:
   group: autotest-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  # Godot 4.7.2-stable only (CLAUDE.md). The hash is from the release's SHA512-SUMS.txt.
-  GODOT_VERSION: 4.7.2-stable
-  GODOT_ZIP: Godot_v4.7.2-stable_linux.x86_64.zip
-  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
-
 jobs:
   autotest:
     runs-on: ubuntu-24.04
@@ -40,12 +43,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 2 # a PR's merge commit + its base parent: tools/ci_select.py reads the PR's diff
 
       # 1. Scope: a PR looks at its own files (not what merging the base brought in), a push at what
       #    it added since the previous head. No game file changed = no Godot (tools/ci_scope.sh).
-      # 2. Tree: the Godot run leaves a marker artifact "autotest-pass-<tree>"; when one from this
-      #    repository (never a fork) exists for this exact tree, the same files already passed.
-      # Pushes to main and manual runs always run everything.
+      # 2. Tree: the Godot run leaves a marker artifact "autotest-pass-<tree>" (any passing run) and
+      #    "autotest-full-<tree>" (the whole autotest passed); when one from this repository (never a fork)
+      #    exists for this exact tree, the same files already passed. uat / main need the full marker.
+      # 3. Which groups (MV-779): staging PRs and pushes run tools/ci_select.py on the changed files;
+      #    "only" = space-separated --only groups, empty = the whole autotest.
+      # Pushes to main and manual runs always run everything (a manual run can name groups instead).
       - name: Need Godot?
         id: scope
         env:
@@ -53,27 +60,65 @@ jobs:
           EVENT: ${{ github.event_name }}
           REF: ${{ github.ref }}
           PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.ref }}
           BEFORE: ${{ github.event.before }}
           REPO_ID: ${{ github.repository_id }}
+          INPUT_GROUPS: ${{ inputs.groups }}
         run: |
           tree=$(git rev-parse 'HEAD^{tree}')
           echo "tree=$tree" >> "$GITHUB_OUTPUT"
           skip() { echo "godot=false" | tee -a "$GITHUB_OUTPUT"; echo "### Autotest: ⏭️ $1, Godot run skipped" >> "$GITHUB_STEP_SUMMARY"; exit 0; }
-          if [ "$EVENT" = workflow_dispatch ] || [ "$REF" = refs/heads/main ]; then
-            echo "godot=true" | tee -a "$GITHUB_OUTPUT"; exit 0
+          run_all() { echo "godot=true" | tee -a "$GITHUB_OUTPUT"; echo "only=" >> "$GITHUB_OUTPUT"; echo "Autotest: whole suite ($1)"; exit 0; }
+          if [ "$EVENT" = workflow_dispatch ]; then
+            if [ -n "$INPUT_GROUPS" ]; then
+              echo "godot=true" | tee -a "$GITHUB_OUTPUT"; echo "only=$INPUT_GROUPS" | tee -a "$GITHUB_OUTPUT"; exit 0
+            fi
+            run_all "manual run"
           fi
+          [ "$REF" != refs/heads/main ] || run_all "push to main"
           files=
-          if [ "$EVENT" = pull_request ]; then
+          patch="$RUNNER_TEMP/autotest.patch"
+          : > "$patch"
+          if [ "$EVENT" = pull_request ] && git rev-parse -q --verify HEAD^2 >/dev/null; then
+            # HEAD is GitHub's test merge: base tip (HEAD^1) + this PR. Its diff from HEAD^1 is exactly the
+            # PR's own change, with autotest.gd line numbers as in the tree that runs.
+            files=$(git diff --name-only HEAD^1 HEAD)
+            git diff HEAD^1 HEAD -- tools/autotest.gd > "$patch"
+          elif [ "$EVENT" = pull_request ]; then
             files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
+            : # no merge commit to diff: tools/ci_select.py gets no patch and picks the full run for autotest.gd
           elif [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ] \
               && git fetch -q --no-tags --depth=1 origin "$BEFORE"; then
             files=$(git diff --name-only "$BEFORE" HEAD)
+            git diff "$BEFORE" HEAD -- tools/autotest.gd > "$patch"
           fi
           [ "$(bash tools/ci_scope.sh <<<"$files")" = true ] || skip "no game files changed"
-          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=autotest-pass-$tree&per_page=100" \
+          full_only=false
+          if [ "$EVENT" = pull_request ] && [ "$BASE" != staging ]; then full_only=true; fi
+          [ "$REF" = refs/heads/uat ] && full_only=true
+          marker="autotest-pass-$tree"
+          [ "$full_only" = false ] || marker="autotest-full-$tree"
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$marker&per_page=100" \
             --jq "[.artifacts[] | select(.expired | not) | select(.workflow_run.head_repository_id == $REPO_ID)][0].workflow_run.id // empty")
           [ -z "$run" ] || skip "this exact tree already passed in [run $run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run)"
+          [ "$full_only" = false ] || run_all "$([ "$EVENT" = pull_request ] && echo "PR into $BASE" || echo "push to uat")"
+          # an empty file list (first push of a branch, unreadable diff) also gives the full run
+          only=$(printf '%s\n' "$files" | python3 tools/ci_select.py --files - --patch "$patch" --explain)
           echo "godot=true" | tee -a "$GITHUB_OUTPUT"
+          if [ "$only" = full ]; then only=; fi
+          echo "only=$only" | tee -a "$GITHUB_OUTPUT"
+          {
+            echo "### Autotest scope (tools/ci_select.py)"
+            echo
+            if [ -n "$only" ]; then echo "Runs only: \`$only\` (the whole autotest runs nightly)"; else echo "Runs the whole autotest"; fi
+            echo
+            echo '<details><summary>why</summary>'
+            echo
+            echo '```'
+            printf '%s\n' "$files" | python3 tools/ci_select.py --files - --patch "$patch" --explain 2>&1 >/dev/null | head -200
+            echo '```'
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # BuildInfo.GAME_VERSION is semver and matches the web shell + CHANGELOG.md (MV-111)
       - name: Version check
@@ -95,38 +140,16 @@ jobs:
       - name: Sentry forwarding tests (offline)
         run: python3 -m unittest discover -s tools/tests -p 'test_sentry_forward.py'
 
-      - name: Cache Godot
-        id: godot-cache
+      - name: Set up Godot + import assets
         if: steps.scope.outputs.godot == 'true'
-        uses: actions/cache@v4
-        with:
-          path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
-
-      - name: Download Godot ${{ env.GODOT_VERSION }}
-        if: steps.scope.outputs.godot == 'true' && steps.godot-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/godot && cd ~/godot
-          curl -sSLf -o "$GODOT_ZIP" "https://github.com/godotengine/godot/releases/download/$GODOT_VERSION/$GODOT_ZIP"
-          echo "$GODOT_SHA512  $GODOT_ZIP" | sha512sum -c -
-          unzip -q "$GODOT_ZIP" && rm "$GODOT_ZIP"
-
-      - name: Install Godot
-        if: steps.scope.outputs.godot == 'true'
-        run: |
-          sudo ln -sf ~/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
-          godot --version
-          command -v xvfb-run || (sudo apt-get update -q && sudo apt-get install -yq xvfb)
-
-      - name: Import assets
-        if: steps.scope.outputs.godot == 'true'
-        run: godot --headless --path . --import
+        uses: ./.github/actions/setup-godot
 
       - name: Run autotest
         if: steps.scope.outputs.godot == 'true'
         env:
           OUT: ${{ runner.temp }}/autotest
           TIMEOUT: "1200"
+          ONLY: ${{ steps.scope.outputs.only }}
         run: bash tools/ci_autotest.sh
 
       - name: Upload screenshots and log
@@ -147,6 +170,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: autotest-pass-${{ steps.scope.outputs.tree }}
+          path: ${{ runner.temp }}/autotest-pass.txt
+          retention-days: 30
+          overwrite: true
+
+      # the whole autotest passed on this tree: uat / main PRs and the nightly run may skip it (MV-779)
+      - name: Upload full-run pass marker
+        if: success() && steps.scope.outputs.godot == 'true' && steps.scope.outputs.only == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: autotest-full-${{ steps.scope.outputs.tree }}
           path: ${{ runner.temp }}/autotest-pass.txt
           retention-days: 30
           overwrite: true

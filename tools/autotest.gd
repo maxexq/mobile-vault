@@ -612,7 +612,13 @@ func _run() -> void:
 		return
 	if "--only=settings" in OS.get_cmdline_user_args():
 		Tutorial.skip()
+		# MV-779: the full run reaches the settings test at 1280x640; at the boot size (405x720, UI scale 1)
+		# "defaults restored" can't tell the pixel scale apart
+		get_window().size = Vector2i(1280, 640)
+		await wait(0.6)
 		await _settings_test()
+		_finish()
+		return
 	if "--only=activity" in OS.get_cmdline_user_args():
 		Tutorial.skip()
 		await _activity_test()
@@ -1711,6 +1717,12 @@ func _run() -> void:
 	for e in errs:
 		print("[autotest] trace error: ", Trace.fmt_entry(e))
 	print("[autotest] v3/v4 checks done: %d failed total" % _fails)
+	# MV-779: --only=core = the boot + core gameplay walk above (tutorial, combat, build, expedition, prestige,
+	# save round-trip, GOD panel) and nothing after it. CI runs it for game files no named group covers;
+	# tools/ci_select.py reads this marker line, keep the text.
+	if "--only=core" in OS.get_cmdline_user_args():
+		_finish()
+		return
 	await _roof_deck_test()
 	_share_preview_test()
 	# portrait phone
