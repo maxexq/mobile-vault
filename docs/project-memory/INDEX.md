@@ -122,6 +122,7 @@ Snapshot of the claude.ai project memory, one file per subject. Files are dated 
 - [christmas-living-v3](christmas-living-v3.md): MV-691 Christmas festival living room v3 L1-L3 (Claude picks), anims crew 2/3 + hotspots, APPROVED + saved christmas/approved/, Done
 - [icons-v2](icons-v2.md): MV-694 all ic_* icons redrawn 32 px + moods neutral/stressed/broken, APPROVED + saved, PR #191 MERGED to staging 2026-11-04 (switch icons_v2, IconTex), web export pending
 - [icons-v2-approved](icons-v2-approved.md): RULE every in-game icon = 32 px PixelLab salvage-object style (designs/icons-v2/approved/README.md), shown in 16 px slot via IconTex
+- [icons-v4-approved](icons-v4-approved.md): RULE icons v4 APPROVED 2026-11-13 (MV-775): native 16 px PixelLab + black outline, moods code-drawn on one circle; supersedes icons-v2-approved
 - [lore-crew-3](lore-crew-3.md): MV-692/695 Bit, Auntie Wan, Captain Sorn 2.5D ref v3 stills + 13 anim clips each APPROVED by Parames 2026-11-03 (eye lock), designs/lore-crew-3/approved/, artifact Lore Crew Three; edit-image-pro-flash now ~15 gens
 - [art-readiness-v5](art-readiness-v5.md): MV-702 2026-11-03 big-upgrade readiness: not ready to ship, ready to integrate; staging has 0 new art; phase plan + ~1,600 gens missing
 - [celestial-clean-disc](celestial-clean-disc.md): RULE parallax sun/moon = clean disc, no clouds over it, code halo effect (MV-706, all 6 biomes)
